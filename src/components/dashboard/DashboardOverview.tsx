@@ -92,6 +92,40 @@ function EventPill({ status }: { status: Event['status'] }) {
   )
 }
 
+// ── Nudge card ────────────────────────────────────────────────────────────────
+
+function NudgeCard({ icon, iconColor, iconBg, title, description, href }: {
+  icon: string; iconColor: string; iconBg: string
+  title: string; description: string; href: string
+}) {
+  return (
+    <Link href={href} style={{
+      display: 'flex', alignItems: 'center', gap: 14,
+      background: 'var(--wimc-bg-elevated)',
+      border: '1px solid var(--wimc-border-default)',
+      borderRadius: 12, padding: '14px 18px',
+      textDecoration: 'none', color: 'inherit',
+      transition: 'border-color 200ms ease, transform 200ms ease',
+      flex: 1, minWidth: 0,
+    }}
+      onMouseEnter={e => { const el = e.currentTarget as HTMLAnchorElement; el.style.borderColor = 'var(--wimc-border-strong)'; el.style.transform = 'translateY(-1px)' }}
+      onMouseLeave={e => { const el = e.currentTarget as HTMLAnchorElement; el.style.borderColor = 'var(--wimc-border-default)'; el.style.transform = '' }}
+    >
+      <div style={{
+        width: 36, height: 36, borderRadius: 8, flexShrink: 0,
+        display: 'grid', placeItems: 'center', background: iconBg, color: iconColor,
+      }}>
+        <span className="material-symbols-outlined" style={{ fontSize: 18 }}>{icon}</span>
+      </div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: 13, fontWeight: 700, fontFamily: 'var(--font-dm-sans)' }}>{title}</div>
+        <div style={{ fontSize: 12, color: 'var(--wimc-text-secondary)', marginTop: 2 }}>{description}</div>
+      </div>
+      <span className="material-symbols-outlined" style={{ fontSize: 18, color: 'var(--wimc-text-muted)', flexShrink: 0 }}>arrow_forward</span>
+    </Link>
+  )
+}
+
 // ── Main component ────────────────────────────────────────────────────────────
 
 interface DashboardOverviewProps {
@@ -116,6 +150,10 @@ export default function DashboardOverview({ profile, events, bookings, linkClick
   const tierKey = profile.maker_tier ?? 'mohalla'
   const tierLabel = tierKey.charAt(0).toUpperCase() + tierKey.slice(1)
   const nextTier = TIER_NEXT[tierKey]
+
+  const hasSocials = profile.social_links != null &&
+    typeof profile.social_links === 'object' &&
+    Object.keys(profile.social_links as Record<string, unknown>).length > 0
 
   // Booking counts per event
   const bookingsByEvent: Record<string, number> = {}
@@ -233,6 +271,33 @@ export default function DashboardOverview({ profile, events, bookings, linkClick
             </div>
           </div>
         </div>
+
+        {/* Setup nudges — shown until socials are added */}
+        {!hasSocials && (
+          <div>
+            <div style={{ fontSize: 11, fontFamily: 'var(--font-jetbrains-mono)', color: 'var(--wimc-text-muted)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: 10 }}>
+              Finish setting up your page
+            </div>
+            <div style={{ display: 'flex', gap: 12 }}>
+              <NudgeCard
+                icon="share"
+                iconColor="var(--wimc-coral)"
+                iconBg="var(--wimc-coral-dim)"
+                title="Add your social links"
+                description="Let fans find you on Instagram, YouTube, and more."
+                href="/dashboard/profile"
+              />
+              <NudgeCard
+                icon="palette"
+                iconColor="var(--wimc-teal)"
+                iconBg="var(--wimc-teal-dim)"
+                title="Customize your look"
+                description="Pick a theme that matches your vibe."
+                href="/dashboard/studio"
+              />
+            </div>
+          </div>
+        )}
 
         {/* Stats grid */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}>

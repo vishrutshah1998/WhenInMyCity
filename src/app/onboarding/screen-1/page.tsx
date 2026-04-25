@@ -1,28 +1,15 @@
 'use client'
 
-import { useState, useTransition, useCallback } from 'react'
+import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import {
-  checkUsernameAvailable,
   generateUsernameFromName,
   saveOnboardingScreen,
 } from '@/app/actions/onboarding'
-import { CREATOR_CATEGORIES, EXPLORING_OPTION, getCategoryColors } from '@/lib/constants/categories'
+import { CREATOR_CATEGORIES, getCategoryColors } from '@/lib/constants/categories'
 import type { V2_CREATOR_TYPES } from '@/types/onboarding'
 
 type V2CreatorType = typeof V2_CREATOR_TYPES[number]
-
-const ALL_CATEGORIES = [
-  ...CREATOR_CATEGORIES,
-  {
-    ...EXPLORING_OPTION,
-    subTypes: [],
-    suggestedPlatforms: [],
-    offlineActivities: null,
-    bioSuggestion: '',
-    nextLabel: 'Continue',
-  },
-]
 
 export default function Screen1Page() {
   const router = useRouter()
@@ -30,43 +17,13 @@ export default function Screen1Page() {
   const [displayName, setDisplayName] = useState('')
   const [username, setUsername] = useState('')
   const [creatorType, setCreatorType] = useState<V2CreatorType | null>(null)
-  const [usernameStatus, setUsernameStatus] = useState<'idle' | 'checking' | 'available' | 'taken' | 'invalid'>('idle')
-  const [usernameError, setUsernameError] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
 
   const [nameSuggestTimer, setNameSuggestTimer] = useState<ReturnType<typeof setTimeout> | null>(null)
-  const [usernameCheckTimer, setUsernameCheckTimer] = useState<ReturnType<typeof setTimeout> | null>(null)
 
   const colors = getCategoryColors(creatorType)
-  const selectedCategory = ALL_CATEGORIES.find((c) => c.id === (creatorType as string))
-
-  const checkUsername = useCallback(async (value: string) => {
-    if (!value || value.length < 3) { setUsernameStatus('idle'); return }
-    setUsernameStatus('checking')
-    const result = await checkUsernameAvailable(value)
-    if (!result.available && result.error) {
-      setUsernameStatus('invalid')
-      setUsernameError(result.error)
-    } else if (result.available) {
-      setUsernameStatus('available')
-      setUsernameError(null)
-    } else {
-      setUsernameStatus('taken')
-      setUsernameError('This username is already taken.')
-    }
-  }, [])
-
-  function handleUsernameChange(value: string) {
-    const n = value.toLowerCase().replace(/[^a-z0-9_]/g, '').slice(0, 30)
-    setUsername(n)
-    setUsernameStatus('idle')
-    setUsernameError(null)
-    if (usernameCheckTimer) clearTimeout(usernameCheckTimer)
-    if (n.length >= 3) {
-      setUsernameCheckTimer(setTimeout(() => checkUsername(n), 600))
-    }
-  }
+  const selectedCategory = CREATOR_CATEGORIES.find((c) => c.id === (creatorType as string))
 
   function handleNameChange(value: string) {
     setDisplayName(value)
@@ -76,10 +33,10 @@ export default function Screen1Page() {
         setTimeout(async () => {
           const suggested = await generateUsernameFromName(value)
           setUsername(suggested)
-          setUsernameStatus('available')
-          setUsernameError(null)
         }, 800),
       )
+    } else {
+      setUsername('')
     }
   }
 
@@ -90,45 +47,26 @@ export default function Screen1Page() {
 
   function handleContinue() {
     if (!displayName.trim()) { setError('Please enter your name.'); return }
-    if (!username || username.length < 3) { setError('Please choose a username (at least 3 characters).'); return }
-    if (usernameStatus === 'taken' || usernameStatus === 'invalid') { setError(usernameError || 'Please choose a different username.'); return }
     if (!creatorType) { setError('Please select a category.'); return }
-
     setError(null)
+
     startTransition(async () => {
+      // Generate username now if the debounce timer hasn't fired yet
+      const finalUsername = username || await generateUsernameFromName(displayName)
+
       const result = await saveOnboardingScreen(1, {
         displayName: displayName.trim(),
-        username,
+        username: finalUsername,
         creatorType,
       })
       if (result.error) { setError(result.error); return }
-      sessionStorage.setItem('wimc_s1', JSON.stringify({ displayName: displayName.trim(), username, creatorType }))
+      sessionStorage.setItem('wimc_s1', JSON.stringify({ displayName: displayName.trim(), username: finalUsername, creatorType }))
       router.push('/onboarding/screen-2')
     })
   }
 
-  const usernameStatusIcon =
-    usernameStatus === 'checking' ? (
-      <span className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">Checking…</span>
-    ) : usernameStatus === 'available' ? (
-      <div className="flex items-center gap-1 px-2 py-1 rounded-full border" style={{ borderColor: `${colors.primary}40`, backgroundColor: `${colors.primary}15` }}>
-        <span className="material-symbols-outlined text-sm" style={{ color: colors.primary, fontVariationSettings: "'FILL' 1" }}>check_circle</span>
-        <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: colors.primary }}>Available</span>
-      </div>
-    ) : usernameStatus === 'taken' || usernameStatus === 'invalid' ? (
-      <div className="flex items-center gap-1 bg-error/10 px-2 py-1 rounded-full border border-error/20">
-        <span className="material-symbols-outlined text-error text-sm" style={{ fontVariationSettings: "'FILL' 1" }}>cancel</span>
-        <span className="text-[10px] font-bold text-error uppercase tracking-wider">Taken</span>
-      </div>
-    ) : null
-
   const ctaLabel = selectedCategory?.nextLabel ?? 'Continue →'
-  const isValid =
-    displayName.trim().length > 0 &&
-    username.length >= 3 &&
-    usernameStatus !== 'taken' &&
-    usernameStatus !== 'invalid' &&
-    creatorType !== null
+  const isValid = displayName.trim().length > 0 && creatorType !== null
 
   return (
     <div className="flex flex-col min-h-screen bg-background text-on-surface font-body transition-colors duration-500">
@@ -176,38 +114,19 @@ export default function Screen1Page() {
             maxLength={80}
             className="w-full px-5 py-4 rounded-xl bg-surface-container-low border-2 border-transparent focus:border-primary/30 focus:bg-surface-container transition-all text-on-surface placeholder:text-on-surface-variant/40 outline-none text-base"
           />
-        </section>
-
-        {/* Q2 — Handle */}
-        <section className="space-y-3">
-          <label className="block text-base font-semibold text-on-surface" htmlFor="username">
-            Pick your page link.
-            <span className="text-sm font-normal text-on-surface-variant ml-2">You can change this later.</span>
-          </label>
-          <div className="relative">
-            <span className="absolute left-5 top-1/2 -translate-y-1/2 font-headline font-bold" style={{ color: colors.primary }}>@</span>
-            <input
-              id="username"
-              type="text"
-              placeholder="yourname"
-              value={username}
-              onChange={(e) => handleUsernameChange(e.target.value)}
-              maxLength={30}
-              className="w-full pl-10 pr-32 py-4 rounded-xl bg-surface-container-low border-2 border-transparent focus:border-primary/30 focus:bg-surface-container transition-all text-on-surface placeholder:text-on-surface-variant/40 outline-none"
-            />
-            {usernameStatusIcon && (
-              <div className="absolute right-4 top-1/2 -translate-y-1/2">{usernameStatusIcon}</div>
-            )}
-          </div>
-          {usernameError && <p className="text-error text-xs font-medium px-1">{usernameError}</p>}
-          {username && usernameStatus !== 'taken' && usernameStatus !== 'invalid' && (
+          {/* Auto-generated handle preview */}
+          {username && (
             <p className="text-xs text-on-surface-variant px-1">
-              wimcity.in/<span className="font-semibold text-on-surface">{username}</span>
+              Your page:{' '}
+              <span className="font-semibold" style={{ color: colors.primary }}>
+                wimcity.in/{username}
+              </span>
+              <span className="ml-2 text-on-surface-variant/60">· you can change this later</span>
             </p>
           )}
         </section>
 
-        {/* Q3 — Category */}
+        {/* Q2 — Category */}
         <section className="space-y-4">
           <label className="block text-base font-semibold text-on-surface">
             What best describes you?
@@ -245,15 +164,7 @@ export default function Screen1Page() {
               )
             })}
           </div>
-          {/* "Just exploring" link */}
-          <button
-            type="button"
-            onClick={() => handleCategorySelect('exploring')}
-            className="w-full text-center text-sm text-on-surface-variant underline underline-offset-2 py-2 transition-colors hover:text-on-surface"
-            style={creatorType === 'exploring' ? { color: colors.primary, textDecorationColor: colors.primary } : undefined}
-          >
-            {creatorType === 'exploring' ? '✓ ' : ''}Just exploring
-          </button>
+
         </section>
 
         {error && <p className="text-error text-sm font-medium">{error}</p>}

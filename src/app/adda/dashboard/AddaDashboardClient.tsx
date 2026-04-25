@@ -277,9 +277,13 @@ export default function AddaDashboardClient({
             </span>
           )}
           <a href={`/adda/${adda.slug}`} target="_blank" rel="noopener noreferrer"
-            style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: 'var(--wimc-coral)', textDecoration: 'none', fontWeight: 600 }}>
-            View listing
-            <span className="material-symbols-outlined" style={{ fontSize: 14 }}>open_in_new</span>
+            style={{
+              fontFamily: 'var(--font-jetbrains-mono)', fontSize: 12,
+              color: 'var(--wimc-teal)', background: 'var(--wimc-teal-dim)',
+              padding: '4px 10px', borderRadius: 9999,
+              border: '1px solid rgba(93,217,208,0.2)', textDecoration: 'none',
+            }}>
+            wheninmycity.com/adda/{adda.slug} ↗
           </a>
           <a href="/dashboard" style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: 'var(--wimc-text-secondary)', textDecoration: 'none' }}>
             <span className="material-symbols-outlined" style={{ fontSize: 14 }}>arrow_back</span>

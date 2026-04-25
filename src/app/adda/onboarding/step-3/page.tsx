@@ -19,11 +19,35 @@ const AMENITIES: { id: string; label: string; icon: string }[] = [
 
 type PricingModel = 'fixed_rental' | 'door_split' | 'hybrid' | 'f_and_b_minimum'
 
-const PRICING_MODELS: { id: PricingModel; label: string; desc: string }[] = [
-  { id: 'fixed_rental',     label: 'Fixed Rental',        desc: 'Flat fee per day or session — predictable for both parties.' },
-  { id: 'door_split',       label: 'Door Split',          desc: 'You share a % of ticket revenue — no upfront charge to the creator.' },
-  { id: 'hybrid',           label: 'Hybrid',              desc: 'Smaller base rent + a smaller revenue share.' },
-  { id: 'f_and_b_minimum',  label: 'F&B Minimum',         desc: 'No rental — the creator just guarantees a food/beverage spend.' },
+const PRICING_MODELS: { id: PricingModel; label: string; desc: string; example: string; tag?: string }[] = [
+  {
+    id: 'fixed_rental',
+    label: 'Fixed Rental',
+    desc: 'Flat fee per session — you earn the same regardless of how many tickets the creator sells.',
+    example: 'e.g. ₹5,000 for a 4-hour evening slot. The creator sells 30 or 300 tickets — your payout doesn\'t change.',
+    tag: 'Good for co-working spaces & studios',
+  },
+  {
+    id: 'door_split',
+    label: 'Door Split',
+    desc: 'You take a % of every ticket sold — no upfront charge to the creator, so they\'re more likely to say yes.',
+    example: 'e.g. 20% split — if the creator sells 50 tickets at ₹300 each, you earn ₹3,000 with zero risk.',
+    tag: 'Popular with cafés & rooftop spaces',
+  },
+  {
+    id: 'hybrid',
+    label: 'Hybrid',
+    desc: 'A smaller fixed base rent plus a smaller revenue share — you get a safety net and still benefit if the event is a hit.',
+    example: 'e.g. ₹2,000 base + 10% of tickets. Creator sells 40 tickets at ₹300 → you earn ₹2,000 + ₹1,200 = ₹3,200.',
+    tag: 'Good for restaurants & event halls',
+  },
+  {
+    id: 'f_and_b_minimum',
+    label: 'F&B Minimum',
+    desc: 'No rental fee — the creator\'s group just commits to spending a minimum amount on food and drinks.',
+    example: 'e.g. ₹8,000 F&B minimum. Perfect for a 20-person dinner event at your café — the order covers your floor.',
+    tag: 'Ideal for cafés, restaurants & bars',
+  },
 ]
 
 export default function AddaStep3Page() {
@@ -130,7 +154,7 @@ export default function AddaStep3Page() {
         <div className="space-y-4">
           <h2 className="font-headline font-bold text-on-surface">Pricing model <span className="text-error">*</span></h2>
           <div className="space-y-3">
-            {PRICING_MODELS.map(({ id, label, desc }) => {
+            {PRICING_MODELS.map(({ id, label, desc, example, tag }) => {
               const selected = pricingModel === id
               return (
                 <button
@@ -143,11 +167,19 @@ export default function AddaStep3Page() {
                       : 'bg-surface-container-low border-transparent hover:bg-surface-container-high'
                   }`}
                 >
-                  <div className="flex items-center gap-3">
-                    <div className={`w-4 h-4 rounded-full border-2 flex-shrink-0 ${selected ? 'bg-primary border-primary' : 'border-on-surface-variant'}`} />
-                    <div>
-                      <div className="font-headline font-bold text-on-surface text-sm">{label}</div>
-                      <div className="text-xs text-on-surface-variant mt-0.5">{desc}</div>
+                  <div className="flex items-start gap-3">
+                    <div className={`w-4 h-4 rounded-full border-2 flex-shrink-0 mt-0.5 ${selected ? 'bg-primary border-primary' : 'border-on-surface-variant'}`} />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-headline font-bold text-on-surface text-sm">{label}</span>
+                        {tag && (
+                          <span className="text-[10px] font-semibold font-label px-2 py-0.5 rounded-full bg-primary/10 text-primary leading-none">
+                            {tag}
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-xs text-on-surface-variant mt-0.5 leading-relaxed">{desc}</div>
+                      <div className="text-xs text-on-surface-variant/70 mt-1.5 leading-relaxed italic">{example}</div>
                     </div>
                   </div>
                 </button>

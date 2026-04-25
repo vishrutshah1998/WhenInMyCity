@@ -92,7 +92,7 @@ export default function AddaStep4Page() {
       <main className="flex-1 px-6 pt-8 pb-36 max-w-2xl mx-auto w-full space-y-6">
         <div className="mb-8">
           <h1 className="text-3xl font-headline font-extrabold tracking-tight text-on-surface mb-2">How can creators reach you?</h1>
-          <p className="text-on-surface-variant text-base leading-relaxed">All fields are optional — add at least one so creators can get in touch.</p>
+          <p className="text-on-surface-variant text-base leading-relaxed">Add at least one so creators can reach you.</p>
         </div>
 
         {/* WhatsApp */}
@@ -163,7 +163,7 @@ export default function AddaStep4Page() {
         <div className="max-w-2xl mx-auto">
           <button
             onClick={handleSubmit}
-            disabled={isPending}
+            disabled={isPending || (!whatsapp.trim() && !email.trim() && !instagram.trim())}
             className="w-full py-4 px-6 bg-primary text-on-primary font-headline font-bold rounded-lg shadow-lg active:scale-[0.98] transition-transform flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
           >
             {isPending ? 'Creating your Adda…' : 'List my Adda'}

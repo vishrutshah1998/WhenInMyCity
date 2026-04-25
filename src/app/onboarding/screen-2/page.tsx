@@ -24,6 +24,7 @@ export default function Screen2Page() {
   const [subTypes, setSubTypes] = useState<string[]>([])
   const [city, setCity] = useState('')
   const [citySearch, setCitySearch] = useState('')
+  const [cityFocused, setCityFocused] = useState(false)
   const [offlineActivities, setOfflineActivities] = useState<string[]>([])
   const [error, setError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
@@ -64,7 +65,22 @@ export default function Screen2Page() {
 
   const filteredCities = useMemo(() => {
     const q = citySearch.trim().toLowerCase()
-    if (!q) return CITIES
+    if (!q) {
+      // Tier-2 focus cities float to the top; rest follow alphabetically
+      const tier2 = new Set([
+        'jaipur', 'ahmedabad', 'surat', 'vadodara', 'lucknow', 'kanpur',
+        'nagpur', 'indore', 'bhopal', 'chandigarh', 'patna', 'visakhapatnam',
+        'kochi', 'coimbatore', 'madurai', 'nashik', 'ludhiana', 'agra',
+        'varanasi', 'ranchi', 'bhubaneswar', 'amritsar', 'rajkot', 'mysuru',
+        'guwahati', 'dehradun', 'udaipur', 'jodhpur',
+      ])
+      return [...CITIES].sort((a, b) => {
+        const aT = tier2.has(a.id) ? 0 : 1
+        const bT = tier2.has(b.id) ? 0 : 1
+        if (aT !== bT) return aT - bT
+        return a.name.localeCompare(b.name)
+      })
+    }
     return CITIES.filter(
       (c) =>
         c.name.toLowerCase().includes(q) ||
@@ -202,16 +218,18 @@ export default function Screen2Page() {
             <input
               id="city-search"
               type="text"
-              placeholder="Search city…"
+              placeholder="Search or scroll to pick a city…"
               value={citySearch}
               onChange={(e) => { setCitySearch(e.target.value); setCity('') }}
+              onFocus={() => setCityFocused(true)}
+              onBlur={() => setCityFocused(false)}
               className="w-full pl-11 pr-5 py-4 rounded-xl bg-surface-container-low border-2 border-transparent focus:border-primary/30 focus:bg-surface-container transition-all text-on-surface placeholder:text-on-surface-variant/40 outline-none"
             />
           </div>
 
-          {/* City results */}
-          {citySearch && !city && (
-            <div className="bg-surface-container rounded-xl border border-outline-variant/20 overflow-hidden max-h-48 overflow-y-auto shadow-sm">
+          {/* City results — show on focus or while typing */}
+          {cityFocused && !city && (
+            <div className="bg-surface-container rounded-xl border border-outline-variant/20 overflow-hidden max-h-52 overflow-y-auto shadow-sm">
               {filteredCities.length === 0 ? (
                 <p className="px-4 py-3 text-sm text-on-surface-variant">No cities found.</p>
               ) : (
@@ -219,6 +237,7 @@ export default function Screen2Page() {
                   <button
                     key={c.id}
                     type="button"
+                    onMouseDown={(e) => e.preventDefault()}
                     onClick={() => handleCitySelect(c.name)}
                     className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-surface-container-high transition-colors text-sm border-b border-outline-variant/10 last:border-0"
                   >

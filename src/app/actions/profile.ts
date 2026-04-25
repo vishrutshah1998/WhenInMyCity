@@ -7,6 +7,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { ProfileThemeSchema } from '@/types/theme'
 import type { ProfileTheme } from '@/types/theme'
 import type { CreatorType } from '@/types/database'
+import { UsernameSchema } from '@/types/onboarding'
 
 // ---------------------------------------------------------------------------
 // updateProfileTheme
@@ -84,6 +85,7 @@ export interface UpdateProfileInput {
   display_name: string
   bio: string
   city: string
+  username?: string
   creator_type?: CreatorType
   sub_types: string[]
   offline_activities: string[]
@@ -102,6 +104,25 @@ export async function updateProfile(
   if (!input.city.trim()) return { error: 'City is required.' }
   if (input.bio.length > 160) return { error: 'Bio must be 160 characters or fewer.' }
 
+  // Validate and check availability for username changes
+  let newUsername: string | undefined
+  if (input.username !== undefined) {
+    const normalized = input.username.trim().toLowerCase()
+    const parsed = UsernameSchema.safeParse(normalized)
+    if (!parsed.success) return { error: parsed.error.errors[0].message }
+
+    const admin = createAdminClient()
+    const { data: taken } = await admin
+      .from('user_profiles')
+      .select('id')
+      .ilike('username', normalized)
+      .neq('id', user.id)
+      .maybeSingle()
+
+    if (taken) return { error: 'That username is already taken. Please choose another.' }
+    newUsername = normalized
+  }
+
   // Clean social links — strip empty values and normalise URLs
   const socialLinks: Record<string, string> = {}
   for (const [platform, url] of Object.entries(input.social_links)) {
@@ -119,6 +140,7 @@ export async function updateProfile(
       display_name:       input.display_name.trim(),
       bio:                input.bio.trim() || null,
       city:               input.city.trim(),
+      ...(newUsername !== undefined ? { username: newUsername } : {}),
       ...(input.creator_type ? { creator_type: input.creator_type } : {}),
       sub_types:          input.sub_types,
       offline_activities: input.offline_activities,
@@ -130,6 +152,7 @@ export async function updateProfile(
 
   if (error) {
     console.error('[updateProfile]', error.message)
+    if (error.code === '23505') return { error: 'That username is already taken. Please choose another.' }
     return { error: 'Failed to save profile.' }
   }
 

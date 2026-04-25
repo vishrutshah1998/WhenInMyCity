@@ -1,9 +1,10 @@
 'use client'
 
-import { useState, useTransition, useRef, useMemo, useEffect } from 'react'
+import { useState, useTransition, useRef, useMemo, useEffect, useCallback } from 'react'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { updateProfile, uploadAvatar, deleteAccount } from '@/app/actions/profile'
+import { checkUsernameAvailable } from '@/app/actions/onboarding'
 import { signOut } from '@/app/actions/auth'
 import type { CreatorType } from '@/types/database'
 import { createClient } from '@/lib/supabase/client'
@@ -77,6 +78,12 @@ export default function ProfileForm() {
   // Offline activities / vibes
   const [offlineActivities, setOfflineActivities] = useState<string[]>([])
 
+  // Username editing + availability
+  const [savedUsername, setSavedUsername]         = useState('')
+  const [usernameStatus, setUsernameStatus]       = useState<'idle' | 'checking' | 'available' | 'taken' | 'invalid'>('idle')
+  const [usernameError, setUsernameError]         = useState<string | null>(null)
+  const [usernameCheckTimer, setUsernameCheckTimer] = useState<ReturnType<typeof setTimeout> | null>(null)
+
   // Social links — keyed by platform id
   const [socialInputs, setSocialInputs]           = useState<Record<string, string>>({})
   const [expandedPlatforms, setExpandedPlatforms] = useState<Set<string>>(new Set())
@@ -138,6 +145,7 @@ export default function ProfileForm() {
           setBio(data.bio ?? '')
           setAvatarUrl(data.avatar_url ?? null)
           setUsername(data.username)
+          setSavedUsername(data.username)
 
           // Only pre-select if it's a V2 type
           const ct = data.creator_type as string
@@ -193,6 +201,35 @@ export default function ProfileForm() {
     setCitySearch(name)
   }
 
+  // ── Username handlers ─────────────────────────────────────────────────────
+  const checkUsername = useCallback(async (value: string) => {
+    if (!value || value.length < 3) { setUsernameStatus('idle'); return }
+    setUsernameStatus('checking')
+    const result = await checkUsernameAvailable(value)
+    if (!result.available && result.error) {
+      setUsernameStatus('invalid')
+      setUsernameError(result.error)
+    } else if (result.available) {
+      setUsernameStatus('available')
+      setUsernameError(null)
+    } else {
+      setUsernameStatus('taken')
+      setUsernameError('That username is already taken.')
+    }
+  }, [])
+
+  function handleUsernameChange(value: string) {
+    const n = value.toLowerCase().replace(/[^a-z0-9_]/g, '').slice(0, 30)
+    setUsername(n)
+    setUsernameStatus('idle')
+    setUsernameError(null)
+    if (usernameCheckTimer) clearTimeout(usernameCheckTimer)
+    // Only check availability if actually changed from saved value
+    if (n !== savedUsername && n.length >= 3) {
+      setUsernameCheckTimer(setTimeout(() => checkUsername(n), 600))
+    }
+  }
+
   // ── Social link handlers ───────────────────────────────────────────────────
   function togglePlatform(id: string) {
     setExpandedPlatforms((prev) => {
@@ -218,6 +255,10 @@ export default function ProfileForm() {
 
   function handleSave() {
     if (!city.trim()) { setErrorMsg('Please select your city.'); return }
+    if (usernameStatus === 'taken' || usernameStatus === 'invalid') {
+      setErrorMsg(usernameError || 'Please fix your username before saving.')
+      return
+    }
     setSaveStatus('saving')
     setErrorMsg(null)
 
@@ -236,6 +277,7 @@ export default function ProfileForm() {
         display_name:       displayName,
         bio,
         city,
+        username:           username !== savedUsername ? username : undefined,
         creator_type:       creatorType ?? undefined,
         sub_types:          subTypes,
         offline_activities: offlineActivities,
@@ -249,6 +291,8 @@ export default function ProfileForm() {
       } else {
         setSaveStatus('saved')
         setAvatarFile(null)
+        setSavedUsername(username)
+        setUsernameStatus('idle')
         router.refresh()
         setTimeout(() => setSaveStatus('idle'), 3000)
       }
@@ -333,6 +377,37 @@ export default function ProfileForm() {
             className={inputCls}
             placeholder="Your name or stage name"
           />
+        </div>
+
+        {/* Username */}
+        <div>
+          <label className={labelCls}>Username</label>
+          <div className="relative">
+            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-bold text-on-surface-variant">@</span>
+            <input
+              type="text"
+              value={username}
+              onChange={(e) => handleUsernameChange(e.target.value)}
+              maxLength={30}
+              className={`${inputCls} pl-8 pr-28`}
+              placeholder="yourhandle"
+            />
+            {usernameStatus !== 'idle' && (
+              <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                {usernameStatus === 'checking' && (
+                  <span className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">Checking…</span>
+                )}
+                {usernameStatus === 'available' && (
+                  <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: colors.primary }}>Available ✓</span>
+                )}
+                {(usernameStatus === 'taken' || usernameStatus === 'invalid') && (
+                  <span className="text-[10px] font-bold text-error uppercase tracking-wider">Taken</span>
+                )}
+              </div>
+            )}
+          </div>
+          {usernameError && <p className="text-xs text-error mt-1">{usernameError}</p>}
+          <p className="text-xs text-on-surface-variant mt-1">wheninmycity.com/{username || '…'}</p>
         </div>
 
         {/* Bio */}
@@ -584,22 +659,13 @@ export default function ProfileForm() {
 
       {/* ── Account ────────────────────────────────────────────────────── */}
       <Section title="Account">
-        <div className="flex flex-col gap-3">
-          <div className="flex items-center justify-between py-2 border-b border-white/5">
-            <div>
-              <p className="text-sm font-semibold text-on-surface">Username</p>
-              <p className="text-xs text-on-surface-variant mt-0.5">@{username} · cannot be changed yet</p>
-            </div>
-            <span className="material-symbols-outlined text-outline">lock</span>
-          </div>
-          <button
-            onClick={() => signOut()}
-            className="flex items-center gap-2 w-full px-4 py-3 rounded-xl bg-surface-container-low text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high transition-all text-sm font-semibold"
-          >
-            <span className="material-symbols-outlined text-base">logout</span>
-            Sign out
-          </button>
-        </div>
+        <button
+          onClick={() => signOut()}
+          className="flex items-center gap-2 w-full px-4 py-3 rounded-xl bg-surface-container-low text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high transition-all text-sm font-semibold"
+        >
+          <span className="material-symbols-outlined text-base">logout</span>
+          Sign out
+        </button>
       </Section>
 
       {/* ── Danger zone ────────────────────────────────────────────────── */}

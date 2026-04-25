@@ -20,13 +20,14 @@ interface NavItem {
   exact?: boolean
 }
 
-const CREATOR_NAV: NavItem[] = [
-  { href: '/dashboard',        icon: 'dashboard',            label: 'Dashboard', exact: true },
-  { href: '/dashboard/studio', icon: 'web',                  label: 'My Page' },
-  { href: '/dashboard/events', icon: 'event',                label: 'Events' },
-  { href: '/dashboard/tickets',icon: 'confirmation_number',  label: 'Tickets' },
-  { href: '/dashboard/bookings',icon: 'calendar_today',      label: 'Bookings' },
+const CORE_NAV: NavItem[] = [
+  { href: '/dashboard',        icon: 'dashboard', label: 'Dashboard', exact: true },
+  { href: '/dashboard/studio', icon: 'web',       label: 'My Page' },
+  { href: '/dashboard/events', icon: 'event',     label: 'Events' },
 ]
+
+const BOOKINGS_ITEM: NavItem = { href: '/dashboard/bookings', icon: 'calendar_today',     label: 'Bookings' }
+const TICKETS_ITEM: NavItem  = { href: '/dashboard/tickets',  icon: 'confirmation_number', label: 'Tickets' }
 
 const GROWTH_NAV: NavItem[] = [
   { href: '/dashboard/leads',        icon: 'group',            label: 'Leads' },
@@ -36,12 +37,12 @@ const GROWTH_NAV: NavItem[] = [
 ]
 
 const SPACES_NAV: NavItem[] = [
-  { href: '/dashboard/venues', icon: 'apartment', label: 'Venues' },
+  { href: '/dashboard/venues', icon: 'apartment',         label: 'Venues' },
   { href: '/dashboard/tier',   icon: 'workspace_premium', label: 'Tier Progress' },
 ]
 
 const ACCOUNT_NAV: NavItem[] = [
-  { href: '/dashboard/profile',  icon: 'manage_accounts', label: 'Profile Settings' },
+  { href: '/dashboard/profile', icon: 'manage_accounts', label: 'Profile Settings' },
 ]
 
 interface SidebarProps {
@@ -49,9 +50,12 @@ interface SidebarProps {
   displayName: string
   tier: MakerTier
   initials: string
+  hasAnyEvent: boolean
+  hasPublishedEvent: boolean
+  hasAnyRsvp: boolean
 }
 
-export default function Sidebar({ username, displayName, tier, initials }: SidebarProps) {
+export default function Sidebar({ username, displayName, tier, initials, hasAnyEvent, hasPublishedEvent, hasAnyRsvp }: SidebarProps) {
   const pathname = usePathname()
 
   function isActive(item: NavItem) {
@@ -98,19 +102,25 @@ export default function Sidebar({ username, displayName, tier, initials }: Sideb
       {/* Nav */}
       <nav style={{ flex: 1, padding: '16px 12px', display: 'flex', flexDirection: 'column', gap: 2 }}>
         <SectionLabel>Creator</SectionLabel>
-        {CREATOR_NAV.map((item) => (
+        {CORE_NAV.map((item) => (
           <NavLink key={item.href} item={item} active={isActive(item)} />
         ))}
+        {hasAnyEvent && <NavLink item={BOOKINGS_ITEM} active={isActive(BOOKINGS_ITEM)} />}
+        {hasAnyRsvp  && <NavLink item={TICKETS_ITEM}  active={isActive(TICKETS_ITEM)} />}
 
-        <SectionLabel>Growth</SectionLabel>
-        {GROWTH_NAV.map((item) => (
-          <NavLink key={item.href} item={item} active={isActive(item)} />
-        ))}
+        {hasPublishedEvent && (
+          <>
+            <SectionLabel>Growth</SectionLabel>
+            {GROWTH_NAV.map((item) => (
+              <NavLink key={item.href} item={item} active={isActive(item)} />
+            ))}
 
-        <SectionLabel>Spaces</SectionLabel>
-        {SPACES_NAV.map((item) => (
-          <NavLink key={item.href} item={item} active={isActive(item)} />
-        ))}
+            <SectionLabel>Spaces</SectionLabel>
+            {SPACES_NAV.map((item) => (
+              <NavLink key={item.href} item={item} active={isActive(item)} />
+            ))}
+          </>
+        )}
 
         <SectionLabel>Account</SectionLabel>
         {ACCOUNT_NAV.map((item) => (

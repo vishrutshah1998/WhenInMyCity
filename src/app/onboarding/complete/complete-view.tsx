@@ -95,7 +95,7 @@ export default function CompleteView({ username, displayName, city, avatarUrl }:
           {/* Actions */}
           <div className="w-full flex flex-col gap-3">
             <button
-              onClick={() => router.push('/dashboard')}
+              onClick={() => router.push(`/${username}`)}
               className="w-full py-4 px-6 bg-primary text-white font-headline font-bold rounded-lg shadow-[0_8px_20px_rgba(232,87,42,0.3)] active:scale-95 transition-all duration-150"
             >
               Go to my page
@@ -104,7 +104,7 @@ export default function CompleteView({ username, displayName, city, avatarUrl }:
               onClick={() => router.push('/dashboard')}
               className="w-full py-4 px-6 bg-surface-container-high text-on-surface font-headline font-semibold rounded-lg hover:bg-surface-container-highest transition-colors active:scale-95 border border-white/5"
             >
-              Preview my page
+              Set up dashboard
             </button>
           </div>
         </main>

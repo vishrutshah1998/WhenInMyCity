@@ -4,35 +4,14 @@ import { useState, useTransition, useEffect, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import { completeOnboarding, uploadOnboardingAvatar } from '@/app/actions/onboarding'
-import { getCategoryConfig, getCategoryColors, CREATOR_CATEGORIES, EXPLORING_OPTION } from '@/lib/constants/categories'
+import { getCategoryColors, getCategoryConfig, CREATOR_CATEGORIES, EXPLORING_OPTION } from '@/lib/constants/categories'
 import type { CreatorType } from '@/types/database'
 import type { Screen1Data, Screen2Data } from '@/types/onboarding'
 
-type ThemeVariant = 'soft' | 'bold' | 'dark'
-
-interface ThemeOption {
-  id: ThemeVariant
-  label: string
-  bg: string
-  accent: string
-  text: string
-}
-
-function buildThemeOptions(primary: string, secondary: string): ThemeOption[] {
-  const darkened = darkenHex(primary, 0.45)
-  return [
-    { id: 'soft',  label: 'Soft',  bg: secondary, accent: primary,    text: '#1a1a1a' },
-    { id: 'bold',  label: 'Bold',  bg: primary,   accent: '#ffffff',   text: '#ffffff' },
-    { id: 'dark',  label: 'Dark',  bg: darkened,  accent: primary,     text: '#f0f0f0' },
-  ]
-}
-
-function darkenHex(hex: string, amount: number): string {
-  const n = parseInt(hex.replace('#', ''), 16)
-  const r = Math.max(0, Math.round(((n >> 16) & 0xff) * (1 - amount)))
-  const g = Math.max(0, Math.round(((n >> 8) & 0xff) * (1 - amount)))
-  const b = Math.max(0, Math.round((n & 0xff) * (1 - amount)))
-  return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`
+function normalizeUrl(url: string, platform: string): string {
+  if (platform === 'whatsapp') return url
+  if (url && !url.startsWith('http')) return `https://${url}`
+  return url
 }
 
 function loadScreenData(): { s1: Screen1Data | null; s2: Screen2Data | null } {
@@ -52,10 +31,8 @@ export default function Screen3Page() {
 
   const [s1, setS1] = useState<Screen1Data | null>(null)
   const [s2, setS2] = useState<Screen2Data | null>(null)
-  const [socialInputs, setSocialInputs] = useState<Record<string, string>>({})
-  const [expandedPlatforms, setExpandedPlatforms] = useState<Set<string>>(new Set())
   const [bio, setBio] = useState('')
-  const [themeVariant, setThemeVariant] = useState<ThemeVariant>('soft')
+  const [socialInputs, setSocialInputs] = useState<Record<string, string>>({})
   const [avatarFile, setAvatarFile] = useState<File | null>(null)
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -71,7 +48,6 @@ export default function Screen3Page() {
     setS2(data2)
   }, [router])
 
-  // Revoke object URL on unmount
   useEffect(() => {
     return () => { if (avatarPreview) URL.revokeObjectURL(avatarPreview) }
   }, [avatarPreview])
@@ -86,20 +62,17 @@ export default function Screen3Page() {
     ? EXPLORING_OPTION.label
     : CREATOR_CATEGORIES.find((c) => c.id === s1?.creatorType)?.label ?? ''
 
+  const city = s2?.city ?? ''
+  const rawBioSuggestion = categoryConfig?.bioSuggestion ?? ''
+  const bioSuggestion = city
+    ? rawBioSuggestion.replace(/\[city\]/g, city)
+    : rawBioSuggestion
+  const bioPlaceholder = bioSuggestion
+    ? `e.g. ${bioSuggestion}`
+    : city
+      ? `e.g. Who are you and what do you create in ${city}?`
+      : 'e.g. Who are you and what do you create?'
   const platforms = categoryConfig?.suggestedPlatforms ?? []
-  const themeOptions = buildThemeOptions(colors.primary, colors.secondary)
-  const activeTheme = themeOptions.find((t) => t.id === themeVariant)!
-
-  const bioSuggestion = categoryConfig?.bioSuggestion ?? ''
-
-  function togglePlatform(id: string) {
-    setExpandedPlatforms((prev) => {
-      const next = new Set(prev)
-      if (next.has(id)) next.delete(id)
-      else next.add(id)
-      return next
-    })
-  }
 
   function handleSocialInput(platform: string, value: string) {
     setSocialInputs((prev) => ({ ...prev, [platform]: value }))
@@ -117,11 +90,11 @@ export default function Screen3Page() {
     if (!s1 || !s2) return
     setError(null)
 
-    const socialLinks = Object.entries(socialInputs)
-      .filter(([, url]) => url.trim().length > 0)
-      .map(([platform, url]) => ({ platform, url: url.trim() }))
-
     startTransition(async () => {
+      const socialLinks = Object.entries(socialInputs)
+        .filter(([, url]) => url.trim().length > 0)
+        .map(([platform, url]) => ({ platform, url: normalizeUrl(url.trim(), platform) }))
+
       const result = await completeOnboarding({
         displayName: s1.displayName,
         username: s1.username,
@@ -131,12 +104,11 @@ export default function Screen3Page() {
         offlineActivities: s2.offlineActivities ?? [],
         bio: bio.trim() || undefined,
         socialLinks,
-        themeVariant,
+        themeVariant: 'soft',
       })
 
       if (result.error) { setError(result.error); return }
 
-      // Upload avatar separately
       if (avatarFile) {
         const fd = new FormData()
         fd.append('file', avatarFile)
@@ -151,7 +123,7 @@ export default function Screen3Page() {
         `/onboarding/complete?username=${encodeURIComponent(result.username)}&name=${encodeURIComponent(s1.displayName)}`,
       )
     })
-  }, [s1, s2, socialInputs, bio, themeVariant, avatarFile, router])
+  }, [s1, s2, bio, socialInputs, avatarFile, router])
 
   if (!s1 || !s2) return null
 
@@ -188,7 +160,7 @@ export default function Screen3Page() {
         <div>
           <p className="text-sm font-medium text-on-surface-variant mb-1">Almost done ✨</p>
           <h1 className="text-2xl font-headline font-extrabold text-on-surface tracking-tight">
-            Where should people find you?
+            Add a photo and a quick bio.
           </h1>
         </div>
 
@@ -226,58 +198,7 @@ export default function Screen3Page() {
           </div>
         </section>
 
-        {/* 3A — Socials */}
-        {platforms.length > 0 && (
-          <section className="space-y-3">
-            <label className="block text-base font-semibold text-on-surface">
-              Where can people find you?
-            </label>
-            <div className="space-y-2">
-              {platforms.map((p) => {
-                const isExpanded = expandedPlatforms.has(p.id)
-                const value = socialInputs[p.id] ?? ''
-                const hasValue = value.trim().length > 0
-                return (
-                  <div
-                    key={p.id}
-                    className={`rounded-xl overflow-hidden border-2 transition-all duration-200 ${!(isExpanded || hasValue) ? 'bg-surface-container-low' : ''}`}
-                    style={{ borderColor: isExpanded || hasValue ? colors.primary : 'transparent', backgroundColor: isExpanded || hasValue ? `${colors.secondary}40` : undefined }}
-                  >
-                    <button
-                      type="button"
-                      onClick={() => togglePlatform(p.id)}
-                      className="w-full flex items-center justify-between px-4 py-3 text-left"
-                    >
-                      <span className="font-medium text-sm">{p.label}</span>
-                      <div className="flex items-center gap-2">
-                        {hasValue && (
-                          <span className="material-symbols-outlined text-sm" style={{ color: colors.primary, fontVariationSettings: "'FILL' 1" }}>check_circle</span>
-                        )}
-                        <span className="material-symbols-outlined text-on-surface-variant text-sm">
-                          {isExpanded ? 'expand_less' : 'expand_more'}
-                        </span>
-                      </div>
-                    </button>
-                    {isExpanded && (
-                      <div className="px-4 pb-3">
-                        <input
-                          type="text"
-                          placeholder={p.placeholder}
-                          value={value}
-                          onChange={(e) => handleSocialInput(p.id, e.target.value)}
-                          className="w-full px-4 py-3 rounded-lg bg-background border border-outline-variant/20 text-sm text-on-surface placeholder:text-on-surface-variant/40 outline-none focus:border-primary/30 transition-colors"
-                          autoFocus
-                        />
-                      </div>
-                    )}
-                  </div>
-                )
-              })}
-            </div>
-          </section>
-        )}
-
-        {/* 3B — Bio */}
+        {/* Bio */}
         <section className="space-y-3">
           <label className="block text-base font-semibold text-on-surface" htmlFor="bio">
             Tell people who you are in 1–2 lines.
@@ -285,7 +206,7 @@ export default function Screen3Page() {
           </label>
           <textarea
             id="bio"
-            placeholder="e.g. Singer-songwriter from Jaipur…"
+            placeholder={bioPlaceholder}
             value={bio}
             onChange={(e) => setBio(e.target.value)}
             maxLength={160}
@@ -295,7 +216,6 @@ export default function Screen3Page() {
           <div className="flex items-center justify-between px-1">
             <p className="text-xs text-on-surface-variant/60">{bio.length}/160</p>
           </div>
-          {/* Bio suggestion chip */}
           {bioSuggestion && !bio && (
             <button
               type="button"
@@ -309,91 +229,34 @@ export default function Screen3Page() {
           )}
         </section>
 
-        {/* 3C — Theme preview */}
-        <section className="space-y-4">
-          <p className="text-base font-semibold text-on-surface">Your page, ready to go.</p>
-
-          {/* Theme variant selector */}
-          <div className="flex gap-2">
-            {themeOptions.map((opt) => (
-              <button
-                key={opt.id}
-                type="button"
-                onClick={() => setThemeVariant(opt.id)}
-                className="flex-1 py-2 rounded-lg text-xs font-bold uppercase tracking-wider border-2 transition-all duration-200 active:scale-95"
-                style={{
-                  backgroundColor: opt.bg,
-                  borderColor: themeVariant === opt.id ? colors.primary : 'transparent',
-                  color: opt.text,
-                }}
-              >
-                {opt.label}
-              </button>
-            ))}
-          </div>
-
-          {/* Mini page preview */}
-          <div
-            className="rounded-2xl overflow-hidden p-6 transition-all duration-500 shadow-md"
-            style={{ backgroundColor: activeTheme.bg }}
-          >
-            {/* Avatar + name */}
-            <div className="flex items-center gap-4 mb-5">
-              <div
-                className="w-14 h-14 rounded-full overflow-hidden flex items-center justify-center border-2 shrink-0"
-                style={{ borderColor: `${activeTheme.accent}50` }}
-              >
-                {avatarPreview ? (
-                  <Image src={avatarPreview} alt="Preview" width={56} height={56} className="w-full h-full object-cover" unoptimized />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center" style={{ backgroundColor: `${activeTheme.accent}20` }}>
-                    <span className="material-symbols-outlined" style={{ color: activeTheme.accent, fontVariationSettings: "'FILL' 1" }}>person</span>
-                  </div>
-                )}
-              </div>
-              <div>
-                <p className="font-headline font-bold text-base leading-tight" style={{ color: activeTheme.text }}>
-                  {s1.displayName}
-                </p>
-                <p className="text-xs mt-0.5" style={{ color: `${activeTheme.text}80` }}>@{s1.username}</p>
-                {s2.city && (
-                  <p className="text-xs mt-0.5" style={{ color: `${activeTheme.text}70` }}>📍 {s2.city}</p>
-                )}
-              </div>
-            </div>
-
-            {/* Bio preview */}
-            {bio && (
-              <p className="text-sm mb-5 leading-relaxed" style={{ color: `${activeTheme.text}90` }}>
-                {bio}
+        {/* Social links — flat, optional */}
+        {platforms.length > 0 && (
+          <section className="space-y-4">
+            <div>
+              <p className="text-base font-semibold text-on-surface">
+                Add your links
+                <span className="text-sm font-normal text-on-surface-variant ml-2">(optional)</span>
               </p>
-            )}
-
-            {/* Social link pills */}
-            <div className="flex flex-wrap gap-2">
-              {platforms
-                .filter((p) => socialInputs[p.id]?.trim())
-                .slice(0, 4)
-                .map((p) => (
-                  <div
-                    key={p.id}
-                    className="px-3 py-1.5 rounded-full text-xs font-medium"
-                    style={{ backgroundColor: `${activeTheme.accent}20`, color: activeTheme.accent }}
-                  >
-                    {p.label}
-                  </div>
-                ))}
-              {platforms.filter((p) => socialInputs[p.id]?.trim()).length === 0 && (
-                <div
-                  className="px-3 py-1.5 rounded-full text-xs font-medium"
-                  style={{ backgroundColor: `${activeTheme.accent}15`, color: `${activeTheme.text}60` }}
-                >
-                  Add your links above
-                </div>
-              )}
+              <p className="text-sm text-on-surface-variant mt-0.5">Skip for now — you can add these from your profile later.</p>
             </div>
-          </div>
-        </section>
+            <div className="space-y-3">
+              {platforms.map((p) => (
+                <div key={p.id}>
+                  <label className="block text-xs font-semibold text-on-surface-variant uppercase tracking-wide mb-1.5">
+                    {p.label}
+                  </label>
+                  <input
+                    type="text"
+                    placeholder={p.placeholder}
+                    value={socialInputs[p.id] ?? ''}
+                    onChange={(e) => handleSocialInput(p.id, e.target.value)}
+                    className="w-full px-4 py-3 rounded-xl bg-surface-container-low border-2 border-transparent focus:border-primary/30 focus:bg-surface-container transition-all text-on-surface placeholder:text-on-surface-variant/40 outline-none text-sm"
+                  />
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
 
         {error && <p className="text-error text-sm font-medium">{error}</p>}
       </main>
