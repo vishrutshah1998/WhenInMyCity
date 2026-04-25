@@ -147,10 +147,10 @@ export default function Screen3Page() {
           <div className="h-1.5 w-32 bg-surface-container-high rounded-full overflow-hidden">
             <div
               className="h-full rounded-full transition-all duration-500"
-              style={{ width: '100%', backgroundColor: colors.primary }}
+              style={{ width: '75%', backgroundColor: colors.primary }}
             />
           </div>
-          <span className="text-xs text-on-surface-variant font-medium">3 / 3</span>
+          <span className="text-xs text-on-surface-variant font-medium">3 / 4</span>
         </div>
       </header>
 
@@ -273,6 +273,16 @@ export default function Screen3Page() {
           >
             {isPending ? 'Launching your page…' : 'Launch my page 🚀'}
           </button>
+          {platforms.length > 0 && Object.values(socialInputs).every(v => !v.trim()) && (
+            <button
+              type="button"
+              onClick={handleSubmit}
+              disabled={isPending}
+              className="w-full mt-3 py-2 text-sm font-medium text-on-surface-variant hover:text-on-surface transition-colors disabled:opacity-40"
+            >
+              Skip for now
+            </button>
+          )}
         </div>
       </footer>
 

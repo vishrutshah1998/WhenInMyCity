@@ -76,7 +76,7 @@ function SignInForm() {
             <>
               <div className="mb-10 text-center md:text-left">
                 <h1 className="font-headline font-bold text-3xl md:text-4xl text-on-surface tracking-tight mb-2">
-                  Welcome back
+                  Welcome
                 </h1>
                 <p className="text-on-surface-variant font-medium">
                   Enter your phone number to continue

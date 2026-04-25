@@ -83,10 +83,10 @@ export default function Screen1Page() {
           <div className="h-1.5 w-32 bg-surface-container-high rounded-full overflow-hidden">
             <div
               className="h-full rounded-full transition-all duration-500"
-              style={{ width: '33%', backgroundColor: colors.primary }}
+              style={{ width: '25%', backgroundColor: colors.primary }}
             />
           </div>
-          <span className="text-xs text-on-surface-variant font-medium">1 / 3</span>
+          <span className="text-xs text-on-surface-variant font-medium">1 / 4</span>
         </div>
       </header>
 

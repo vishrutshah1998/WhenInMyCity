@@ -151,10 +151,10 @@ export default function Screen2Page() {
           <div className="h-1.5 w-32 bg-surface-container-high rounded-full overflow-hidden">
             <div
               className="h-full rounded-full transition-all duration-500"
-              style={{ width: '66%', backgroundColor: colors.primary }}
+              style={{ width: '50%', backgroundColor: colors.primary }}
             />
           </div>
-          <span className="text-xs text-on-surface-variant font-medium">2 / 3</span>
+          <span className="text-xs text-on-surface-variant font-medium">2 / 4</span>
         </div>
       </header>
 
@@ -176,14 +176,7 @@ export default function Screen2Page() {
         {categoryConfig && (
           <section className="space-y-4">
             <label className="block text-base font-semibold text-on-surface">
-              As someone in{' '}
-              <span
-                className="px-1.5 py-0.5 rounded-md font-bold"
-                style={{ backgroundColor: colors.secondary, color: '#1a1a1a' }}
-              >
-                {categoryLabel}
-              </span>
-              , what do you create?
+              What kind of events do you host?
             </label>
             <div className="flex flex-wrap gap-2">
               {categoryConfig.subTypes.map((st) => {
