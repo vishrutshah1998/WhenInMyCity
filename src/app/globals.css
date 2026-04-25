@@ -1,0 +1,330 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: dark;
+
+    /* ── WIMC Prototype Design System ────────────────────────────────────────
+       Dashboard & creator studio tokens. Used via CSS variables in new
+       dashboard components. Keep separate from the profile-theme system below.
+    ── */
+    --wimc-bg-base:     #0A0A0B;
+    --wimc-bg-raised:   #131318;
+    --wimc-bg-elevated: #1C1C24;
+    --wimc-bg-overlay:  #242430;
+    --wimc-bg-hover:    #2E2E3C;
+
+    --wimc-border-subtle:  rgba(255,255,255,0.06);
+    --wimc-border-default: rgba(255,255,255,0.10);
+    --wimc-border-strong:  rgba(255,255,255,0.18);
+
+    --wimc-text-primary:   #F0EFF8;
+    --wimc-text-secondary: #9896B0;
+    --wimc-text-muted:     #5C5A72;
+
+    --wimc-coral:       #E8705A;
+    --wimc-coral-light: #FFBBA6;
+    --wimc-coral-dim:   rgba(232,112,90,0.15);
+    --wimc-coral-glow:  rgba(232,112,90,0.35);
+
+    --wimc-teal:     #5DD9D0;
+    --wimc-teal-dim: rgba(93,217,208,0.12);
+
+    --wimc-amber:     #F5A800;
+    --wimc-amber-dim: rgba(245,168,0,0.12);
+
+    --wimc-gulaal: #E8342A;
+    --wimc-neel:   #3B6BCC;
+    --wimc-success: #4ADE80;
+
+    --wimc-sidebar-w: 220px;
+    --wimc-t-base:    220ms ease;
+
+    /* Default dark-orange theme — must match existing Tailwind color hex values */
+    --color-primary:                   232 87 42;   /* #E8572A */
+    --color-on-primary:                255 255 255;
+    --color-primary-container:         74 29 13;    /* #4A1D0D */
+    --color-on-primary-container:      255 219 209; /* #FFDBD1 */
+    --color-background:                18 18 18;    /* #121212 */
+    --color-on-background:             242 240 239; /* #F2F0EF */
+    --color-surface:                   18 18 18;
+    --color-on-surface:                242 240 239;
+    --color-on-surface-variant:        160 160 160; /* #A0A0A0 */
+    --color-surface-container-lowest:  12 10 8;     /* #0C0A08 */
+    --color-surface-container-low:     26 26 26;    /* #1A1A1A */
+    --color-surface-container:         36 36 36;    /* #242424 */
+    --color-surface-container-high:    44 44 44;    /* #2C2C2C */
+    --color-surface-container-highest: 51 51 51;    /* #333333 */
+    --color-outline:                   160 141 136; /* #A08D88 */
+    --color-outline-variant:           90 65 58;    /* #5A413A */
+  }
+
+  * {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    min-height: max(884px, 100dvh);
+  }
+
+  /* Hide scrollbar globally */
+  ::-webkit-scrollbar {
+    display: none;
+  }
+
+  * {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}
+
+@keyframes pulse-highlight {
+  0%, 100% { outline-color: transparent; }
+  25%, 75%  { outline-color: currentColor; }
+}
+
+/* Blob float — used by MinimalTheme cover */
+@keyframes wimc-blob {
+  0%,100% { transform: translate(0,0) scale(1); }
+  33%      { transform: translate(14px,-18px) scale(1.06); }
+  66%      { transform: translate(-10px,10px) scale(0.95); }
+}
+
+/* Aurora flowing background blobs — legacy (kept for safety) */
+@keyframes wimc-aurora-a {
+  0%, 100% { transform: translate(0%, 0%) scale(1);       }
+  33%       { transform: translate(6%, -10%) scale(1.14); }
+  66%       { transform: translate(-8%, 6%) scale(0.9);   }
+}
+@keyframes wimc-aurora-b {
+  0%, 100% { transform: translate(0%, 0%) scale(1);       }
+  33%       { transform: translate(-12%, 8%) scale(1.08); }
+  66%       { transform: translate(9%, -6%) scale(0.93);  }
+}
+@keyframes wimc-aurora-c {
+  0%, 100% { transform: translate(0%, 0%) scale(1);       }
+  33%       { transform: translate(10%, 7%) scale(0.88);  }
+  66%       { transform: translate(-5%, -11%) scale(1.1); }
+}
+
+/* Aurora: Luma-style vivid drifting blobs */
+@keyframes wimc-luma-a {
+  0%   { transform: translate(0%,    0%)    scale(1);    }
+  20%  { transform: translate(10%,  -14%)   scale(1.10); }
+  40%  { transform: translate(-8%,  -20%)   scale(1.15); }
+  60%  { transform: translate(-16%, -5%)    scale(1.06); }
+  80%  { transform: translate(-5%,  10%)    scale(0.93); }
+  100% { transform: translate(0%,    0%)    scale(1);    }
+}
+@keyframes wimc-luma-b {
+  0%   { transform: translate(0%,    0%)    scale(1);    }
+  25%  { transform: translate(-14%,  12%)   scale(1.12); }
+  50%  { transform: translate(8%,    20%)   scale(0.90); }
+  75%  { transform: translate(16%,  -8%)    scale(1.08); }
+  100% { transform: translate(0%,    0%)    scale(1);    }
+}
+@keyframes wimc-luma-c {
+  0%   { transform: translate(0%,    0%)    scale(1);    }
+  33%  { transform: translate(18%,   14%)   scale(1.09); }
+  66%  { transform: translate(-12%, -16%)   scale(1.06); }
+  100% { transform: translate(0%,    0%)    scale(1);    }
+}
+@keyframes wimc-luma-d {
+  0%   { transform: translate(0%,    0%)    scale(1);    }
+  30%  { transform: translate(-20%, -10%)   scale(1.14); }
+  60%  { transform: translate(12%,   16%)   scale(0.88); }
+  100% { transform: translate(0%,    0%)    scale(1);    }
+}
+@keyframes wimc-luma-e {
+  0%   { transform: translate(0%,    0%)    scale(1);    }
+  40%  { transform: translate(14%,  -18%)   scale(1.11); }
+  80%  { transform: translate(-10%,  12%)   scale(0.94); }
+  100% { transform: translate(0%,    0%)    scale(1);    }
+}
+
+/* Bloom pulse — used by BloomTheme cover */
+@keyframes wimc-bloom-pulse {
+  0%,100% { transform: scale(1);    opacity: 0.85; }
+  50%      { transform: scale(1.07); opacity: 1;    }
+}
+
+/* Marquee ticker scroll — used by marquee_text block */
+@keyframes wimc-marquee {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+
+/* Aurora: mesh — tighter blobs drifting in figure-8 paths */
+@keyframes wimc-mesh-a {
+  0%,100% { transform: translate(0%,   0%)   scale(1);    }
+  25%      { transform: translate(18%,  -12%) scale(1.08); }
+  50%      { transform: translate(30%,  8%)   scale(0.94); }
+  75%      { transform: translate(10%,  20%)  scale(1.05); }
+}
+@keyframes wimc-mesh-b {
+  0%,100% { transform: translate(0%,   0%)   scale(1);    }
+  25%      { transform: translate(-20%, 10%)  scale(1.06); }
+  50%      { transform: translate(-10%, -18%) scale(0.96); }
+  75%      { transform: translate(8%,   -8%)  scale(1.04); }
+}
+@keyframes wimc-mesh-c {
+  0%,100% { transform: translate(0%,   0%)   scale(1);    }
+  33%      { transform: translate(12%,  14%)  scale(1.10); }
+  66%      { transform: translate(-14%, 6%)   scale(0.92); }
+}
+@keyframes wimc-mesh-d {
+  0%,100% { transform: translate(0%,   0%)   scale(1);    }
+  33%      { transform: translate(-8%,  -16%) scale(1.07); }
+  66%      { transform: translate(16%,  -4%)  scale(0.95); }
+}
+@keyframes wimc-mesh-e {
+  0%,100% { transform: translate(0%,   0%)   scale(1);    }
+  50%      { transform: translate(-18%, 14%)  scale(1.09); }
+}
+@keyframes wimc-mesh-f {
+  0%,100% { transform: translate(0%,   0%)   scale(1);    }
+  50%      { transform: translate(14%,  -20%) scale(1.06); }
+}
+
+/* Aurora: rays — slow conic spin */
+@keyframes wimc-rays-spin {
+  from { transform: rotate(0deg);   }
+  to   { transform: rotate(360deg); }
+}
+
+/* Aurora: ripple — concentric scale pulses */
+@keyframes wimc-ripple-a {
+  0%,100% { transform: scale(0.85); opacity: 0.55; }
+  50%      { transform: scale(1.15); opacity: 0.20; }
+}
+@keyframes wimc-ripple-b {
+  0%,100% { transform: scale(0.75); opacity: 0.45; }
+  50%      { transform: scale(1.25); opacity: 0.15; }
+}
+@keyframes wimc-ripple-c {
+  0%,100% { transform: scale(0.65); opacity: 0.35; }
+  50%      { transform: scale(1.35); opacity: 0.10; }
+}
+
+@layer utilities {
+  /* Profile page font toggles — consumed by ProfilePage via className */
+  .font-inter          { font-family: var(--font-inter), sans-serif; }
+  .font-playfair       { font-family: var(--font-playfair), serif; }
+  .font-space-grotesk  { font-family: var(--font-space-grotesk), sans-serif; }
+  .font-archivo-black  { font-family: var(--font-archivo-black), sans-serif; }
+
+  /* Marquee speed utilities */
+  .marquee-slow   { animation: wimc-marquee 40s linear infinite; }
+  .marquee-normal { animation: wimc-marquee 20s linear infinite; }
+  .marquee-fast   { animation: wimc-marquee 10s linear infinite; }
+
+  /* Public profile page warm-tint radial gradient overlay */
+  .art-tint {
+    background:
+      radial-gradient(circle at top right, rgba(245, 96, 51, 0.15), transparent 60%),
+      radial-gradient(circle at bottom left, rgba(255, 185, 85, 0.10), transparent 60%);
+  }
+
+  .brand-text {
+    font-family: var(--font-jakarta), sans-serif;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: -0.02em;
+  }
+
+  .brand-script {
+    font-family: var(--font-dancing), cursive;
+    text-transform: lowercase;
+    font-weight: 600;
+    margin: 0 2px;
+  }
+
+  .glass {
+    backdrop-filter: blur(28px) saturate(1.8);
+    -webkit-backdrop-filter: blur(28px) saturate(1.8);
+  }
+
+  /* ── Liquid Glass — toggled via data-glass="true" on page root ─────────── */
+  [data-glass="true"] .card-surface {
+    /* Near-zero fill so the blurred scene behind shows through */
+    background-color: rgba(255, 255, 255, 0.07) !important;
+
+    /* Heavy blur + saturation lift + slight brightness — the core of liquid glass */
+    backdrop-filter: blur(32px) saturate(2.0) brightness(1.08);
+    -webkit-backdrop-filter: blur(32px) saturate(2.0) brightness(1.08);
+
+    /*
+     * Layered border + inset shadows to replicate Apple's specular edge:
+     *   • bright top inset  → light refraction from above
+     *   • subtle left inset → secondary specular edge
+     *   • dark bottom inset → shadow side of the glass
+     *   • solid border      → thin rim that catches light all around
+     */
+    border: 1px solid rgba(255, 255, 255, 0.22) !important;
+    box-shadow:
+      inset 0  1.5px 0   rgba(255, 255, 255, 0.50),   /* top specular highlight  */
+      inset 1px  0   0   rgba(255, 255, 255, 0.18),   /* left specular edge      */
+      inset 0  -1px  0   rgba(0,   0,   0,   0.20),   /* bottom shadow edge      */
+      inset -1px 0   0   rgba(0,   0,   0,   0.08),   /* right shadow edge       */
+      0 2px  4px rgba(0, 0, 0, 0.08),                 /* tight contact shadow    */
+      0 8px 24px rgba(0, 0, 0, 0.22),                 /* ambient depth shadow    */
+      0 20px 48px rgba(0, 0, 0, 0.12);                /* far soft shadow         */
+  }
+
+  /* Card drop shadow / border — driven by --wimc-card-shadow set on the page root
+     via inline style in buildThemeStyle(). Inherits to all .card-surface descendants.
+     Glass-mode rules below override this via higher specificity. */
+  .card-surface {
+    box-shadow: var(--wimc-card-shadow, none);
+  }
+
+  /*
+   * When glass is on, any Tailwind bg-surface-* classes on card-surface elements
+   * would fight the near-transparent fill above. The !important on background-color
+   * already wins — this rule is a safety net for bg-* set via style= instead.
+   */
+  [data-glass="true"] .card-surface {
+    --tw-bg-opacity: 0 !important;
+  }
+
+  /* Glass + thicc */
+  [data-glass="true"][data-shadow="thicc"] .card-surface {
+    box-shadow:
+      inset 0  1.5px 0   rgba(255, 255, 255, 0.50),
+      inset 1px  0   0   rgba(255, 255, 255, 0.18),
+      inset 0  -1px  0   rgba(0,   0,   0,   0.20),
+      inset -1px 0   0   rgba(0,   0,   0,   0.08),
+      4px 4px 0 rgb(var(--color-on-background));
+  }
+
+  /* Glass + natural */
+  [data-glass="true"][data-shadow="natural"] .card-surface {
+    box-shadow:
+      inset 0  1.5px 0   rgba(255, 255, 255, 0.50),
+      inset 1px  0   0   rgba(255, 255, 255, 0.18),
+      inset 0  -1px  0   rgba(0,   0,   0,   0.20),
+      inset -1px 0   0   rgba(0,   0,   0,   0.08),
+      0 0  4px 1px rgba(var(--color-on-background) / 0.12),
+      0 0 20px 3px rgba(var(--color-on-background) / 0.18);
+  }
+
+  /* Heavy borders — 2px solid rim on card-surface elements */
+  [data-heavy-borders="true"] .card-surface {
+    border: 2px solid rgb(var(--color-outline) / 0.5) !important;
+  }
+
+  /* Noise grain overlay — toggled via data-noise="true" on page root */
+  [data-noise="true"]::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 2;
+    opacity: 0.045;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    background-repeat: repeat;
+    background-size: 200px 200px;
+  }
+}

@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>WIMC · Creator Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;500&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg-base:#0A0A0B; --bg-raised:#131318; --bg-elevated:#1C1C24; --bg-overlay:#242430; --bg-hover:#2E2E3C;
+  --border-subtle:rgba(255,255,255,0.06); --border-default:rgba(255,255,255,0.10); --border-strong:rgba(255,255,255,0.18);
+  --text-primary:#F0EFF8; --text-secondary:#9896B0; --text-muted:#5C5A72;
+  --coral:#E8705A; --coral-light:#FFBBA6; --coral-dim:rgba(232,112,90,0.15); --coral-glow:rgba(232,112,90,0.35);
+  --teal:#5DD9D0; --teal-dim:rgba(93,217,208,0.12);
+  --amber:#F5A800; --amber-dim:rgba(245,168,0,0.12);
+  --gulaal:#E8342A; --neel:#3B6BCC;
+  --success:#4ADE80; --font-display:'Syne',sans-serif; --font-body:'DM Sans',sans-serif; --font-mono:'JetBrains Mono',monospace;
+  --r-sm:6px; --r-md:12px; --r-lg:18px; --r-xl:24px; --r-full:9999px;
+  --sidebar-w:220px; --t-base:220ms ease;
+}
+.material-symbols-outlined { font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24; font-size:20px; }
+
+body { background:var(--bg-base); color:var(--text-primary); font-family:var(--font-body); min-height:100vh; display:flex; overflow-x:hidden; }
+
+/* ── Sidebar ─────────────────────────────── */
+.sidebar {
+  width:var(--sidebar-w); min-height:100vh; background:var(--bg-raised);
+  border-right:1px solid var(--border-subtle); display:flex; flex-direction:column;
+  padding:24px 0; position:fixed; top:0; left:0; z-index:50;
+}
+.sidebar-brand { padding:0 20px 28px; border-bottom:1px solid var(--border-subtle); }
+.brand-logo { display:flex; align-items:center; gap:10px; }
+.brand-icon { width:32px; height:32px; background:var(--coral); border-radius:8px; display:grid; place-items:center; }
+.brand-name { font-family:var(--font-display); font-weight:800; font-size:18px; letter-spacing:-0.5px; }
+.brand-tier { font-size:10px; font-weight:500; color:var(--coral); letter-spacing:1.5px; text-transform:uppercase; margin-top:3px; font-family:var(--font-mono); }
+
+.nav { flex:1; padding:16px 12px; display:flex; flex-direction:column; gap:2px; }
+.nav-section-label { font-size:10px; letter-spacing:1.5px; text-transform:uppercase; color:var(--text-muted); padding:12px 8px 6px; font-family:var(--font-mono); }
+.nav-item { display:flex; align-items:center; gap:10px; padding:9px 10px; border-radius:var(--r-sm); cursor:pointer; font-size:13.5px; font-weight:500; color:var(--text-secondary); transition:background var(--t-base), color var(--t-base); text-decoration:none; }
+.nav-item:hover { background:var(--bg-elevated); color:var(--text-primary); }
+.nav-item.active { background:var(--coral-dim); color:var(--coral-light); }
+.nav-item.active .material-symbols-outlined { font-variation-settings:'FILL' 1,'wght' 400,'GRAD' 0,'opsz' 24; }
+.nav-badge { margin-left:auto; background:var(--coral); color:#fff; font-size:10px; font-family:var(--font-mono); padding:1px 6px; border-radius:var(--r-full); font-weight:600; }
+.nav-badge.soon { background:var(--bg-overlay); color:var(--text-muted); }
+
+.sidebar-footer { padding:16px 12px 0; border-top:1px solid var(--border-subtle); }
+.user-chip { display:flex; align-items:center; gap:10px; padding:8px 10px; border-radius:var(--r-sm); cursor:pointer; }
+.user-avatar { width:32px; height:32px; border-radius:50%; background:linear-gradient(135deg,var(--coral),var(--amber)); display:grid; place-items:center; font-weight:700; font-size:13px; flex-shrink:0; }
+.user-name { font-size:13px; font-weight:600; }
+.user-handle { font-size:11px; color:var(--text-secondary); font-family:var(--font-mono); }
+
+/* ── Main ─────────────────────────────────── */
+.main { margin-left:var(--sidebar-w); flex:1; }
+
+.topbar { height:64px; border-bottom:1px solid var(--border-subtle); display:flex; align-items:center; justify-content:space-between; padding:0 32px; position:sticky; top:0; background:rgba(10,10,11,0.85); backdrop-filter:blur(12px); z-index:40; }
+.page-title { font-family:var(--font-display); font-size:20px; font-weight:700; }
+.topbar-actions { display:flex; align-items:center; gap:12px; }
+.btn { display:inline-flex; align-items:center; gap:6px; padding:8px 16px; border-radius:var(--r-sm); font-size:13px; font-weight:600; cursor:pointer; transition:all var(--t-base); border:none; font-family:var(--font-body); }
+.btn-ghost { background:transparent; color:var(--text-secondary); }
+.btn-ghost:hover { background:var(--bg-elevated); color:var(--text-primary); }
+.btn-primary { background:var(--coral); color:#fff; }
+.btn-primary:hover { background:#d4614d; box-shadow:0 0 20px var(--coral-glow); }
+.page-link { font-family:var(--font-mono); font-size:12px; color:var(--teal); background:var(--teal-dim); padding:4px 10px; border-radius:var(--r-full); border:1px solid rgba(93,217,208,0.2); }
+
+/* ── Content ─────────────────────────────── */
+.content { padding:32px; display:grid; gap:24px; }
+
+/* Welcome Strip */
+.welcome-strip { background:linear-gradient(135deg, var(--bg-elevated) 0%, var(--bg-overlay) 100%); border:1px solid var(--border-default); border-radius:var(--r-lg); padding:28px 32px; display:flex; align-items:center; justify-content:space-between; overflow:hidden; position:relative; }
+.welcome-strip::before { content:''; position:absolute; right:-60px; top:-60px; width:240px; height:240px; background:radial-gradient(circle, var(--coral-glow) 0%, transparent 70%); pointer-events:none; }
+.welcome-heading { font-family:var(--font-display); font-size:26px; font-weight:800; }
+.welcome-heading span { color:var(--coral-light); }
+.welcome-sub { color:var(--text-secondary); font-size:13.5px; margin-top:6px; }
+.welcome-cta { display:flex; gap:10px; margin-top:20px; }
+
+/* Stats Grid */
+.stats-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:16px; }
+.stat-card { background:var(--bg-elevated); border:1px solid var(--border-default); border-radius:var(--r-lg); padding:22px 24px; position:relative; overflow:hidden; transition:border-color var(--t-base), transform var(--t-base); }
+.stat-card:hover { border-color:var(--border-strong); transform:translateY(-2px); }
+.stat-icon { width:38px; height:38px; border-radius:var(--r-sm); display:grid; place-items:center; margin-bottom:14px; }
+.stat-icon.coral { background:var(--coral-dim); color:var(--coral); }
+.stat-icon.teal  { background:var(--teal-dim);  color:var(--teal);  }
+.stat-icon.amber { background:var(--amber-dim); color:var(--amber); }
+.stat-icon.neel  { background:rgba(59,107,204,0.15); color:var(--neel); }
+.stat-num { font-family:var(--font-display); font-size:32px; font-weight:800; line-height:1; }
+.stat-label { font-size:12px; color:var(--text-secondary); margin-top:4px; text-transform:uppercase; letter-spacing:0.8px; font-family:var(--font-mono); }
+.stat-delta { font-size:11.5px; color:var(--success); margin-top:8px; display:flex; align-items:center; gap:4px; font-family:var(--font-mono); }
+
+/* Two column layout */
+.two-col { display:grid; grid-template-columns:1fr 380px; gap:24px; }
+
+/* Section card */
+.section-card { background:var(--bg-elevated); border:1px solid var(--border-default); border-radius:var(--r-lg); overflow:hidden; }
+.section-header { padding:20px 24px; border-bottom:1px solid var(--border-subtle); display:flex; align-items:center; justify-content:space-between; }
+.section-title { font-family:var(--font-display); font-size:15px; font-weight:700; }
+.section-link { font-size:12px; color:var(--coral); font-weight:600; cursor:pointer; }
+
+/* Event rows */
+.event-list { }
+.event-row { padding:16px 24px; display:flex; align-items:center; gap:16px; border-bottom:1px solid var(--border-subtle); transition:background var(--t-base); cursor:pointer; }
+.event-row:last-child { border-bottom:none; }
+.event-row:hover { background:var(--bg-overlay); }
+.event-date-badge { width:44px; height:44px; border-radius:var(--r-sm); background:var(--coral-dim); color:var(--coral-light); display:flex; flex-direction:column; align-items:center; justify-content:center; flex-shrink:0; }
+.event-date-badge .day { font-family:var(--font-display); font-size:17px; font-weight:800; line-height:1; }
+.event-date-badge .mon { font-size:9px; text-transform:uppercase; letter-spacing:1px; font-family:var(--font-mono); opacity:0.8; }
+.event-info { flex:1; min-width:0; }
+.event-name { font-size:14px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.event-meta { font-size:12px; color:var(--text-secondary); margin-top:2px; font-family:var(--font-mono); }
+.event-pill { font-size:11px; padding:3px 9px; border-radius:var(--r-full); font-weight:600; font-family:var(--font-mono); white-space:nowrap; }
+.pill-upcoming { background:var(--teal-dim); color:var(--teal); }
+.pill-sold { background:var(--amber-dim); color:var(--amber); }
+.pill-draft { background:var(--bg-overlay); color:var(--text-muted); }
+.spots-bar { width:80px; }
+.spots-track { height:4px; background:var(--bg-overlay); border-radius:2px; overflow:hidden; }
+.spots-fill { height:100%; border-radius:2px; background:var(--teal); }
+.spots-text { font-size:11px; color:var(--text-secondary); font-family:var(--font-mono); text-align:right; margin-top:3px; }
+
+/* Tier progress card */
+.tier-card { padding:24px; display:flex; flex-direction:column; gap:20px; }
+.tier-badge { display:flex; align-items:center; gap:10px; }
+.tier-icon { width:42px; height:42px; border-radius:var(--r-sm); background:linear-gradient(135deg,var(--amber),var(--coral)); display:grid; place-items:center; font-size:20px; }
+.tier-name { font-family:var(--font-display); font-size:18px; font-weight:800; }
+.tier-sub { font-size:12px; color:var(--text-secondary); font-family:var(--font-mono); }
+.tier-metrics { display:flex; flex-direction:column; gap:12px; }
+.tier-metric-row { }
+.tier-metric-label { display:flex; justify-content:space-between; font-size:12px; margin-bottom:5px; }
+.tier-metric-label span:first-child { color:var(--text-secondary); }
+.tier-metric-label span:last-child { font-family:var(--font-mono); font-size:11px; }
+.progress-track { height:6px; background:var(--bg-overlay); border-radius:3px; overflow:hidden; }
+.progress-fill { height:100%; border-radius:3px; transition:width 0.8s cubic-bezier(0.16,1,0.3,1); }
+.fill-coral  { background:linear-gradient(90deg,var(--coral),var(--coral-light)); }
+.fill-teal   { background:linear-gradient(90deg,var(--teal),#A8F0EC); }
+.fill-amber  { background:linear-gradient(90deg,var(--amber),#FFD166); }
+.tier-next { background:var(--coral-dim); border:1px solid rgba(232,112,90,0.2); border-radius:var(--r-sm); padding:14px; font-size:13px; }
+.tier-next-label { font-size:11px; color:var(--coral); font-family:var(--font-mono); text-transform:uppercase; letter-spacing:1px; margin-bottom:4px; }
+
+/* Quick actions */
+.quick-actions { display:grid; grid-template-columns:1fr 1fr; gap:12px; padding:20px 24px; }
+.qa-btn { background:var(--bg-overlay); border:1px solid var(--border-default); border-radius:var(--r-sm); padding:14px; cursor:pointer; transition:all var(--t-base); display:flex; align-items:center; gap:10px; font-size:13px; font-weight:600; color:var(--text-primary); }
+.qa-btn:hover { background:var(--bg-hover); border-color:var(--border-strong); }
+.qa-icon { width:32px; height:32px; border-radius:6px; display:grid; place-items:center; flex-shrink:0; }
+</style>
+</head>
+<body>
+
+<!-- ── Sidebar ─────────────────────────────── -->
+<aside class="sidebar">
+  <div class="sidebar-brand">
+    <div class="brand-logo">
+      <div class="brand-icon">
+        <span style="font-size:16px;font-weight:900;color:#fff;font-family:'Syne',sans-serif">W</span>
+      </div>
+      <div>
+        <div class="brand-name">WIMC</div>
+        <div class="brand-tier">Mohalla Tier</div>
+      </div>
+    </div>
+  </div>
+
+  <nav class="nav">
+    <span class="nav-section-label">Creator</span>
+    <a class="nav-item active" href="01-dashboard.html">
+      <span class="material-symbols-outlined">dashboard</span> Dashboard
+    </a>
+    <a class="nav-item" href="02-my-page.html">
+      <span class="material-symbols-outlined">web</span> My Page
+    </a>
+    <a class="nav-item" href="03-events.html">
+      <span class="material-symbols-outlined">event</span> Events
+      <span class="nav-badge">3</span>
+    </a>
+    <a class="nav-item" href="#">
+      <span class="material-symbols-outlined">confirmation_number</span> Tickets
+    </a>
+    <a class="nav-item" href="#">
+      <span class="material-symbols-outlined">calendar_today</span> Bookings
+    </a>
+
+    <span class="nav-section-label">Growth</span>
+    <a class="nav-item" href="#">
+      <span class="material-symbols-outlined">group</span> Leads
+    </a>
+    <a class="nav-item" href="#">
+      <span class="material-symbols-outlined">reviews</span> Testimonials
+    </a>
+    <a class="nav-item" href="#">
+      <span class="material-symbols-outlined">bar_chart</span> Analytics
+    </a>
+
+    <span class="nav-section-label">Spaces</span>
+    <a class="nav-item" href="05-venues.html">
+      <span class="material-symbols-outlined">apartment</span> Venues
+      <span class="nav-badge soon">Soon</span>
+    </a>
+    <a class="nav-item" href="04-tier.html">
+      <span class="material-symbols-outlined">workspace_premium</span> Tier Progress
+    </a>
+  </nav>
+
+  <div class="sidebar-footer">
+    <div class="user-chip">
+      <div class="user-avatar">AB</div>
+      <div>
+        <div class="user-name">ABCD</div>
+        <div class="user-handle">@abcd</div>
+      </div>
+    </div>
+  </div>
+</aside>
+
+<!-- ── Main ────────────────────────────────── -->
+<main class="main">
+  <header class="topbar">
+    <div class="page-title">Overview</div>
+    <div class="topbar-actions">
+      <span class="page-link">wimc.app/abcd ↗</span>
+      <button class="btn btn-ghost"><span class="material-symbols-outlined">notifications</span></button>
+      <button class="btn btn-primary">
+        <span class="material-symbols-outlined" style="font-size:16px">add</span> New Event
+      </button>
+    </div>
+  </header>
+
+  <div class="content">
+
+    <!-- Welcome strip -->
+    <div class="welcome-strip">
+      <div>
+        <div class="welcome-heading">Hey, <span>ABCD</span> 👋</div>
+        <div class="welcome-sub">Here's what's happening with your creator page today.</div>
+        <div class="welcome-cta">
+          <button class="btn btn-primary" onclick="location.href='02-my-page.html'">
+            <span class="material-symbols-outlined" style="font-size:15px">edit_note</span> Edit My Page
+          </button>
+          <button class="btn btn-ghost" onclick="location.href='03-events.html'">View Events →</button>
+        </div>
+      </div>
+      <div style="text-align:right">
+        <div style="font-family:var(--font-mono);font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px">Live Page Visits</div>
+        <div style="font-family:var(--font-display);font-size:52px;font-weight:800;color:var(--coral-light);line-height:1">1,284</div>
+        <div style="font-size:12px;color:var(--success);font-family:var(--font-mono)">↑ +14% this week</div>
+      </div>
+    </div>
+
+    <!-- Stats row -->
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-icon coral"><span class="material-symbols-outlined">event</span></div>
+        <div class="stat-num">3</div>
+        <div class="stat-label">Upcoming Events</div>
+        <div class="stat-delta"><span class="material-symbols-outlined" style="font-size:14px">trending_up</span> +1 this month</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon teal"><span class="material-symbols-outlined">groups</span></div>
+        <div class="stat-num">127</div>
+        <div class="stat-label">Total Attendees</div>
+        <div class="stat-delta"><span class="material-symbols-outlined" style="font-size:14px">trending_up</span> +23 this month</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon amber"><span class="material-symbols-outlined">payments</span></div>
+        <div class="stat-num" style="font-size:24px">₹42K</div>
+        <div class="stat-label">Revenue (MTD)</div>
+        <div class="stat-delta"><span class="material-symbols-outlined" style="font-size:14px">trending_up</span> +12.4%</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon neel"><span class="material-symbols-outlined">person_add</span></div>
+        <div class="stat-num">89</div>
+        <div class="stat-label">Email Leads</div>
+        <div class="stat-delta"><span class="material-symbols-outlined" style="font-size:14px">trending_up</span> +5 this week</div>
+      </div>
+    </div>
+
+    <!-- Two column -->
+    <div class="two-col">
+
+      <!-- Left: Events + Quick Actions -->
+      <div style="display:flex;flex-direction:column;gap:20px;">
+        <div class="section-card">
+          <div class="section-header">
+            <div class="section-title">Upcoming Events</div>
+            <span class="section-link" onclick="location.href='03-events.html'">See all →</span>
+          </div>
+          <div class="event-list">
+            <!-- Event 1 -->
+            <div class="event-row" onclick="location.href='03-events.html'">
+              <div class="event-date-badge"><div class="day">24</div><div class="mon">Oct</div></div>
+              <div class="event-info">
+                <div class="event-name">Photography Walk — Cubbon Park</div>
+                <div class="event-meta">3:00 PM · Bengaluru</div>
+              </div>
+              <div class="spots-bar">
+                <div class="spots-track"><div class="spots-fill" style="width:7%"></div></div>
+                <div class="spots-text">1/15</div>
+              </div>
+              <span class="event-pill pill-upcoming">Live</span>
+            </div>
+            <!-- Event 2 -->
+            <div class="event-row">
+              <div class="event-date-badge" style="background:var(--amber-dim);color:var(--amber)"><div class="day">02</div><div class="mon">Nov</div></div>
+              <div class="event-info">
+                <div class="event-name">Street Food Trail — Manek Chowk</div>
+                <div class="event-meta">7:30 PM · Ahmedabad</div>
+              </div>
+              <div class="spots-bar">
+                <div class="spots-track"><div class="spots-fill" style="width:80%;background:var(--amber)"></div></div>
+                <div class="spots-text">12/15</div>
+              </div>
+              <span class="event-pill pill-sold">Almost Full</span>
+            </div>
+            <!-- Event 3 -->
+            <div class="event-row">
+              <div class="event-date-badge" style="background:var(--bg-overlay);color:var(--text-muted)"><div class="day">10</div><div class="mon">Nov</div></div>
+              <div class="event-info">
+                <div class="event-name">Urban Architecture Deep Dive</div>
+                <div class="event-meta">Draft · Not published</div>
+              </div>
+              <div class="spots-bar">
+                <div class="spots-track"><div class="spots-fill" style="width:0%;"></div></div>
+                <div class="spots-text">0/20</div>
+              </div>
+              <span class="event-pill pill-draft">Draft</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="section-card">
+          <div class="section-header"><div class="section-title">Quick Actions</div></div>
+          <div class="quick-actions">
+            <div class="qa-btn" onclick="location.href='03-events.html'">
+              <div class="qa-icon" style="background:var(--coral-dim);color:var(--coral)"><span class="material-symbols-outlined" style="font-size:18px">add_circle</span></div>
+              Create Event
+            </div>
+            <div class="qa-btn" onclick="location.href='02-my-page.html'">
+              <div class="qa-icon" style="background:var(--teal-dim);color:var(--teal)"><span class="material-symbols-outlined" style="font-size:18px">edit_note</span></div>
+              Edit Page
+            </div>
+            <div class="qa-btn">
+              <div class="qa-icon" style="background:var(--amber-dim);color:var(--amber)"><span class="material-symbols-outlined" style="font-size:18px">group_add</span></div>
+              Invite Leads
+            </div>
+            <div class="qa-btn" onclick="location.href='05-venues.html'">
+              <div class="qa-icon" style="background:rgba(59,107,204,0.15);color:var(--neel)"><span class="material-symbols-outlined" style="font-size:18px">apartment</span></div>
+              Find Venue
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right: Tier Card -->
+      <div style="display:flex;flex-direction:column;gap:20px;">
+        <div class="section-card">
+          <div class="section-header"><div class="section-title">Tier Progress</div><span class="section-link" onclick="location.href='04-tier.html'">Details →</span></div>
+          <div class="tier-card">
+            <div class="tier-badge">
+              <div class="tier-icon">🏘</div>
+              <div>
+                <div class="tier-name">Mohalla</div>
+                <div class="tier-sub">Next: Nukkad (72% complete)</div>
+              </div>
+            </div>
+            <div class="tier-metrics">
+              <div class="tier-metric-row">
+                <div class="tier-metric-label"><span>Events hosted</span><span>8 / 12</span></div>
+                <div class="progress-track"><div class="progress-fill fill-coral" style="width:66%"></div></div>
+              </div>
+              <div class="tier-metric-row">
+                <div class="tier-metric-label"><span>Attendees</span><span>280 / 300</span></div>
+                <div class="progress-track"><div class="progress-fill fill-teal" style="width:93%"></div></div>
+              </div>
+              <div class="tier-metric-row">
+                <div class="tier-metric-label"><span>GMV</span><span>₹42K / ₹75K</span></div>
+                <div class="progress-track"><div class="progress-fill fill-amber" style="width:56%"></div></div>
+              </div>
+              <div class="tier-metric-row">
+                <div class="tier-metric-label"><span>Rating</span><span>4.1 / 4.3</span></div>
+                <div class="progress-track"><div class="progress-fill fill-coral" style="width:95%"></div></div>
+              </div>
+            </div>
+            <div class="tier-next">
+              <div class="tier-next-label">Unlock at Nukkad</div>
+              Premium venue access, priority discovery, bulk ticket tools
+            </div>
+          </div>
+        </div>
+
+        <!-- Recent activity -->
+        <div class="section-card">
+          <div class="section-header"><div class="section-title">Recent Activity</div></div>
+          <div style="padding:8px 0;">
+            <div style="padding:12px 24px;display:flex;gap:12px;align-items:flex-start;border-bottom:1px solid var(--border-subtle)">
+              <div style="width:8px;height:8px;border-radius:50%;background:var(--success);margin-top:5px;flex-shrink:0"></div>
+              <div><div style="font-size:13px">New booking from <strong>Anjali M.</strong></div><div style="font-size:11px;color:var(--text-muted);font-family:var(--font-mono);margin-top:2px">Photography Walk · just now</div></div>
+            </div>
+            <div style="padding:12px 24px;display:flex;gap:12px;align-items:flex-start;border-bottom:1px solid var(--border-subtle)">
+              <div style="width:8px;height:8px;border-radius:50%;background:var(--amber);margin-top:5px;flex-shrink:0"></div>
+              <div><div style="font-size:13px">Payout of <strong>₹8,400</strong> processed</div><div style="font-size:11px;color:var(--text-muted);font-family:var(--font-mono);margin-top:2px">2 hours ago</div></div>
+            </div>
+            <div style="padding:12px 24px;display:flex;gap:12px;align-items:flex-start;">
+              <div style="width:8px;height:8px;border-radius:50%;background:var(--teal);margin-top:5px;flex-shrink:0"></div>
+              <div><div style="font-size:13px"><strong>5 new leads</strong> from Instagram page</div><div style="font-size:11px;color:var(--text-muted);font-family:var(--font-mono);margin-top:2px">Yesterday</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /content -->
+</main>
+
+</body>
+</html>

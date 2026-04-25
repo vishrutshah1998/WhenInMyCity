@@ -1,0 +1,296 @@
+'use client'
+
+import { useState, useMemo } from 'react'
+import type { LinkClickStats } from '@/app/actions/analytics'
+
+interface SlimBlock {
+  id: string
+  block_type: string
+}
+
+export interface EventStat {
+  id:           string
+  title:        string
+  starts_at:    string
+  status:       string
+  rsvpCount:    number
+  revenuePaise: number
+}
+
+interface AnalyticsClientProps {
+  stats7:     LinkClickStats
+  stats30:    LinkClickStats
+  stats365:   LinkClickStats
+  blocks:     SlimBlock[]
+  username:   string
+  eventStats: EventStat[]
+}
+
+type Window = '7d' | '30d' | 'all'
+
+function formatInr(paise: number): string {
+  return '₹' + Math.round(paise / 100).toLocaleString('en-IN')
+}
+
+function formatDate(iso: string): string {
+  return new Date(iso).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
+}
+
+const STATUS_COLORS: Record<string, string> = {
+  published:  'var(--wimc-teal)',
+  draft:      'var(--wimc-amber)',
+  cancelled:  'var(--wimc-coral)',
+  completed:  'var(--wimc-text-secondary)',
+}
+
+export default function AnalyticsClient({ stats7, stats30, stats365, blocks, username, eventStats }: AnalyticsClientProps) {
+  const [win, setWin] = useState<Window>('30d')
+
+  const stats = win === '7d' ? stats7 : win === '30d' ? stats30 : stats365
+  const blockMap = Object.fromEntries(blocks.map((b) => [b.id, b]))
+
+  const topbar: React.CSSProperties = {
+    height: 64, borderBottom: '1px solid var(--wimc-border-subtle)',
+    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+    padding: '0 32px', position: 'sticky', top: 0,
+    background: 'rgba(10,10,11,0.9)', backdropFilter: 'blur(12px)', zIndex: 40,
+  }
+
+  const deviceTotal = stats.deviceBreakdown.mobile + stats.deviceBreakdown.tablet + stats.deviceBreakdown.desktop || 1
+  const deviceBars = [
+    { label: 'Mobile',  value: stats.deviceBreakdown.mobile,  color: 'var(--wimc-coral)' },
+    { label: 'Desktop', value: stats.deviceBreakdown.desktop, color: 'var(--wimc-teal)' },
+    { label: 'Tablet',  value: stats.deviceBreakdown.tablet,  color: 'var(--wimc-amber)' },
+  ]
+
+  // Build chart data: daily for 7d/30d, monthly buckets for all
+  const chartData = useMemo(() => {
+    if (win === 'all') {
+      const monthMap: Record<string, number> = {}
+      for (const { date, count } of stats365.byDay) {
+        const key = date.slice(0, 7) // YYYY-MM
+        monthMap[key] = (monthMap[key] ?? 0) + count
+      }
+      return Object.entries(monthMap)
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([key, count]) => ({
+          label: new Date(key + '-01').toLocaleDateString('en-IN', { month: 'short' }),
+          count,
+        }))
+    }
+    const source = win === '7d' ? stats7.byDay : stats30.byDay
+    return source.map(({ date, count }) => ({
+      label: new Date(date).toLocaleDateString('en-IN', { month: 'short', day: 'numeric' }),
+      count,
+    }))
+  }, [win, stats7.byDay, stats30.byDay, stats365.byDay])
+
+  const chartMax = Math.max(...chartData.map((d) => d.count), 1)
+
+  // Week-over-week comparison (only meaningful for 7d/30d)
+  const prevClicksLabel = win === '7d' ? 'vs prev 7d' : win === '30d' ? 'vs prev 30d' : null
+  const currentTotal = stats.totalClicks
+
+  return (
+    <>
+      <header style={topbar}>
+        <div style={{ fontFamily: 'var(--font-syne)', fontSize: 20, fontWeight: 700 }}>Analytics</div>
+        <div style={{ display: 'flex', gap: 4, padding: 4, background: 'var(--wimc-bg-elevated)', borderRadius: 8, border: '1px solid var(--wimc-border-default)' }}>
+          {(['7d', '30d', 'all'] as const).map((w) => (
+            <button key={w} onClick={() => setWin(w)} style={{
+              padding: '4px 14px', borderRadius: 5, fontSize: 12, fontWeight: 600,
+              fontFamily: 'var(--font-jetbrains-mono)', cursor: 'pointer', border: 'none',
+              background: win === w ? 'var(--wimc-coral)' : 'transparent',
+              color: win === w ? '#fff' : 'var(--wimc-text-secondary)',
+            }}>
+              {w === 'all' ? 'All' : w}
+            </button>
+          ))}
+        </div>
+      </header>
+
+      <div style={{ padding: 32, display: 'flex', flexDirection: 'column', gap: 24 }}>
+
+        {/* KPI row */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
+          {[
+            { label: 'Total Link Clicks', value: currentTotal, color: 'var(--wimc-coral)', icon: 'ads_click', sub: prevClicksLabel },
+            { label: 'Active Blocks',     value: blocks.length,                                 color: 'var(--wimc-teal)',  icon: 'grid_view',  sub: null },
+            {
+              label: 'Avg Clicks / Block',
+              value: blocks.length ? (currentTotal / blocks.length).toFixed(1) : '0',
+              color: 'var(--wimc-amber)', icon: 'bar_chart', sub: null,
+            },
+          ].map(({ label, value, color, icon }) => (
+            <div key={label} style={{ background: 'var(--wimc-bg-elevated)', border: '1px solid var(--wimc-border-default)', borderRadius: 16, padding: '20px 24px', display: 'flex', gap: 16, alignItems: 'center' }}>
+              <div style={{ width: 44, height: 44, borderRadius: 12, background: `${color}22`, display: 'grid', placeItems: 'center', color, flexShrink: 0 }}>
+                <span className="material-symbols-outlined" style={{ fontSize: 22 }}>{icon}</span>
+              </div>
+              <div>
+                <div style={{ fontFamily: 'var(--font-syne)', fontSize: 26, fontWeight: 800, color }}>{value}</div>
+                <div style={{ fontSize: 11, color: 'var(--wimc-text-secondary)', fontFamily: 'var(--font-jetbrains-mono)', textTransform: 'uppercase', letterSpacing: '0.8px', marginTop: 2 }}>{label}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Clicks over time chart */}
+        <div style={{ background: 'var(--wimc-bg-elevated)', border: '1px solid var(--wimc-border-default)', borderRadius: 18, padding: 24 }}>
+          <div style={{ fontFamily: 'var(--font-syne)', fontWeight: 700, fontSize: 15, marginBottom: 20 }}>
+            Clicks Over Time
+            <span style={{ fontFamily: 'var(--font-jetbrains-mono)', fontWeight: 400, fontSize: 11, color: 'var(--wimc-text-secondary)', marginLeft: 10 }}>
+              {win === 'all' ? 'monthly' : 'daily'}
+            </span>
+          </div>
+          {chartData.every((d) => d.count === 0) ? (
+            <div style={{ textAlign: 'center', color: 'var(--wimc-text-secondary)', fontSize: 13, padding: '24px 0' }}>
+              No clicks recorded in this window yet.
+            </div>
+          ) : (
+            <div style={{ display: 'flex', alignItems: 'flex-end', gap: win === '30d' ? 3 : 6, height: 100, overflowX: 'auto' }}>
+              {chartData.map(({ label, count }) => (
+                <div key={label} title={`${label}: ${count}`} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, flex: '1 0 auto', minWidth: win === '30d' ? 10 : 28 }}>
+                  <div style={{
+                    width: '100%',
+                    height: Math.max(3, Math.round((count / chartMax) * 80)),
+                    background: count > 0 ? 'var(--wimc-coral)' : 'var(--wimc-bg-overlay)',
+                    borderRadius: '3px 3px 0 0',
+                    transition: 'height 300ms ease',
+                  }} />
+                  {win !== '30d' && (
+                    <div style={{ fontSize: 9, color: 'var(--wimc-text-secondary)', fontFamily: 'var(--font-jetbrains-mono)', writingMode: 'vertical-rl', transform: 'rotate(180deg)', whiteSpace: 'nowrap' }}>
+                      {label}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24 }}>
+          {/* Device breakdown */}
+          <div style={{ background: 'var(--wimc-bg-elevated)', border: '1px solid var(--wimc-border-default)', borderRadius: 18, padding: 24 }}>
+            <div style={{ fontFamily: 'var(--font-syne)', fontWeight: 700, fontSize: 15, marginBottom: 20 }}>Device Breakdown</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              {deviceBars.map(({ label, value, color }) => (
+                <div key={label}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, fontFamily: 'var(--font-jetbrains-mono)', marginBottom: 6 }}>
+                    <span style={{ color: 'var(--wimc-text-secondary)' }}>{label}</span>
+                    <span style={{ color }}>{value} ({Math.round((value / deviceTotal) * 100)}%)</span>
+                  </div>
+                  <div style={{ height: 8, background: 'var(--wimc-bg-overlay)', borderRadius: 4, overflow: 'hidden' }}>
+                    <div style={{ height: '100%', width: `${Math.round((value / deviceTotal) * 100)}%`, background: color, borderRadius: 4, transition: 'width 500ms ease' }} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Top blocks */}
+          <div style={{ background: 'var(--wimc-bg-elevated)', border: '1px solid var(--wimc-border-default)', borderRadius: 18, overflow: 'hidden' }}>
+            <div style={{ padding: '16px 24px', borderBottom: '1px solid var(--wimc-border-subtle)', fontFamily: 'var(--font-syne)', fontWeight: 700, fontSize: 15 }}>
+              Top Blocks
+            </div>
+            {stats.byBlock.length === 0 ? (
+              <div style={{ padding: 32, textAlign: 'center', color: 'var(--wimc-text-secondary)', fontSize: 13 }}>
+                No clicks recorded yet in this window.
+              </div>
+            ) : (
+              stats.byBlock.slice(0, 6).map((b, i) => {
+                const block = blockMap[b.blockId]
+                const pct = Math.round((b.count / (stats.byBlock[0]?.count || 1)) * 100)
+                return (
+                  <div key={b.blockId} style={{
+                    padding: '12px 24px',
+                    borderBottom: i < Math.min(5, stats.byBlock.length - 1) ? '1px solid var(--wimc-border-subtle)' : 'none',
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                      <span style={{ fontSize: 12, fontFamily: 'var(--font-jetbrains-mono)', color: 'var(--wimc-text-secondary)' }}>
+                        {block?.block_type?.replace(/_/g, ' ') ?? b.blockId.slice(0, 12) + '…'}
+                      </span>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--wimc-coral)' }}>{b.count}</span>
+                    </div>
+                    <div style={{ height: 4, background: 'var(--wimc-bg-overlay)', borderRadius: 2, overflow: 'hidden' }}>
+                      <div style={{ height: '100%', width: `${pct}%`, background: 'var(--wimc-coral)', borderRadius: 2 }} />
+                    </div>
+                  </div>
+                )
+              })
+            )}
+          </div>
+        </div>
+
+        {/* Event performance table */}
+        {eventStats.length > 0 && (
+          <div style={{ background: 'var(--wimc-bg-elevated)', border: '1px solid var(--wimc-border-default)', borderRadius: 18, overflow: 'hidden' }}>
+            <div style={{ padding: '16px 24px', borderBottom: '1px solid var(--wimc-border-subtle)', fontFamily: 'var(--font-syne)', fontWeight: 700, fontSize: 15 }}>
+              Event Performance
+            </div>
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+                <thead>
+                  <tr style={{ borderBottom: '1px solid var(--wimc-border-subtle)' }}>
+                    {['Event', 'Date', 'Status', 'RSVPs', 'Revenue'].map((h) => (
+                      <th key={h} style={{
+                        padding: '10px 20px', textAlign: h === 'RSVPs' || h === 'Revenue' ? 'right' : 'left',
+                        fontSize: 11, fontFamily: 'var(--font-jetbrains-mono)', fontWeight: 600,
+                        color: 'var(--wimc-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.6px',
+                      }}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {eventStats.map((e, i) => (
+                    <tr key={e.id} style={{ borderBottom: i < eventStats.length - 1 ? '1px solid var(--wimc-border-subtle)' : 'none' }}>
+                      <td style={{ padding: '12px 20px', fontWeight: 600, maxWidth: 240, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {e.title}
+                      </td>
+                      <td style={{ padding: '12px 20px', color: 'var(--wimc-text-secondary)', fontFamily: 'var(--font-jetbrains-mono)', fontSize: 12, whiteSpace: 'nowrap' }}>
+                        {formatDate(e.starts_at)}
+                      </td>
+                      <td style={{ padding: '12px 20px' }}>
+                        <span style={{
+                          display: 'inline-block', padding: '2px 10px', borderRadius: 9999,
+                          fontSize: 11, fontWeight: 600, fontFamily: 'var(--font-jetbrains-mono)',
+                          background: `${STATUS_COLORS[e.status] ?? 'var(--wimc-text-secondary)'}22`,
+                          color: STATUS_COLORS[e.status] ?? 'var(--wimc-text-secondary)',
+                          textTransform: 'capitalize',
+                        }}>
+                          {e.status}
+                        </span>
+                      </td>
+                      <td style={{ padding: '12px 20px', textAlign: 'right', fontFamily: 'var(--font-jetbrains-mono)', fontWeight: 700, color: 'var(--wimc-teal)' }}>
+                        {e.rsvpCount}
+                      </td>
+                      <td style={{ padding: '12px 20px', textAlign: 'right', fontFamily: 'var(--font-jetbrains-mono)', fontWeight: 700, color: e.revenuePaise > 0 ? 'var(--wimc-coral)' : 'var(--wimc-text-secondary)' }}>
+                        {e.revenuePaise > 0 ? formatInr(e.revenuePaise) : '—'}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* Public page link */}
+        <div style={{ background: 'var(--wimc-bg-elevated)', border: '1px solid var(--wimc-border-default)', borderRadius: 14, padding: '16px 24px', display: 'flex', alignItems: 'center', gap: 14 }}>
+          <span className="material-symbols-outlined" style={{ color: 'var(--wimc-teal)', fontSize: 20 }}>link</span>
+          <div>
+            <div style={{ fontSize: 12, color: 'var(--wimc-text-secondary)', fontFamily: 'var(--font-jetbrains-mono)', marginBottom: 3 }}>Your public page</div>
+            <div style={{ fontSize: 14, fontWeight: 600 }}>wheninmycity.com/{username}</div>
+          </div>
+          <a
+            href={`/${username}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ marginLeft: 'auto', fontSize: 12, color: 'var(--wimc-coral)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4, fontFamily: 'var(--font-dm-sans)', fontWeight: 600 }}
+          >
+            View <span className="material-symbols-outlined" style={{ fontSize: 14 }}>open_in_new</span>
+          </a>
+        </div>
+      </div>
+    </>
+  )
+}

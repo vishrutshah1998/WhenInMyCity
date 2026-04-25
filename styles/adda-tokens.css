@@ -1,0 +1,56 @@
+/*
+ * Adda Design Tokens
+ * Scoped to .adda-theme — does not affect Creator Studio.
+ *
+ * Contrast ratios (WCAG):
+ *   --adda-amber #f59e0b on --adda-bg-base #0a0a0a      = 10.4:1 ✓ AAA
+ *   --adda-text-primary #fafafa on --adda-bg-surface #111114 = 19.2:1 ✓ AAA
+ *   --adda-text-secondary #a1a1aa on --adda-bg-elevated #18181b = 5.7:1 ✓ AA
+ */
+
+.adda-theme {
+  /* ── Surface stack ───────────────────────────────────────────────────────── */
+  --adda-bg-base:     #0a0a0a;
+  --adda-bg-surface:  #111114;
+  --adda-bg-elevated: #18181b;
+  --adda-bg-overlay:  #27272a;
+  --adda-bg-hover:    #3f3f46;
+
+  /* ── Borders ─────────────────────────────────────────────────────────────── */
+  --adda-border-subtle:  rgba(255, 255, 255, 0.05);
+  --adda-border-default: rgba(255, 255, 255, 0.09);
+  --adda-border-strong:  rgba(255, 255, 255, 0.16);
+
+  /* ── Text ────────────────────────────────────────────────────────────────── */
+  --adda-text-primary:   #fafafa;
+  --adda-text-secondary: #a1a1aa;
+  --adda-text-muted:     #52525b;
+
+  /* ── Brand amber (hero CTAs, confirmed bookings, top-quartile metrics only) */
+  --adda-amber:        #f59e0b;
+  --adda-amber-hover:  #fbbf24;
+  --adda-amber-pressed: #d97706;
+  --adda-amber-tint:   rgba(245, 158, 11, 0.10);
+  --adda-amber-border: rgba(245, 158, 11, 0.25);
+
+  /* ── Semantic booking states ─────────────────────────────────────────────── */
+  /* confirmed  → solid amber fill, black text */
+  --adda-confirmed: #f59e0b;
+  /* pending    → amber tint fill, dashed amber border, amber text */
+  --adda-pending:   rgba(245, 158, 11, 0.15);
+  /* tentative  → no fill, dashed amber border, subdued text */
+  --adda-tentative: transparent;
+  /* blocked    → neutral fill, dotted neutral border */
+  --adda-blocked:   #27272a;
+  /* external   → synced from Google Calendar */
+  --adda-external:  rgba(16, 185, 129, 0.15);
+  /* conflict   → overlapping bookings */
+  --adda-conflict:  rgba(239, 68, 68, 0.15);
+
+  /* ── Semantic utility ────────────────────────────────────────────────────── */
+  --adda-success: #10b981;
+  --adda-danger:  #ef4444;
+  /* warning uses orange-400, NOT amber, to avoid brand color collision */
+  --adda-warning: #fb923c;
+  --adda-info:    #38bdf8;
+}

@@ -1,0 +1,1027 @@
+'use server'
+
+import { z } from 'zod'
+import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
+import { requireAuth } from '@/lib/auth/requireAuth'
+import {
+  CreateAddaSchema,
+  type CreateAddaInput,
+  type AvailabilityUpdate,
+  type ProposalCounterOffer,
+  type AddaSearchParams,
+} from '@/types/marketplace'
+import { notifyAddaOfProposal, notifyMakerOfProposalResponse } from '@/lib/notifications'
+import type {
+  AddaProfile,
+  MakerAddaProposal,
+  Json,
+  Event,
+  UserProfile,
+  MakerTier,
+} from '@/types/database'
+
+// ---------------------------------------------------------------------------
+// Proposal input schema + type
+// ---------------------------------------------------------------------------
+
+const VALID_SLOTS = ['morning', 'afternoon', 'evening', 'full_day'] as const
+
+const SendProposalSchema = z.object({
+  adda_id:                  z.string().uuid('Invalid Adda ID'),
+  proposed_date:            z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be YYYY-MM-DD'),
+  proposed_slot:            z.enum(VALID_SLOTS),
+  event_title:              z.string().min(3, 'Event title must be at least 3 characters').max(120),
+  event_id:                 z.string().uuid().optional(),
+  expected_attendees:       z.number().int().min(1).max(10000).optional(),
+  expected_revenue_paise:   z.number().int().min(0).optional(),
+  proposed_pricing_model:   z
+    .enum(['fixed_rental', 'door_split', 'hybrid', 'f_and_b_minimum'])
+    .optional(),
+  proposed_split_config:    z.record(z.unknown()).default({}),
+  message:                  z.string().max(1000).optional(),
+})
+
+export type SendProposalInput = z.infer<typeof SendProposalSchema>
+
+/** Tier ordering for gate checks. */
+const TIER_ORDER: Record<MakerTier, number> = {
+  mohalla: 0, nukkad: 1, chowk: 2, maidan: 3,
+}
+
+// ---------------------------------------------------------------------------
+// Internal helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Converts an adda name into a URL-safe slug.
+ * Strips non-alphanumeric characters; truncates to 55 chars to leave room
+ * for a uniqueness suffix.
+ *
+ * @example slugifyAdda('The Blue Café') → 'the-blue-cafe'
+ */
+function slugifyAdda(name: string): string {
+  return name
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')  // strip diacritics (café → cafe)
+    .replace(/\s+/g, '-')
+    .replace(/[^a-z0-9\-]/g, '')
+    .replace(/-+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 55)
+}
+
+/**
+ * Returns a unique slug derived from the adda name.
+ * If the base slug is taken, appends a random 3-digit suffix.
+ */
+async function generateAddaSlug(name: string): Promise<string> {
+  const base = slugifyAdda(name) || 'adda'
+  const admin = createAdminClient()
+
+  const candidates = [
+    base,
+    ...Array.from({ length: 5 }, () => `${base}-${Math.floor(100 + Math.random() * 900)}`),
+  ]
+
+  for (const candidate of candidates) {
+    if (candidate.length < 3) continue
+
+    const { data, error } = await admin
+      .from('adda_profiles')
+      .select('slug')
+      .eq('slug', candidate)
+      .maybeSingle()
+
+    if (error) {
+      console.error('[generateAddaSlug] lookup error', error.message)
+      continue
+    }
+
+    if (data === null) return candidate
+  }
+
+  return `adda-${Math.floor(100000 + Math.random() * 900000)}`
+}
+
+// ---------------------------------------------------------------------------
+// createAddaProfile
+// ---------------------------------------------------------------------------
+
+/**
+ * Creates a new Adda profile for the authenticated user.
+ *
+ * Steps:
+ *   1. Validates input with Zod.
+ *   2. Checks that the user hasn't already registered an Adda.
+ *   3. Generates a unique URL slug from the Adda name.
+ *   4. Inserts the adda_profiles row.
+ *
+ * Cover image upload is handled separately via `uploadAddaCoverImage()`.
+ *
+ * @returns `{ slug, error: null }` on success or `{ slug: '', error: string }` on failure.
+ */
+export async function createAddaProfile(
+  data: CreateAddaInput,
+): Promise<{ slug: string; error: string | null }> {
+  const { user } = await requireAuth('/onboarding/adda')
+
+  const parsed = CreateAddaSchema.safeParse(data)
+  if (!parsed.success) {
+    return { slug: '', error: parsed.error.errors[0].message }
+  }
+
+  const admin = createAdminClient()
+
+  // Guard: one adda per auth account.
+  const { data: existing } = await admin
+    .from('adda_profiles')
+    .select('slug')
+    .eq('auth_user_id', user.id)
+    .maybeSingle()
+
+  if (existing) {
+    return { slug: existing.slug, error: null }  // idempotent
+  }
+
+  const slug = await generateAddaSlug(parsed.data.name)
+
+  const { error: insertError } = await admin.from('adda_profiles').insert({
+    auth_user_id: user.id,
+    slug,
+    name:                     parsed.data.name,
+    description:              parsed.data.description ?? null,
+    adda_type:                parsed.data.adda_type,
+    city:                     parsed.data.city,
+    neighbourhood:            parsed.data.neighbourhood ?? null,
+    address:                  parsed.data.address,
+    lat:                      parsed.data.lat ?? null,
+    lng:                      parsed.data.lng ?? null,
+    cover_image_url:          parsed.data.cover_image_url || null,
+    gallery_images:           parsed.data.gallery_images,
+    capacity_min:             parsed.data.capacity_min ?? null,
+    capacity_max:             parsed.data.capacity_max ?? null,
+    capacity_configurations:  parsed.data.capacity_configurations,
+    amenities:                parsed.data.amenities,
+    pricing_model:            parsed.data.pricing_model,
+    pricing_config:           parsed.data.pricing_config,
+    contact_whatsapp:         parsed.data.contact_whatsapp || null,
+    contact_email:            parsed.data.contact_email || null,
+    instagram_handle:         parsed.data.instagram_handle || null,
+  })
+
+  if (insertError) {
+    console.error('[createAddaProfile] insert', insertError.message)
+    if (insertError.code === '23505') {
+      return { slug: '', error: 'That slug is already taken. Please try a different name.' }
+    }
+    return { slug: '', error: 'Failed to create your Adda profile. Please try again.' }
+  }
+
+  return { slug, error: null }
+}
+
+// ---------------------------------------------------------------------------
+// uploadAddaCoverImage
+// ---------------------------------------------------------------------------
+
+/**
+ * Uploads an Adda cover image via FormData.
+ * Must be called after `createAddaProfile` so the adda_profiles row exists.
+ *
+ * @param formData - Must contain a `file` field with the image File.
+ * @returns `{ url: string | null; error: string | null }`
+ */
+export async function uploadAddaCoverImage(
+  formData: FormData,
+): Promise<{ url: string | null; error: string | null }> {
+  const { user } = await requireAuth()
+
+  const file = formData.get('file')
+  if (!(file instanceof File) || file.size === 0) return { url: null, error: 'No file provided.' }
+  if (file.size > 5 * 1024 * 1024) return { url: null, error: 'Cover image must be smaller than 5 MB.' }
+
+  const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
+  if (!allowedTypes.includes(file.type)) return { url: null, error: 'Cover must be a JPEG, PNG, WebP, or GIF.' }
+
+  const ext = file.type.split('/')[1].replace('jpeg', 'jpg')
+  const storagePath = `${user.id}/cover.${ext}`
+
+  const admin = createAdminClient()
+
+  const { error: uploadError } = await admin.storage
+    .from('adda-covers')
+    .upload(storagePath, file, { upsert: true, contentType: file.type })
+
+  if (uploadError) {
+    console.error('[uploadAddaCoverImage]', uploadError.message)
+    return { url: null, error: 'Failed to upload cover image. Please try again.' }
+  }
+
+  const { data: urlData } = admin.storage.from('adda-covers').getPublicUrl(storagePath)
+
+  // Patch the adda profile row with the cover URL.
+  await admin
+    .from('adda_profiles')
+    .update({ cover_image_url: urlData.publicUrl })
+    .eq('auth_user_id', user.id)
+
+  return { url: urlData.publicUrl, error: null }
+}
+
+// ---------------------------------------------------------------------------
+// getAddaProfile
+// ---------------------------------------------------------------------------
+
+/**
+ * Fetches a public Adda profile by slug.
+ * Used by the Adda public page at /adda/[slug].
+ */
+export async function getAddaProfile(
+  slug: string,
+): Promise<{ adda: AddaProfile | null }> {
+  const supabase = await createClient()
+
+  const { data, error } = await supabase
+    .from('adda_profiles')
+    .select('*')
+    .eq('slug', slug)
+    .maybeSingle()
+
+  if (error) {
+    console.error('[getAddaProfile]', error.message)
+    return { adda: null }
+  }
+
+  return { adda: data }
+}
+
+// ---------------------------------------------------------------------------
+// updateAddaAvailability
+// ---------------------------------------------------------------------------
+
+/**
+ * Upserts multiple availability slots for the authenticated Adda owner.
+ *
+ * @param availability - Array of { date, slot_type, status, notes? }
+ * @returns `{ error: string | null }`
+ */
+export async function updateAddaAvailability(
+  availability: AvailabilityUpdate[],
+): Promise<{ error: string | null }> {
+  const { user } = await requireAuth()
+
+  if (!availability.length) return { error: null }
+
+  const admin = createAdminClient()
+
+  // Resolve the adda_id for this owner.
+  const { data: adda, error: addaError } = await admin
+    .from('adda_profiles')
+    .select('id')
+    .eq('auth_user_id', user.id)
+    .maybeSingle()
+
+  if (addaError || !adda) {
+    return { error: 'Adda profile not found.' }
+  }
+
+  const rows = availability.map((slot) => ({
+    adda_id:   adda.id,
+    date:      slot.date,
+    slot_type: slot.slot_type,
+    status:    slot.status,
+    notes:     slot.notes ?? null,
+  }))
+
+  const { error: upsertError } = await admin
+    .from('adda_availability')
+    .upsert(rows, { onConflict: 'adda_id,date,slot_type' })
+
+  if (upsertError) {
+    console.error('[updateAddaAvailability]', upsertError.message)
+    return { error: 'Failed to update availability. Please try again.' }
+  }
+
+  return { error: null }
+}
+
+// ---------------------------------------------------------------------------
+// getAddaProposals
+// ---------------------------------------------------------------------------
+
+/**
+ * Returns all proposals received by the authenticated Adda, newest first.
+ */
+export async function getAddaProposals(): Promise<{ proposals: MakerAddaProposal[] }> {
+  const { user } = await requireAuth()
+
+  const admin = createAdminClient()
+
+  const { data: adda } = await admin
+    .from('adda_profiles')
+    .select('id')
+    .eq('auth_user_id', user.id)
+    .maybeSingle()
+
+  if (!adda) return { proposals: [] }
+
+  const { data, error } = await admin
+    .from('maker_adda_proposals')
+    .select('*')
+    .eq('adda_id', adda.id)
+    .order('created_at', { ascending: false })
+
+  if (error) {
+    console.error('[getAddaProposals]', error.message)
+    return { proposals: [] }
+  }
+
+  return { proposals: data ?? [] }
+}
+
+// ---------------------------------------------------------------------------
+// respondToProposal
+// ---------------------------------------------------------------------------
+
+/**
+ * Lets the Adda owner respond to a Maker's booking proposal.
+ *
+ * - 'accept':        Sets status = 'accepted'; creates a tentative availability slot.
+ * - 'decline':       Sets status = 'declined'.
+ * - 'counter_offer': Sets status = 'counter_offered', stores counterOffer JSON.
+ *
+ * @returns `{ error: string | null }`
+ */
+export async function respondToProposal(
+  proposalId: string,
+  response: 'accept' | 'decline' | 'counter_offer',
+  counterOffer?: ProposalCounterOffer,
+  note?: string,
+): Promise<{ error: string | null }> {
+  const { user } = await requireAuth()
+
+  const admin = createAdminClient()
+
+  // Verify the authenticated user owns the adda that received this proposal.
+  const { data: proposal, error: fetchError } = await admin
+    .from('maker_adda_proposals')
+    .select('id, adda_id, proposed_date, proposed_slot, status, maker_id, event_title')
+    .eq('id', proposalId)
+    .maybeSingle()
+
+  if (fetchError || !proposal) {
+    return { error: 'Proposal not found.' }
+  }
+
+  const { data: adda } = await admin
+    .from('adda_profiles')
+    .select('id, name')
+    .eq('id', proposal.adda_id)
+    .eq('auth_user_id', user.id)
+    .maybeSingle()
+
+  if (!adda) {
+    return { error: 'You are not authorised to respond to this proposal.' }
+  }
+
+  if (!['pending', 'counter_offered'].includes(proposal.status)) {
+    return { error: `Cannot respond to a proposal with status '${proposal.status}'.` }
+  }
+
+  const newStatus =
+    response === 'accept'
+      ? 'accepted'
+      : response === 'decline'
+      ? 'declined'
+      : 'counter_offered'
+
+  const { error: updateError } = await admin
+    .from('maker_adda_proposals')
+    .update({
+      status:             newStatus,
+      counter_offer:      response === 'counter_offer' ? (counterOffer as unknown as Json ?? {}) : {},
+      adda_response_note: note ?? null,
+    })
+    .eq('id', proposalId)
+
+  if (updateError) {
+    console.error('[respondToProposal]', updateError.message)
+    return { error: 'Failed to update proposal. Please try again.' }
+  }
+
+  // On acceptance: create a tentative availability slot so the date shows as booked.
+  if (response === 'accept') {
+    const { error: slotError } = await admin
+      .from('adda_availability')
+      .upsert(
+        {
+          adda_id:   adda.id,
+          date:      proposal.proposed_date,
+          slot_type: proposal.proposed_slot as 'morning' | 'afternoon' | 'evening' | 'full_day',
+          status:    'pending',
+        },
+        { onConflict: 'adda_id,date,slot_type' },
+      )
+
+    if (slotError) {
+      // Non-fatal: the proposal status was already updated.
+      console.error('[respondToProposal] slot upsert', slotError.message)
+    }
+  }
+
+  // Notify maker of the response (fire-and-forget)
+  notifyMakerOfProposalResponse(
+    proposal as unknown as import('@/types/database').MakerAddaProposal,
+    newStatus as 'accepted' | 'declined' | 'counter_offered',
+    adda?.name ?? 'The Adda',
+  ).catch(() => {})
+
+  return { error: null }
+}
+
+// ---------------------------------------------------------------------------
+// searchAddas
+// ---------------------------------------------------------------------------
+
+/**
+ * Searches for Addas matching the given criteria.
+ * Results are ordered by total_events_hosted DESC (social proof first).
+ *
+ * Requires Maker authentication at Nukkad tier or above.
+ *
+ * @returns `{ addas: AddaProfile[] }`
+ */
+export async function searchAddas(
+  params: AddaSearchParams,
+): Promise<{ addas: AddaProfile[]; error: string | null }> {
+  const { user } = await requireAuth()
+
+  const admin = createAdminClient()
+
+  // Enforce Nukkad+ tier gating.
+  const { data: maker } = await admin
+    .from('user_profiles')
+    .select('maker_tier, user_role')
+    .eq('id', user.id)
+    .maybeSingle()
+
+  if (!maker || maker.user_role !== 'maker') {
+    return { addas: [], error: 'Only Makers can search for Addas.' }
+  }
+
+  const tierOrder: Record<string, number> = { mohalla: 0, nukkad: 1, chowk: 2, maidan: 3 }
+  if ((tierOrder[maker.maker_tier] ?? 0) < 1) {
+    return {
+      addas: [],
+      error: 'Adda search is available from the Nukkad tier onwards. Keep hosting events to unlock this feature!',
+    }
+  }
+
+  let query = admin
+    .from('adda_profiles')
+    .select('*')
+    .eq('is_active', true)
+    .eq('city', params.city)
+    .order('total_events_hosted', { ascending: false })
+
+  if (params.adda_type) {
+    query = query.contains('adda_type', [params.adda_type])
+  }
+
+  if (params.capacity_min != null) {
+    query = query.gte('capacity_max', params.capacity_min)
+  }
+
+  if (params.capacity_max != null) {
+    query = query.lte('capacity_min', params.capacity_max)
+  }
+
+  if (params.pricing_model) {
+    query = query.eq('pricing_model', params.pricing_model)
+  }
+
+  if (params.amenities?.length) {
+    query = query.contains('amenities', params.amenities)
+  }
+
+  // Date filtering: exclude addas where the date is fully booked (all 4 slots confirmed/blocked).
+  // Simple approximation: if a date filter is supplied, we check at the app layer after fetching.
+  const { data, error } = await query.limit(50)
+
+  if (error) {
+    console.error('[searchAddas]', error.message)
+    return { addas: [], error: 'Search failed. Please try again.' }
+  }
+
+  let results = data ?? []
+
+  // If a date filter is provided, exclude addas where every slot on that date is unavailable.
+  if (params.date && results.length) {
+    const addaIds = results.map((a) => a.id)
+
+    const { data: slots } = await admin
+      .from('adda_availability')
+      .select('adda_id, status')
+      .in('adda_id', addaIds)
+      .eq('date', params.date)
+      .in('status', ['blocked', 'confirmed'])
+
+    // Count unavailable slots per adda (4 total: morning, afternoon, evening, full_day).
+    const blockedCounts: Record<string, number> = {}
+    for (const slot of slots ?? []) {
+      blockedCounts[slot.adda_id] = (blockedCounts[slot.adda_id] ?? 0) + 1
+    }
+
+    // Exclude only addas where full_day is blocked/confirmed (simplest heuristic).
+    const { data: fullDayBlocked } = await admin
+      .from('adda_availability')
+      .select('adda_id')
+      .in('adda_id', addaIds)
+      .eq('date', params.date)
+      .eq('slot_type', 'full_day')
+      .in('status', ['blocked', 'confirmed'])
+
+    const blockedAddaIds = new Set((fullDayBlocked ?? []).map((s) => s.adda_id))
+    results = results.filter((a) => !blockedAddaIds.has(a.id))
+  }
+
+  return { addas: results, error: null }
+}
+
+// ---------------------------------------------------------------------------
+// sendProposal
+// ---------------------------------------------------------------------------
+
+/**
+ * Sends a Maker's booking proposal to an Adda.
+ *
+ * Guards:
+ *  1. Caller must be an authenticated Maker at Nukkad tier or above.
+ *     (Mohalla tier cannot access the Adda matching system.)
+ *  2. The proposed date must have an 'available' full_day or matching slot in
+ *     `adda_availability`. Addas with no explicit availability record are
+ *     treated as available by default.
+ *  3. No existing 'accepted' proposal can exist for the same adda + date.
+ *
+ * On success:
+ *  - Inserts a `maker_adda_proposals` row with `expires_at = now + 72 hours`.
+ *  - Logs a WhatsApp-style notification to the Adda owner (v1: console.log).
+ *
+ * @param data  Validated proposal payload.
+ * @returns `{ proposalId: string; error: null }` or `{ proposalId: ''; error: string }`.
+ */
+export async function sendProposal(
+  data: SendProposalInput,
+): Promise<{ proposalId: string; error: string | null }> {
+  const { user } = await requireAuth('/dashboard')
+
+  const parsed = SendProposalSchema.safeParse(data)
+  if (!parsed.success) {
+    return { proposalId: '', error: parsed.error.errors[0].message }
+  }
+
+  const d = parsed.data
+  const admin = createAdminClient()
+
+  // Gate: caller must be a Maker at Nukkad+
+  const { data: maker } = await admin
+    .from('user_profiles')
+    .select('display_name, maker_tier, user_role')
+    .eq('id', user.id)
+    .maybeSingle()
+
+  if (!maker || maker.user_role !== 'maker') {
+    return { proposalId: '', error: 'Only Makers can send venue proposals.' }
+  }
+  if ((TIER_ORDER[maker.maker_tier as MakerTier] ?? 0) < TIER_ORDER['nukkad']) {
+    return {
+      proposalId: '',
+      error: 'Adda proposals are available from the Nukkad tier. Keep hosting events to unlock this!',
+    }
+  }
+
+  // Validate the Adda exists
+  const { data: adda } = await admin
+    .from('adda_profiles')
+    .select('id, name, slug, is_active, contact_whatsapp')
+    .eq('id', d.adda_id)
+    .maybeSingle()
+
+  if (!adda || !adda.is_active) {
+    return { proposalId: '', error: 'Adda not found or is currently inactive.' }
+  }
+
+  // Guard: no existing accepted proposal for this adda on this date
+  const { data: conflict } = await admin
+    .from('maker_adda_proposals')
+    .select('id')
+    .eq('adda_id', d.adda_id)
+    .eq('proposed_date', d.proposed_date)
+    .eq('status', 'accepted')
+    .maybeSingle()
+
+  if (conflict) {
+    return {
+      proposalId: '',
+      error: 'This Adda already has a confirmed booking on that date. Please choose another date.',
+    }
+  }
+
+  // Check availability (if an explicit record exists; absence = available)
+  const { data: availSlot } = await admin
+    .from('adda_availability')
+    .select('status')
+    .eq('adda_id', d.adda_id)
+    .eq('date', d.proposed_date)
+    .eq('slot_type', d.proposed_slot)
+    .maybeSingle()
+
+  if (availSlot && !['available'].includes(availSlot.status)) {
+    return {
+      proposalId: '',
+      error: `The ${d.proposed_slot} slot on ${d.proposed_date} is not available. Please choose a different slot or date.`,
+    }
+  }
+
+  const expiresAt = new Date(Date.now() + 72 * 60 * 60 * 1000).toISOString()
+
+  const { data: inserted, error: insertError } = await admin
+    .from('maker_adda_proposals')
+    .insert({
+      maker_id:               user.id,
+      adda_id:                d.adda_id,
+      event_id:               d.event_id ?? null,
+      proposed_date:          d.proposed_date,
+      proposed_slot:          d.proposed_slot,
+      event_title:            d.event_title,
+      expected_attendees:     d.expected_attendees ?? null,
+      expected_revenue_paise: d.expected_revenue_paise ?? null,
+      proposed_pricing_model: d.proposed_pricing_model ?? null,
+      proposed_split_config:  d.proposed_split_config as Json,
+      message:                d.message ?? null,
+      status:                 'pending',
+      counter_offer:          {} as Json,
+      expires_at:             expiresAt,
+    })
+    .select('id')
+    .single()
+
+  if (insertError || !inserted) {
+    console.error('[sendProposal] insert', insertError?.message)
+    return { proposalId: '', error: 'Failed to send proposal. Please try again.' }
+  }
+
+  // Fetch the full row for the notification
+  const { data: proposalRow } = await admin
+    .from('maker_adda_proposals')
+    .select('*')
+    .eq('id', inserted.id)
+    .single()
+
+  if (proposalRow) {
+    notifyAddaOfProposal(proposalRow, maker.display_name, adda.slug, adda.contact_whatsapp)
+      .catch(() => { /* fire-and-forget */ })
+  }
+
+  return { proposalId: inserted.id, error: null }
+}
+
+// ---------------------------------------------------------------------------
+// withdrawProposal
+// ---------------------------------------------------------------------------
+
+/**
+ * Allows a Maker to withdraw a proposal they sent, provided it is still in a
+ * mutable state ('pending' or 'counter_offered').
+ *
+ * If the proposal had tentatively held an availability slot ('pending' status
+ * in `adda_availability`), that slot is freed back to 'available'.
+ *
+ * @param proposalId  The proposal to withdraw.
+ * @returns `{ error: string | null }`
+ */
+export async function withdrawProposal(
+  proposalId: string,
+): Promise<{ error: string | null }> {
+  const { user } = await requireAuth('/dashboard')
+
+  const uuidResult = z.string().uuid().safeParse(proposalId)
+  if (!uuidResult.success) return { error: 'Invalid proposal ID.' }
+
+  const admin = createAdminClient()
+
+  const { data: proposal } = await admin
+    .from('maker_adda_proposals')
+    .select('id, maker_id, adda_id, proposed_date, proposed_slot, status')
+    .eq('id', proposalId)
+    .maybeSingle()
+
+  if (!proposal) return { error: 'Proposal not found.' }
+  if (proposal.maker_id !== user.id) {
+    return { error: 'You can only withdraw proposals you sent.' }
+  }
+  if (!['pending', 'counter_offered'].includes(proposal.status)) {
+    return { error: `Cannot withdraw a proposal with status '${proposal.status}'.` }
+  }
+
+  const { error: updateError } = await admin
+    .from('maker_adda_proposals')
+    .update({ status: 'withdrawn' })
+    .eq('id', proposalId)
+
+  if (updateError) {
+    console.error('[withdrawProposal]', updateError.message)
+    return { error: 'Failed to withdraw proposal. Please try again.' }
+  }
+
+  // Free any tentative availability slot this proposal held (fire-and-forget)
+  admin
+    .from('adda_availability')
+    .update({ status: 'available' })
+    .eq('adda_id', proposal.adda_id)
+    .eq('date', proposal.proposed_date)
+    .eq('slot_type', proposal.proposed_slot as import('@/types/database').AvailabilitySlotType)
+    .eq('status', 'pending')
+    .then(
+      () => { /* success */ },
+      (e: Error) => console.error('[withdrawProposal] slot release', e.message),
+    )
+
+  return { error: null }
+}
+
+// ---------------------------------------------------------------------------
+// acceptCounterOffer
+// ---------------------------------------------------------------------------
+
+/**
+ * Called by the Maker after reviewing an Adda's counter-offer.
+ * Accepting locks the date as 'confirmed' and optionally links the event.
+ *
+ * Steps:
+ *  1. Verifies the caller sent the proposal and its status is 'counter_offered'.
+ *  2. Updates proposal status to 'accepted'.
+ *  3. Upserts an `adda_availability` row with `status = 'confirmed'`.
+ *  4. If an `event_id` is attached, updates `events.venue_adda_id`.
+ *  5. Sends a notification to the Adda (accepted response).
+ *
+ * @param proposalId  The proposal to accept.
+ * @returns `{ error: string | null }`
+ */
+export async function acceptCounterOffer(
+  proposalId: string,
+): Promise<{ error: string | null }> {
+  const { user } = await requireAuth('/dashboard')
+
+  const uuidResult = z.string().uuid().safeParse(proposalId)
+  if (!uuidResult.success) return { error: 'Invalid proposal ID.' }
+
+  const admin = createAdminClient()
+
+  const { data: proposal } = await admin
+    .from('maker_adda_proposals')
+    .select('*')
+    .eq('id', proposalId)
+    .maybeSingle()
+
+  if (!proposal) return { error: 'Proposal not found.' }
+  if (proposal.maker_id !== user.id) {
+    return { error: 'You can only accept counter-offers on proposals you sent.' }
+  }
+  if (proposal.status !== 'counter_offered') {
+    return { error: `Proposal status is '${proposal.status}' — only 'counter_offered' proposals can be accepted here.` }
+  }
+
+  const { error: updateError } = await admin
+    .from('maker_adda_proposals')
+    .update({ status: 'accepted' })
+    .eq('id', proposalId)
+
+  if (updateError) {
+    console.error('[acceptCounterOffer] update proposal', updateError.message)
+    return { error: 'Failed to accept counter-offer. Please try again.' }
+  }
+
+  // Lock the availability slot as confirmed (fire-and-forget)
+  admin
+    .from('adda_availability')
+    .upsert(
+      {
+        adda_id:   proposal.adda_id,
+        date:      proposal.proposed_date,
+        slot_type: proposal.proposed_slot as import('@/types/database').AvailabilitySlotType,
+        status:    'confirmed',
+        event_id:  proposal.event_id ?? null,
+      },
+      { onConflict: 'adda_id,date,slot_type' },
+    )
+    .then(
+      () => { /* success */ },
+      (e: Error) => console.error('[acceptCounterOffer] slot confirm', e.message),
+    )
+
+  // Link the event to this Adda (fire-and-forget)
+  if (proposal.event_id) {
+    admin
+      .from('events')
+      .update({ venue_adda_id: proposal.adda_id })
+      .eq('id', proposal.event_id)
+      .eq('creator_id', user.id)
+      .then(
+        () => { /* success */ },
+        (e: Error) => console.error('[acceptCounterOffer] event link', e.message),
+      )
+  }
+
+  // Notify the Adda of the acceptance
+  const { data: adda } = await admin
+    .from('adda_profiles')
+    .select('name')
+    .eq('id', proposal.adda_id)
+    .maybeSingle()
+
+  notifyMakerOfProposalResponse(proposal, 'accepted', adda?.name ?? 'The Adda')
+    .catch(() => { /* fire-and-forget */ })
+
+  return { error: null }
+}
+
+// ---------------------------------------------------------------------------
+// getProposalHistory
+// ---------------------------------------------------------------------------
+
+/**
+ * Returns all proposals sent by a Maker, including the Adda's profile data
+ * for display in the Maker dashboard proposals list.
+ *
+ * Access control: only the Maker who sent the proposals can view them.
+ *
+ * @param makerId  Must equal the authenticated user's `user_profiles.id`.
+ * @returns Array of proposals with embedded Adda details.
+ */
+export async function getProposalHistory(
+  makerId: string,
+): Promise<Array<MakerAddaProposal & { adda: Pick<AddaProfile, 'id' | 'name' | 'slug' | 'city' | 'cover_image_url' | 'pricing_model'> | null }>> {
+  const { user } = await requireAuth('/dashboard')
+
+  if (user.id !== makerId) return []
+
+  const admin = createAdminClient()
+
+  const { data: proposals, error } = await admin
+    .from('maker_adda_proposals')
+    .select('*')
+    .eq('maker_id', makerId)
+    .order('created_at', { ascending: false })
+
+  if (error || !proposals?.length) return []
+
+  // Batch-fetch Adda profiles
+  const addaIds = [...new Set(proposals.map((p) => p.adda_id))]
+  const { data: addas } = await admin
+    .from('adda_profiles')
+    .select('id, name, slug, city, cover_image_url, pricing_model')
+    .in('id', addaIds)
+
+  const addaMap = new Map((addas ?? []).map((a) => [a.id, a]))
+
+  return proposals.map((p) => ({
+    ...p,
+    adda: addaMap.get(p.adda_id) ?? null,
+  }))
+}
+
+// ---------------------------------------------------------------------------
+// getAddaPublicPage
+// ---------------------------------------------------------------------------
+
+/**
+ * Fetches all data needed to render an Adda's public profile page at `/adda/[slug]`.
+ *
+ * No authentication required — this is a public endpoint.
+ *
+ * Returns:
+ *  - Full Adda profile (only if `is_active = true`)
+ *  - Upcoming published events (next 60 days, joined with maker profile snippet)
+ *  - 6 most recent past (completed) events (title, date, attendee count, cover)
+ *  - Aggregate stats: total event count + average maker rating
+ *
+ * @param slug  The Adda's URL slug.
+ * @returns Page data or `{ error: string }` if the Adda is not found.
+ */
+export async function getAddaPublicPage(slug: string): Promise<{
+  adda: AddaProfile
+  upcomingEvents: Array<Event & {
+    maker: Pick<UserProfile, 'display_name' | 'username' | 'avatar_url' | 'creator_type'>
+  }>
+  pastEvents: Array<{
+    title: string
+    date: string
+    attendee_count: number
+    cover_image_url: string | null
+  }>
+  stats: { total_events: number; average_rating: number }
+} | { error: string }> {
+  const supabase = await createClient()
+
+  const { data: adda, error: addaError } = await supabase
+    .from('adda_profiles')
+    .select('*')
+    .eq('slug', slug)
+    .eq('is_active', true)
+    .maybeSingle()
+
+  if (addaError) {
+    console.error('[getAddaPublicPage]', addaError.message)
+    return { error: 'Failed to load Adda page.' }
+  }
+  if (!adda) return { error: 'Adda not found.' }
+
+  const now = new Date().toISOString()
+  const in60Days = new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString()
+
+  const [upcomingResult, pastResult] = await Promise.all([
+    supabase
+      .from('events')
+      .select('*')
+      .eq('venue_adda_id', adda.id)
+      .eq('status', 'published')
+      .gte('starts_at', now)
+      .lte('starts_at', in60Days)
+      .order('starts_at', { ascending: true })
+      .limit(10),
+
+    supabase
+      .from('events')
+      .select('id, title, starts_at, cover_image_url, creator_id')
+      .eq('venue_adda_id', adda.id)
+      .eq('status', 'completed')
+      .order('starts_at', { ascending: false })
+      .limit(6),
+  ])
+
+  const upcomingEvents = upcomingResult.data ?? []
+  const pastEventRows = pastResult.data ?? []
+
+  // Fetch maker profiles for upcoming events
+  const creatorIds = [...new Set(upcomingEvents.map((e) => e.creator_id))]
+  const { data: makers } = creatorIds.length
+    ? await supabase
+        .from('user_profiles')
+        .select('id, display_name, username, avatar_url, creator_type')
+        .in('id', creatorIds)
+    : { data: [] }
+
+  const makerMap = new Map((makers ?? []).map((m) => [m.id, m]))
+
+  const upcomingWithMakers = upcomingEvents.map((ev) => ({
+    ...ev,
+    maker: (() => {
+      const m = makerMap.get(ev.creator_id)
+      return {
+        display_name: m?.display_name ?? 'Unknown Maker',
+        username:     m?.username ?? '',
+        avatar_url:   m?.avatar_url ?? null,
+        creator_type: m?.creator_type ?? ('content_creation' as UserProfile['creator_type']),
+      }
+    })(),
+  }))
+
+  // Fetch attendee counts for past events
+  let pastWithCounts: Array<{ title: string; date: string; attendee_count: number; cover_image_url: string | null }> = []
+  if (pastEventRows.length) {
+    const pastIds = pastEventRows.map((e) => e.id)
+    const { data: rsvps } = await supabase
+      .from('rsvps')
+      .select('event_id')
+      .in('event_id', pastIds)
+      .eq('payment_status', 'captured')
+
+    const countMap = new Map<string, number>()
+    for (const r of rsvps ?? []) {
+      countMap.set(r.event_id, (countMap.get(r.event_id) ?? 0) + 1)
+    }
+
+    pastWithCounts = pastEventRows.map((e) => ({
+      title:           e.title,
+      date:            e.starts_at,
+      attendee_count:  countMap.get(e.id) ?? 0,
+      cover_image_url: e.cover_image_url,
+    }))
+  }
+
+  const stats = {
+    total_events:   adda.total_events_hosted,
+    average_rating: adda.average_maker_rating,
+  }
+
+  return {
+    adda,
+    upcomingEvents: upcomingWithMakers,
+    pastEvents:     pastWithCounts,
+    stats,
+  }
+}

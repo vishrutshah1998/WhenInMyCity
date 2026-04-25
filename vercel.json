@@ -1,0 +1,16 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/reconcile-payments",
+      "schedule": "*/15 * * * *"
+    },
+    {
+      "path": "/api/cron/evaluate-tiers",
+      "schedule": "0 2 * * *"
+    },
+    {
+      "path": "/api/cron/weekly-digest",
+      "schedule": "30 3 * * 0"
+    }
+  ]
+}

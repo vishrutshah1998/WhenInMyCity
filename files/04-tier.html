@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>WIMC · Tier Progress</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;500&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg-base:#0A0A0B;--bg-raised:#131318;--bg-elevated:#1C1C24;--bg-overlay:#242430;--bg-hover:#2E2E3C;
+  --border-subtle:rgba(255,255,255,0.06);--border-default:rgba(255,255,255,0.10);--border-strong:rgba(255,255,255,0.18);
+  --text-primary:#F0EFF8;--text-secondary:#9896B0;--text-muted:#5C5A72;
+  --coral:#E8705A;--coral-light:#FFBBA6;--coral-dim:rgba(232,112,90,0.15);--coral-glow:rgba(232,112,90,0.35);
+  --teal:#5DD9D0;--teal-dim:rgba(93,217,208,0.12);--teal-light:#A8F0EC;
+  --amber:#F5A800;--amber-dim:rgba(245,168,0,0.12);--amber-light:#FFD166;
+  --gulaal:#E8342A;--neel:#3B6BCC;--neel-dim:rgba(59,107,204,0.15);
+  --success:#4ADE80;--font-display:'Syne',sans-serif;--font-body:'DM Sans',sans-serif;--font-mono:'JetBrains Mono',monospace;
+  --r-sm:6px;--r-md:12px;--r-lg:18px;--r-xl:24px;--r-full:9999px;
+  --sidebar-w:220px;--t-base:220ms ease;
+}
+.material-symbols-outlined{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;font-size:20px}
+body{background:var(--bg-base);color:var(--text-primary);font-family:var(--font-body);min-height:100vh;display:flex;overflow-x:hidden}
+.sidebar{width:var(--sidebar-w);min-height:100vh;background:var(--bg-raised);border-right:1px solid var(--border-subtle);display:flex;flex-direction:column;padding:24px 0;position:fixed;top:0;left:0;z-index:50}
+.sidebar-brand{padding:0 20px 28px;border-bottom:1px solid var(--border-subtle)}
+.brand-logo{display:flex;align-items:center;gap:10px}
+.brand-icon{width:32px;height:32px;background:var(--coral);border-radius:8px;display:grid;place-items:center}
+.brand-name{font-family:var(--font-display);font-weight:800;font-size:18px}
+.brand-tier{font-size:10px;color:var(--coral);letter-spacing:1.5px;text-transform:uppercase;margin-top:3px;font-family:var(--font-mono)}
+.nav{flex:1;padding:16px 12px;display:flex;flex-direction:column;gap:2px}
+.nav-item{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:var(--r-sm);cursor:pointer;font-size:13.5px;font-weight:500;color:var(--text-secondary);transition:background var(--t-base),color var(--t-base);text-decoration:none}
+.nav-item:hover{background:var(--bg-elevated);color:var(--text-primary)}
+.nav-item.active{background:var(--coral-dim);color:var(--coral-light)}
+.nav-badge{margin-left:auto;background:var(--coral);color:#fff;font-size:10px;font-family:var(--font-mono);padding:1px 6px;border-radius:var(--r-full)}
+.nav-badge.soon{background:var(--bg-overlay);color:var(--text-muted)}
+.nav-section-label{font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-muted);padding:12px 8px 6px;font-family:var(--font-mono)}
+.sidebar-footer{padding:16px 12px 0;border-top:1px solid var(--border-subtle)}
+.user-chip{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:var(--r-sm)}
+.user-avatar{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--coral),var(--amber));display:grid;place-items:center;font-weight:700;font-size:13px;flex-shrink:0}
+.user-name{font-size:13px;font-weight:600}
+.user-handle{font-size:11px;color:var(--text-secondary);font-family:var(--font-mono)}
+.main{margin-left:var(--sidebar-w);flex:1}
+.topbar{height:64px;border-bottom:1px solid var(--border-subtle);display:flex;align-items:center;justify-content:space-between;padding:0 32px;position:sticky;top:0;background:rgba(10,10,11,0.9);backdrop-filter:blur(12px);z-index:40}
+.page-title{font-family:var(--font-display);font-size:20px;font-weight:700}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:var(--r-sm);font-size:13px;font-weight:600;cursor:pointer;transition:all var(--t-base);border:none;font-family:var(--font-body)}
+.btn-ghost{background:transparent;color:var(--text-secondary)}
+.btn-ghost:hover{background:var(--bg-elevated);color:var(--text-primary)}
+.btn-primary{background:var(--coral);color:#fff}
+.btn-primary:hover{background:#d4614d}
+.content{padding:32px;display:grid;gap:28px;max-width:960px}
+
+/* Hero tier banner */
+.tier-hero{background:linear-gradient(135deg,#1A1208 0%,#0A0A0B 100%);border:1px solid rgba(245,168,0,0.2);border-radius:var(--r-xl);padding:36px;display:flex;align-items:center;gap:32px;position:relative;overflow:hidden}
+.tier-hero::before{content:'';position:absolute;right:-80px;top:-80px;width:300px;height:300px;background:radial-gradient(circle,rgba(245,168,0,0.12) 0%,transparent 70%);pointer-events:none}
+.tier-emblem{width:80px;height:80px;border-radius:var(--r-lg);background:linear-gradient(135deg,var(--amber),var(--coral));display:grid;place-items:center;font-size:36px;flex-shrink:0;box-shadow:0 0 40px rgba(245,168,0,0.3)}
+.tier-hero-info{flex:1}
+.tier-hero-label{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--amber);font-family:var(--font-mono);margin-bottom:6px}
+.tier-hero-name{font-family:var(--font-display);font-size:36px;font-weight:800;line-height:1}
+.tier-hero-sub{font-size:14px;color:var(--text-secondary);margin-top:8px}
+.tier-overall-bar{margin-top:16px}
+.tier-overall-track{height:10px;background:rgba(255,255,255,0.08);border-radius:5px;overflow:hidden;margin-bottom:6px}
+.tier-overall-fill{height:100%;background:linear-gradient(90deg,var(--amber),var(--coral));border-radius:5px;width:72%}
+.tier-overall-labels{display:flex;justify-content:space-between;font-size:12px;font-family:var(--font-mono);color:var(--text-secondary)}
+.tier-next-badge{background:rgba(245,168,0,0.1);border:1px solid rgba(245,168,0,0.2);border-radius:var(--r-md);padding:16px 20px;text-align:center;flex-shrink:0;min-width:130px}
+.tier-next-label{font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--amber);font-family:var(--font-mono);margin-bottom:6px}
+.tier-next-name{font-family:var(--font-display);font-size:22px;font-weight:800;color:var(--amber-light)}
+.tier-next-arrow{font-size:28px;margin-bottom:4px}
+
+/* Tier roadmap */
+.tier-roadmap{display:flex;align-items:center;gap:0;padding:28px 32px;background:var(--bg-elevated);border:1px solid var(--border-default);border-radius:var(--r-lg);overflow-x:auto}
+.tier-stop{display:flex;flex-direction:column;align-items:center;gap:8px;min-width:110px;position:relative}
+.tier-stop::after{content:'';position:absolute;top:18px;right:-50%;width:100%;height:2px;background:var(--border-default)}
+.tier-stop:last-child::after{display:none}
+.tier-stop.done::after{background:var(--amber)}
+.tier-stop.current::after{background:linear-gradient(90deg,var(--amber),var(--border-default))}
+.tier-node{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;font-size:15px;position:relative;z-index:1;border:2px solid var(--border-default)}
+.tier-node.done{background:var(--amber);border-color:var(--amber);font-size:16px}
+.tier-node.current{background:var(--bg-overlay);border-color:var(--amber);box-shadow:0 0 16px rgba(245,168,0,0.3)}
+.tier-node.locked{background:var(--bg-overlay);border-color:var(--border-subtle)}
+.tier-stop-name{font-family:var(--font-display);font-size:13px;font-weight:700;text-align:center}
+.tier-stop-sub{font-size:10px;color:var(--text-muted);font-family:var(--font-mono);text-align:center}
+
+/* Metrics grid */
+.metrics-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.metric-card{background:var(--bg-elevated);border:1px solid var(--border-default);border-radius:var(--r-lg);padding:24px;display:flex;flex-direction:column;gap:16px}
+.metric-header{display:flex;align-items:center;gap:12px}
+.metric-icon{width:40px;height:40px;border-radius:var(--r-sm);display:grid;place-items:center;flex-shrink:0}
+.metric-title{font-family:var(--font-display);font-size:15px;font-weight:700}
+.metric-sub{font-size:12px;color:var(--text-secondary);margin-top:2px}
+.metric-body{display:flex;flex-direction:column;gap:10px}
+.metric-big-num{font-family:var(--font-display);font-size:40px;font-weight:800;line-height:1}
+.metric-fraction{font-size:14px;color:var(--text-secondary);font-family:var(--font-mono)}
+.bar-track{height:8px;background:rgba(255,255,255,0.06);border-radius:4px;overflow:hidden}
+.bar-fill{height:100%;border-radius:4px;transition:width 0.8s cubic-bezier(0.16,1,0.3,1)}
+
+/* Benefits accordion */
+.benefits-section{background:var(--bg-elevated);border:1px solid var(--border-default);border-radius:var(--r-lg);overflow:hidden}
+.benefits-header{padding:20px 24px;border-bottom:1px solid var(--border-subtle)}
+.benefits-title{font-family:var(--font-display);font-size:15px;font-weight:700}
+.benefits-sub{font-size:13px;color:var(--text-secondary);margin-top:4px}
+.tier-benefit-row{padding:0}
+.benefit-toggle{width:100%;background:transparent;border:none;border-bottom:1px solid var(--border-subtle);padding:18px 24px;display:flex;align-items:center;gap:16px;cursor:pointer;text-align:left;transition:background var(--t-base)}
+.benefit-toggle:last-child{border-bottom:none}
+.benefit-toggle:hover{background:var(--bg-overlay)}
+.benefit-toggle.expanded{background:var(--bg-overlay)}
+.benefit-tier-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.benefit-label{flex:1;font-size:14px;font-weight:600;color:var(--text-primary)}
+.benefit-tier-name{font-size:11px;font-family:var(--font-mono);padding:2px 8px;border-radius:var(--r-full)}
+.benefit-status-icon{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;flex-shrink:0}
+.benefit-desc{padding:0 24px 18px 50px;font-size:13px;color:var(--text-secondary);line-height:1.6;display:none}
+.benefit-toggle.expanded + .benefit-desc{display:block}
+</style>
+</head>
+<body>
+
+<aside class="sidebar">
+  <div class="sidebar-brand">
+    <div class="brand-logo">
+      <div class="brand-icon"><span style="font-size:16px;font-weight:900;color:#fff;font-family:'Syne',sans-serif">W</span></div>
+      <div><div class="brand-name">WIMC</div><div class="brand-tier">Mohalla Tier</div></div>
+    </div>
+  </div>
+  <nav class="nav">
+    <span class="nav-section-label">Creator</span>
+    <a class="nav-item" href="01-dashboard.html"><span class="material-symbols-outlined">dashboard</span> Dashboard</a>
+    <a class="nav-item" href="02-my-page.html"><span class="material-symbols-outlined">web</span> My Page</a>
+    <a class="nav-item" href="03-events.html"><span class="material-symbols-outlined">event</span> Events<span class="nav-badge">3</span></a>
+    <a class="nav-item" href="#"><span class="material-symbols-outlined">confirmation_number</span> Tickets</a>
+    <a class="nav-item" href="#"><span class="material-symbols-outlined">calendar_today</span> Bookings</a>
+    <span class="nav-section-label">Growth</span>
+    <a class="nav-item" href="#"><span class="material-symbols-outlined">group</span> Leads</a>
+    <a class="nav-item" href="#"><span class="material-symbols-outlined">reviews</span> Testimonials</a>
+    <a class="nav-item" href="#"><span class="material-symbols-outlined">bar_chart</span> Analytics</a>
+    <span class="nav-section-label">Spaces</span>
+    <a class="nav-item" href="05-venues.html"><span class="material-symbols-outlined">apartment</span> Venues<span class="nav-badge soon">Soon</span></a>
+    <a class="nav-item active" href="04-tier.html"><span class="material-symbols-outlined">workspace_premium</span> Tier Progress</a>
+  </nav>
+  <div class="sidebar-footer">
+    <div class="user-chip"><div class="user-avatar">AB</div><div><div class="user-name">ABCD</div><div class="user-handle">@abcd</div></div></div>
+  </div>
+</aside>
+
+<main class="main">
+  <header class="topbar">
+    <div class="page-title">Tier Progress</div>
+    <button class="btn btn-ghost"><span class="material-symbols-outlined" style="font-size:16px">help_outline</span> How tiers work</button>
+  </header>
+
+  <div class="content">
+
+    <!-- Hero -->
+    <div class="tier-hero">
+      <div class="tier-emblem">🏘</div>
+      <div class="tier-hero-info">
+        <div class="tier-hero-label">Current Tier</div>
+        <div class="tier-hero-name">Mohalla</div>
+        <div class="tier-hero-sub">You're 72% of the way to <strong style="color:var(--amber-light)">Nukkad</strong></div>
+        <div class="tier-overall-bar">
+          <div class="tier-overall-track"><div class="tier-overall-fill"></div></div>
+          <div class="tier-overall-labels"><span>Mohalla</span><span style="color:var(--amber)">72% · Nukkad ahead</span></div>
+        </div>
+      </div>
+      <div class="tier-next-badge">
+        <div class="tier-next-arrow">→</div>
+        <div class="tier-next-label">Next Tier</div>
+        <div class="tier-next-name">Nukkad</div>
+      </div>
+    </div>
+
+    <!-- Roadmap -->
+    <div>
+      <div style="font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-muted);font-family:var(--font-mono);margin-bottom:16px">Tier Roadmap</div>
+      <div class="tier-roadmap">
+        <div class="tier-stop done">
+          <div class="tier-node done">✓</div>
+          <div class="tier-stop-name">Galliwala</div>
+          <div class="tier-stop-sub">Starter</div>
+        </div>
+        <div style="flex:1;height:2px;background:var(--amber)"></div>
+        <div class="tier-stop current">
+          <div class="tier-node current">🏘</div>
+          <div class="tier-stop-name" style="color:var(--amber-light)">Mohalla</div>
+          <div class="tier-stop-sub" style="color:var(--amber)">You are here</div>
+        </div>
+        <div style="flex:1;height:2px;background:linear-gradient(90deg,var(--amber),var(--border-default))"></div>
+        <div class="tier-stop locked">
+          <div class="tier-node locked" style="font-size:16px">🔒</div>
+          <div class="tier-stop-name" style="color:var(--text-muted)">Nukkad</div>
+          <div class="tier-stop-sub">Next</div>
+        </div>
+        <div style="flex:1;height:2px;background:var(--border-default)"></div>
+        <div class="tier-stop locked">
+          <div class="tier-node locked" style="font-size:16px">🔒</div>
+          <div class="tier-stop-name" style="color:var(--text-muted)">Adda</div>
+          <div class="tier-stop-sub">Unlocks later</div>
+        </div>
+        <div style="flex:1;height:2px;background:var(--border-default)"></div>
+        <div class="tier-stop locked">
+          <div class="tier-node locked" style="font-size:16px">🔒</div>
+          <div class="tier-stop-name" style="color:var(--text-muted)">Zila</div>
+          <div class="tier-stop-sub">Top tier</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Metric cards -->
+    <div>
+      <div style="font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-muted);font-family:var(--font-mono);margin-bottom:16px">Progress to Nukkad</div>
+      <div class="metrics-grid">
+
+        <div class="metric-card">
+          <div class="metric-header">
+            <div class="metric-icon" style="background:var(--coral-dim);color:var(--coral)"><span class="material-symbols-outlined">event</span></div>
+            <div><div class="metric-title">Events Hosted</div><div class="metric-sub">Minimum quality rating ≥ 4.0</div></div>
+          </div>
+          <div class="metric-body">
+            <div style="display:flex;align-items:baseline;gap:8px">
+              <div class="metric-big-num" style="color:var(--coral)">8</div>
+              <div class="metric-fraction">/ 12 required</div>
+            </div>
+            <div class="bar-track"><div class="bar-fill" style="width:66%;background:linear-gradient(90deg,var(--coral),var(--coral-light))"></div></div>
+            <div style="font-size:12px;color:var(--text-secondary);font-family:var(--font-mono)">4 more events to go</div>
+          </div>
+        </div>
+
+        <div class="metric-card">
+          <div class="metric-header">
+            <div class="metric-icon" style="background:var(--teal-dim);color:var(--teal)"><span class="material-symbols-outlined">groups</span></div>
+            <div><div class="metric-title">Total Attendees</div><div class="metric-sub">Across all paid events</div></div>
+          </div>
+          <div class="metric-body">
+            <div style="display:flex;align-items:baseline;gap:8px">
+              <div class="metric-big-num" style="color:var(--teal)">280</div>
+              <div class="metric-fraction">/ 300 required</div>
+            </div>
+            <div class="bar-track"><div class="bar-fill" style="width:93%;background:linear-gradient(90deg,var(--teal),var(--teal-light))"></div></div>
+            <div style="font-size:12px;color:var(--success);font-family:var(--font-mono)">Almost there — 20 more!</div>
+          </div>
+        </div>
+
+        <div class="metric-card">
+          <div class="metric-header">
+            <div class="metric-icon" style="background:var(--amber-dim);color:var(--amber)"><span class="material-symbols-outlined">payments</span></div>
+            <div><div class="metric-title">Gross Revenue (GMV)</div><div class="metric-sub">Lifetime paid ticket revenue</div></div>
+          </div>
+          <div class="metric-body">
+            <div style="display:flex;align-items:baseline;gap:8px">
+              <div class="metric-big-num" style="color:var(--amber);font-size:32px">₹42K</div>
+              <div class="metric-fraction">/ ₹75K required</div>
+            </div>
+            <div class="bar-track"><div class="bar-fill" style="width:56%;background:linear-gradient(90deg,var(--amber),var(--amber-light))"></div></div>
+            <div style="font-size:12px;color:var(--text-secondary);font-family:var(--font-mono)">₹33K remaining</div>
+          </div>
+        </div>
+
+        <div class="metric-card">
+          <div class="metric-header">
+            <div class="metric-icon" style="background:rgba(74,222,128,0.1);color:var(--success)"><span class="material-symbols-outlined">star</span></div>
+            <div><div class="metric-title">Average Rating</div><div class="metric-sub">From attendee reviews</div></div>
+          </div>
+          <div class="metric-body">
+            <div style="display:flex;align-items:baseline;gap:8px">
+              <div class="metric-big-num" style="color:var(--success)">4.1</div>
+              <div class="metric-fraction">/ 4.3 required</div>
+            </div>
+            <div class="bar-track"><div class="bar-fill" style="width:95%;background:linear-gradient(90deg,var(--success),#A7F3D0)"></div></div>
+            <div style="font-size:12px;color:var(--text-secondary);font-family:var(--font-mono)">Improve by 0.2 — collect more reviews</div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Benefits accordion -->
+    <div class="benefits-section">
+      <div class="benefits-header">
+        <div class="benefits-title">Benefits by Tier</div>
+        <div class="benefits-sub">What you unlock as you grow</div>
+      </div>
+
+      <!-- Unlocked -->
+      <button class="benefit-toggle expanded" onclick="this.classList.toggle('expanded')">
+        <div class="benefit-tier-dot" style="background:var(--success)"></div>
+        <div class="benefit-label">Creator Page & Public Profile</div>
+        <span class="benefit-tier-name" style="background:rgba(74,222,128,0.1);color:var(--success)">Galliwala +</span>
+        <div class="benefit-status-icon" style="background:rgba(74,222,128,0.1);color:var(--success)"><span class="material-symbols-outlined" style="font-size:14px;font-variation-settings:'FILL' 1,'wght' 400,'GRAD' 0,'opsz' 24">check_circle</span></div>
+      </button>
+      <div class="benefit-desc">Your public link-in-bio page at wimc.app/@handle. Customisable blocks for events, links, social media embeds and more.</div>
+
+      <button class="benefit-toggle expanded" onclick="this.classList.toggle('expanded')">
+        <div class="benefit-tier-dot" style="background:var(--success)"></div>
+        <div class="benefit-label">Paid Event Ticketing</div>
+        <span class="benefit-tier-name" style="background:rgba(74,222,128,0.1);color:var(--success)">Mohalla +</span>
+        <div class="benefit-status-icon" style="background:rgba(74,222,128,0.1);color:var(--success)"><span class="material-symbols-outlined" style="font-size:14px;font-variation-settings:'FILL' 1,'wght' 400,'GRAD' 0,'opsz' 24">check_circle</span></div>
+      </button>
+      <div class="benefit-desc">Sell tickets directly through WIMC with UPI, card and wallet support. Instant payout within 3 working days after event.</div>
+
+      <button class="benefit-toggle" onclick="this.classList.toggle('expanded')">
+        <div class="benefit-tier-dot" style="background:var(--success)"></div>
+        <div class="benefit-label">Lead Capture & CRM</div>
+        <span class="benefit-tier-name" style="background:rgba(74,222,128,0.1);color:var(--success)">Mohalla +</span>
+        <div class="benefit-status-icon" style="background:rgba(74,222,128,0.1);color:var(--success)"><span class="material-symbols-outlined" style="font-size:14px;font-variation-settings:'FILL' 1,'wght' 400,'GRAD' 0,'opsz' 24">check_circle</span></div>
+      </button>
+      <div class="benefit-desc">Collect emails from anyone who visits your page. Export CSV or connect to Mailchimp/Brevo for drip campaigns.</div>
+
+      <!-- Locked / upcoming -->
+      <button class="benefit-toggle" onclick="this.classList.toggle('expanded')">
+        <div class="benefit-tier-dot" style="background:var(--amber)"></div>
+        <div class="benefit-label">Priority Discovery Placement</div>
+        <span class="benefit-tier-name" style="background:var(--amber-dim);color:var(--amber)">Nukkad</span>
+        <div class="benefit-status-icon" style="background:var(--bg-overlay);color:var(--text-muted)"><span class="material-symbols-outlined" style="font-size:14px">lock</span></div>
+      </button>
+      <div class="benefit-desc">Your events appear at the top of city Explorer feeds. Higher visibility = more organic sign-ups without paid promotion.</div>
+
+      <button class="benefit-toggle" onclick="this.classList.toggle('expanded')">
+        <div class="benefit-tier-dot" style="background:var(--amber)"></div>
+        <div class="benefit-label">Premium Venue Access (Adda)</div>
+        <span class="benefit-tier-name" style="background:var(--amber-dim);color:var(--amber)">Nukkad</span>
+        <div class="benefit-status-icon" style="background:var(--bg-overlay);color:var(--text-muted)"><span class="material-symbols-outlined" style="font-size:14px">lock</span></div>
+      </button>
+      <div class="benefit-desc">Request bookings at curated Adda-partner spaces — cafés, studios, rooftops. Pre-negotiated rates, no broker needed.</div>
+
+      <button class="benefit-toggle" onclick="this.classList.toggle('expanded')">
+        <div class="benefit-tier-dot" style="background:var(--neel)"></div>
+        <div class="benefit-label">Bulk Ticket Tools & Promo Codes</div>
+        <span class="benefit-tier-name" style="background:var(--neel-dim);color:var(--neel)">Adda</span>
+        <div class="benefit-status-icon" style="background:var(--bg-overlay);color:var(--text-muted)"><span class="material-symbols-outlined" style="font-size:14px">lock</span></div>
+      </button>
+      <div class="benefit-desc">Issue discount codes, group bookings, and referral incentives. Manage multiple ticket tiers for a single event.</div>
+
+      <button class="benefit-toggle" onclick="this.classList.toggle('expanded')">
+        <div class="benefit-tier-dot" style="background:var(--gulaal)"></div>
+        <div class="benefit-label">WIMC Verified Badge + PR Features</div>
+        <span class="benefit-tier-name" style="background:rgba(232,52,42,0.1);color:var(--gulaal)">Zila</span>
+        <div class="benefit-status-icon" style="background:var(--bg-overlay);color:var(--text-muted)"><span class="material-symbols-outlined" style="font-size:14px">lock</span></div>
+      </button>
+      <div class="benefit-desc">Top-tier creators get a Verified badge, featured city newsletter placement, and introductions to brand partnership opportunities.</div>
+    </div>
+
+  </div>
+</main>
+</body>
+</html>

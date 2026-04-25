@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Golden Hour Photography Walk · WIMC</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;500&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --ink:#1A1108;--chalk:#F7F2E8;--chalk-2:#EDE7D6;
+  --turmeric:#F5A800;--gulaal:#E8342A;--neel:#1B3A6B;
+  --teal:#5DD9D0;--coral:#E8705A;--coral-light:#FFBBA6;
+  --leaf:#2A6B4A;
+  --border-chalk:rgba(26,17,8,0.08);--border-chalk-2:rgba(26,17,8,0.14);
+  --text-ink:#1A1108;--text-ink-2:#4A3F2F;--text-ink-3:#7A6E5F;
+  --font-display:'Syne',sans-serif;--font-body:'DM Sans',sans-serif;--font-mono:'JetBrains Mono',monospace;
+  --r-sm:6px;--r-md:12px;--r-lg:18px;--r-xl:24px;--r-full:9999px;
+  --t-base:220ms ease;
+}
+.material-symbols-outlined{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;font-size:20px}
+body{background:var(--chalk);color:var(--text-ink);font-family:var(--font-body);min-height:100vh}
+
+/* Nav */
+.nav{height:56px;background:var(--ink);display:flex;align-items:center;justify-content:space-between;padding:0 32px}
+.nav-logo{display:flex;align-items:center;gap:10px;cursor:pointer}
+.nav-logo-mark{width:28px;height:28px;background:var(--turmeric);border-radius:5px;display:grid;place-items:center;font-family:var(--font-display);font-weight:900;font-size:15px;color:var(--ink)}
+.nav-logo-name{font-family:var(--font-display);font-weight:800;font-size:16px;color:#fff}
+.nav-right{display:flex;align-items:center;gap:10px}
+.nav-back{font-size:13px;color:rgba(255,255,255,0.5);cursor:pointer;display:flex;align-items:center;gap:4px;transition:color var(--t-base)}
+.nav-back:hover{color:#fff}
+
+/* Hero */
+.event-hero{background:var(--ink);padding:0;position:relative;overflow:hidden}
+.event-hero-bg{height:380px;background:linear-gradient(135deg,#1A0D00 0%,#3D2000 40%,#1A0D00 100%);display:grid;place-items:center;position:relative;overflow:hidden}
+.event-hero-bg::before{content:'📸';font-size:120px;position:absolute;right:15%;top:50%;transform:translateY(-50%) rotate(-8deg);opacity:0.15}
+.event-hero-bg::after{content:'';position:absolute;inset:0;background:radial-gradient(circle at 30% 60%,rgba(245,168,0,0.15) 0%,transparent 60%)}
+.event-hero-content{position:absolute;bottom:0;left:0;right:0;padding:32px 48px;background:linear-gradient(to top,rgba(10,8,4,0.9) 0%,transparent 100%)}
+.event-cat-badge{display:inline-flex;align-items:center;gap:6px;background:rgba(245,168,0,0.15);border:1px solid rgba(245,168,0,0.3);border-radius:var(--r-full);padding:4px 12px;font-size:11px;color:var(--turmeric);font-family:var(--font-mono);letter-spacing:1px;text-transform:uppercase;margin-bottom:12px}
+.event-hero-title{font-family:var(--font-display);font-size:40px;font-weight:800;color:#fff;line-height:1.1;max-width:600px}
+.event-hero-meta{display:flex;align-items:center;gap:20px;margin-top:14px;flex-wrap:wrap}
+.event-hero-meta-item{display:flex;align-items:center;gap:6px;font-size:14px;color:rgba(255,255,255,0.65);font-family:var(--font-mono)}
+
+/* Page body */
+.page-body{max-width:1080px;margin:0 auto;padding:40px 32px;display:grid;grid-template-columns:1fr 340px;gap:40px;align-items:start}
+
+/* Left content */
+.about-section{margin-bottom:32px}
+.section-heading{font-family:var(--font-display);font-size:20px;font-weight:800;color:var(--ink);margin-bottom:14px;padding-bottom:12px;border-bottom:2px solid var(--border-chalk-2)}
+.body-text{font-size:15px;line-height:1.7;color:var(--text-ink-2)}
+.info-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:20px 0}
+.info-item{background:#fff;border:1px solid var(--border-chalk);border-radius:var(--r-md);padding:16px}
+.info-item-icon{font-size:22px;margin-bottom:8px}
+.info-item-label{font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-ink-3);font-family:var(--font-mono);margin-bottom:4px}
+.info-item-val{font-size:15px;font-weight:700;color:var(--ink)}
+.info-item-sub{font-size:12px;color:var(--text-ink-3);margin-top:2px}
+
+/* Itinerary */
+.itinerary-list{display:flex;flex-direction:column;gap:0;position:relative}
+.itinerary-list::before{content:'';position:absolute;left:16px;top:24px;bottom:24px;width:2px;background:var(--border-chalk-2)}
+.itinerary-item{display:flex;gap:16px;padding:16px 0}
+.itinerary-dot{width:32px;height:32px;border-radius:50%;background:var(--turmeric);display:grid;place-items:center;flex-shrink:0;font-size:12px;font-weight:700;font-family:var(--font-mono);position:relative;z-index:1;box-shadow:0 0 0 4px var(--chalk)}
+.itinerary-time{font-size:11px;font-family:var(--font-mono);color:var(--text-ink-3);margin-bottom:3px}
+.itinerary-label{font-size:14px;font-weight:600;color:var(--ink)}
+.itinerary-desc{font-size:13px;color:var(--text-ink-3);margin-top:3px}
+
+/* What to bring */
+.bring-list{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.bring-item{background:#fff;border:1px solid var(--border-chalk);border-radius:var(--r-full);padding:6px 14px;font-size:13px;color:var(--text-ink-2);display:flex;align-items:center;gap:6px}
+
+/* Creator bio */
+.creator-card{background:#fff;border:1px solid var(--border-chalk);border-radius:var(--r-lg);padding:20px;display:flex;gap:16px;align-items:flex-start;margin-top:12px;cursor:pointer;transition:box-shadow var(--t-base)}
+.creator-card:hover{box-shadow:0 4px 20px rgba(26,17,8,0.08)}
+.creator-av-lg{width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,var(--coral),var(--turmeric));display:grid;place-items:center;font-weight:800;font-size:18px;flex-shrink:0}
+.creator-name{font-family:var(--font-display);font-size:16px;font-weight:700}
+.creator-rating{display:flex;align-items:center;gap:4px;font-size:13px;color:var(--text-ink-2);margin-top:3px}
+.creator-bio{font-size:13px;color:var(--text-ink-3);margin-top:6px;line-height:1.5}
+.creator-stats{display:flex;gap:20px;margin-top:10px}
+.creator-stat{font-size:12px;color:var(--text-ink-3);font-family:var(--font-mono)}
+.creator-stat strong{color:var(--ink);font-size:14px;font-weight:700;display:block}
+
+/* Booking sticky card */
+.booking-card{background:#fff;border:1px solid var(--border-chalk);border-radius:var(--r-xl);padding:28px;position:sticky;top:24px;box-shadow:0 8px 32px rgba(26,17,8,0.1)}
+.booking-price-row{display:flex;align-items:baseline;gap:8px;margin-bottom:20px}
+.booking-price{font-family:var(--font-display);font-size:36px;font-weight:800;color:var(--ink)}
+.booking-price-sub{font-size:14px;color:var(--text-ink-3)}
+.booking-spots{background:rgba(232,52,42,0.06);border:1px solid rgba(232,52,42,0.15);border-radius:var(--r-sm);padding:10px 14px;margin-bottom:16px;font-size:13px;color:var(--gulaal);font-weight:600;text-align:center}
+.booking-detail-rows{display:flex;flex-direction:column;gap:0;border:1px solid var(--border-chalk);border-radius:var(--r-md);overflow:hidden;margin-bottom:16px}
+.booking-detail-row{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-bottom:1px solid var(--border-chalk)}
+.booking-detail-row:last-child{border-bottom:none}
+.booking-detail-label{font-size:13px;color:var(--text-ink-3);display:flex;align-items:center;gap:6px}
+.booking-detail-val{font-size:13px;font-weight:600;color:var(--ink);font-family:var(--font-mono)}
+.qty-ctrl{display:flex;align-items:center;gap:10px}
+.qty-btn{width:28px;height:28px;border-radius:50%;background:var(--chalk-2);border:1px solid var(--border-chalk-2);cursor:pointer;font-size:16px;display:grid;place-items:center;line-height:1;transition:background var(--t-base)}
+.qty-btn:hover{background:var(--border-chalk-2)}
+.total-row{display:flex;justify-content:space-between;align-items:center;padding:14px 0 18px;border-top:2px solid var(--border-chalk-2);margin-top:4px}
+.total-label{font-size:15px;font-weight:700}
+.total-val{font-family:var(--font-display);font-size:22px;font-weight:800}
+.book-cta{width:100%;background:var(--gulaal);color:#fff;border:none;border-radius:var(--r-lg);padding:16px;font-size:16px;font-weight:700;cursor:pointer;font-family:var(--font-body);transition:background var(--t-base)}
+.book-cta:hover{background:#c42820}
+.book-meta{font-size:12px;color:var(--text-ink-3);text-align:center;margin-top:10px}
+.share-row{display:flex;gap:8px;margin-top:16px;justify-content:center}
+.share-btn{flex:1;padding:8px 12px;border:1px solid var(--border-chalk-2);border-radius:var(--r-sm);background:transparent;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;font-family:var(--font-body);color:var(--text-ink-2);transition:all var(--t-base)}
+.share-btn:hover{background:var(--chalk-2)}
+
+/* Reviews */
+.reviews-list{display:flex;flex-direction:column;gap:16px;margin-top:12px}
+.review-item{background:#fff;border:1px solid var(--border-chalk);border-radius:var(--r-md);padding:16px}
+.review-header{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.review-av{width:32px;height:32px;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:13px;flex-shrink:0}
+.review-name{font-size:14px;font-weight:600}
+.review-stars{color:var(--turmeric);font-size:13px;margin-top:1px}
+.review-text{font-size:13px;color:var(--text-ink-2);line-height:1.5}
+.review-event{font-size:11px;color:var(--text-ink-3);font-family:var(--font-mono);margin-top:6px}
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-logo" onclick="location.href='06-explorer-discovery.html'">
+    <div class="nav-logo-mark">W</div>
+    <div class="nav-logo-name">WIMC</div>
+  </div>
+  <div class="nav-right">
+    <div class="nav-back" onclick="location.href='06-explorer-discovery.html'">
+      <span class="material-symbols-outlined" style="font-size:16px;color:rgba(255,255,255,0.5)">arrow_back</span>
+      Back to Discover
+    </div>
+  </div>
+</nav>
+
+<!-- Hero -->
+<div class="event-hero">
+  <div class="event-hero-bg"></div>
+  <div class="event-hero-content">
+    <div class="event-cat-badge">📸 Photography</div>
+    <h1 class="event-hero-title">Golden Hour Photography Walk — Cubbon Park</h1>
+    <div class="event-hero-meta">
+      <div class="event-hero-meta-item"><span class="material-symbols-outlined" style="font-size:15px">calendar_today</span> Saturday, 24 October · 3:00 PM</div>
+      <div class="event-hero-meta-item"><span class="material-symbols-outlined" style="font-size:15px">location_on</span> Cubbon Park, Bengaluru</div>
+      <div class="event-hero-meta-item"><span class="material-symbols-outlined" style="font-size:15px">schedule</span> 2 hours</div>
+    </div>
+  </div>
+</div>
+
+<div class="page-body">
+  <!-- Left column -->
+  <div>
+    <!-- About -->
+    <div class="about-section">
+      <h2 class="section-heading">About this Experience</h2>
+      <p class="body-text">Join ABCD for an intimate golden-hour photography walk through the historic Cubbon Park. Whether you're a beginner or hobbyist, this walk is designed to help you slow down, observe, and capture Bengaluru's natural light in ways you've never noticed before.</p>
+      <p class="body-text" style="margin-top:12px">We'll explore shaded forest paths, open lawns, and the ornate Victorian-era buildings that frame the park — each offering completely different light conditions to practice in.</p>
+    </div>
+
+    <!-- Key info -->
+    <div class="about-section">
+      <h2 class="section-heading">Key Details</h2>
+      <div class="info-grid">
+        <div class="info-item">
+          <div class="info-item-icon">📅</div>
+          <div class="info-item-label">Date & Time</div>
+          <div class="info-item-val">Sat, 24 October</div>
+          <div class="info-item-sub">3:00 PM – 5:00 PM</div>
+        </div>
+        <div class="info-item">
+          <div class="info-item-icon">📍</div>
+          <div class="info-item-label">Meeting Point</div>
+          <div class="info-item-val">Main Gate, Cubbon Park</div>
+          <div class="info-item-sub">Near Kasturba Rd entrance</div>
+        </div>
+        <div class="info-item">
+          <div class="info-item-icon">👥</div>
+          <div class="info-item-label">Group Size</div>
+          <div class="info-item-val">Max 15 people</div>
+          <div class="info-item-sub">1 spot left</div>
+        </div>
+        <div class="info-item">
+          <div class="info-item-icon">🎓</div>
+          <div class="info-item-label">Experience Level</div>
+          <div class="info-item-val">Beginner–Intermediate</div>
+          <div class="info-item-sub">Any camera welcome</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Itinerary -->
+    <div class="about-section">
+      <h2 class="section-heading">Walk Itinerary</h2>
+      <div class="itinerary-list">
+        <div class="itinerary-item">
+          <div class="itinerary-dot">1</div>
+          <div>
+            <div class="itinerary-time">3:00 PM</div>
+            <div class="itinerary-label">Meet & Brief</div>
+            <div class="itinerary-desc">Introductions, quick camera settings overview</div>
+          </div>
+        </div>
+        <div class="itinerary-item">
+          <div class="itinerary-dot" style="background:var(--teal);color:var(--ink)">2</div>
+          <div>
+            <div class="itinerary-time">3:20 PM</div>
+            <div class="itinerary-label">Forest Path Walk</div>
+            <div class="itinerary-desc">Dappled light, texture and shadow practice</div>
+          </div>
+        </div>
+        <div class="itinerary-item">
+          <div class="itinerary-dot" style="background:var(--gulaal)">3</div>
+          <div>
+            <div class="itinerary-time">4:00 PM</div>
+            <div class="itinerary-label">Golden Hour Open Lawns</div>
+            <div class="itinerary-desc">Portraits, silhouettes, long-shadow compositions</div>
+          </div>
+        </div>
+        <div class="itinerary-item">
+          <div class="itinerary-dot" style="background:var(--neel)">4</div>
+          <div>
+            <div class="itinerary-time">4:45 PM</div>
+            <div class="itinerary-label">Wrap & Photo Review</div>
+            <div class="itinerary-desc">Share your 3 best shots, quick group feedback</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- What to bring -->
+    <div class="about-section">
+      <h2 class="section-heading">What to Bring</h2>
+      <div class="bring-list">
+        <span class="bring-item">📷 Your camera (any kind)</span>
+        <span class="bring-item">👟 Comfortable shoes</span>
+        <span class="bring-item">💧 Water bottle</span>
+        <span class="bring-item">🎒 Light backpack</span>
+        <span class="bring-item">🚫 No experience needed</span>
+      </div>
+    </div>
+
+    <!-- Creator -->
+    <div class="about-section">
+      <h2 class="section-heading">Your Host</h2>
+      <div class="creator-card">
+        <div class="creator-av-lg">AB</div>
+        <div style="flex:1">
+          <div class="creator-name">ABCD</div>
+          <div class="creator-rating">
+            <span style="color:var(--turmeric)">★★★★★</span>
+            <span style="color:var(--text-ink-3)">4.8 · 34 reviews</span>
+          </div>
+          <p class="creator-bio">City photographer and urban storyteller based in Ahmedabad. Has hosted 25+ photography walks across Gujarat and Karnataka.</p>
+          <div class="creator-stats">
+            <div class="creator-stat"><strong>25+</strong> Events hosted</div>
+            <div class="creator-stat"><strong>280+</strong> Attendees</div>
+            <div class="creator-stat"><strong>4.8</strong> Avg rating</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Reviews -->
+    <div class="about-section">
+      <h2 class="section-heading">Reviews</h2>
+      <div class="reviews-list">
+        <div class="review-item">
+          <div class="review-header">
+            <div class="review-av" style="background:linear-gradient(135deg,var(--neel),var(--teal));color:#fff">AM</div>
+            <div>
+              <div class="review-name">Anjali M.</div>
+              <div class="review-stars">★★★★★</div>
+            </div>
+          </div>
+          <p class="review-text">ABCD is an incredible host — patient, passionate, and knows exactly when to stay quiet so you can just shoot. Came back with 12 photos I'm genuinely proud of.</p>
+          <div class="review-event">Street Food Trail · Oct 2024</div>
+        </div>
+        <div class="review-item">
+          <div class="review-header">
+            <div class="review-av" style="background:linear-gradient(135deg,var(--coral),var(--turmeric));color:#fff">RG</div>
+            <div>
+              <div class="review-name">Rohan G.</div>
+              <div class="review-stars">★★★★☆</div>
+            </div>
+          </div>
+          <p class="review-text">Great group size, never felt rushed. Would've loved a slightly longer walk but the feedback session at the end was super valuable.</p>
+          <div class="review-event">Architecture Walk · Sep 2024</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Booking card -->
+  <div>
+    <div class="booking-card">
+      <div class="booking-price-row">
+        <div class="booking-price">₹499</div>
+        <div class="booking-price-sub">per person</div>
+      </div>
+
+      <div class="booking-spots">🔥 Only 1 spot remaining</div>
+
+      <div class="booking-detail-rows">
+        <div class="booking-detail-row">
+          <div class="booking-detail-label"><span class="material-symbols-outlined" style="font-size:15px">calendar_today</span> Date</div>
+          <div class="booking-detail-val">Sat, 24 Oct</div>
+        </div>
+        <div class="booking-detail-row">
+          <div class="booking-detail-label"><span class="material-symbols-outlined" style="font-size:15px">schedule</span> Time</div>
+          <div class="booking-detail-val">3:00 – 5:00 PM</div>
+        </div>
+        <div class="booking-detail-row">
+          <div class="booking-detail-label"><span class="material-symbols-outlined" style="font-size:15px">people</span> Tickets</div>
+          <div class="qty-ctrl">
+            <button class="qty-btn">−</button>
+            <span style="font-size:15px;font-weight:700;min-width:20px;text-align:center">1</span>
+            <button class="qty-btn">+</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="total-row">
+        <div class="total-label">Total</div>
+        <div class="total-val">₹499</div>
+      </div>
+
+      <button class="book-cta">Book My Spot</button>
+      <div class="book-meta">Free cancellation up to 24 hrs before event</div>
+
+      <div class="share-row">
+        <button class="share-btn"><span class="material-symbols-outlined" style="font-size:14px">share</span> Share</button>
+        <button class="share-btn"><span class="material-symbols-outlined" style="font-size:14px">bookmark_border</span> Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

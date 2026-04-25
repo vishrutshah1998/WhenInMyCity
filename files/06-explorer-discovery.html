@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>WIMC · Discover</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;500&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  /* Public/Explorer pages use editorial light palette */
+  --ink:#1A1108;--chalk:#F7F2E8;--chalk-2:#EDE7D6;--chalk-3:#E0D9C8;
+  --turmeric:#F5A800;--gulaal:#E8342A;--neel:#1B3A6B;--neel-light:#3B6BCC;
+  --leaf:#2A6B4A;--teal:#5DD9D0;
+  --border-chalk:rgba(26,17,8,0.08);--border-chalk-2:rgba(26,17,8,0.14);
+  --text-ink:#1A1108;--text-ink-2:#4A3F2F;--text-ink-3:#7A6E5F;
+  --coral:#E8705A;
+  --font-display:'Syne',sans-serif;--font-body:'DM Sans',sans-serif;--font-mono:'JetBrains Mono',monospace;
+  --r-sm:6px;--r-md:12px;--r-lg:18px;--r-xl:24px;--r-full:9999px;
+  --t-base:220ms ease;
+}
+.material-symbols-outlined{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;font-size:20px}
+body{background:var(--chalk);color:var(--text-ink);font-family:var(--font-body);min-height:100vh}
+
+/* Nav */
+.nav{height:60px;background:var(--ink);display:flex;align-items:center;justify-content:space-between;padding:0 32px;position:sticky;top:0;z-index:50}
+.nav-logo{display:flex;align-items:center;gap:10px}
+.nav-logo-mark{width:30px;height:30px;background:var(--turmeric);border-radius:6px;display:grid;place-items:center;font-family:var(--font-display);font-weight:900;font-size:16px;color:var(--ink)}
+.nav-logo-name{font-family:var(--font-display);font-weight:800;font-size:18px;color:#fff}
+.nav-links{display:flex;align-items:center;gap:4px}
+.nav-link{padding:6px 14px;border-radius:var(--r-full);font-size:13px;font-weight:600;color:rgba(255,255,255,0.6);cursor:pointer;transition:all var(--t-base)}
+.nav-link:hover{color:#fff}
+.nav-link.active{background:rgba(255,255,255,0.1);color:#fff}
+.nav-right{display:flex;align-items:center;gap:12px}
+.nav-city{font-size:12px;font-family:var(--font-mono);color:var(--turmeric);background:rgba(245,168,0,0.1);padding:5px 12px;border-radius:var(--r-full);border:1px solid rgba(245,168,0,0.2);cursor:pointer}
+.nav-btn{padding:7px 16px;border-radius:var(--r-full);font-size:13px;font-weight:700;cursor:pointer;border:none;font-family:var(--font-body)}
+.nav-btn-outline{background:transparent;border:1px solid rgba(255,255,255,0.2);color:#fff}
+.nav-btn-fill{background:var(--gulaal);color:#fff}
+.nav-btn-fill:hover{background:#c42820}
+
+/* Hero strip */
+.hero{background:var(--ink);padding:48px 32px 40px;position:relative;overflow:hidden}
+.hero::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 80% 50%,rgba(245,168,0,0.12) 0%,transparent 60%)}
+.hero-eyebrow{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--turmeric);font-family:var(--font-mono);margin-bottom:12px}
+.hero-title{font-family:var(--font-display);font-size:48px;font-weight:800;color:#fff;line-height:1.05;max-width:600px}
+.hero-title em{color:var(--turmeric);font-style:normal}
+.hero-sub{font-size:16px;color:rgba(255,255,255,0.55);margin-top:12px;max-width:480px}
+.hero-search{display:flex;align-items:center;gap:0;margin-top:28px;max-width:560px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);border-radius:var(--r-lg);overflow:hidden}
+.hero-search input{flex:1;background:transparent;border:none;outline:none;padding:14px 20px;color:#fff;font-family:var(--font-body);font-size:15px}
+.hero-search input::placeholder{color:rgba(255,255,255,0.35)}
+.hero-search-btn{background:var(--turmeric);border:none;padding:12px 20px;cursor:pointer;color:var(--ink);font-weight:700;font-family:var(--font-body);font-size:14px;display:flex;align-items:center;gap:6px;transition:background var(--t-base)}
+.hero-search-btn:hover{background:#e09200}
+.hero-chips{display:flex;gap:8px;margin-top:16px;flex-wrap:wrap}
+.hero-chip{padding:5px 14px;border-radius:var(--r-full);font-size:12px;font-weight:600;cursor:pointer;border:1px solid rgba(255,255,255,0.15);color:rgba(255,255,255,0.65);font-family:var(--font-mono);transition:all var(--t-base)}
+.hero-chip:hover{border-color:var(--turmeric);color:var(--turmeric)}
+
+/* Main content */
+.page-body{max-width:1200px;margin:0 auto;padding:40px 32px;display:flex;gap:32px}
+.feed{flex:1;min-width:0}
+.sidebar-right{width:280px;flex-shrink:0}
+
+/* Category filter */
+.cat-row{display:flex;gap:8px;margin-bottom:28px;overflow-x:auto;padding-bottom:4px}
+.cat-chip{padding:7px 16px;border-radius:var(--r-full);font-size:13px;font-weight:600;cursor:pointer;border:2px solid var(--border-chalk-2);color:var(--text-ink-2);white-space:nowrap;transition:all var(--t-base)}
+.cat-chip:hover{border-color:var(--ink);color:var(--ink)}
+.cat-chip.active{background:var(--ink);color:var(--chalk);border-color:var(--ink)}
+
+/* Event cards — editorial grid */
+.events-masonry{columns:2;gap:20px}
+.event-card{break-inside:avoid;margin-bottom:20px;background:#fff;border-radius:var(--r-lg);overflow:hidden;border:1px solid var(--border-chalk);transition:transform var(--t-base),box-shadow var(--t-base);cursor:pointer}
+.event-card:hover{transform:translateY(-3px);box-shadow:0 12px 40px rgba(26,17,8,0.12)}
+.event-card-thumb{height:180px;position:relative;overflow:hidden;display:flex;align-items:flex-end}
+.event-card-thumb-bg{position:absolute;inset:0;display:grid;place-items:center;font-size:56px}
+.event-card-thumb-overlay{position:absolute;inset:0;background:linear-gradient(to top,rgba(26,17,8,0.7) 0%,transparent 60%)}
+.event-card-thumb-content{position:relative;z-index:1;padding:14px;width:100%}
+.event-date-strip{font-size:11px;font-family:var(--font-mono);color:rgba(255,255,255,0.7);letter-spacing:1px;text-transform:uppercase}
+.event-card-body{padding:16px}
+.event-cat-pill{display:inline-block;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;font-family:var(--font-mono);font-weight:600;padding:3px 9px;border-radius:var(--r-full);margin-bottom:8px}
+.event-card-title{font-family:var(--font-display);font-size:16px;font-weight:700;color:var(--ink);line-height:1.3}
+.event-card-meta{display:flex;align-items:center;gap:12px;margin-top:8px;flex-wrap:wrap}
+.event-card-meta-item{font-size:12px;color:var(--text-ink-3);display:flex;align-items:center;gap:4px;font-family:var(--font-mono)}
+.event-card-meta-item .material-symbols-outlined{font-size:13px}
+.event-card-footer{padding:12px 16px;border-top:1px solid var(--border-chalk);display:flex;align-items:center;justify-content:space-between}
+.event-price{font-family:var(--font-display);font-size:17px;font-weight:800;color:var(--ink)}
+.event-spots{font-size:11px;font-family:var(--font-mono);color:var(--text-ink-3)}
+.book-btn{background:var(--gulaal);color:#fff;border:none;padding:7px 16px;border-radius:var(--r-full);font-size:13px;font-weight:700;cursor:pointer;font-family:var(--font-body);transition:background var(--t-base)}
+.book-btn:hover{background:#c42820}
+.book-btn.teal{background:var(--teal);color:var(--ink)}
+.book-btn.neel{background:var(--neel);color:#fff}
+
+/* Right sidebar */
+.widget{background:#fff;border:1px solid var(--border-chalk);border-radius:var(--r-lg);padding:20px;margin-bottom:20px}
+.widget-title{font-family:var(--font-display);font-size:14px;font-weight:700;color:var(--ink);margin-bottom:14px}
+.creator-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border-chalk);cursor:pointer}
+.creator-row:last-child{border-bottom:none}
+.creator-av{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:14px;flex-shrink:0}
+.creator-name{font-size:13px;font-weight:600}
+.creator-events{font-size:11px;color:var(--text-ink-3);font-family:var(--font-mono)}
+.creator-follow-btn{margin-left:auto;font-size:11px;font-weight:700;padding:4px 10px;border-radius:var(--r-full);border:1.5px solid var(--ink);background:transparent;cursor:pointer;font-family:var(--font-body);transition:all var(--t-base)}
+.creator-follow-btn:hover{background:var(--ink);color:#fff}
+.city-pill-row{display:flex;gap:6px;flex-wrap:wrap}
+.city-pill{padding:5px 12px;border-radius:var(--r-full);font-size:12px;font-weight:600;cursor:pointer;border:1.5px solid var(--border-chalk-2);color:var(--text-ink-2);font-family:var(--font-mono);transition:all var(--t-base)}
+.city-pill:hover{border-color:var(--neel);color:var(--neel)}
+.city-pill.active{background:var(--neel);color:#fff;border-color:var(--neel)}
+</style>
+</head>
+<body>
+
+<!-- Nav -->
+<nav class="nav">
+  <div class="nav-logo">
+    <div class="nav-logo-mark">W</div>
+    <div class="nav-logo-name">WIMC</div>
+  </div>
+  <div class="nav-links">
+    <div class="nav-link active">Discover</div>
+    <div class="nav-link">Creators</div>
+    <div class="nav-link">Cities</div>
+  </div>
+  <div class="nav-right">
+    <div class="nav-city">📍 Ahmedabad</div>
+    <button class="nav-btn nav-btn-outline">Sign In</button>
+    <button class="nav-btn nav-btn-fill" onclick="location.href='07-public-event.html'">Explore</button>
+  </div>
+</nav>
+
+<!-- Hero -->
+<div class="hero">
+  <div class="hero-eyebrow">Discover experiences</div>
+  <h1 class="hero-title">Your city.<br><em>Rediscovered.</em></h1>
+  <p class="hero-sub">Curated walks, workshops & pop-ups by creators who actually live here.</p>
+  <div class="hero-search">
+    <input placeholder="Photography walks, food tours, architecture…" />
+    <button class="hero-search-btn"><span class="material-symbols-outlined" style="font-size:16px">search</span> Search</button>
+  </div>
+  <div class="hero-chips">
+    <span class="hero-chip">Photography</span>
+    <span class="hero-chip">Food & Drink</span>
+    <span class="hero-chip">Architecture</span>
+    <span class="hero-chip">Music</span>
+    <span class="hero-chip">Art & Craft</span>
+    <span class="hero-chip">Heritage</span>
+    <span class="hero-chip">Nightlife</span>
+  </div>
+</div>
+
+<!-- Body -->
+<div class="page-body">
+  <div class="feed">
+    <!-- Category filter -->
+    <div class="cat-row">
+      <div class="cat-chip active">All</div>
+      <div class="cat-chip">This Weekend</div>
+      <div class="cat-chip">Photography</div>
+      <div class="cat-chip">Food & Drink</div>
+      <div class="cat-chip">Architecture</div>
+      <div class="cat-chip">Music</div>
+      <div class="cat-chip">Art & Craft</div>
+      <div class="cat-chip">Heritage</div>
+    </div>
+
+    <div class="events-masonry">
+
+      <!-- Card 1 -->
+      <div class="event-card" onclick="location.href='07-public-event.html'">
+        <div class="event-card-thumb" style="height:220px">
+          <div class="event-card-thumb-bg" style="background:linear-gradient(135deg,#1A0D00,#3D2000)">📸</div>
+          <div class="event-card-thumb-overlay"></div>
+          <div class="event-card-thumb-content">
+            <div class="event-date-strip">Sat 24 Oct · 3:00 PM</div>
+          </div>
+        </div>
+        <div class="event-card-body">
+          <span class="event-cat-pill" style="background:rgba(245,168,0,0.1);color:var(--turmeric)">Photography</span>
+          <div class="event-card-title">Golden Hour Walk — Cubbon Park</div>
+          <div class="event-card-meta">
+            <div class="event-card-meta-item"><span class="material-symbols-outlined">location_on</span> Bengaluru</div>
+            <div class="event-card-meta-item"><span class="material-symbols-outlined">person</span> by ABCD</div>
+          </div>
+        </div>
+        <div class="event-card-footer">
+          <div><div class="event-price">₹499</div><div class="event-spots">14 spots left</div></div>
+          <button class="book-btn" onclick="location.href='07-public-event.html'">Book →</button>
+        </div>
+      </div>
+
+      <!-- Card 2 -->
+      <div class="event-card" onclick="location.href='07-public-event.html'">
+        <div class="event-card-thumb">
+          <div class="event-card-thumb-bg" style="background:linear-gradient(135deg,#0D1A15,#1A3025)">🍜</div>
+          <div class="event-card-thumb-overlay"></div>
+          <div class="event-card-thumb-content">
+            <div class="event-date-strip">Fri 02 Nov · 7:30 PM</div>
+          </div>
+        </div>
+        <div class="event-card-body">
+          <span class="event-cat-pill" style="background:rgba(232,52,42,0.1);color:var(--gulaal)">Food & Drink</span>
+          <div class="event-card-title">Street Food Trail — Manek Chowk</div>
+          <div class="event-card-meta">
+            <div class="event-card-meta-item"><span class="material-symbols-outlined">location_on</span> Ahmedabad</div>
+            <div class="event-card-meta-item"><span class="material-symbols-outlined">person</span> by ABCD</div>
+          </div>
+        </div>
+        <div class="event-card-footer">
+          <div><div class="event-price">₹1,200</div><div class="event-spots" style="color:var(--gulaal);font-weight:600">🔥 3 spots left</div></div>
+          <button class="book-btn">Book →</button>
+        </div>
+      </div>
+
+      <!-- Card 3 — free event -->
+      <div class="event-card">
+        <div class="event-card-thumb" style="height:160px">
+          <div class="event-card-thumb-bg" style="background:linear-gradient(135deg,#0D0D2A,#1A1A4A)">🏛</div>
+          <div class="event-card-thumb-overlay"></div>
+          <div class="event-card-thumb-content">
+            <div class="event-date-strip">Sun 05 Nov · 9:00 AM</div>
+          </div>
+        </div>
+        <div class="event-card-body">
+          <span class="event-cat-pill" style="background:rgba(27,58,107,0.1);color:var(--neel)">Architecture</span>
+          <div class="event-card-title">Old City Heritage Walk — Walled City</div>
+          <div class="event-card-meta">
+            <div class="event-card-meta-item"><span class="material-symbols-outlined">location_on</span> Ahmedabad</div>
+            <div class="event-card-meta-item"><span class="material-symbols-outlined">person</span> by Mihir K.</div>
+          </div>
+        </div>
+        <div class="event-card-footer">
+          <div><div class="event-price" style="color:var(--leaf)">Free</div><div class="event-spots">RSVP required</div></div>
+          <button class="book-btn neel">RSVP →</button>
+        </div>
+      </div>
+
+      <!-- Card 4 -->
+      <div class="event-card">
+        <div class="event-card-thumb" style="height:200px">
+          <div class="event-card-thumb-bg" style="background:linear-gradient(135deg,#0A1A0D,#1A3A20)">🎨</div>
+          <div class="event-card-thumb-overlay"></div>
+          <div class="event-card-thumb-content">
+            <div class="event-date-strip">Sat 09 Nov · 5:00 PM</div>
+          </div>
+        </div>
+        <div class="event-card-body">
+          <span class="event-cat-pill" style="background:rgba(93,217,208,0.1);color:var(--teal)">Art & Craft</span>
+          <div class="event-card-title">Warli Painting Workshop — Studio 21</div>
+          <div class="event-card-meta">
+            <div class="event-card-meta-item"><span class="material-symbols-outlined">location_on</span> Mumbai</div>
+            <div class="event-card-meta-item"><span class="material-symbols-outlined">person</span> by Priya S.</div>
+          </div>
+        </div>
+        <div class="event-card-footer">
+          <div><div class="event-price">₹1,800</div><div class="event-spots">8 spots left</div></div>
+          <button class="book-btn teal">Book →</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Right sidebar -->
+  <div class="sidebar-right">
+    <!-- City filter -->
+    <div class="widget">
+      <div class="widget-title">Browse by City</div>
+      <div class="city-pill-row">
+        <span class="city-pill active">Ahmedabad</span>
+        <span class="city-pill">Bengaluru</span>
+        <span class="city-pill">Mumbai</span>
+        <span class="city-pill">Delhi</span>
+        <span class="city-pill">Hyderabad</span>
+        <span class="city-pill">Pune</span>
+      </div>
+    </div>
+
+    <!-- Trending creators -->
+    <div class="widget">
+      <div class="widget-title">Trending Creators</div>
+      <div class="creator-row">
+        <div class="creator-av" style="background:linear-gradient(135deg,var(--coral),var(--turmeric))">AB</div>
+        <div><div class="creator-name">ABCD</div><div class="creator-events">3 upcoming events</div></div>
+        <button class="creator-follow-btn">Follow</button>
+      </div>
+      <div class="creator-row">
+        <div class="creator-av" style="background:linear-gradient(135deg,var(--neel),var(--teal))">MK</div>
+        <div><div class="creator-name">Mihir K.</div><div class="creator-events">2 upcoming events</div></div>
+        <button class="creator-follow-btn">Follow</button>
+      </div>
+      <div class="creator-row">
+        <div class="creator-av" style="background:linear-gradient(135deg,var(--gulaal),var(--turmeric))">PS</div>
+        <div><div class="creator-name">Priya S.</div><div class="creator-events">4 upcoming events</div></div>
+        <button class="creator-follow-btn">Follow</button>
+      </div>
+    </div>
+
+    <!-- Newsletter -->
+    <div class="widget" style="background:var(--ink);border-color:var(--ink)">
+      <div class="widget-title" style="color:var(--chalk)">Get the Ahmedabad drop</div>
+      <p style="font-size:13px;color:rgba(247,242,232,0.6);margin-bottom:14px">Weekly picks of the best experiences in your city.</p>
+      <input placeholder="your@email.com" style="width:100%;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.12);border-radius:var(--r-sm);padding:9px 12px;color:#fff;font-family:var(--font-body);font-size:13px;outline:none;margin-bottom:10px"/>
+      <button style="width:100%;background:var(--turmeric);border:none;border-radius:var(--r-sm);padding:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:var(--font-body)">Subscribe</button>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

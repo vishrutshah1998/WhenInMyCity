@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>WIMC · Adda Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;500&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg-base:#0A0A0B;--bg-raised:#131318;--bg-elevated:#1C1C24;--bg-overlay:#242430;--bg-hover:#2E2E3C;
+  --border-subtle:rgba(255,255,255,0.06);--border-default:rgba(255,255,255,0.10);--border-strong:rgba(255,255,255,0.18);
+  --text-primary:#F0EFF8;--text-secondary:#9896B0;--text-muted:#5C5A72;
+  --coral:#E8705A;--coral-light:#FFBBA6;--coral-dim:rgba(232,112,90,0.15);
+  --teal:#5DD9D0;--teal-dim:rgba(93,217,208,0.12);--teal-light:#A8F0EC;
+  --amber:#F5A800;--amber-dim:rgba(245,168,0,0.12);--amber-light:#FFD166;
+  --gulaal:#E8342A;--neel:#3B6BCC;--neel-dim:rgba(59,107,204,0.15);
+  --success:#4ADE80;--font-display:'Syne',sans-serif;--font-body:'DM Sans',sans-serif;--font-mono:'JetBrains Mono',monospace;
+  --r-sm:6px;--r-md:12px;--r-lg:18px;--r-xl:24px;--r-full:9999px;
+  --sidebar-w:220px;--t-base:220ms ease;
+}
+.material-symbols-outlined{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;font-size:20px}
+body{background:var(--bg-base);color:var(--text-primary);font-family:var(--font-body);min-height:100vh;display:flex;overflow-x:hidden}
+
+/* Adda sidebar — amber accented */
+.sidebar{width:var(--sidebar-w);min-height:100vh;background:var(--bg-raised);border-right:1px solid var(--border-subtle);display:flex;flex-direction:column;padding:24px 0;position:fixed;top:0;left:0;z-index:50}
+.sidebar-brand{padding:0 20px 28px;border-bottom:1px solid var(--border-subtle)}
+.brand-logo{display:flex;align-items:center;gap:10px}
+.brand-icon{width:32px;height:32px;background:var(--amber);border-radius:8px;display:grid;place-items:center}
+.brand-name{font-family:var(--font-display);font-weight:800;font-size:18px}
+.brand-role{font-size:10px;color:var(--amber);letter-spacing:1.5px;text-transform:uppercase;margin-top:3px;font-family:var(--font-mono)}
+.nav{flex:1;padding:16px 12px;display:flex;flex-direction:column;gap:2px}
+.nav-item{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:var(--r-sm);cursor:pointer;font-size:13.5px;font-weight:500;color:var(--text-secondary);transition:background var(--t-base),color var(--t-base);text-decoration:none}
+.nav-item:hover{background:var(--bg-elevated);color:var(--text-primary)}
+.nav-item.active{background:var(--amber-dim);color:var(--amber-light)}
+.nav-section-label{font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-muted);padding:12px 8px 6px;font-family:var(--font-mono)}
+.sidebar-footer{padding:16px 12px 0;border-top:1px solid var(--border-subtle)}
+.user-chip{display:flex;align-items:center;gap:10px;padding:8px 10px}
+.user-avatar{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--amber),var(--coral));display:grid;place-items:center;font-weight:700;font-size:13px;flex-shrink:0}
+.user-name{font-size:13px;font-weight:600}
+.user-handle{font-size:11px;color:var(--text-secondary);font-family:var(--font-mono)}
+.main{margin-left:var(--sidebar-w);flex:1}
+.topbar{height:64px;border-bottom:1px solid var(--border-subtle);display:flex;align-items:center;justify-content:space-between;padding:0 32px;position:sticky;top:0;background:rgba(10,10,11,0.9);backdrop-filter:blur(12px);z-index:40}
+.page-title{font-family:var(--font-display);font-size:20px;font-weight:700}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:var(--r-sm);font-size:13px;font-weight:600;cursor:pointer;transition:all var(--t-base);border:none;font-family:var(--font-body)}
+.btn-ghost{background:transparent;color:var(--text-secondary)}
+.btn-ghost:hover{background:var(--bg-elevated);color:var(--text-primary)}
+.btn-amber{background:var(--amber);color:#000}
+.btn-amber:hover{background:var(--amber-light)}
+.btn-outline{background:transparent;border:1px solid var(--border-default);color:var(--text-primary)}
+.content{padding:32px;display:grid;gap:24px}
+.tab-row{display:flex;border-bottom:1px solid var(--border-subtle);margin-bottom:8px}
+.tab-item{padding:10px 18px;font-size:13.5px;font-weight:600;color:var(--text-secondary);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;transition:all var(--t-base)}
+.tab-item.active{color:var(--amber);border-bottom-color:var(--amber)}
+
+/* Stats */
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+.stat-card{background:var(--bg-elevated);border:1px solid var(--border-default);border-radius:var(--r-lg);padding:22px 24px}
+.stat-icon{width:38px;height:38px;border-radius:var(--r-sm);display:grid;place-items:center;margin-bottom:14px}
+.stat-num{font-family:var(--font-display);font-size:30px;font-weight:800;line-height:1}
+.stat-label{font-size:12px;color:var(--text-secondary);margin-top:4px;text-transform:uppercase;letter-spacing:0.8px;font-family:var(--font-mono)}
+.stat-delta{font-size:11.5px;color:var(--success);margin-top:8px;display:flex;align-items:center;gap:4px;font-family:var(--font-mono)}
+
+/* Calendar */
+.two-col{display:grid;grid-template-columns:1fr 340px;gap:24px}
+.section-card{background:var(--bg-elevated);border:1px solid var(--border-default);border-radius:var(--r-lg);overflow:hidden}
+.section-header{padding:18px 24px;border-bottom:1px solid var(--border-subtle);display:flex;align-items:center;justify-content:space-between}
+.section-title{font-family:var(--font-display);font-size:15px;font-weight:700}
+
+/* Mini calendar */
+.mini-cal{padding:20px}
+.cal-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.cal-month{font-family:var(--font-display);font-size:15px;font-weight:700}
+.cal-btn{width:28px;height:28px;border-radius:50%;background:var(--bg-overlay);border:none;color:var(--text-secondary);cursor:pointer;display:grid;place-items:center}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px}
+.cal-day-label{text-align:center;font-size:11px;color:var(--text-muted);font-family:var(--font-mono);padding:4px 0;text-transform:uppercase}
+.cal-day{text-align:center;height:34px;display:flex;align-items:center;justify-content:center;font-size:13px;border-radius:50%;cursor:pointer;transition:all var(--t-base);color:var(--text-secondary)}
+.cal-day:hover{background:var(--bg-hover);color:var(--text-primary)}
+.cal-day.has-booking{background:var(--amber-dim);color:var(--amber);font-weight:700}
+.cal-day.today{background:var(--amber);color:#000;font-weight:700}
+.cal-day.has-proposal{background:var(--teal-dim);color:var(--teal);font-weight:700}
+
+/* Proposals list */
+.proposal-list{padding:0}
+.proposal-item{padding:16px 20px;border-bottom:1px solid var(--border-subtle);display:flex;gap:14px;align-items:flex-start;transition:background var(--t-base);cursor:pointer}
+.proposal-item:last-child{border-bottom:none}
+.proposal-item:hover{background:var(--bg-overlay)}
+.proposal-av{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:14px;flex-shrink:0}
+.proposal-info{flex:1;min-width:0}
+.proposal-creator{font-size:14px;font-weight:600}
+.proposal-event{font-size:12px;color:var(--text-secondary);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.proposal-meta{font-size:11px;color:var(--text-muted);font-family:var(--font-mono);margin-top:4px}
+.proposal-price{font-family:var(--font-display);font-size:16px;font-weight:700;color:var(--amber);text-align:right;white-space:nowrap}
+.proposal-actions{display:flex;gap:6px;margin-top:6px}
+.p-btn{padding:5px 12px;border-radius:var(--r-full);font-size:12px;font-weight:700;cursor:pointer;border:none;font-family:var(--font-body)}
+.p-btn-accept{background:var(--teal);color:#000}
+.p-btn-decline{background:var(--bg-hover);color:var(--text-secondary)}
+.proposal-status{font-size:11px;font-family:var(--font-mono);padding:3px 9px;border-radius:var(--r-full)}
+.status-confirmed{background:rgba(74,222,128,0.1);color:var(--success)}
+.status-pending{background:var(--amber-dim);color:var(--amber)}
+
+/* Revenue chart placeholder */
+.chart-placeholder{height:160px;background:var(--bg-overlay);border-radius:var(--r-md);display:flex;align-items:flex-end;gap:6px;padding:20px 20px 0;overflow:hidden}
+.bar{flex:1;border-radius:3px 3px 0 0;transition:height var(--t-base)}
+</style>
+</head>
+<body>
+
+<aside class="sidebar">
+  <div class="sidebar-brand">
+    <div class="brand-logo">
+      <div class="brand-icon"><span style="font-size:16px;font-weight:900;color:#000;font-family:'Syne',sans-serif">A</span></div>
+      <div><div class="brand-name">Adda</div><div class="brand-role">Venue Manager</div></div>
+    </div>
+  </div>
+  <nav class="nav">
+    <span class="nav-section-label">Overview</span>
+    <a class="nav-item active" href="#"><span class="material-symbols-outlined">dashboard</span> Dashboard</a>
+    <a class="nav-item" href="#"><span class="material-symbols-outlined">calendar_today</span> Calendar</a>
+    <a class="nav-item" href="#"><span class="material-symbols-outlined">inbox</span> Proposals<span style="margin-left:auto;background:var(--amber);color:#000;font-size:10px;font-family:var(--font-mono);padding:1px 6px;border-radius:9999px;font-weight:700">3</span></a>
+    <span class="nav-section-label">Venue</span>
+    <a class="nav-item" href="#"><span class="material-symbols-outlined">apartment</span> My Spaces</a>
+    <a class="nav-item" href="#"><span class="material-symbols-outlined">tune</span> Availability</a>
+    <a class="nav-item" href="#"><span class="material-symbols-outlined">photo_library</span> Photos & Info</a>
+    <span class="nav-section-label">Finance</span>
+    <a class="nav-item" href="#"><span class="material-symbols-outlined">payments</span> Revenue</a>
+    <a class="nav-item" href="#"><span class="material-symbols-outlined">account_balance</span> Payouts</a>
+  </nav>
+  <div class="sidebar-footer">
+    <div class="user-chip"><div class="user-avatar">TA</div><div><div class="user-name">The Atelier</div><div class="user-handle">Law Garden, Ahm</div></div></div>
+  </div>
+</aside>
+
+<main class="main">
+  <header class="topbar">
+    <div class="page-title">Adda Dashboard</div>
+    <div style="display:flex;gap:10px;align-items:center">
+      <span style="font-size:12px;font-family:var(--font-mono);color:var(--teal);background:var(--teal-dim);padding:4px 10px;border-radius:var(--r-full);border:1px solid rgba(93,217,208,0.2)">● Listed & Active</span>
+      <button class="btn btn-amber"><span class="material-symbols-outlined" style="font-size:16px">edit</span> Edit Listing</button>
+    </div>
+  </header>
+
+  <div class="content">
+    <!-- Stats -->
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-icon" style="background:var(--amber-dim);color:var(--amber)"><span class="material-symbols-outlined">event_available</span></div>
+        <div class="stat-num">12</div>
+        <div class="stat-label">Bookings (MTD)</div>
+        <div class="stat-delta"><span class="material-symbols-outlined" style="font-size:14px">trending_up</span> +3 this week</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon" style="background:var(--teal-dim);color:var(--teal)"><span class="material-symbols-outlined">payments</span></div>
+        <div class="stat-num" style="font-size:22px">₹1.4L</div>
+        <div class="stat-label">Revenue (MTD)</div>
+        <div class="stat-delta"><span class="material-symbols-outlined" style="font-size:14px">trending_up</span> +18%</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon" style="background:var(--coral-dim);color:var(--coral)"><span class="material-symbols-outlined">inbox</span></div>
+        <div class="stat-num" style="color:var(--amber)">3</div>
+        <div class="stat-label">Pending Proposals</div>
+        <div class="stat-delta" style="color:var(--amber)"><span class="material-symbols-outlined" style="font-size:14px">pending</span> Needs review</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon" style="background:rgba(74,222,128,0.1);color:var(--success)"><span class="material-symbols-outlined">star</span></div>
+        <div class="stat-num">4.8</div>
+        <div class="stat-label">Avg Rating</div>
+        <div class="stat-delta"><span class="material-symbols-outlined" style="font-size:14px">trending_up</span> 34 reviews</div>
+      </div>
+    </div>
+
+    <div class="two-col">
+      <!-- Left: Calendar + Revenue -->
+      <div style="display:flex;flex-direction:column;gap:20px;">
+        <!-- Calendar -->
+        <div class="section-card">
+          <div class="section-header">
+            <div class="section-title">October 2024</div>
+            <div style="display:flex;gap:12px;align-items:center">
+              <div style="display:flex;gap:12px">
+                <div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text-muted);font-family:var(--font-mono)"><div style="width:8px;height:8px;border-radius:50%;background:var(--amber)"></div>Booked</div>
+                <div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text-muted);font-family:var(--font-mono)"><div style="width:8px;height:8px;border-radius:50%;background:var(--teal)"></div>Proposal</div>
+              </div>
+              <button class="btn btn-outline" style="padding:5px 12px;font-size:12px">+ Block date</button>
+            </div>
+          </div>
+          <div class="mini-cal">
+            <div class="cal-nav">
+              <button class="cal-btn"><span class="material-symbols-outlined" style="font-size:15px">chevron_left</span></button>
+              <div class="cal-month">October 2024</div>
+              <button class="cal-btn"><span class="material-symbols-outlined" style="font-size:15px">chevron_right</span></button>
+            </div>
+            <div class="cal-grid">
+              <div class="cal-day-label">Mo</div><div class="cal-day-label">Tu</div><div class="cal-day-label">We</div><div class="cal-day-label">Th</div><div class="cal-day-label">Fr</div><div class="cal-day-label">Sa</div><div class="cal-day-label">Su</div>
+              <div class="cal-day" style="color:var(--text-muted)">30</div>
+              <div class="cal-day">1</div><div class="cal-day">2</div><div class="cal-day has-booking">3</div><div class="cal-day">4</div><div class="cal-day has-booking">5</div><div class="cal-day">6</div>
+              <div class="cal-day">7</div><div class="cal-day has-booking">8</div><div class="cal-day">9</div><div class="cal-day">10</div><div class="cal-day">11</div><div class="cal-day has-booking">12</div><div class="cal-day">13</div>
+              <div class="cal-day">14</div><div class="cal-day">15</div><div class="cal-day has-booking">16</div><div class="cal-day">17</div><div class="cal-day today">18</div><div class="cal-day has-proposal">19</div><div class="cal-day has-proposal">20</div>
+              <div class="cal-day">21</div><div class="cal-day has-booking">22</div><div class="cal-day">23</div><div class="cal-day has-booking">24</div><div class="cal-day">25</div><div class="cal-day has-proposal">26</div><div class="cal-day">27</div>
+              <div class="cal-day">28</div><div class="cal-day">29</div><div class="cal-day has-booking">30</div><div class="cal-day">31</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Revenue chart -->
+        <div class="section-card">
+          <div class="section-header">
+            <div class="section-title">Monthly Revenue</div>
+            <span style="font-size:12px;color:var(--amber);font-family:var(--font-mono)">Last 6 months</span>
+          </div>
+          <div style="padding:20px">
+            <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:16px">
+              <span style="font-family:var(--font-display);font-size:28px;font-weight:800;color:var(--amber)">₹1,40,000</span>
+              <span style="font-size:13px;color:var(--success);font-family:var(--font-mono)">↑ +18% vs last month</span>
+            </div>
+            <div class="chart-placeholder">
+              <div class="bar" style="height:40%;background:var(--bg-hover)"></div>
+              <div class="bar" style="height:55%;background:var(--bg-hover)"></div>
+              <div class="bar" style="height:45%;background:var(--bg-hover)"></div>
+              <div class="bar" style="height:70%;background:var(--bg-hover)"></div>
+              <div class="bar" style="height:65%;background:rgba(93,217,208,0.3)"></div>
+              <div class="bar" style="height:90%;background:linear-gradient(to top,var(--amber),var(--amber-light))"></div>
+            </div>
+            <div style="display:flex;justify-content:space-between;padding:8px 0;font-size:11px;color:var(--text-muted);font-family:var(--font-mono)">
+              <span>May</span><span>Jun</span><span>Jul</span><span>Aug</span><span>Sep</span><span>Oct</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right: Proposals -->
+      <div style="display:flex;flex-direction:column;gap:20px;">
+        <div class="section-card">
+          <div class="section-header">
+            <div class="section-title">Booking Proposals</div>
+            <span style="font-size:11px;font-family:var(--font-mono);background:var(--amber-dim);color:var(--amber);padding:2px 8px;border-radius:var(--r-full)">3 pending</span>
+          </div>
+          <div class="proposal-list">
+            <!-- Proposal 1 — pending -->
+            <div class="proposal-item">
+              <div class="proposal-av" style="background:linear-gradient(135deg,var(--coral),var(--amber));color:#fff">AB</div>
+              <div class="proposal-info">
+                <div class="proposal-creator">ABCD</div>
+                <div class="proposal-event">Photography Walk — 15 pax</div>
+                <div class="proposal-meta">Sat 26 Oct · 3–5 PM · 2 hrs</div>
+                <div class="proposal-actions">
+                  <button class="p-btn p-btn-accept">Accept</button>
+                  <button class="p-btn p-btn-decline">Decline</button>
+                </div>
+              </div>
+              <div style="text-align:right">
+                <div class="proposal-price">₹5,000</div>
+                <span class="proposal-status status-pending">Pending</span>
+              </div>
+            </div>
+            <!-- Proposal 2 — pending -->
+            <div class="proposal-item">
+              <div class="proposal-av" style="background:linear-gradient(135deg,var(--neel),var(--teal));color:#fff">MK</div>
+              <div class="proposal-info">
+                <div class="proposal-creator">Mihir K.</div>
+                <div class="proposal-event">Heritage Walk Debrief — 20 pax</div>
+                <div class="proposal-meta">Sun 27 Oct · 10 AM–1 PM · 3 hrs</div>
+                <div class="proposal-actions">
+                  <button class="p-btn p-btn-accept">Accept</button>
+                  <button class="p-btn p-btn-decline">Decline</button>
+                </div>
+              </div>
+              <div style="text-align:right">
+                <div class="proposal-price">₹7,500</div>
+                <span class="proposal-status status-pending">Pending</span>
+              </div>
+            </div>
+            <!-- Proposal 3 — confirmed -->
+            <div class="proposal-item">
+              <div class="proposal-av" style="background:linear-gradient(135deg,var(--amber),var(--coral));color:#000">PS</div>
+              <div class="proposal-info">
+                <div class="proposal-creator">Priya S.</div>
+                <div class="proposal-event">Watercolour Workshop — 12 pax</div>
+                <div class="proposal-meta">Sat 02 Nov · 4–6 PM · 2 hrs</div>
+              </div>
+              <div style="text-align:right">
+                <div class="proposal-price">₹5,000</div>
+                <span class="proposal-status status-confirmed">Confirmed</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Quick stats -->
+        <div class="section-card">
+          <div class="section-header"><div class="section-title">Venue Performance</div></div>
+          <div style="padding:18px 20px;display:flex;flex-direction:column;gap:14px">
+            <div>
+              <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:5px"><span style="color:var(--text-secondary)">Occupancy rate</span><span style="font-family:var(--font-mono);color:var(--amber)">62%</span></div>
+              <div style="height:6px;background:var(--bg-overlay);border-radius:3px;overflow:hidden"><div style="width:62%;height:100%;background:linear-gradient(90deg,var(--amber),var(--amber-light));border-radius:3px"></div></div>
+            </div>
+            <div>
+              <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:5px"><span style="color:var(--text-secondary)">Avg booking duration</span><span style="font-family:var(--font-mono)">2.4 hrs</span></div>
+              <div style="height:6px;background:var(--bg-overlay);border-radius:3px;overflow:hidden"><div style="width:48%;height:100%;background:linear-gradient(90deg,var(--teal),var(--teal-light));border-radius:3px"></div></div>
+            </div>
+            <div>
+              <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:5px"><span style="color:var(--text-secondary)">Repeat creators</span><span style="font-family:var(--font-mono)">4 of 12</span></div>
+              <div style="height:6px;background:var(--bg-overlay);border-radius:3px;overflow:hidden"><div style="width:33%;height:100%;background:linear-gradient(90deg,var(--coral),var(--coral-light));border-radius:3px"></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+</body>
+</html>

@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>WIMC · UX Prototype</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg-base:#0A0A0B;--bg-elevated:#1C1C24;--bg-overlay:#242430;
+  --border-default:rgba(255,255,255,0.10);
+  --text-primary:#F0EFF8;--text-secondary:#9896B0;--text-muted:#5C5A72;
+  --coral:#E8705A;--coral-dim:rgba(232,112,90,0.15);--coral-light:#FFBBA6;
+  --teal:#5DD9D0;--teal-dim:rgba(93,217,208,0.12);
+  --amber:#F5A800;--amber-dim:rgba(245,168,0,0.12);
+  --gulaal:#E8342A;--neel:#3B6BCC;
+  --font-display:'Syne',sans-serif;--font-body:'DM Sans',sans-serif;--font-mono:'JetBrains Mono',monospace;
+  --r-lg:18px;--r-xl:24px;--r-full:9999px;
+}
+body{background:var(--bg-base);color:var(--text-primary);font-family:var(--font-body);min-height:100vh;padding:48px 32px;max-width:1100px;margin:0 auto}
+.header{text-align:center;margin-bottom:56px}
+.logo-row{display:flex;align-items:center;justify-content:center;gap:12px;margin-bottom:20px}
+.logo-mark{width:44px;height:44px;background:var(--coral);border-radius:10px;display:grid;place-items:center;font-family:var(--font-display);font-weight:900;font-size:22px;color:#fff}
+.logo-name{font-family:var(--font-display);font-weight:800;font-size:28px}
+.proto-label{display:inline-block;font-family:var(--font-mono);font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--teal);background:var(--teal-dim);padding:4px 12px;border-radius:var(--r-full);border:1px solid rgba(93,217,208,0.2);margin-bottom:16px}
+.header h1{font-family:var(--font-display);font-size:40px;font-weight:800;margin-bottom:12px}
+.header p{font-size:16px;color:var(--text-secondary);max-width:500px;margin:0 auto}
+
+.section-label{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--text-muted);font-family:var(--font-mono);margin-bottom:16px}
+.section-group{margin-bottom:44px}
+
+.screens-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px}
+.screen-card{background:var(--bg-elevated);border:1px solid var(--border-default);border-radius:var(--r-lg);padding:24px;cursor:pointer;text-decoration:none;color:inherit;transition:transform 200ms ease,border-color 200ms ease,box-shadow 200ms ease;display:flex;flex-direction:column;gap:14px}
+.screen-card:hover{transform:translateY(-3px);border-color:rgba(255,255,255,0.2);box-shadow:0 12px 40px rgba(0,0,0,0.5)}
+.screen-num{font-family:var(--font-mono);font-size:11px;color:var(--text-muted);letter-spacing:1px}
+.screen-icon{font-size:28px;margin-bottom:4px}
+.screen-name{font-family:var(--font-display);font-size:17px;font-weight:700}
+.screen-desc{font-size:13px;color:var(--text-secondary);line-height:1.5}
+.screen-tags{display:flex;gap:6px;flex-wrap:wrap}
+.tag{font-size:11px;padding:3px 9px;border-radius:var(--r-full);font-family:var(--font-mono);font-weight:500}
+
+.flow-diagram{background:var(--bg-elevated);border:1px solid var(--border-default);border-radius:var(--r-xl);padding:32px;margin-bottom:44px}
+.flow-title{font-family:var(--font-display);font-size:17px;font-weight:700;margin-bottom:24px}
+.flow-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+.flow-node{padding:8px 16px;border-radius:var(--r-full);font-size:12px;font-weight:600;font-family:var(--font-mono);white-space:nowrap;text-decoration:none;color:inherit;transition:opacity 200ms ease}
+.flow-node:hover{opacity:0.8}
+.flow-arrow{color:var(--text-muted);font-size:16px}
+.flow-label{font-size:11px;color:var(--text-muted);font-family:var(--font-mono);width:100%;padding-left:4px;margin-top:-8px;margin-bottom:6px}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="logo-row">
+    <div class="logo-mark">W</div>
+    <div class="logo-name">WIMC</div>
+  </div>
+  <div class="proto-label">UX Prototype · v1</div>
+  <h1>When In My City</h1>
+  <p>Full UX map — 8 screens covering Creator Studio, Explorer feed, and Adda venue management.</p>
+</div>
+
+<!-- User flow diagram -->
+<div class="flow-diagram">
+  <div class="flow-title">User Flows</div>
+
+  <div class="flow-label">Creator flow →</div>
+  <div class="flow-row">
+    <a class="flow-node" style="background:var(--coral-dim);color:var(--coral-light)" href="01-dashboard.html">Dashboard</a>
+    <span class="flow-arrow">→</span>
+    <a class="flow-node" style="background:var(--coral-dim);color:var(--coral-light)" href="02-my-page.html">Edit Page</a>
+    <span class="flow-arrow">→</span>
+    <a class="flow-node" style="background:var(--coral-dim);color:var(--coral-light)" href="03-events.html">Create Event</a>
+    <span class="flow-arrow">→</span>
+    <a class="flow-node" style="background:var(--coral-dim);color:var(--coral-light)" href="04-tier.html">Track Tier</a>
+    <span class="flow-arrow">→</span>
+    <a class="flow-node" style="background:var(--coral-dim);color:var(--coral-light)" href="05-venues.html">Book Venue</a>
+  </div>
+
+  <div class="flow-label" style="margin-top:16px">Explorer flow →</div>
+  <div class="flow-row">
+    <a class="flow-node" style="background:var(--amber-dim);color:var(--amber-light,#FFD166)" href="06-explorer-discovery.html">Discover Feed</a>
+    <span class="flow-arrow">→</span>
+    <a class="flow-node" style="background:var(--amber-dim);color:var(--amber-light,#FFD166)" href="07-public-event.html">Event Page</a>
+    <span class="flow-arrow">→</span>
+    <a class="flow-node" style="background:var(--amber-dim);color:var(--amber-light,#FFD166)" href="07-public-event.html">Book Spot</a>
+  </div>
+
+  <div class="flow-label" style="margin-top:16px">Venue owner flow →</div>
+  <div class="flow-row">
+    <a class="flow-node" style="background:rgba(93,217,208,0.1);color:var(--teal)" href="08-adda-dashboard.html">Adda Dashboard</a>
+    <span class="flow-arrow">→</span>
+    <a class="flow-node" style="background:rgba(93,217,208,0.1);color:var(--teal)" href="08-adda-dashboard.html">Review Proposals</a>
+    <span class="flow-arrow">→</span>
+    <a class="flow-node" style="background:rgba(93,217,208,0.1);color:var(--teal)" href="08-adda-dashboard.html">Manage Calendar</a>
+    <span class="flow-arrow">→</span>
+    <a class="flow-node" style="background:rgba(93,217,208,0.1);color:var(--teal)" href="08-adda-dashboard.html">Track Revenue</a>
+  </div>
+</div>
+
+<!-- Creator screens -->
+<div class="section-group">
+  <div class="section-label">Creator Studio · Dark base + coral/teal/amber pops</div>
+  <div class="screens-grid">
+    <a class="screen-card" href="01-dashboard.html">
+      <div class="screen-num">SCREEN 01</div>
+      <div class="screen-icon">📊</div>
+      <div class="screen-name">Dashboard Overview</div>
+      <div class="screen-desc">Welcome strip, 4-stat grid, upcoming events, tier progress card, recent activity feed.</div>
+      <div class="screen-tags">
+        <span class="tag" style="background:var(--coral-dim);color:var(--coral)">Creator</span>
+        <span class="tag" style="background:var(--bg-overlay);color:var(--text-muted)">Dark</span>
+      </div>
+    </a>
+    <a class="screen-card" href="02-my-page.html">
+      <div class="screen-num">SCREEN 02</div>
+      <div class="screen-icon">🪟</div>
+      <div class="screen-name">My Page — Block Editor</div>
+      <div class="screen-desc">Split-panel block editor with drag/toggle/edit, live phone preview, publish flow.</div>
+      <div class="screen-tags">
+        <span class="tag" style="background:var(--coral-dim);color:var(--coral)">Creator</span>
+        <span class="tag" style="background:var(--teal-dim);color:var(--teal)">Interactive</span>
+      </div>
+    </a>
+    <a class="screen-card" href="03-events.html">
+      <div class="screen-num">SCREEN 03</div>
+      <div class="screen-icon">🎟</div>
+      <div class="screen-name">Events Management</div>
+      <div class="screen-desc">Tabbed event list with capacity bars, status pills, revenue stats. Create event modal (4-step).</div>
+      <div class="screen-tags">
+        <span class="tag" style="background:var(--coral-dim);color:var(--coral)">Creator</span>
+        <span class="tag" style="background:var(--teal-dim);color:var(--teal)">Modal</span>
+      </div>
+    </a>
+    <a class="screen-card" href="04-tier.html">
+      <div class="screen-num">SCREEN 04</div>
+      <div class="screen-icon">🏘</div>
+      <div class="screen-name">Tier Progress</div>
+      <div class="screen-desc">Tier hero banner, roadmap visualisation, 4 metric progress cards, benefits accordion.</div>
+      <div class="screen-tags">
+        <span class="tag" style="background:var(--amber-dim);color:var(--amber)">Gamification</span>
+      </div>
+    </a>
+    <a class="screen-card" href="05-venues.html">
+      <div class="screen-num">SCREEN 05</div>
+      <div class="screen-icon">🗺</div>
+      <div class="screen-name">Venue Discovery (Adda)</div>
+      <div class="screen-desc">Split map+list layout, filter chips, venue cards with pricing, side detail panel, tier lock notice.</div>
+      <div class="screen-tags">
+        <span class="tag" style="background:var(--amber-dim);color:var(--amber)">Adda</span>
+        <span class="tag" style="background:var(--teal-dim);color:var(--teal)">Map</span>
+      </div>
+    </a>
+  </div>
+</div>
+
+<!-- Public screens -->
+<div class="section-group">
+  <div class="section-label">Explorer (Public) · Editorial light theme — chalk + chromatic pops</div>
+  <div class="screens-grid">
+    <a class="screen-card" href="06-explorer-discovery.html">
+      <div class="screen-num">SCREEN 06</div>
+      <div class="screen-icon">🌆</div>
+      <div class="screen-name">Explorer Discovery Feed</div>
+      <div class="screen-desc">Dark nav + ink/chalk hero, masonry event grid, city filter, trending creators sidebar, newsletter widget.</div>
+      <div class="screen-tags">
+        <span class="tag" style="background:var(--amber-dim);color:var(--amber)">Public</span>
+        <span class="tag" style="background:rgba(232,52,42,0.1);color:var(--gulaal)">Editorial</span>
+      </div>
+    </a>
+    <a class="screen-card" href="07-public-event.html">
+      <div class="screen-num">SCREEN 07</div>
+      <div class="screen-icon">📸</div>
+      <div class="screen-name">Public Event Page</div>
+      <div class="screen-desc">Hero banner, about section, itinerary timeline, what-to-bring, host bio, reviews, sticky booking card.</div>
+      <div class="screen-tags">
+        <span class="tag" style="background:var(--amber-dim);color:var(--amber)">Public</span>
+        <span class="tag" style="background:rgba(232,52,42,0.1);color:var(--gulaal)">Booking</span>
+      </div>
+    </a>
+  </div>
+</div>
+
+<!-- Adda screens -->
+<div class="section-group">
+  <div class="section-label">Adda · Venue owner dashboard — dark base + amber accents</div>
+  <div class="screens-grid">
+    <a class="screen-card" href="08-adda-dashboard.html">
+      <div class="screen-num">SCREEN 08</div>
+      <div class="screen-icon">🏛</div>
+      <div class="screen-name">Adda Dashboard</div>
+      <div class="screen-desc">Venue stats, interactive calendar, booking proposals (accept/decline), revenue chart, occupancy metrics.</div>
+      <div class="screen-tags">
+        <span class="tag" style="background:var(--amber-dim);color:var(--amber)">Venue</span>
+        <span class="tag" style="background:var(--teal-dim);color:var(--teal)">Calendar</span>
+      </div>
+    </a>
+  </div>
+</div>
+
+<div style="text-align:center;padding:32px 0;border-top:1px solid rgba(255,255,255,0.06);color:var(--text-muted);font-family:var(--font-mono);font-size:12px">
+  WIMC UX Prototype · 8 screens · Dark + editorial light themes · All screens clickable
+</div>
+</body>
+</html>
