@@ -16,7 +16,7 @@ import type {
   MakerAddaProposal,
   Event,
   UserProfile,
-  MakerTier,
+  UserTier,
   AvailabilitySlotType,
   AvailabilityStatus,
   Json,
@@ -186,7 +186,7 @@ export async function getAddaDashboardData(addaId: string): Promise<{
     for (const ev of revenueEvents) {
       const agg = countMap.get(ev.id) ?? { count: 0, total: 0 }
       // Use mohalla split as conservative default (actual split stored separately)
-      const split = calculateRevenueSplit(ev.ticket_price, agg.count, 'mohalla', true)
+      const split = calculateRevenueSplit(ev.ticket_price, agg.count, 'wanderer', true)
       recentRevenue.push({
         event_id:            ev.id,
         event_title:         ev.title,
@@ -429,9 +429,9 @@ export async function getAddaEventHistory(
  * Calculates and returns the three-way revenue split for a specific event
  * hosted at this Adda.
  *
- * The maker's tier at event time is inferred from `maker_tier_history` —
+ * The maker's tier at event time is inferred from `user_tier_history` —
  * the most recent tier change record whose `triggered_at` is ≤ the event's
- * `starts_at`. Falls back to 'mohalla' if no history exists.
+ * `starts_at`. Falls back to 'wanderer' if no history exists.
  *
  * Revenue figures are computed from captured RSVPs (`payment_status = 'captured'`).
  *
@@ -475,14 +475,14 @@ export async function getAddaRevenueSplits(
 
   // Determine maker tier at time of event
   const { data: tierHistory } = await admin
-    .from('maker_tier_history')
+    .from('user_tier_history')
     .select('new_tier, triggered_at')
-    .eq('maker_id', event.creator_id)
+    .eq('user_id', event.creator_id)
     .lte('triggered_at', event.starts_at)
     .order('triggered_at', { ascending: false })
     .limit(1)
 
-  const makerTierAtEvent = (tierHistory?.[0]?.new_tier ?? 'mohalla') as MakerTier
+  const makerTierAtEvent = (tierHistory?.[0]?.new_tier ?? 'wanderer') as UserTier
 
   // Sum captured RSVP revenue
   const { data: rsvps } = await admin
@@ -533,7 +533,7 @@ export async function getAddaRevenueSplits(
       (e: Error) => console.error('[getAddaRevenueSplits] upsert', e.message),
     )
 
-  const splitFromTier = REVENUE_SPLITS[makerTierAtEvent] ?? REVENUE_SPLITS['mohalla']
+  const splitFromTier = REVENUE_SPLITS[makerTierAtEvent] ?? REVENUE_SPLITS['wanderer']
 
   const splitConfig: RevenueSplitConfig = {
     makerFraction:    splitFromTier.maker,

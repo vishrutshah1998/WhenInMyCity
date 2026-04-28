@@ -217,6 +217,7 @@ export default function StudioClient({
               isDirty={isDirty}
               isSaving={isPending}
               onSave={handleSave}
+              userTier={profile.user_tier}
             />
           ) : (
             <ThemeEditor

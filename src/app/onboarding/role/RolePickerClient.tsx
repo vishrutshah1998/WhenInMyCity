@@ -47,7 +47,7 @@ export default function RolePickerClient() {
             </button>
 
             <button
-              onClick={() => router.push('/onboarding/explorer')}
+              onClick={() => router.push('/onboarding')}
               className="w-full flex items-center gap-4 p-5 bg-surface-container-low border-2 border-outline-variant/30 rounded-2xl text-left hover:border-primary hover:bg-surface-container-high transition-all duration-200 active:scale-[0.98]"
             >
               <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center flex-shrink-0">

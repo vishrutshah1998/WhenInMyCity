@@ -20,7 +20,10 @@ export type UserRole = 'maker' | 'explorer'
 
 export type PayoutStatus = 'pending' | 'approved' | 'paid' | 'rejected'
 
-export type MakerTier = 'mohalla' | 'nukkad' | 'chowk' | 'maidan'
+export type UserTier = 'wanderer' | 'local' | 'lantern' | 'beacon'
+/** @deprecated Use UserTier */
+export type MakerTier = UserTier
+export type AddaTier  = 'open' | 'verified' | 'beloved' | 'legendary'
 
 export type PricingModel = 'fixed_rental' | 'door_split' | 'hybrid' | 'f_and_b_minimum'
 
@@ -29,6 +32,8 @@ export type ProposalStatus = 'pending' | 'counter_offered' | 'accepted' | 'decli
 export type AvailabilitySlotType = 'morning' | 'afternoon' | 'evening' | 'full_day'
 
 export type AvailabilityStatus = 'available' | 'blocked' | 'pending' | 'confirmed'
+
+export type ConnectionStatus = 'pending' | 'accepted' | 'declined'
 
 export type CreatorType =
   // Legacy values (pre-v2 onboarding) — kept for existing profiles
@@ -215,7 +220,7 @@ export interface Database {
           page_theme: Json
           // Marketplace extension (migration 007)
           user_role: UserRole
-          maker_tier: MakerTier
+          user_tier: UserTier
           tier_evaluated_at: string | null
           cumulative_events_hosted: number
           cumulative_unique_attendees: number
@@ -229,11 +234,26 @@ export interface Database {
           whatsapp_subscriber_count: number
           collab_invite_active: boolean
           collab_invite_config: Json
+          // Explorer-side tier metrics (migration 015)
+          events_attended_count: number
+          events_saved_count: number
+          creators_followed_count: number
+          reviews_posted_count: number
+          rsvps_total_count: number
+          no_shows_count: number
+          tier_recovery_until: string | null
           // Onboarding v2 (migration 014)
           sub_types: string[]
           offline_activities: string[]
           // Admin flag (migration 012)
           is_admin: boolean
+          // Attendance streak (migration 020)
+          attendance_streak: number
+          streak_freeze_tokens: number
+          last_streak_week: string | null   // ISO date "YYYY-MM-DD" of that week's Monday
+          // Long-tenure recognition (migration 023)
+          lantern_since: string | null
+          beacon_since: string | null
           created_at: string
           updated_at: string
         }
@@ -254,7 +274,7 @@ export interface Database {
           is_verified?: boolean
           page_theme?: Json
           user_role?: UserRole
-          maker_tier?: MakerTier
+          user_tier?: UserTier
           tier_evaluated_at?: string | null
           cumulative_events_hosted?: number
           cumulative_unique_attendees?: number
@@ -268,7 +288,19 @@ export interface Database {
           whatsapp_subscriber_count?: number
           collab_invite_active?: boolean
           collab_invite_config?: Json
+          events_attended_count?: number
+          events_saved_count?: number
+          creators_followed_count?: number
+          reviews_posted_count?: number
+          rsvps_total_count?: number
+          no_shows_count?: number
+          tier_recovery_until?: string | null
           is_admin?: boolean
+          attendance_streak?: number
+          streak_freeze_tokens?: number
+          last_streak_week?: string | null
+          lantern_since?: string | null
+          beacon_since?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -289,7 +321,7 @@ export interface Database {
           is_verified?: boolean
           page_theme?: Json
           user_role?: UserRole
-          maker_tier?: MakerTier
+          user_tier?: UserTier
           tier_evaluated_at?: string | null
           cumulative_events_hosted?: number
           cumulative_unique_attendees?: number
@@ -303,7 +335,19 @@ export interface Database {
           whatsapp_subscriber_count?: number
           collab_invite_active?: boolean
           collab_invite_config?: Json
+          events_attended_count?: number
+          events_saved_count?: number
+          creators_followed_count?: number
+          reviews_posted_count?: number
+          rsvps_total_count?: number
+          no_shows_count?: number
+          tier_recovery_until?: string | null
           is_admin?: boolean
+          attendance_streak?: number
+          streak_freeze_tokens?: number
+          last_streak_week?: string | null
+          lantern_since?: string | null
+          beacon_since?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -328,7 +372,7 @@ export interface Database {
           config: Json
           // Extended in migration 008
           block_family: BlockFamily
-          minimum_tier: MakerTier
+          minimum_tier: UserTier
           analytics_config: Json
           created_at: string
           updated_at: string
@@ -341,7 +385,7 @@ export interface Database {
           is_visible?: boolean
           config?: Json
           block_family?: BlockFamily
-          minimum_tier?: MakerTier
+          minimum_tier?: UserTier
           analytics_config?: Json
           created_at?: string
           updated_at?: string
@@ -354,7 +398,7 @@ export interface Database {
           is_visible?: boolean
           config?: Json
           block_family?: BlockFamily
-          minimum_tier?: MakerTier
+          minimum_tier?: UserTier
           analytics_config?: Json
           created_at?: string
           updated_at?: string
@@ -396,6 +440,10 @@ export interface Database {
           average_rating: number
           /** Number of Explorer ratings submitted. Added in migration 009. */
           rating_count: number
+          /** If set, Wanderers cannot RSVP until this timestamp passes. Added in migration 019. */
+          early_access_at: string | null
+          /** Patreon-style ticket tiers. NULL = flat ticket_price. Added in migration 022. */
+          ticket_tiers: Json | null
           created_at: string
           updated_at: string
         }
@@ -421,6 +469,8 @@ export interface Database {
           venue_adda_id?: string | null
           average_rating?: number
           rating_count?: number
+          early_access_at?: string | null
+          ticket_tiers?: Json | null
           created_at?: string
           updated_at?: string
         }
@@ -446,6 +496,8 @@ export interface Database {
           venue_adda_id?: string | null
           average_rating?: number
           rating_count?: number
+          early_access_at?: string | null
+          ticket_tiers?: Json | null
           created_at?: string
           updated_at?: string
         }
@@ -474,6 +526,13 @@ export interface Database {
           qr_code_token: string
           checked_in: boolean
           checked_in_at: string | null
+          platform_fee_paise: number | null
+          maker_payout_paise: number | null
+          venue_fee_paise: number | null
+          split_tier: string | null
+          /** Fan tier ID from event.ticket_tiers. NULL for flat-price events. */
+          ticket_tier_id: string | null
+          ticket_tier_name: string | null
           created_at: string
         }
         Insert: {
@@ -489,6 +548,12 @@ export interface Database {
           qr_code_token?: string
           checked_in?: boolean
           checked_in_at?: string | null
+          platform_fee_paise?: number | null
+          maker_payout_paise?: number | null
+          venue_fee_paise?: number | null
+          split_tier?: string | null
+          ticket_tier_id?: string | null
+          ticket_tier_name?: string | null
           created_at?: string
         }
         Update: {
@@ -504,6 +569,12 @@ export interface Database {
           qr_code_token?: string
           checked_in?: boolean
           checked_in_at?: string | null
+          platform_fee_paise?: number | null
+          maker_payout_paise?: number | null
+          venue_fee_paise?: number | null
+          split_tier?: string | null
+          ticket_tier_id?: string | null
+          ticket_tier_name?: string | null
           created_at?: string
         }
         Relationships: [
@@ -787,6 +858,13 @@ export interface Database {
           total_events_hosted: number
           total_revenue_earned_paise: number
           average_maker_rating: number
+          adda_tier: AddaTier
+          trending_until: string | null
+          on_time_rate: number
+          complaint_rate: number
+          repeat_attendee_rate: number
+          unique_lantern_beacon_hosts: number
+          beloved_since: string | null
           created_at: string
           updated_at: string
         }
@@ -818,6 +896,13 @@ export interface Database {
           total_events_hosted?: number
           total_revenue_earned_paise?: number
           average_maker_rating?: number
+          adda_tier?: AddaTier
+          trending_until?: string | null
+          on_time_rate?: number
+          complaint_rate?: number
+          repeat_attendee_rate?: number
+          unique_lantern_beacon_hosts?: number
+          beloved_since?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -849,6 +934,13 @@ export interface Database {
           total_events_hosted?: number
           total_revenue_earned_paise?: number
           average_maker_rating?: number
+          adda_tier?: AddaTier
+          trending_until?: string | null
+          on_time_rate?: number
+          complaint_rate?: number
+          repeat_attendee_rate?: number
+          unique_lantern_beacon_hosts?: number
+          beloved_since?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -1064,10 +1156,10 @@ export interface Database {
         ]
       }
 
-      maker_tier_history: {
+      user_tier_history: {
         Row: {
           id: string
-          maker_id: string
+          user_id: string
           previous_tier: string | null
           new_tier: string
           triggered_at: string
@@ -1075,7 +1167,7 @@ export interface Database {
         }
         Insert: {
           id?: string
-          maker_id: string
+          user_id: string
           previous_tier?: string | null
           new_tier: string
           triggered_at?: string
@@ -1083,7 +1175,7 @@ export interface Database {
         }
         Update: {
           id?: string
-          maker_id?: string
+          user_id?: string
           previous_tier?: string | null
           new_tier?: string
           triggered_at?: string
@@ -1091,8 +1183,8 @@ export interface Database {
         }
         Relationships: [
           {
-            foreignKeyName: 'maker_tier_history_maker_id_fkey'
-            columns: ['maker_id']
+            foreignKeyName: 'user_tier_history_user_id_fkey'
+            columns: ['user_id']
             isOneToOne: false
             referencedRelation: 'user_profiles'
             referencedColumns: ['id']
@@ -1332,6 +1424,144 @@ export interface Database {
           }
         ]
       }
+
+      // ----- Creator Hub (migration 021) -----
+
+      creator_connections: {
+        Row: {
+          id:           string
+          requester_id: string
+          recipient_id: string
+          status:       ConnectionStatus
+          created_at:   string
+          updated_at:   string
+        }
+        Insert: {
+          id?:          string
+          requester_id: string
+          recipient_id: string
+          status?:      ConnectionStatus
+          created_at?:  string
+          updated_at?:  string
+        }
+        Update: {
+          id?:           string
+          requester_id?: string
+          recipient_id?: string
+          status?:       ConnectionStatus
+          created_at?:   string
+          updated_at?:   string
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'creator_connections_requester_id_fkey'
+            columns: ['requester_id']
+            isOneToOne: false
+            referencedRelation: 'user_profiles'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'creator_connections_recipient_id_fkey'
+            columns: ['recipient_id']
+            isOneToOne: false
+            referencedRelation: 'user_profiles'
+            referencedColumns: ['id']
+          }
+        ]
+      }
+
+      creator_messages: {
+        Row: {
+          id:            string
+          connection_id: string
+          sender_id:     string
+          body:          string
+          sent_at:       string
+          read_at:       string | null
+        }
+        Insert: {
+          id?:           string
+          connection_id: string
+          sender_id:     string
+          body:          string
+          sent_at?:      string
+          read_at?:      string | null
+        }
+        Update: {
+          id?:            string
+          connection_id?: string
+          sender_id?:     string
+          body?:          string
+          sent_at?:       string
+          read_at?:       string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'creator_messages_connection_id_fkey'
+            columns: ['connection_id']
+            isOneToOne: false
+            referencedRelation: 'creator_connections'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'creator_messages_sender_id_fkey'
+            columns: ['sender_id']
+            isOneToOne: false
+            referencedRelation: 'user_profiles'
+            referencedColumns: ['id']
+          }
+        ]
+      }
+      // ----- Referral codes (migration 024) -----
+
+      referral_codes: {
+        Row: {
+          id:               string
+          code:             string
+          issuer_id:        string
+          event_id:         string
+          redeemed_at:      string | null
+          redeemed_rsvp_id: string | null
+          issued_at:        string
+          expires_at:       string
+        }
+        Insert: {
+          id?:              string
+          code:             string
+          issuer_id:        string
+          event_id:         string
+          redeemed_at?:     string | null
+          redeemed_rsvp_id?: string | null
+          issued_at?:       string
+          expires_at:       string
+        }
+        Update: {
+          id?:              string
+          code?:            string
+          issuer_id?:       string
+          event_id?:        string
+          redeemed_at?:     string | null
+          redeemed_rsvp_id?: string | null
+          issued_at?:       string
+          expires_at?:      string
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'referral_codes_issuer_id_fkey'
+            columns: ['issuer_id']
+            isOneToOne: false
+            referencedRelation: 'user_profiles'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'referral_codes_event_id_fkey'
+            columns: ['event_id']
+            isOneToOne: false
+            referencedRelation: 'events'
+            referencedColumns: ['id']
+          }
+        ]
+      }
     }
 
     Views: {
@@ -1359,6 +1589,10 @@ export interface Database {
         Args: { event_id_param: string }
         Returns: undefined
       }
+      increment_user_metric: {
+        Args: { p_user_id: string; p_column: string; p_delta?: number }
+        Returns: undefined
+      }
     }
 
     Enums: {
@@ -1368,7 +1602,8 @@ export interface Database {
       event_status: EventStatus
       payment_status: PaymentStatus
       user_role: UserRole
-      maker_tier: MakerTier
+      user_tier: UserTier
+      adda_tier: AddaTier
       pricing_model: PricingModel
       proposal_status: ProposalStatus
     }
@@ -1406,7 +1641,9 @@ export type AddaProfile          = Tables<'adda_profiles'>
 export type ExplorerProfile      = Tables<'explorer_profiles'>
 export type AddaAvailability     = Tables<'adda_availability'>
 export type MakerAddaProposal    = Tables<'maker_adda_proposals'>
-export type MakerTierHistory     = Tables<'maker_tier_history'>
+export type UserTierHistory       = Tables<'user_tier_history'>
+/** @deprecated Use UserTierHistory */
+export type MakerTierHistory      = UserTierHistory
 export type ExplorerEventHistory = Tables<'explorer_event_history'>
 export type BlockAnalytic        = Tables<'block_analytics'>
 export type MakerSubscriber      = Tables<'maker_subscribers'>

@@ -101,7 +101,7 @@ export default function Screen3Page() {
         creatorType: s1.creatorType,
         subTypes: s2.subTypes,
         city: s2.city,
-        offlineActivities: s2.offlineActivities ?? [],
+        interestTags: s2.interestTags ?? [],
         bio: bio.trim() || undefined,
         socialLinks,
         themeVariant: 'soft',

@@ -1,24 +1,23 @@
 'use client'
 
-import Link from 'next/link'
-import type { MakerTier } from '@/types/database'
+import type { UserTier } from '@/types/database'
 import { TIER_THRESHOLDS } from '@/lib/constants/interests'
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
-const TIER_ORDER: MakerTier[] = ['mohalla', 'nukkad', 'chowk', 'maidan']
+const TIER_ORDER: UserTier[] = ['wanderer', 'local', 'lantern', 'beacon']
 
-const TIER_META: Record<MakerTier, { emoji: string; label: string; sub: string }> = {
-  mohalla: { emoji: '🏘️', label: 'Mohalla', sub: 'Starter' },
-  nukkad:  { emoji: '🏙️', label: 'Nukkad',  sub: 'Growing' },
-  chowk:   { emoji: '🏛️', label: 'Chowk',   sub: 'Established' },
-  maidan:  { emoji: '🌆', label: 'Maidan',   sub: 'Top tier' },
+const TIER_META: Record<UserTier, { emoji: string; label: string; story: string; sub: string }> = {
+  wanderer: { emoji: '🕯️', label: 'Wanderer', story: 'I\'m exploring my city.',  sub: 'Default' },
+  local:    { emoji: '🏠', label: 'Local',    story: 'I belong to this scene.',  sub: 'Regular' },
+  lantern:  { emoji: '🏮', label: 'Lantern',  story: 'I bring people together.', sub: 'Host' },
+  beacon:   { emoji: '🗼', label: 'Beacon',   story: 'My passion is my livelihood.', sub: 'Pro creator' },
 }
 
 const BENEFITS: {
   label: string
   desc: string
-  tier: MakerTier
+  tier: UserTier
   dotColor: string
   tierColor: string
   tierBg: string
@@ -26,37 +25,62 @@ const BENEFITS: {
   {
     label: 'Creator Page & Public Profile',
     desc: 'Your public link-in-bio page at wheninmycity.com/@handle. Customisable blocks for events, links, social media embeds and more.',
-    tier: 'mohalla', dotColor: '#4ADE80', tierColor: '#4ADE80', tierBg: 'rgba(74,222,128,0.1)',
+    tier: 'wanderer', dotColor: '#4ADE80', tierColor: '#4ADE80', tierBg: 'rgba(74,222,128,0.1)',
   },
   {
     label: 'Paid Event Ticketing',
-    desc: 'Sell tickets directly through WIMC with UPI, card and wallet support. Instant payout within 3 working days after event.',
-    tier: 'mohalla', dotColor: '#4ADE80', tierColor: '#4ADE80', tierBg: 'rgba(74,222,128,0.1)',
+    desc: 'Sell tickets directly through WIMC with UPI, card and wallet support. Instant payout within 7 working days after event.',
+    tier: 'wanderer', dotColor: '#4ADE80', tierColor: '#4ADE80', tierBg: 'rgba(74,222,128,0.1)',
   },
   {
     label: 'Lead Capture & CRM',
     desc: 'Collect emails from anyone who visits your page. Export CSV or connect to email providers for drip campaigns.',
-    tier: 'mohalla', dotColor: '#4ADE80', tierColor: '#4ADE80', tierBg: 'rgba(74,222,128,0.1)',
+    tier: 'wanderer', dotColor: '#4ADE80', tierColor: '#4ADE80', tierBg: 'rgba(74,222,128,0.1)',
+  },
+  {
+    label: 'Curated Weekly Digest',
+    desc: 'Personalised event digest based on your taste tags — delivered weekly so you never miss something worth attending.',
+    tier: 'wanderer', dotColor: '#4ADE80', tierColor: '#4ADE80', tierBg: 'rgba(74,222,128,0.1)',
+  },
+  {
+    label: 'Early Access to Popular Events',
+    desc: 'Locals get first access to ticket releases before they open to the public — no more missing out on sold-out shows.',
+    tier: 'local', dotColor: '#F5A800', tierColor: '#F5A800', tierBg: 'rgba(245,168,0,0.12)',
+  },
+  {
+    label: 'Local-Only Ticket Prices',
+    desc: 'Participating Addas offer Local members a modest but real discount — cash savings as you keep showing up.',
+    tier: 'local', dotColor: '#F5A800', tierColor: '#F5A800', tierBg: 'rgba(245,168,0,0.12)',
   },
   {
     label: 'Priority Discovery Placement',
-    desc: 'Your events appear at the top of city Explorer feeds. Higher visibility = more organic sign-ups without paid promotion.',
-    tier: 'nukkad', dotColor: '#F5A800', tierColor: '#F5A800', tierBg: 'rgba(245,168,0,0.12)',
+    desc: 'Your events appear at the top of city Explorer feeds when you open ticket sales. More organic sign-ups without paid promotion.',
+    tier: 'lantern', dotColor: '#3B6BCC', tierColor: '#3B6BCC', tierBg: 'rgba(59,107,204,0.15)',
   },
   {
-    label: 'Premium Venue Access (Adda)',
-    desc: 'Request bookings at curated Adda-partner spaces — cafés, studios, rooftops. Pre-negotiated rates, no broker needed.',
-    tier: 'nukkad', dotColor: '#F5A800', tierColor: '#F5A800', tierBg: 'rgba(245,168,0,0.12)',
+    label: 'Reduced Platform Fee (8%)',
+    desc: 'Lanterns pay 8% instead of 10%. Every event you host earns you more — your community investment compounds.',
+    tier: 'lantern', dotColor: '#3B6BCC', tierColor: '#3B6BCC', tierBg: 'rgba(59,107,204,0.15)',
   },
   {
-    label: 'Bulk Ticket Tools & Promo Codes',
-    desc: 'Issue discount codes, group bookings, and referral incentives. Manage multiple ticket tiers for a single event.',
-    tier: 'chowk', dotColor: '#3B6BCC', tierColor: '#3B6BCC', tierBg: 'rgba(59,107,204,0.15)',
+    label: 'Marketing Toolkit & Lantern Badge',
+    desc: 'Auto-generated event posters, push-notification credits to past attendees, basic analytics, and a Lantern trust badge on every event page.',
+    tier: 'lantern', dotColor: '#3B6BCC', tierColor: '#3B6BCC', tierBg: 'rgba(59,107,204,0.15)',
   },
   {
-    label: 'WIMC Verified Badge + PR Features',
-    desc: 'Top-tier creators get a Verified badge, featured city newsletter placement, and introductions to brand partnership opportunities.',
-    tier: 'maidan', dotColor: '#E8342A', tierColor: '#E8342A', tierBg: 'rgba(232,52,42,0.1)',
+    label: 'Lowest Platform Fee (5%)',
+    desc: 'Beacons keep 85% of every ticket — the lowest fee on the platform, matching what legacy creator platforms charge at their top tier.',
+    tier: 'beacon', dotColor: '#E8342A', tierColor: '#E8342A', tierBg: 'rgba(232,52,42,0.1)',
+  },
+  {
+    label: 'Beacon Fund Grants',
+    desc: 'Small platform-funded grants (₹40K–₹1.6L) for ambitious or experimental events. Epic meaning, not just transactional reward.',
+    tier: 'beacon', dotColor: '#E8342A', tierColor: '#E8342A', tierBg: 'rgba(232,52,42,0.1)',
+  },
+  {
+    label: 'Beacon Mentorship & Hall of Lights',
+    desc: 'Beacons are matched with Lanterns to coach. After 3 years: Lantern Mentor distinction. After 5 years: permanent Hall-of-Lights city listing.',
+    tier: 'beacon', dotColor: '#E8342A', tierColor: '#E8342A', tierBg: 'rgba(232,52,42,0.1)',
   },
 ]
 
@@ -64,13 +88,6 @@ const BENEFITS: {
 
 function pct(current: number, target: number): number {
   return Math.min(100, Math.round((current / target) * 100))
-}
-
-function formatGMV(paise: number): string {
-  const rs = paise / 100
-  if (rs >= 100000) return `₹${(rs / 100000).toFixed(1)}L`
-  if (rs >= 1000) return `₹${Math.round(rs / 1000)}K`
-  return `₹${rs.toLocaleString('en-IN')}`
 }
 
 // ── Sub-components ────────────────────────────────────────────────────────────
@@ -119,7 +136,7 @@ function MetricCard({
             transition: 'width 0.8s cubic-bezier(0.16,1,0.3,1)',
           }} />
         </div>
-        <div style={{ fontSize: 12, color: fill >= 90 ? 'var(--wimc-success)' : 'var(--wimc-text-secondary)', fontFamily: 'var(--font-jetbrains-mono)' }}>
+        <div style={{ fontSize: 12, color: fill >= 100 ? 'var(--wimc-success)' : 'var(--wimc-text-secondary)', fontFamily: 'var(--font-jetbrains-mono)' }}>
           {helperText}
         </div>
       </div>
@@ -130,7 +147,8 @@ function MetricCard({
 // ── Main component ────────────────────────────────────────────────────────────
 
 interface Metrics {
-  maker_tier: string
+  user_tier: string
+  // Creator metrics
   cumulative_events_hosted: number
   cumulative_unique_attendees: number
   cumulative_gmv_paise: number
@@ -138,46 +156,61 @@ interface Metrics {
   repeat_attendee_rate: number
   monthly_page_visitors: number
   is_founding_maker: boolean
+  // Explorer metrics
+  events_attended_count: number
+  rsvps_total_count: number
+  no_shows_count: number
+  reviews_posted_count: number
+  whatsapp_subscriber_count: number
+  tier_recovery_until: string | null
 }
 
 interface TierClientProps {
-  tier: MakerTier
+  tier: UserTier
   metrics: Metrics
+  // Rolling-window counts fetched server-side
+  eventsAttendedIn90d: number
+  eventsHostedIn180d: number
+  eventsHostedIn365d: number
 }
 
-export default function TierClient({ tier, metrics }: TierClientProps) {
+export default function TierClient({ tier, metrics, eventsAttendedIn90d, eventsHostedIn180d, eventsHostedIn365d }: TierClientProps) {
   const currentIdx = TIER_ORDER.indexOf(tier)
-  const nextTier = currentIdx < TIER_ORDER.length - 1 ? TIER_ORDER[currentIdx + 1] : null
-  const nextMeta = nextTier ? TIER_META[nextTier] : null
+  const nextTier   = currentIdx < TIER_ORDER.length - 1 ? TIER_ORDER[currentIdx + 1] : null
+  const nextMeta   = nextTier ? TIER_META[nextTier] : null
   const currentMeta = TIER_META[tier]
 
-  // Calculate overall progress to next tier (average of all metric percents)
+  const inRecovery = Boolean(
+    tier === 'beacon' &&
+    metrics.tier_recovery_until &&
+    new Date(metrics.tier_recovery_until) > new Date()
+  )
+
+  // Overall progress percent to next tier
   let overallPct = 0
-  if (nextTier === 'nukkad') {
-    const t = TIER_THRESHOLDS.nukkad
+  if (nextTier === 'local') {
+    const t = TIER_THRESHOLDS.local
     overallPct = Math.round((
-      pct(metrics.cumulative_events_hosted, t.events) +
-      pct(metrics.cumulative_unique_attendees, t.uniqueAttendees) +
-      pct(metrics.cumulative_gmv_paise, t.gmvPaise) +
-      pct(metrics.average_event_rating, t.averageRating)
-    ) / 4)
-  } else if (nextTier === 'chowk') {
-    const t = TIER_THRESHOLDS.chowk
+      pct(eventsAttendedIn90d, t.eventsAttendedIn90d) +
+      pct(metrics.reviews_posted_count, Math.ceil(eventsAttendedIn90d * t.reviewsPerEventsRatio + 0.1))
+    ) / 2)
+  } else if (nextTier === 'lantern') {
+    const t = TIER_THRESHOLDS.lantern
     overallPct = Math.round((
-      pct(metrics.cumulative_events_hosted, t.events) +
-      pct(metrics.cumulative_unique_attendees, t.uniqueAttendees) +
-      pct(metrics.cumulative_gmv_paise, t.gmvPaise) +
-      pct(metrics.average_event_rating, t.averageRating)
+      pct(eventsHostedIn180d, t.eventsHostedIn180d) +
+      pct(metrics.average_event_rating * 10, t.minAverageRating * 10)
+    ) / 2)
+  } else if (nextTier === 'beacon') {
+    const t = TIER_THRESHOLDS.beacon
+    overallPct = Math.round((
+      pct(eventsHostedIn365d, t.eventsHostedIn365d) +
+      pct(metrics.average_event_rating * 10, t.minAverageRating * 10) +
+      pct(metrics.repeat_attendee_rate * 100, t.minRepeatAttendanceRate * 100) +
+      pct(metrics.whatsapp_subscriber_count, t.minActiveSubscribers)
     ) / 4)
   } else if (!nextTier) {
     overallPct = 100
   }
-
-  // Next tier metric requirements
-  const nextThresholds = nextTier === 'nukkad' ? TIER_THRESHOLDS.nukkad
-    : nextTier === 'chowk' ? TIER_THRESHOLDS.chowk
-    : nextTier === 'maidan' ? TIER_THRESHOLDS.maidan
-    : null
 
   const topbar: React.CSSProperties = {
     height: 64, borderBottom: '1px solid var(--wimc-border-subtle)',
@@ -203,6 +236,32 @@ export default function TierClient({ tier, metrics }: TierClientProps) {
 
       <div style={{ padding: 32, display: 'grid', gap: 28, maxWidth: 960 }}>
 
+        {/* Beacon Recovery banner — visible only to the creator */}
+        {inRecovery && (
+          <div style={{
+            background: 'rgba(245,168,0,0.08)', border: '1px solid rgba(245,168,0,0.25)',
+            borderRadius: 16, padding: '16px 24px',
+            display: 'flex', alignItems: 'center', gap: 16,
+          }}>
+            <span className="material-symbols-outlined" style={{ color: 'var(--wimc-amber)', fontSize: 24 }}>
+              brightness_alert
+            </span>
+            <div>
+              <div style={{ fontFamily: 'var(--font-syne)', fontSize: 14, fontWeight: 700, color: 'var(--wimc-amber)' }}>
+                Beacon Recovery active
+              </div>
+              <div style={{ fontSize: 13, color: 'var(--wimc-text-secondary)', marginTop: 2 }}>
+                Your badge is dimmed and perks are frozen while you recover.
+                Meet all Beacon gates again before{' '}
+                <strong style={{ color: '#FFD166' }}>
+                  {new Date(metrics.tier_recovery_until!).toLocaleDateString('en-IN', { day: 'numeric', month: 'long' })}
+                </strong>{' '}
+                to stay at Beacon.
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Hero banner */}
         <div style={{
           background: 'linear-gradient(135deg, #1A1208 0%, #0A0A0B 100%)',
@@ -221,6 +280,7 @@ export default function TierClient({ tier, metrics }: TierClientProps) {
             background: 'linear-gradient(135deg, var(--wimc-amber), var(--wimc-coral))',
             display: 'grid', placeItems: 'center', fontSize: 36,
             boxShadow: '0 0 40px rgba(245,168,0,0.3)',
+            opacity: inRecovery ? 0.5 : 1,
           }}>
             {currentMeta.emoji}
           </div>
@@ -230,6 +290,9 @@ export default function TierClient({ tier, metrics }: TierClientProps) {
             </div>
             <div style={{ fontFamily: 'var(--font-syne)', fontSize: 36, fontWeight: 800, lineHeight: 1 }}>
               {currentMeta.label}
+            </div>
+            <div style={{ fontSize: 13, color: 'var(--wimc-text-secondary)', marginTop: 6, fontStyle: 'italic' }}>
+              &ldquo;{currentMeta.story}&rdquo;
             </div>
             {nextMeta && (
               <div style={{ fontSize: 14, color: 'var(--wimc-text-secondary)', marginTop: 8 }}>
@@ -277,9 +340,9 @@ export default function TierClient({ tier, metrics }: TierClientProps) {
             overflowX: 'auto',
           }}>
             {TIER_ORDER.map((t, i) => {
-              const done = currentIdx > i
+              const done    = currentIdx > i
               const current = currentIdx === i
-              const meta = TIER_META[t]
+              const meta    = TIER_META[t]
               return (
                 <div key={t} style={{ display: 'flex', alignItems: 'center', flex: 1 }}>
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, minWidth: 100 }}>
@@ -313,41 +376,93 @@ export default function TierClient({ tier, metrics }: TierClientProps) {
           </div>
         </div>
 
-        {/* Metric cards */}
-        {nextThresholds && (
+        {/* Progress metric cards — vary by next tier */}
+        {nextTier === 'local' && (
           <div>
             <div style={{ fontSize: 11, letterSpacing: '1.5px', textTransform: 'uppercase', color: 'var(--wimc-text-muted)', fontFamily: 'var(--font-jetbrains-mono)', marginBottom: 16 }}>
-              Progress to {nextMeta?.label}
+              Progress to Local — rolling 90-day window
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
               <MetricCard
-                icon="event" title="Events Hosted" sub="Minimum quality rating ≥ 4.0"
-                current={metrics.cumulative_events_hosted} target={nextThresholds.events}
-                displayCurrent={String(metrics.cumulative_events_hosted)} displayTarget={String(nextThresholds.events)}
+                icon="local_activity" title="Events Attended" sub="In the last 90 days"
+                current={eventsAttendedIn90d} target={TIER_THRESHOLDS.local.eventsAttendedIn90d}
+                displayCurrent={String(eventsAttendedIn90d)} displayTarget={String(TIER_THRESHOLDS.local.eventsAttendedIn90d)}
                 barColor="var(--wimc-coral)" barColorLight="var(--wimc-coral-light)"
-                helperText={metrics.cumulative_events_hosted >= nextThresholds.events ? '✓ Requirement met!' : `${nextThresholds.events - metrics.cumulative_events_hosted} more events to go`}
+                helperText={eventsAttendedIn90d >= TIER_THRESHOLDS.local.eventsAttendedIn90d ? '✓ Requirement met!' : `${TIER_THRESHOLDS.local.eventsAttendedIn90d - eventsAttendedIn90d} more events to go`}
               />
               <MetricCard
-                icon="groups" title="Total Attendees" sub="Across all paid events"
-                current={metrics.cumulative_unique_attendees} target={nextThresholds.uniqueAttendees}
-                displayCurrent={String(metrics.cumulative_unique_attendees)} displayTarget={String(nextThresholds.uniqueAttendees)}
+                icon="rate_review" title="Reviews Posted" sub="At least 1 per 3 events"
+                current={metrics.reviews_posted_count}
+                target={Math.max(1, Math.ceil(eventsAttendedIn90d * TIER_THRESHOLDS.local.reviewsPerEventsRatio))}
+                displayCurrent={String(metrics.reviews_posted_count)}
+                displayTarget={String(Math.max(1, Math.ceil(eventsAttendedIn90d * TIER_THRESHOLDS.local.reviewsPerEventsRatio)))}
                 barColor="var(--wimc-teal)" barColorLight="#A8F0EC"
-                helperText={metrics.cumulative_unique_attendees >= nextThresholds.uniqueAttendees ? '✓ Almost there!' : `${nextThresholds.uniqueAttendees - metrics.cumulative_unique_attendees} more attendees needed`}
+                helperText="Leave a review after each event you attend"
               />
+            </div>
+          </div>
+        )}
+
+        {nextTier === 'lantern' && (
+          <div>
+            <div style={{ fontSize: 11, letterSpacing: '1.5px', textTransform: 'uppercase', color: 'var(--wimc-text-muted)', fontFamily: 'var(--font-jetbrains-mono)', marginBottom: 16 }}>
+              Progress to Lantern — rolling 180-day window
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
               <MetricCard
-                icon="payments" title="Gross Revenue (GMV)" sub="Lifetime paid ticket revenue"
-                current={metrics.cumulative_gmv_paise} target={nextThresholds.gmvPaise}
-                displayCurrent={formatGMV(metrics.cumulative_gmv_paise)} displayTarget={formatGMV(nextThresholds.gmvPaise)}
-                barColor="var(--wimc-amber)" barColorLight="#FFD166"
-                helperText={metrics.cumulative_gmv_paise >= nextThresholds.gmvPaise ? '✓ Requirement met!' : `${formatGMV(nextThresholds.gmvPaise - metrics.cumulative_gmv_paise)} remaining`}
+                icon="event" title="Events Hosted" sub="In the last 180 days"
+                current={eventsHostedIn180d} target={TIER_THRESHOLDS.lantern.eventsHostedIn180d}
+                displayCurrent={String(eventsHostedIn180d)} displayTarget={String(TIER_THRESHOLDS.lantern.eventsHostedIn180d)}
+                barColor="var(--wimc-coral)" barColorLight="var(--wimc-coral-light)"
+                helperText={eventsHostedIn180d >= TIER_THRESHOLDS.lantern.eventsHostedIn180d ? '✓ Requirement met!' : `${TIER_THRESHOLDS.lantern.eventsHostedIn180d - eventsHostedIn180d} more to host`}
               />
               <MetricCard
                 icon="star" title="Average Rating" sub="From attendee reviews"
-                current={metrics.average_event_rating * 10} target={nextThresholds.averageRating * 10}
+                current={metrics.average_event_rating * 10} target={TIER_THRESHOLDS.lantern.minAverageRating * 10}
                 displayCurrent={metrics.average_event_rating > 0 ? metrics.average_event_rating.toFixed(1) : '—'}
-                displayTarget={nextThresholds.averageRating.toFixed(1)}
+                displayTarget={TIER_THRESHOLDS.lantern.minAverageRating.toFixed(1)}
                 barColor="#4ADE80" barColorLight="#A7F3D0"
-                helperText={metrics.average_event_rating >= nextThresholds.averageRating ? '✓ Requirement met!' : `Improve by ${(nextThresholds.averageRating - metrics.average_event_rating).toFixed(1)} — collect more reviews`}
+                helperText={metrics.average_event_rating >= TIER_THRESHOLDS.lantern.minAverageRating ? '✓ Requirement met!' : `Improve by ${(TIER_THRESHOLDS.lantern.minAverageRating - metrics.average_event_rating).toFixed(1)} — keep collecting reviews`}
+              />
+            </div>
+          </div>
+        )}
+
+        {nextTier === 'beacon' && (
+          <div>
+            <div style={{ fontSize: 11, letterSpacing: '1.5px', textTransform: 'uppercase', color: 'var(--wimc-text-muted)', fontFamily: 'var(--font-jetbrains-mono)', marginBottom: 16 }}>
+              Progress to Beacon — rolling 365-day window
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+              <MetricCard
+                icon="event" title="Events Hosted" sub="In the last 12 months (or 1,200 tickets)"
+                current={eventsHostedIn365d} target={TIER_THRESHOLDS.beacon.eventsHostedIn365d}
+                displayCurrent={String(eventsHostedIn365d)} displayTarget={String(TIER_THRESHOLDS.beacon.eventsHostedIn365d)}
+                barColor="var(--wimc-coral)" barColorLight="var(--wimc-coral-light)"
+                helperText={eventsHostedIn365d >= TIER_THRESHOLDS.beacon.eventsHostedIn365d ? '✓ Requirement met!' : `${TIER_THRESHOLDS.beacon.eventsHostedIn365d - eventsHostedIn365d} more events to host`}
+              />
+              <MetricCard
+                icon="star" title="Average Rating" sub="≥4.7★ across all events"
+                current={metrics.average_event_rating * 10} target={TIER_THRESHOLDS.beacon.minAverageRating * 10}
+                displayCurrent={metrics.average_event_rating > 0 ? metrics.average_event_rating.toFixed(1) : '—'}
+                displayTarget={TIER_THRESHOLDS.beacon.minAverageRating.toFixed(1)}
+                barColor="#4ADE80" barColorLight="#A7F3D0"
+                helperText={metrics.average_event_rating >= TIER_THRESHOLDS.beacon.minAverageRating ? '✓ Requirement met!' : `Improve by ${(TIER_THRESHOLDS.beacon.minAverageRating - metrics.average_event_rating).toFixed(1)} — keep collecting reviews`}
+              />
+              <MetricCard
+                icon="groups" title="Repeat Attendance" sub="≥30% of attendees return"
+                current={Math.round(metrics.repeat_attendee_rate * 100)} target={Math.round(TIER_THRESHOLDS.beacon.minRepeatAttendanceRate * 100)}
+                displayCurrent={`${Math.round(metrics.repeat_attendee_rate * 100)}%`}
+                displayTarget={`${Math.round(TIER_THRESHOLDS.beacon.minRepeatAttendanceRate * 100)}%`}
+                barColor="var(--wimc-amber)" barColorLight="#FFD166"
+                helperText={metrics.repeat_attendee_rate >= TIER_THRESHOLDS.beacon.minRepeatAttendanceRate ? '✓ Requirement met!' : 'Build regulars — the single best signal of true-fan formation'}
+              />
+              <MetricCard
+                icon="notifications_active" title="Active Subscribers" sub="≥50 WhatsApp subscribers"
+                current={metrics.whatsapp_subscriber_count} target={TIER_THRESHOLDS.beacon.minActiveSubscribers}
+                displayCurrent={String(metrics.whatsapp_subscriber_count)} displayTarget={String(TIER_THRESHOLDS.beacon.minActiveSubscribers)}
+                barColor="#3B6BCC" barColorLight="#7BA4F0"
+                helperText={metrics.whatsapp_subscriber_count >= TIER_THRESHOLDS.beacon.minActiveSubscribers ? '✓ Requirement met!' : `${TIER_THRESHOLDS.beacon.minActiveSubscribers - metrics.whatsapp_subscriber_count} more subscribers needed`}
               />
             </div>
           </div>

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import type { MakerTier } from '@/types/database'
+import type { UserTier } from '@/types/database'
 
 interface Subscriber {
   id: string
@@ -14,7 +14,7 @@ interface Subscriber {
 interface LeadsClientProps {
   subscribers: Subscriber[]
   total: number
-  tier: MakerTier
+  tier: UserTier
 }
 
 const SOURCE_LABEL: Record<string, string> = {
@@ -24,7 +24,7 @@ const SOURCE_LABEL: Record<string, string> = {
 
 export default function LeadsClient({ subscribers, total, tier }: LeadsClientProps) {
   const [search, setSearch] = useState('')
-  const canExport = tier === 'chowk' || tier === 'maidan'
+  const canExport = tier === 'lantern' || tier === 'beacon'
 
   const filtered = subscribers.filter(
     (s) => !search || s.email.toLowerCase().includes(search.toLowerCase())
@@ -76,7 +76,7 @@ export default function LeadsClient({ subscribers, total, tier }: LeadsClientPro
             </button>
           ) : (
             <div style={{ fontSize: 12, color: 'var(--wimc-amber)', fontFamily: 'var(--font-jetbrains-mono)', padding: '6px 12px', background: 'var(--wimc-amber-dim)', borderRadius: 8 }}>
-              CSV export unlocks at Chowk tier
+              CSV export unlocks at Lantern tier
             </div>
           )}
         </div>

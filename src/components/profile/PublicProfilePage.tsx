@@ -804,6 +804,54 @@ export default function PublicProfilePage({
             </span>
           )}
 
+          {/* Tier badge — Lantern and Beacon only, with long-tenure upgrades */}
+          {profile.user_tier === 'lantern' && (() => {
+            const yrs = profile.lantern_since
+              ? (Date.now() - new Date(profile.lantern_since).getTime()) / (365.25 * 24 * 60 * 60 * 1000)
+              : 0
+            const isMentor = yrs >= 3
+            return (
+              <span
+                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold"
+                style={{ background: isMentor ? 'rgba(245,168,0,0.18)' : 'rgba(245,168,0,0.12)', color: '#F5A800', border: '1px solid rgba(245,168,0,0.25)' }}
+              >
+                <span className="material-symbols-outlined" style={{ fontSize: 13, fontVariationSettings: "'FILL' 1" }}>
+                  {isMentor ? 'local_fire_department' : 'light_mode'}
+                </span>
+                {isMentor ? 'Lantern Mentor' : 'Lantern Creator'}
+              </span>
+            )
+          })()}
+          {profile.user_tier === 'beacon' && (() => {
+            const inRecovery = !!profile.tier_recovery_until && new Date(profile.tier_recovery_until) > new Date()
+            if (inRecovery) {
+              return (
+                <span
+                  className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold"
+                  style={{ background: 'rgba(168,85,247,0.06)', color: 'rgba(168,85,247,0.5)', border: '1px solid rgba(168,85,247,0.2)' }}
+                >
+                  <span className="material-symbols-outlined" style={{ fontSize: 13 }}>schedule</span>
+                  Beacon · Reviewing
+                </span>
+              )
+            }
+            const yrs = profile.beacon_since
+              ? (Date.now() - new Date(profile.beacon_since).getTime()) / (365.25 * 24 * 60 * 60 * 1000)
+              : 0
+            const isLegacy = yrs >= 5
+            return (
+              <span
+                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold"
+                style={{ background: isLegacy ? 'rgba(168,85,247,0.18)' : 'rgba(168,85,247,0.12)', color: '#a855f7', border: '1px solid rgba(168,85,247,0.25)' }}
+              >
+                <span className="material-symbols-outlined" style={{ fontSize: 13, fontVariationSettings: "'FILL' 1" }}>
+                  {isLegacy ? 'auto_awesome' : 'workspace_premium'}
+                </span>
+                {isLegacy ? 'Hall of Lights' : 'Beacon Creator'}
+              </span>
+            )
+          })()}
+
           {/* Bio */}
           {profile.bio && (
             <p className="max-w-md text-on-surface/90 text-sm md:text-base leading-relaxed mt-1">

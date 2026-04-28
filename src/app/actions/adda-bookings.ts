@@ -3,7 +3,7 @@
 import { z } from 'zod'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { requireAuth } from '@/lib/auth/requireAuth'
-import type { MakerAddaProposal, ProposalStatus, MakerTier, CreatorType } from '@/types/database'
+import type { MakerAddaProposal, ProposalStatus, UserTier, CreatorType } from '@/types/database'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -16,7 +16,7 @@ export interface MakerInfo {
   avatar_url: string | null
   creator_type: CreatorType
   is_verified: boolean
-  maker_tier: MakerTier
+  user_tier: UserTier
   cumulative_events_hosted: number
   is_founding_maker: boolean
 }
@@ -81,10 +81,10 @@ export async function getAddaBookings(
 
   if (!proposals?.length) return { proposals: [], error: null }
 
-  const makerIds = [...new Set(proposals.map(p => p.maker_id))]
+  const makerIds = [...new Set(proposals.map((p) => p.maker_id))]
   const { data: makers } = await admin
     .from('user_profiles')
-    .select('id, display_name, username, avatar_url, creator_type, is_verified, maker_tier, cumulative_events_hosted, is_founding_maker')
+    .select('id, display_name, username, avatar_url, creator_type, is_verified, user_tier, cumulative_events_hosted, is_founding_maker')
     .in('id', makerIds)
 
   const makerMap = new Map((makers ?? []).map(m => [m.id, m]))
@@ -100,7 +100,7 @@ export async function getAddaBookings(
         avatar_url:               m?.avatar_url ?? null,
         creator_type:             (m?.creator_type ?? 'content_creation') as CreatorType,
         is_verified:              m?.is_verified ?? false,
-        maker_tier:               (m?.maker_tier ?? 'mohalla') as MakerTier,
+        user_tier:               (m?.user_tier ?? 'wanderer') as UserTier,
         cumulative_events_hosted: m?.cumulative_events_hosted ?? 0,
         is_founding_maker:        m?.is_founding_maker ?? false,
       },

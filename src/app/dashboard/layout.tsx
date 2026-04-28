@@ -3,16 +3,20 @@ import { createClient } from '@/lib/supabase/server'
 import Sidebar from '@/components/dashboard/Sidebar'
 import NotificationBell from '@/components/dashboard/NotificationBell'
 import { getNotificationsForUser } from '@/app/actions/notifications'
+import { getUnreadMessageCount } from '@/app/actions/hub'
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { profile } = await requireProfile()
   const supabase = await createClient()
 
-  const [eventsRes, publishedRes, rsvpsRes, notifications] = await Promise.all([
+  const isLanternPlus = profile.user_tier === 'lantern' || profile.user_tier === 'beacon'
+
+  const [eventsRes, publishedRes, rsvpsRes, notifications, unreadHub] = await Promise.all([
     supabase.from('events').select('id', { count: 'exact', head: true }).eq('creator_id', profile.id),
     supabase.from('events').select('id', { count: 'exact', head: true }).eq('creator_id', profile.id).eq('status', 'published'),
     supabase.from('rsvps').select('id', { count: 'exact', head: true }).eq('attendee_user_id', profile.id),
     getNotificationsForUser(),
+    isLanternPlus ? getUnreadMessageCount() : Promise.resolve(0),
   ])
 
   const hasAnyEvent      = (eventsRes.count   ?? 0) > 0
@@ -31,11 +35,12 @@ export default async function DashboardLayout({ children }: { children: React.Re
       <Sidebar
         username={profile.username ?? ''}
         displayName={profile.display_name ?? profile.username ?? ''}
-        tier={profile.maker_tier ?? 'mohalla'}
+        tier={profile.user_tier ?? 'wanderer'}
         initials={initials}
         hasAnyEvent={hasAnyEvent}
         hasPublishedEvent={hasPublishedEvent}
         hasAnyRsvp={hasAnyRsvp}
+        unreadHubMessages={unreadHub}
       />
       <div style={{ marginLeft: 'var(--wimc-sidebar-w)', flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
         {/* Slim top bar — notification bell lives here */}

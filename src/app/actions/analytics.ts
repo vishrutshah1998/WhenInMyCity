@@ -19,6 +19,7 @@
 import { z } from 'zod'
 import { headers } from 'next/headers'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { requireAuth } from '@/lib/auth/requireAuth'
 import { checkAnalyticsRateLimit } from '@/lib/ratelimit'
 
 // ---------------------------------------------------------------------------
@@ -190,4 +191,56 @@ export async function getLinkClickStats(
     byDay,
     windowDays,
   }
+}
+
+// ---------------------------------------------------------------------------
+// getAudienceBreakdown
+// ---------------------------------------------------------------------------
+
+export interface AudienceBreakdown {
+  wanderer: number
+  local:    number
+  lantern:  number
+  beacon:   number
+  total:    number
+}
+
+/**
+ * Counts the caller's followers (explorers who have this creator in their
+ * `followed_maker_ids`) broken down by their `user_tier`.
+ *
+ * Requires the caller to be authenticated.
+ */
+export async function getAudienceBreakdown(): Promise<AudienceBreakdown> {
+  const { user } = await requireAuth()
+  const admin     = createAdminClient()
+
+  const empty: AudienceBreakdown = { wanderer: 0, local: 0, lantern: 0, beacon: 0, total: 0 }
+
+  // 1. Find all explorer_profiles that follow this creator.
+  const { data: followers, error: followError } = await admin
+    .from('explorer_profiles')
+    .select('auth_user_id')
+    .contains('followed_maker_ids', [user.id])
+
+  if (followError || !followers?.length) return empty
+
+  const followerIds = followers.map((f) => f.auth_user_id)
+
+  // 2. Fetch the user_tier for each follower from user_profiles.
+  const { data: profiles, error: profileError } = await admin
+    .from('user_profiles')
+    .select('user_tier')
+    .in('id', followerIds)
+
+  if (profileError || !profiles?.length) return empty
+
+  const breakdown = { ...empty }
+  for (const p of profiles) {
+    const tier = (p.user_tier ?? 'wanderer') as keyof Omit<AudienceBreakdown, 'total'>
+    if (tier in breakdown) breakdown[tier]++
+    breakdown.total++
+  }
+
+  return breakdown
 }

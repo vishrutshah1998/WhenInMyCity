@@ -158,7 +158,7 @@ export async function completeOnboarding(
       city,
       creatorType,
       subTypes,
-      offlineActivities,
+      interestTags,
       socialLinks,
       themeVariant,
     } = parsed.data
@@ -216,9 +216,9 @@ export async function completeOnboarding(
       avatar_url: null,
       city,
       creator_type: creatorType,
-      interest_tags: [],
+      interest_tags: interestTags,
       sub_types: subTypes,
-      offline_activities: offlineActivities,
+      offline_activities: [],
       social_links: socialLinksRecord,
       phone: user.phone ?? null,
       page_theme: pageTheme,
@@ -254,6 +254,20 @@ export async function completeOnboarding(
     const { error: blocksError } = await admin.from('page_blocks').insert(blocks)
     if (blocksError) {
       console.error('[completeOnboarding] default blocks', blocksError.message)
+    }
+
+    // Also create an explorer profile so the user can discover events
+    const { error: explorerError } = await admin.from('explorer_profiles').insert({
+      auth_user_id: user.id,
+      display_name: displayName,
+      city,
+      interest_tags: interestTags,
+      preferred_formats: [],
+      price_range_max_paise: 50000,
+      notification_preferences: { whatsapp: true, digest_frequency: 'weekly' },
+    })
+    if (explorerError) {
+      console.error('[completeOnboarding] explorer profile', explorerError.message)
     }
 
     // Clear onboarding metadata
@@ -297,7 +311,7 @@ export async function selectUserRole(
   const redirectMap: Record<string, string> = {
     maker:    '/onboarding',
     adda:     '/onboarding/adda',
-    explorer: '/onboarding/explorer',
+    explorer: '/onboarding',
   }
 
   return { redirectTo: redirectMap[role], error: null }

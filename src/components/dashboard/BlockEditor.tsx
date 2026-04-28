@@ -7,6 +7,7 @@ import type {
   BlockType,
   PageBlock,
   Event,
+  UserTier,
   SocialLinkConfig,
   YoutubeEmbedConfig,
   InstagramEmbedConfig,
@@ -984,11 +985,19 @@ function BlockEditPanel({
 // Add Block modal
 // ---------------------------------------------------------------------------
 
-function AddBlockModal({ onClose, onAdd, isPending }: {
+const LANTERN_GATED_BLOCKS: BlockType[] = ['image_gallery']
+
+function AddBlockModal({ onClose, onAdd, isPending, userTier }: {
   onClose: () => void
   onAdd: (type: BlockType) => void
   isPending: boolean
+  userTier?: UserTier | null
 }) {
+  const isGated = (type: BlockType) => {
+    if (!LANTERN_GATED_BLOCKS.includes(type)) return false
+    const tierOrder: Record<string, number> = { wanderer: 0, local: 1, lantern: 2, beacon: 3 }
+    return (tierOrder[userTier ?? 'wanderer'] ?? 0) < 2
+  }
   return (
     <div className="fixed inset-0 z-[70]">
       <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={onClose} />
@@ -1003,22 +1012,28 @@ function AddBlockModal({ onClose, onAdd, isPending }: {
           </button>
         </div>
         <div className="px-8 pb-12 grid grid-cols-2 gap-4">
-          {BLOCK_TYPES.map((bt) => (
-            <button
-              key={bt.type}
-              onClick={() => { onAdd(bt.type); onClose() }}
-              disabled={isPending}
-              className="bg-surface-container-lowest p-5 rounded-xl text-left border border-white/5 hover:border-primary transition-all active:scale-[0.98] group flex flex-col items-start gap-3 disabled:opacity-50"
-            >
-              <div className="w-12 h-12 rounded-xl bg-primary-container text-on-primary-container flex items-center justify-center group-hover:bg-primary group-hover:text-white transition-colors">
-                <span className="material-symbols-outlined text-[28px]">{bt.icon}</span>
-              </div>
-              <div>
-                <h4 className="font-headline font-bold text-sm text-on-surface">{bt.label}</h4>
-                <p className="font-body text-[11px] text-on-surface-variant leading-tight mt-0.5">{bt.description}</p>
-              </div>
-            </button>
-          ))}
+          {BLOCK_TYPES.map((bt) => {
+            const locked = isGated(bt.type)
+            return (
+              <button
+                key={bt.type}
+                onClick={() => { if (!locked) { onAdd(bt.type); onClose() } }}
+                disabled={isPending || locked}
+                title={locked ? 'Requires Lantern tier' : undefined}
+                className={`bg-surface-container-lowest p-5 rounded-xl text-left border border-white/5 transition-all flex flex-col items-start gap-3 relative overflow-hidden ${locked ? 'opacity-50 cursor-not-allowed' : 'hover:border-primary active:scale-[0.98] group disabled:opacity-50'}`}
+              >
+                <div className={`w-12 h-12 rounded-xl bg-primary-container text-on-primary-container flex items-center justify-center transition-colors ${locked ? '' : 'group-hover:bg-primary group-hover:text-white'}`}>
+                  <span className="material-symbols-outlined text-[28px]">{locked ? 'lock' : bt.icon}</span>
+                </div>
+                <div>
+                  <h4 className="font-headline font-bold text-sm text-on-surface">{bt.label}</h4>
+                  <p className="font-body text-[11px] text-on-surface-variant leading-tight mt-0.5">
+                    {locked ? 'Lantern+ required' : bt.description}
+                  </p>
+                </div>
+              </button>
+            )
+          })}
 
           {/* Event block */}
           <button
@@ -1101,9 +1116,10 @@ interface BlockEditorProps {
   isDirty: boolean
   isSaving: boolean
   onSave: () => void
+  userTier?: UserTier | null
 }
 
-export default function BlockEditor({ blocks, events, onBlocksChange, onEditBlock, isDirty, isSaving, onSave }: BlockEditorProps) {
+export default function BlockEditor({ blocks, events, onBlocksChange, onEditBlock, isDirty, isSaving, onSave, userTier }: BlockEditorProps) {
   const [showAddModal, setShowAddModal] = useState(false)
   const [editingBlockId, setEditingBlockId] = useState<string | null>(null)
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null)
@@ -1123,7 +1139,7 @@ export default function BlockEditor({ blocks, events, onBlocksChange, onEditBloc
       is_visible: true,
       config: {} as PageBlock['config'],
       block_family: 'content' as import('@/types/database').BlockFamily,
-      minimum_tier: 'mohalla' as import('@/types/database').MakerTier,
+      minimum_tier: 'wanderer' as import('@/types/database').UserTier,
       analytics_config: {} as PageBlock['analytics_config'],
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
@@ -1281,6 +1297,7 @@ export default function BlockEditor({ blocks, events, onBlocksChange, onEditBloc
           onClose={() => setShowAddModal(false)}
           onAdd={handleAdd}
           isPending={isSaving}
+          userTier={userTier}
         />
       )}
     </div>

@@ -52,13 +52,13 @@ export const Screen1Schema = z.object({
 export type Screen1Data = z.infer<typeof Screen1Schema>
 
 // ---------------------------------------------------------------------------
-// Screen 2 — sub-types, city, offline activities
+// Screen 2 — sub-types, city, interests
 // ---------------------------------------------------------------------------
 
 export const Screen2Schema = z.object({
-  subTypes: z.array(z.string().min(1)).min(1, 'Please select at least one option'),
+  subTypes: z.array(z.string().min(1)).default([]),
   city: z.string().min(1, 'Please select a city'),
-  offlineActivities: z.array(z.string()).default([]),
+  interestTags: z.array(z.string()).min(3, 'Pick at least 3 interests').max(5, 'Pick at most 5 interests'),
 })
 
 export type Screen2Data = z.infer<typeof Screen2Schema>
@@ -95,9 +95,9 @@ export const CompleteOnboardingSchema = z.object({
   username: UsernameSchema,
   creatorType: CreatorTypeV2Schema,
   // Screen 2
-  subTypes: z.array(z.string().min(1)).min(1),
+  subTypes: z.array(z.string().min(1)).default([]),
   city: z.string().min(1),
-  offlineActivities: z.array(z.string()).default([]),
+  interestTags: z.array(z.string()).min(3).max(5),
   // Screen 3
   bio: z.string().max(160).optional(),
   socialLinks: z.array(SocialLinkEntrySchema).default([]),

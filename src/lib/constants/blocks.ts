@@ -3,7 +3,7 @@
 // Tier gates, family assignments, and display metadata for every block type.
 // =============================================================================
 
-import type { BlockType, BlockFamily, MakerTier } from '@/types/database'
+import type { BlockType, BlockFamily, UserTier } from '@/types/database'
 
 // ---------------------------------------------------------------------------
 // Block meta entry shape
@@ -19,54 +19,54 @@ export interface BlockMetaEntry {
   /** Which family this block belongs to. */
   family: BlockFamily
   /** Minimum maker tier required to add this block. */
-  minimumTier: MakerTier
-  /** True for all Nukkad+ blocks — used to show lock state in the picker. */
+  minimumTier: UserTier
+  /** True for all Local+ blocks — used to show lock state in the picker. */
   isPremium: boolean
 }
 
 // ---------------------------------------------------------------------------
 // BLOCK_TIER_GATES
-// Maps every BlockType to the minimum MakerTier required to add it.
+// Maps every BlockType to the minimum UserTier required to add it.
 // Enforced server-side in validateBlockTierAccess.
 // ---------------------------------------------------------------------------
 
-export const BLOCK_TIER_GATES: Record<BlockType, MakerTier> = {
-  // ── Mohalla — available to all Makers ─────────────────────────────────────
-  text_bio:           'mohalla',
-  social_link:        'mohalla',
-  social_links_row:   'mohalla',
-  creator_type_badge: 'mohalla',
-  city_community:     'mohalla',
-  announcement:       'mohalla',
-  event_listing:      'mohalla',
-  rsvp_link:          'mohalla',
-  youtube_embed:      'mohalla',
-  image_gallery:      'mohalla',
-  custom_link:        'mohalla',
-  support_tip:        'mohalla',
-  quote_block:        'mohalla',
-  marquee_text:       'mohalla',
-  stats_grid:         'mohalla',
+export const BLOCK_TIER_GATES: Record<BlockType, UserTier> = {
+  // ── Wanderer — available to all users ────────────────────────────────────
+  text_bio:           'wanderer',
+  social_link:        'wanderer',
+  social_links_row:   'wanderer',
+  creator_type_badge: 'wanderer',
+  city_community:     'wanderer',
+  announcement:       'wanderer',
+  event_listing:      'wanderer',
+  rsvp_link:          'wanderer',
+  youtube_embed:      'wanderer',
+  image_gallery:      'wanderer',
+  custom_link:        'wanderer',
+  support_tip:        'wanderer',
+  quote_block:        'wanderer',
+  marquee_text:       'wanderer',
+  stats_grid:         'wanderer',
 
-  // ── Nukkad — 3+ events, 50+ attendees, ₹10K GMV ──────────────────────────
-  newsletter_signup:  'nukkad',
-  event_calendar:     'nukkad',
-  community_stats:    'nukkad',
-  venue_partnership:  'nukkad',
-  instagram_post:     'nukkad',
-  instagram_embed:    'nukkad',    // legacy block — same gate as instagram_post
-  spotify_now_playing:'nukkad',
-  past_events_gallery:'nukkad',
-  testimonial:        'nukkad',
+  // ── Local — 6+ events attended in 90d ────────────────────────────────────
+  newsletter_signup:  'local',
+  event_calendar:     'local',
+  community_stats:    'local',
+  venue_partnership:  'local',
+  instagram_post:     'local',
+  instagram_embed:    'local',    // legacy block — same gate as instagram_post
+  spotify_now_playing:'local',
+  past_events_gallery:'local',
+  testimonial:        'local',
 
-  // ── Chowk — 12+ events, 300+ attendees, ₹75K GMV ─────────────────────────
-  podcast_episode:    'chowk',
-  substack_preview:   'chowk',
-  event_series:       'chowk',
-  collab_invite:      'chowk',
+  // ── Lantern — 3+ events hosted in 180d ───────────────────────────────────
+  podcast_episode:    'lantern',
+  substack_preview:   'lantern',
+  event_series:       'lantern',
+  collab_invite:      'lantern',
 
-  // ── Maidan — 25+ events, 1000+ attendees, ₹3L GMV ────────────────────────
-  white_label_event:  'maidan',
+  // ── Beacon — 36+ events/yr, ≥4.7★, ≥30% repeat ─────────────────────────
+  white_label_event:  'beacon',
 }
 
 // ---------------------------------------------------------------------------
@@ -127,7 +127,7 @@ export const BLOCK_META: Record<BlockType, BlockMetaEntry> = {
     description:  'Show your creator category with a styled badge',
     icon:         'BadgeCheck',
     family:       'identity',
-    minimumTier:  'mohalla',
+    minimumTier:  'wanderer',
     isPremium:    false,
   },
   city_community: {
@@ -135,7 +135,7 @@ export const BLOCK_META: Record<BlockType, BlockMetaEntry> = {
     description:  "Link visitors to your city's WIMC community feed",
     icon:         'MapPin',
     family:       'identity',
-    minimumTier:  'mohalla',
+    minimumTier:  'wanderer',
     isPremium:    false,
   },
   announcement: {
@@ -143,7 +143,7 @@ export const BLOCK_META: Record<BlockType, BlockMetaEntry> = {
     description:  'Prominent banner for upcoming events, news, or countdowns',
     icon:         'Megaphone',
     family:       'identity',
-    minimumTier:  'mohalla',
+    minimumTier:  'wanderer',
     isPremium:    false,
   },
   marquee_text: {
@@ -151,7 +151,7 @@ export const BLOCK_META: Record<BlockType, BlockMetaEntry> = {
     description:  'Eye-catching scrolling text banner',
     icon:         'AlignLeft',
     family:       'identity',
-    minimumTier:  'mohalla',
+    minimumTier:  'wanderer',
     isPremium:    false,
   },
 
@@ -161,7 +161,7 @@ export const BLOCK_META: Record<BlockType, BlockMetaEntry> = {
     description:  'A single social media profile link',
     icon:         'Link',
     family:       'social',
-    minimumTier:  'mohalla',
+    minimumTier:  'wanderer',
     isPremium:    false,
   },
   social_links_row: {
@@ -169,7 +169,7 @@ export const BLOCK_META: Record<BlockType, BlockMetaEntry> = {
     description:  'All your social profiles in one compact row',
     icon:         'Share2',
     family:       'social',
-    minimumTier:  'mohalla',
+    minimumTier:  'wanderer',
     isPremium:    false,
   },
   youtube_embed: {
@@ -177,7 +177,7 @@ export const BLOCK_META: Record<BlockType, BlockMetaEntry> = {
     description:  'Embed a YouTube video directly on your page',
     icon:         'Youtube',
     family:       'social',
-    minimumTier:  'mohalla',
+    minimumTier:  'wanderer',
     isPremium:    false,
   },
   instagram_embed: {
@@ -185,7 +185,7 @@ export const BLOCK_META: Record<BlockType, BlockMetaEntry> = {
     description:  'Embed an Instagram post',
     icon:         'Instagram',
     family:       'social',
-    minimumTier:  'nukkad',
+    minimumTier:  'local',
     isPremium:    true,
   },
   instagram_post: {
@@ -193,7 +193,7 @@ export const BLOCK_META: Record<BlockType, BlockMetaEntry> = {
     description:  'Embed an Instagram post with live preview',
     icon:         'Instagram',
     family:       'social',
-    minimumTier:  'nukkad',
+    minimumTier:  'local',
     isPremium:    true,
   },
   spotify_now_playing: {
@@ -201,7 +201,7 @@ export const BLOCK_META: Record<BlockType, BlockMetaEntry> = {
     description:  "Show what you're currently listening to on Spotify",
     icon:         'Music',
     family:       'social',
-    minimumTier:  'nukkad',
+    minimumTier:  'local',
     isPremium:    true,
   },
 
@@ -211,7 +211,7 @@ export const BLOCK_META: Record<BlockType, BlockMetaEntry> = {
     description:  'Show your upcoming events on your profile page',
     icon:         'Calendar',
     family:       'events',
-    minimumTier:  'mohalla',
+    minimumTier:  'wanderer',
     isPremium:    false,
   },
   rsvp_link: {
@@ -219,7 +219,7 @@ export const BLOCK_META: Record<BlockType, BlockMetaEntry> = {
     description:  'Link to an external event registration page',
     icon:         'Ticket',
     family:       'events',
-    minimumTier:  'mohalla',
+    minimumTier:  'wanderer',
     isPremium:    false,
   },
   event_calendar: {
@@ -227,7 +227,7 @@ export const BLOCK_META: Record<BlockType, BlockMetaEntry> = {
     description:  'Full calendar view of your upcoming events',
     icon:         'CalendarDays',
     family:       'events',
-    minimumTier:  'nukkad',
+    minimumTier:  'local',
     isPremium:    true,
   },
   past_events_gallery: {
@@ -235,7 +235,7 @@ export const BLOCK_META: Record<BlockType, BlockMetaEntry> = {
     description:  'Grid or list showcase of your completed events',
     icon:         'Images',
     family:       'events',
-    minimumTier:  'nukkad',
+    minimumTier:  'local',
     isPremium:    true,
   },
   event_series: {
@@ -243,7 +243,7 @@ export const BLOCK_META: Record<BlockType, BlockMetaEntry> = {
     description:  'Group recurring events under a named series',
     icon:         'CalendarRange',
     family:       'events',
-    minimumTier:  'chowk',
+    minimumTier:  'lantern',
     isPremium:    true,
   },
 
@@ -253,7 +253,7 @@ export const BLOCK_META: Record<BlockType, BlockMetaEntry> = {
     description:  'Your creator bio in markdown or plain text',
     icon:         'FileText',
     family:       'content',
-    minimumTier:  'mohalla',
+    minimumTier:  'wanderer',
     isPremium:    false,
   },
   image_gallery: {
@@ -261,7 +261,7 @@ export const BLOCK_META: Record<BlockType, BlockMetaEntry> = {
     description:  'Grid or carousel of photos',
     icon:         'Image',
     family:       'content',
-    minimumTier:  'mohalla',
+    minimumTier:  'wanderer',
     isPremium:    false,
   },
   custom_link: {
@@ -269,7 +269,7 @@ export const BLOCK_META: Record<BlockType, BlockMetaEntry> = {
     description:  'Rich link card with title, thumbnail, and call-to-action',
     icon:         'ExternalLink',
     family:       'content',
-    minimumTier:  'mohalla',
+    minimumTier:  'wanderer',
     isPremium:    false,
   },
   quote_block: {
@@ -277,7 +277,7 @@ export const BLOCK_META: Record<BlockType, BlockMetaEntry> = {
     description:  'A stylised pull quote or testimonial excerpt',
     icon:         'Quote',
     family:       'content',
-    minimumTier:  'mohalla',
+    minimumTier:  'wanderer',
     isPremium:    false,
   },
   stats_grid: {
@@ -285,7 +285,7 @@ export const BLOCK_META: Record<BlockType, BlockMetaEntry> = {
     description:  'Key numbers displayed in a visual grid',
     icon:         'BarChart2',
     family:       'content',
-    minimumTier:  'mohalla',
+    minimumTier:  'wanderer',
     isPremium:    false,
   },
   newsletter_signup: {
@@ -293,7 +293,7 @@ export const BLOCK_META: Record<BlockType, BlockMetaEntry> = {
     description:  'Collect email subscribers directly from your page',
     icon:         'MailPlus',
     family:       'content',
-    minimumTier:  'nukkad',
+    minimumTier:  'local',
     isPremium:    true,
   },
   podcast_episode: {
@@ -301,7 +301,7 @@ export const BLOCK_META: Record<BlockType, BlockMetaEntry> = {
     description:  'Embed or link a podcast episode from any platform',
     icon:         'Mic',
     family:       'content',
-    minimumTier:  'chowk',
+    minimumTier:  'lantern',
     isPremium:    true,
   },
   substack_preview: {
@@ -309,7 +309,7 @@ export const BLOCK_META: Record<BlockType, BlockMetaEntry> = {
     description:  'Show your latest Substack posts with a subscribe button',
     icon:         'Mail',
     family:       'content',
-    minimumTier:  'chowk',
+    minimumTier:  'lantern',
     isPremium:    true,
   },
 
@@ -319,7 +319,7 @@ export const BLOCK_META: Record<BlockType, BlockMetaEntry> = {
     description:  'Let your community support you with a UPI tip jar',
     icon:         'Heart',
     family:       'community',
-    minimumTier:  'mohalla',
+    minimumTier:  'wanderer',
     isPremium:    false,
   },
   testimonial: {
@@ -327,7 +327,7 @@ export const BLOCK_META: Record<BlockType, BlockMetaEntry> = {
     description:  'Display verified attendee reviews in a carousel or stack',
     icon:         'MessageSquare',
     family:       'community',
-    minimumTier:  'nukkad',
+    minimumTier:  'local',
     isPremium:    true,
   },
   community_stats: {
@@ -335,7 +335,7 @@ export const BLOCK_META: Record<BlockType, BlockMetaEntry> = {
     description:  'Show your community impact: events hosted, attendees, rating',
     icon:         'TrendingUp',
     family:       'community',
-    minimumTier:  'nukkad',
+    minimumTier:  'local',
     isPremium:    true,
   },
   venue_partnership: {
@@ -343,7 +343,7 @@ export const BLOCK_META: Record<BlockType, BlockMetaEntry> = {
     description:  'Showcase your Adda venue partners',
     icon:         'Building2',
     family:       'community',
-    minimumTier:  'nukkad',
+    minimumTier:  'local',
     isPremium:    true,
   },
   collab_invite: {
@@ -351,7 +351,7 @@ export const BLOCK_META: Record<BlockType, BlockMetaEntry> = {
     description:  'Open invitation for creative collaborations and partnerships',
     icon:         'Users',
     family:       'community',
-    minimumTier:  'chowk',
+    minimumTier:  'lantern',
     isPremium:    true,
   },
   white_label_event: {
@@ -359,7 +359,7 @@ export const BLOCK_META: Record<BlockType, BlockMetaEntry> = {
     description:  'Host events under a partner or sponsor brand',
     icon:         'Star',
     family:       'community',
-    minimumTier:  'maidan',
+    minimumTier:  'beacon',
     isPremium:    true,
   },
 }
@@ -368,21 +368,21 @@ export const BLOCK_META: Record<BlockType, BlockMetaEntry> = {
 // Tier ordering helper
 // ---------------------------------------------------------------------------
 
-export const TIER_ORDER: Record<MakerTier, number> = {
-  mohalla: 0,
-  nukkad:  1,
-  chowk:   2,
-  maidan:  3,
+export const TIER_ORDER: Record<UserTier, number> = {
+  wanderer: 0,
+  local:    1,
+  lantern:  2,
+  beacon:   3,
 }
 
 /**
  * Returns true if `currentTier` meets the `requiredTier` threshold.
  *
  * @example
- * meetsMinimumTier('nukkad', 'nukkad') // true
- * meetsMinimumTier('mohalla', 'nukkad') // false
+ * meetsMinimumTier('local', 'local') // true
+ * meetsMinimumTier('wanderer', 'local') // false
  */
-export function meetsMinimumTier(currentTier: MakerTier, requiredTier: MakerTier): boolean {
+export function meetsMinimumTier(currentTier: UserTier, requiredTier: UserTier): boolean {
   return TIER_ORDER[currentTier] >= TIER_ORDER[requiredTier]
 }
 

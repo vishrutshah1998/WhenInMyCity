@@ -39,27 +39,31 @@ export function WimcLogo({
       className={`inline-flex items-center select-none ${className}`}
       style={{ gap: s.gap }}
     >
-      {/* ── Location-pin icon ──────────────────────────────────────────────
-          Shape: C-shaped ring (circle with right side open) tapering to
-          a downward point — standard map-pin silhouette.
-          viewBox 50 68 | circle center (22, 24) | outer r=20 | inner r=12
-          Opening at ±45° from the right horizontal.
-      ─────────────────────────────────────────────────────────────────── */}
+      {/* ── Location-pin icon ── */}
       <svg
         viewBox="0 0 50 68"
-        fill={color}
         aria-hidden="true"
         style={{ height: s.iconH, width: 'auto', flexShrink: 0 }}
       >
         {/*
-          M 36 10   — outer upper-right edge of opening
-          A 20 20 0 1 0 36 38  — outer arc, counter-clockwise large (goes left→bottom→right)
-          L 22 62   — pin tip
-          L 31 32   — inner lower-right edge of opening
-          A 12 12 0 1 0 31 16  — inner arc, counter-clockwise large (back up through left)
-          Z         — closes across the opening face of the C
+          C-ring: thick stroked arc open on the right side.
+          Center (22,22), radius 16, opening ±45° from right horizontal.
+          Top opening  → (33, 11)
+          Bottom opening → (33, 33)
+          Stroke width 10 → outer ring r=21, inner ring r=11 — hole always visible.
         */}
-        <path d="M36 10 A20 20 0 1 0 36 38 L22 62 L31 32 A12 12 0 1 0 31 16 Z" />
+        <path
+          d="M 33 11 A 16 16 0 1 0 33 33"
+          stroke={color}
+          strokeWidth="10"
+          strokeLinecap="butt"
+          fill="none"
+        />
+        {/* Pin tail — triangle that tucks under the ring bottom */}
+        <path
+          d="M 16 41 L 22 62 L 28 41 Z"
+          fill={color}
+        />
       </svg>
 
       {/* ── Wordmark ─────────────────────────────────────────────────────── */}

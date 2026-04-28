@@ -7,7 +7,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { requireAuth } from '@/lib/auth/requireAuth'
 import { BLOCK_TIER_GATES, BLOCK_FAMILIES, BLOCK_META, meetsMinimumTier, type BlockMetaEntry } from '@/lib/constants/blocks'
 import { validateBlockConfig, SupportTipConfigSchema, type SubstackPost } from '@/lib/validators/blocks'
-import type { BlockType, MakerTier, Json, PageBlock } from '@/types/database'
+import type { BlockType, UserTier, Json, PageBlock } from '@/types/database'
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -344,23 +344,23 @@ export async function deleteBlock(
 export async function validateBlockTierAccess(
   profileId: string,
   blockType: BlockType,
-): Promise<{ allowed: boolean; requiredTier?: MakerTier }> {
-  const requiredTier = BLOCK_TIER_GATES[blockType] ?? 'mohalla'
+): Promise<{ allowed: boolean; requiredTier?: UserTier }> {
+  const requiredTier = BLOCK_TIER_GATES[blockType] ?? 'wanderer'
 
   // All Makers can use Mohalla-gated blocks — no DB query needed.
-  if (requiredTier === 'mohalla') return { allowed: true }
+  if (requiredTier === 'wanderer') return { allowed: true }
 
   const admin = createAdminClient()
 
   const { data: profile } = await admin
     .from('user_profiles')
-    .select('maker_tier')
+    .select('user_tier')
     .eq('id', profileId)
     .maybeSingle()
 
   if (!profile) return { allowed: false, requiredTier }
 
-  const allowed = meetsMinimumTier(profile.maker_tier as MakerTier, requiredTier)
+  const allowed = meetsMinimumTier(profile.user_tier as UserTier, requiredTier)
   return allowed ? { allowed: true } : { allowed: false, requiredTier }
 }
 
@@ -378,23 +378,23 @@ export async function validateBlockTierAccess(
  */
 export async function getAvailableBlocks(makerId: string): Promise<{
   available: Array<BlockMetaEntry & { blockType: BlockType }>
-  locked: Array<BlockMetaEntry & { blockType: BlockType; unlocksAtTier: MakerTier }>
+  locked: Array<BlockMetaEntry & { blockType: BlockType; unlocksAtTier: UserTier }>
 }> {
   const admin = createAdminClient()
 
   const { data: profile } = await admin
     .from('user_profiles')
-    .select('maker_tier')
+    .select('user_tier')
     .eq('id', makerId)
     .maybeSingle()
 
-  const currentTier: MakerTier = (profile?.maker_tier as MakerTier) ?? 'mohalla'
+  const currentTier: UserTier = (profile?.user_tier as UserTier) ?? 'wanderer'
 
   const available: Array<BlockMetaEntry & { blockType: BlockType }> = []
-  const locked:    Array<BlockMetaEntry & { blockType: BlockType; unlocksAtTier: MakerTier }> = []
+  const locked:    Array<BlockMetaEntry & { blockType: BlockType; unlocksAtTier: UserTier }> = []
 
   for (const [blockType, meta] of Object.entries(BLOCK_META) as [BlockType, BlockMetaEntry][]) {
-    const requiredTier = BLOCK_TIER_GATES[blockType] ?? 'mohalla'
+    const requiredTier = BLOCK_TIER_GATES[blockType] ?? 'wanderer'
     if (meetsMinimumTier(currentTier, requiredTier)) {
       available.push({ ...meta, blockType })
     } else {

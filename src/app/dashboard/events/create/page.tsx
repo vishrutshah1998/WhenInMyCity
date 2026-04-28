@@ -18,6 +18,7 @@ export default async function CreateEventPage() {
       profile={{
         display_name: profile.display_name,
         avatar_url: profile.avatar_url,
+        user_tier: profile.user_tier,
       }}
     />
   )

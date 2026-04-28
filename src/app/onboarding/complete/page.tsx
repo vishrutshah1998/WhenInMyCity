@@ -14,7 +14,7 @@ export default async function CompletePage() {
 
   const { data: profile } = await supabase
     .from('user_profiles')
-    .select('username, display_name, city, avatar_url')
+    .select('username, display_name, city, avatar_url, creator_type')
     .eq('id', user.id)
     .single()
 
@@ -27,6 +27,7 @@ export default async function CompletePage() {
         displayName={profile.display_name}
         city={profile.city}
         avatarUrl={profile.avatar_url}
+        creatorType={profile.creator_type}
       />
     </Suspense>
   )

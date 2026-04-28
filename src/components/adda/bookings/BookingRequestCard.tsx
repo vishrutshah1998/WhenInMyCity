@@ -385,7 +385,7 @@ export default function BookingRequestCard({ proposal, addaId: _addaId, onRespon
                 </span>
               )}
               <span style={{ fontSize: 10.5, fontWeight: 500, padding: '2px 8px', borderRadius: 9999, border: '1px solid var(--adda-border-default)', color: 'var(--adda-text-muted)' }}>
-                {tierLabel(maker.maker_tier)} tier
+                {tierLabel(maker.user_tier)} tier
               </span>
             </div>
           </div>

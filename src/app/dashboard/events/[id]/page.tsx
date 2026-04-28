@@ -12,12 +12,10 @@ export default async function EventManagePage({
   const { user } = await requireAuth()
   const admin = createAdminClient()
 
-  const { data: event } = await admin
-    .from('events')
-    .select('*')
-    .eq('id', id)
-    .eq('creator_id', user.id)
-    .maybeSingle()
+  const [{ data: event }, { data: profile }] = await Promise.all([
+    admin.from('events').select('*').eq('id', id).eq('creator_id', user.id).maybeSingle(),
+    admin.from('user_profiles').select('user_tier').eq('id', user.id).single(),
+  ])
 
   if (!event) notFound()
 
@@ -28,5 +26,11 @@ export default async function EventManagePage({
     .eq('event_id', event.id)
     .eq('payment_status', 'captured')
 
-  return <EventManageClient event={event} rsvpCount={rsvpCount ?? 0} />
+  return (
+    <EventManageClient
+      event={event}
+      rsvpCount={rsvpCount ?? 0}
+      creatorTier={(profile?.user_tier ?? 'wanderer') as string}
+    />
+  )
 }

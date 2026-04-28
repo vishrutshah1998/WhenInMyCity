@@ -81,62 +81,58 @@ export const EXPLORER_FORMATS: ExplorerFormat[] = [
 ]
 
 // ---------------------------------------------------------------------------
-// Maker Tier Thresholds
+// User Tier Thresholds (Wanderer → Local → Lantern → Beacon)
 // ---------------------------------------------------------------------------
 
-export interface NukkadThresholds {
-  events: number
-  daysWindow: number
-  uniqueAttendees: number
-  gmvPaise: number
-  averageRating: number
+export interface LocalThresholds {
+  // Rolling 90-day window
+  eventsAttendedIn90d: number          // ≥6 (≥2/month avg)
+  reviewsPerEventsRatio: number        // ≥1 review per 3 events attended
+  maxNoShowRate: number                // <0.15 (15%)
 }
 
-export interface ChowkThresholds {
-  events: number
-  uniqueAttendees: number
-  gmvPaise: number
-  averageRating: number
-  repeatAttendeeRate: number
-  monthlyPageVisitors: number
+export interface LanternThresholds {
+  // Rolling 180-day window
+  eventsHostedIn180d: number           // ≥3 events hosted
+  minAverageRating: number             // ≥4.5★
+  maxCancellationRate: number          // <0.05 (5%)
+  minOnTimeRate: number                // ≥0.80 (80%) — tracked Phase 2
 }
 
-export interface MaidanThresholds {
-  events: number
-  uniqueAttendees: number
-  gmvPaise: number
-  averageRating: number
-  repeatAttendeeRate: number
-  multipleEventTypes: number
+export interface BeaconThresholds {
+  // Rolling 365-day window
+  eventsHostedIn365d: number           // ≥36 events hosted
+  altPaidTickets: number               // OR ≥1,200 paid tickets sold
+  minAverageRating: number             // ≥4.7★
+  minRepeatAttendanceRate: number      // ≥0.30 (30%)
+  minActiveSubscribers: number         // ≥50 active subscribers
+  maxCancellationRate: number          // <0.01 (1%)
+  // minSubTipRevenuePercent: 0.20     // ≥20% — tracked Phase 2
 }
 
 export const TIER_THRESHOLDS: {
-  nukkad: NukkadThresholds
-  chowk: ChowkThresholds
-  maidan: MaidanThresholds
+  local: LocalThresholds
+  lantern: LanternThresholds
+  beacon: BeaconThresholds
 } = {
-  nukkad: {
-    events: 3,
-    daysWindow: 90,
-    uniqueAttendees: 50,
-    gmvPaise: 1000000,    // ₹10,000
-    averageRating: 4.0,
+  local: {
+    eventsAttendedIn90d:      6,
+    reviewsPerEventsRatio:    1 / 3,   // 1 review per 3 events
+    maxNoShowRate:            0.15,
   },
-  chowk: {
-    events: 12,
-    uniqueAttendees: 300,
-    gmvPaise: 7500000,    // ₹75,000
-    averageRating: 4.3,
-    repeatAttendeeRate: 0.15,
-    monthlyPageVisitors: 100,
+  lantern: {
+    eventsHostedIn180d:       3,
+    minAverageRating:         4.5,
+    maxCancellationRate:      0.05,
+    minOnTimeRate:            0.80,
   },
-  maidan: {
-    events: 25,
-    uniqueAttendees: 1000,
-    gmvPaise: 30000000,   // ₹3,00,000
-    averageRating: 4.5,
-    repeatAttendeeRate: 0.20,
-    multipleEventTypes: 3,
+  beacon: {
+    eventsHostedIn365d:       36,
+    altPaidTickets:           1200,
+    minAverageRating:         4.7,
+    minRepeatAttendanceRate:  0.30,
+    minActiveSubscribers:     50,
+    maxCancellationRate:      0.01,
   },
 }
 
@@ -152,10 +148,10 @@ export interface RevenueSplit {
 }
 
 export const REVENUE_SPLITS: Record<string, RevenueSplit> = {
-  mohalla: { maker: 0.70, venue: 0.15, platform: 0.15, payoutDays: 7 },
-  nukkad:  { maker: 0.75, venue: 0.15, platform: 0.10, payoutDays: 3 },
-  chowk:   { maker: 0.80, venue: 0.12, platform: 0.08, payoutDays: 1 },
-  maidan:  { maker: 0.85, venue: 0.10, platform: 0.05, payoutDays: 0 },
+  wanderer: { maker: 0.75, venue: 0.15, platform: 0.10, payoutDays: 7 },
+  local:    { maker: 0.75, venue: 0.15, platform: 0.10, payoutDays: 7 },
+  lantern:  { maker: 0.80, venue: 0.12, platform: 0.08, payoutDays: 3 },
+  beacon:   { maker: 0.85, venue: 0.10, platform: 0.05, payoutDays: 1 },
 }
 
 // ---------------------------------------------------------------------------

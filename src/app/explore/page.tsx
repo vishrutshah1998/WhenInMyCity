@@ -13,13 +13,20 @@ export default async function ExplorePage({
   const admin = createAdminClient()
 
   // Require an explorer profile — redirect to setup if missing.
-  const { data: explorerRow } = await admin
-    .from('explorer_profiles')
-    .select('saved_event_ids, city')
-    .eq('auth_user_id', user.id)
-    .maybeSingle()
+  const [{ data: explorerRow }, { data: userProfile }] = await Promise.all([
+    admin
+      .from('explorer_profiles')
+      .select('saved_event_ids, city')
+      .eq('auth_user_id', user.id)
+      .maybeSingle(),
+    admin
+      .from('user_profiles')
+      .select('attendance_streak, streak_freeze_tokens')
+      .eq('id', user.id)
+      .maybeSingle(),
+  ])
 
-  if (!explorerRow) redirect('/onboarding/explorer')
+  if (!explorerRow) redirect('/onboarding')
 
   const params = await searchParams
 
@@ -42,6 +49,8 @@ export default async function ExplorePage({
       events={events}
       savedEventIds={savedEventIds}
       currentFilters={filters}
+      attendanceStreak={userProfile?.attendance_streak ?? 0}
+      streakFreezeTokens={userProfile?.streak_freeze_tokens ?? 0}
     />
   )
 }

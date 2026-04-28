@@ -14,10 +14,10 @@ export default async function ExplorerSettingsPage() {
     .eq('auth_user_id', user.id)
     .maybeSingle()
 
-  if (!ep) redirect('/onboarding/explorer')
+  if (!ep) redirect('/onboarding')
 
   const { profile } = await getExplorerProfile()
-  if (!profile) redirect('/onboarding/explorer')
+  if (!profile) redirect('/onboarding')
 
   return <SettingsClient profile={profile} />
 }

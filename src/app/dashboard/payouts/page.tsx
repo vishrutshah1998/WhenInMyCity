@@ -1,4 +1,5 @@
 import { getPayableEvents, getPayoutHistory } from '@/app/actions/payouts'
+import { requireProfile } from '@/lib/auth/requireAuth'
 import PayoutRequestForm from './PayoutRequestForm'
 import type { PayoutStatus } from '@/types/database'
 
@@ -33,9 +34,9 @@ function StatusBadge({ status }: { status: PayoutStatus }) {
 // ---------------------------------------------------------------------------
 
 export default async function PayoutsPage() {
-  const [{ data: payable }, { data: history }] = await Promise.all([
-    getPayableEvents(),
-    getPayoutHistory(),
+  const [{ profile }, [{ data: payable }, { data: history }]] = await Promise.all([
+    requireProfile(),
+    Promise.all([getPayableEvents(), getPayoutHistory()]),
   ])
 
   const payableEvents = payable ?? []
@@ -88,6 +89,48 @@ export default async function PayoutsPage() {
             </div>
           ))}
         </div>
+
+        {/* Beacon annual subscription CTA */}
+        {profile.user_tier === 'beacon' && (
+          <div style={{
+            background: 'linear-gradient(135deg, rgba(168,85,247,0.12) 0%, rgba(77,210,177,0.08) 100%)',
+            border: '1px solid rgba(168,85,247,0.35)',
+            borderRadius: 18, padding: '20px 24px',
+            display: 'flex', alignItems: 'center', gap: 20, flexWrap: 'wrap',
+          }}>
+            <div style={{
+              width: 48, height: 48, borderRadius: 14, flexShrink: 0,
+              background: 'rgba(168,85,247,0.18)', border: '1px solid rgba(168,85,247,0.4)',
+              display: 'grid', placeItems: 'center',
+            }}>
+              <span className="material-symbols-outlined" style={{ fontSize: 24, color: '#a855f7' }}>workspace_premium</span>
+            </div>
+            <div style={{ flex: 1, minWidth: 200 }}>
+              <div style={{ fontFamily: 'var(--font-syne)', fontWeight: 700, fontSize: 15, color: 'var(--wimc-text-primary)', marginBottom: 4 }}>
+                Switch subscribers to annual
+              </div>
+              <div style={{ fontSize: 13, color: 'var(--wimc-text-secondary)', lineHeight: 1.5 }}>
+                Save your subscribers 15% and unlock 10% more revenue on every annual renewal — Beacon exclusive.
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: 16, flexShrink: 0, flexWrap: 'wrap' }}>
+              <div style={{
+                background: 'rgba(168,85,247,0.15)', border: '1px solid rgba(168,85,247,0.3)',
+                borderRadius: 10, padding: '8px 16px', textAlign: 'center',
+              }}>
+                <div style={{ fontSize: 18, fontWeight: 800, color: '#a855f7' }}>−15%</div>
+                <div style={{ fontSize: 11, color: 'var(--wimc-text-secondary)', marginTop: 2 }}>for subscribers</div>
+              </div>
+              <div style={{
+                background: 'rgba(77,210,177,0.12)', border: '1px solid rgba(77,210,177,0.3)',
+                borderRadius: 10, padding: '8px 16px', textAlign: 'center',
+              }}>
+                <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--wimc-teal)' }}>+10%</div>
+                <div style={{ fontSize: 11, color: 'var(--wimc-text-secondary)', marginTop: 2 }}>for you</div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Payable events */}
         <div>
@@ -169,7 +212,7 @@ export default async function PayoutsPage() {
           borderRadius: 12, padding: '14px 18px', lineHeight: 1.6,
         }}>
           <strong style={{ color: 'var(--wimc-text-primary)' }}>Platform fee: </strong>
-          Your payout amount is your share of ticket revenue after the platform fee (15% for Mohalla, 10% for Nukkad, 8% for Chowk, 5% for Maidan).
+          Your payout amount is your share of ticket revenue after the platform fee (10% for Wanderer/Local, 8% for Lantern, 5% for Beacon).
           Razorpay processing fees (2%) are deducted from the platform's share, not yours.
         </div>
 

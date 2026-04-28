@@ -34,7 +34,12 @@ import {
   RazorpayApiError,
 } from '@/lib/razorpay'
 import { calculateChargeAmount } from '@/types/events'
+import { calculateRevenueSplit } from '@/lib/revenue'
 import { checkRSVPRateLimit } from '@/lib/ratelimit'
+import { bumpUserMetric } from '@/lib/metrics'
+import { updateAttendanceStreak } from '@/lib/streak'
+import { redeemReferralCode } from '@/app/actions/referral'
+import type { UserTier } from '@/types/database'
 
 // ---------------------------------------------------------------------------
 // Input validation schemas
@@ -54,6 +59,8 @@ const InitiateRSVPSchema = z.object({
     .int()
     .min(1, 'Quantity must be at least 1')
     .max(10, 'Maximum 10 tickets per booking'),
+  ticketTierId:  z.string().optional(),
+  referralCode:  z.string().max(20).optional(),
 })
 
 const ConfirmRSVPSchema = z.object({
@@ -131,6 +138,8 @@ export async function initiateRSVP(params: {
   attendeeName: string
   attendeePhone: string
   quantity: number
+  ticketTierId?: string
+  referralCode?: string
 }): Promise<{
   orderId: string           // WIMC RSVP ID of the first ticket (anchor for confirm)
   qrToken: string | null    // real qr_code_token — set for free events, null for paid (set after confirmRSVPPayment)
@@ -150,7 +159,7 @@ export async function initiateRSVP(params: {
     return { ...EMPTY, error: parsed.error.errors[0].message }
   }
 
-  const { eventId, attendeeName, attendeePhone, quantity } = parsed.data
+  const { eventId, attendeeName, attendeePhone, quantity, ticketTierId, referralCode } = parsed.data
 
   // ── 2. Resolve the authenticated user (optional — guests are allowed) ───
   // We attempt to get the session; if the user isn't logged in, that's fine.
@@ -163,7 +172,7 @@ export async function initiateRSVP(params: {
   // ── 3. Fetch and validate the event ─────────────────────────────────────
   const { data: event, error: eventError } = await admin
     .from('events')
-    .select('id, status, ticket_price, capacity, title, starts_at')
+    .select('id, status, ticket_price, capacity, title, starts_at, creator_id, venue_adda_id, early_access_at, ticket_tiers')
     .eq('id', eventId)
     .maybeSingle()
 
@@ -179,7 +188,85 @@ export async function initiateRSVP(params: {
     return { ...EMPTY, error: 'Bookings for this event are closed.' }
   }
 
-  // ── 4. Capacity check ────────────────────────────────────────────────────
+  // ── 4. Early-access gate (S15-T1) ────────────────────────────────────────
+  if (event.early_access_at && new Date() < new Date(event.early_access_at)) {
+    const tierOrder: Record<string, number> = { wanderer: 0, local: 1, lantern: 2, beacon: 3 }
+    let attendeeTierRank = 0  // guests treated as wanderers
+
+    if (attendeeUserId) {
+      const { data: attendeeProfile } = await admin
+        .from('user_profiles')
+        .select('user_tier')
+        .eq('id', attendeeUserId)
+        .maybeSingle()
+      attendeeTierRank = tierOrder[attendeeProfile?.user_tier ?? 'wanderer'] ?? 0
+    }
+
+    if (attendeeTierRank < 1) {
+      const until = new Date(event.early_access_at).toLocaleString('en-IN', {
+        day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', hour12: true,
+      })
+      return { ...EMPTY, error: `Early access only — open to everyone after ${until}. Reach Local tier to book now.` }
+    }
+  }
+
+  // ── 4b. Fan tier resolution ──────────────────────────────────────────────
+  type RawTier = { id: string; name: string; price_paise: number; description: string; capacity: number | null }
+  let resolvedTierPrice = event.ticket_price
+  let resolvedTierId: string | null = null
+  let resolvedTierName: string | null = null
+
+  const tiers = event.ticket_tiers as RawTier[] | null
+  if (tiers?.length) {
+    if (!ticketTierId) {
+      return { ...EMPTY, error: 'Please select a ticket tier.' }
+    }
+    const tier = tiers.find((t) => t.id === ticketTierId)
+    if (!tier) {
+      return { ...EMPTY, error: 'Selected ticket tier is no longer available.' }
+    }
+    resolvedTierPrice = tier.price_paise
+    resolvedTierId    = tier.id
+    resolvedTierName  = tier.name
+
+    // Per-tier capacity check (in addition to global capacity)
+    if (tier.capacity !== null) {
+      const { count: tierOccupied } = await admin
+        .from('rsvps')
+        .select('id', { count: 'exact', head: true })
+        .eq('event_id', eventId)
+        .eq('ticket_tier_id', tier.id)
+        .in('payment_status', ['captured', 'pending'])
+      const tierUsed = tierOccupied ?? 0
+      if (tierUsed + quantity > tier.capacity) {
+        const tierLeft = Math.max(0, tier.capacity - tierUsed)
+        if (tierLeft === 0) return { ...EMPTY, error: `The "${tier.name}" tier is sold out.` }
+        return { ...EMPTY, error: `Only ${tierLeft} spot${tierLeft === 1 ? '' : 's'} left in the "${tier.name}" tier.` }
+      }
+    }
+  }
+
+  // ── 4c. Referral code — overrides price to 0 for one ticket ────────────
+  let appliedReferralCode: string | null = null
+  if (referralCode) {
+    const normalized = referralCode.trim().toUpperCase()
+    const { data: refRow } = await admin
+      .from('referral_codes')
+      .select('id, event_id, redeemed_at, expires_at')
+      .eq('code', normalized)
+      .maybeSingle()
+
+    if (!refRow) return { ...EMPTY, error: 'Referral code not found.' }
+    if (refRow.event_id !== eventId) return { ...EMPTY, error: 'This code is for a different event.' }
+    if (refRow.redeemed_at) return { ...EMPTY, error: 'This referral code has already been used.' }
+    if (new Date(refRow.expires_at) < new Date()) return { ...EMPTY, error: 'This referral code has expired.' }
+
+    // Code is valid — make the booking free (applies to first ticket; quantity forced to 1)
+    resolvedTierPrice = 0
+    appliedReferralCode = normalized
+  }
+
+  // ── 5. Capacity check ────────────────────────────────────────────────────
   if (event.capacity !== null) {
     const occupied = await countOccupiedSpots(eventId)
     if (occupied + quantity > event.capacity) {
@@ -194,8 +281,8 @@ export async function initiateRSVP(params: {
     }
   }
 
-  // ── 5. FREE event — create captured RSVPs immediately ───────────────────
-  if (event.ticket_price === 0) {
+  // ── 6. FREE event — create captured RSVPs immediately ───────────────────
+  if (resolvedTierPrice === 0) {
     // Build one row per ticket so each person gets their own QR code.
     const rows = Array.from({ length: quantity }, () => ({
       event_id: eventId,
@@ -204,6 +291,12 @@ export async function initiateRSVP(params: {
       attendee_user_id: attendeeUserId,
       payment_status: 'captured' as const,
       amount_paid: 0,
+      platform_fee_paise: 0,
+      maker_payout_paise: 0,
+      venue_fee_paise: 0,
+      split_tier: null,
+      ticket_tier_id:   resolvedTierId,
+      ticket_tier_name: resolvedTierName,
     }))
 
     const { data: inserted, error: insertError } = await admin
@@ -216,6 +309,17 @@ export async function initiateRSVP(params: {
       return { ...EMPTY, error: 'Failed to complete your booking. Please try again.' }
     }
 
+    if (attendeeUserId) {
+      bumpUserMetric(admin, attendeeUserId, 'rsvps_total_count', quantity, 'initiateRSVP')
+    }
+
+    // Mark referral code as redeemed (fire-and-forget — RSVP already created)
+    if (appliedReferralCode) {
+      redeemReferralCode(appliedReferralCode, inserted[0].id).catch((err) => {
+        console.error('[initiateRSVP] referral code redemption failed', err)
+      })
+    }
+
     return {
       orderId: inserted[0].id,
       qrToken: inserted[0].qr_code_token,
@@ -226,10 +330,10 @@ export async function initiateRSVP(params: {
     }
   }
 
-  // ── 6. PAID event — ORDER-FIRST pattern ─────────────────────────────────
+  // ── 7. PAID event — ORDER-FIRST pattern ─────────────────────────────────
 
-  // 6a. Calculate total charge (per-person GST rule: SAC 998596)
-  const totalAmount = calculateChargeAmount(event.ticket_price, quantity)
+  // 7a. Calculate total charge (per-person GST rule: SAC 998596)
+  const totalAmount = calculateChargeAmount(resolvedTierPrice, quantity)
 
   // 6b. Create the Razorpay order BEFORE inserting RSVP rows.
   //     If Razorpay is down, we fail early without touching the DB.
@@ -264,7 +368,29 @@ export async function initiateRSVP(params: {
     return { ...EMPTY, error: msg }
   }
 
-  // 6c. Insert pending RSVP rows — one per ticket, all sharing the same
+  // 7c. Compute per-ticket revenue split locked to the creator's current tier.
+  const { data: creatorProfile } = await admin
+    .from('user_profiles')
+    .select('user_tier, created_at')
+    .eq('id', event.creator_id)
+    .maybeSingle()
+
+  const creatorTier    = (creatorProfile?.user_tier ?? 'wanderer') as UserTier
+  const hasVenue       = event.venue_adda_id != null
+  const perTicket      = calculateRevenueSplit(resolvedTierPrice, 1, creatorTier, hasVenue)
+
+  // S15-T3: First 90 days free for new Lanterns — platform takes no cut.
+  const creatorCreatedAt = creatorProfile?.created_at ? new Date(creatorProfile.created_at) : null
+  const isFirstYearFree  = creatorTier === 'lantern' &&
+    creatorCreatedAt != null &&
+    Date.now() - creatorCreatedAt.getTime() < 90 * 24 * 60 * 60 * 1000
+
+  const platformFeePaise = isFirstYearFree ? 0 : perTicket.platformPaise
+  const makerPayoutPaise = isFirstYearFree
+    ? perTicket.makerPaise + perTicket.platformPaise
+    : perTicket.makerPaise
+
+  // 6d. Insert pending RSVP rows — one per ticket, all sharing the same
   //     razorpay_order_id.  This is the "order" that holds the spots.
   //     The webhook and confirmRSVPPayment find all tickets by order ID.
   const rows = Array.from({ length: quantity }, () => ({
@@ -274,6 +400,12 @@ export async function initiateRSVP(params: {
     attendee_user_id: attendeeUserId,
     payment_status: 'pending' as const,
     razorpay_order_id: razorpayOrderId,
+    platform_fee_paise: platformFeePaise,
+    maker_payout_paise: makerPayoutPaise,
+    venue_fee_paise:    perTicket.venuePaise,
+    split_tier:         creatorTier,
+    ticket_tier_id:     resolvedTierId,
+    ticket_tier_name:   resolvedTierName,
     // amount_paid is set when payment is confirmed
   }))
 
@@ -410,7 +542,7 @@ export async function confirmRSVPPayment(params: {
   // Guards against replay attacks: if already captured, return success (idempotent).
   const { data: anchor, error: fetchError } = await admin
     .from('rsvps')
-    .select('id, payment_status, razorpay_order_id, event_id')
+    .select('id, payment_status, razorpay_order_id, event_id, attendee_user_id')
     .eq('id', rsvpId)
     .maybeSingle()
 
@@ -460,6 +592,11 @@ export async function confirmRSVPPayment(params: {
       razorpayPaymentId,
     })
     return { ...FAIL, error: 'Failed to confirm your booking. Please contact support.' }
+  }
+
+  // Increment the attendee's rsvps_total_count now that payment is confirmed.
+  if (anchor.attendee_user_id) {
+    bumpUserMetric(admin, anchor.attendee_user_id, 'rsvps_total_count', updated.length, 'confirmRSVPPayment')
   }
 
   // Return the first ticket's QR token (anchor RSVP).
@@ -547,7 +684,7 @@ export async function checkInAttendee(
   // Find the RSVP by token + event.
   const { data: rsvp } = await admin
     .from('rsvps')
-    .select('id, attendee_name, checked_in, payment_status')
+    .select('id, attendee_name, checked_in, payment_status, attendee_user_id')
     .eq('qr_code_token', qrToken)
     .eq('event_id', eventId)
     .maybeSingle()
@@ -569,6 +706,11 @@ export async function checkInAttendee(
 
   if (updateError) {
     return { success: false, alreadyCheckedIn: false, attendeeName: null, error: 'Check-in failed. Please try again.' }
+  }
+
+  if (rsvp.attendee_user_id) {
+    bumpUserMetric(admin, rsvp.attendee_user_id, 'events_attended_count', 1, 'checkInAttendee')
+    updateAttendanceStreak(admin, rsvp.attendee_user_id)
   }
 
   return { success: true, alreadyCheckedIn: false, attendeeName: rsvp.attendee_name, error: null }
@@ -654,7 +796,7 @@ export async function checkInAttendeeById(
 
   const { data: rsvp } = await admin
     .from('rsvps')
-    .select('id, checked_in, payment_status')
+    .select('id, checked_in, payment_status, attendee_user_id')
     .eq('id', rsvpId)
     .eq('event_id', eventId)
     .maybeSingle()
@@ -669,6 +811,12 @@ export async function checkInAttendeeById(
     .eq('id', rsvpId)
 
   if (error) return { success: false, error: error.message }
+
+  if (rsvp.attendee_user_id) {
+    bumpUserMetric(admin, rsvp.attendee_user_id, 'events_attended_count', 1, 'checkInAttendeeById')
+    updateAttendanceStreak(admin, rsvp.attendee_user_id)
+  }
+
   return { success: true }
 }
 

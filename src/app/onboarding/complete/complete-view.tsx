@@ -8,11 +8,13 @@ interface CompleteViewProps {
   displayName: string
   city: string
   avatarUrl: string | null
+  creatorType?: string
 }
 
-export default function CompleteView({ username, displayName, city, avatarUrl }: CompleteViewProps) {
+export default function CompleteView({ username, displayName, city, avatarUrl, creatorType }: CompleteViewProps) {
   const router = useRouter()
   const firstName = displayName.split(' ')[0]
+  const isExplorer = creatorType === 'exploring'
 
   return (
     <div className="flex flex-col min-h-screen bg-background text-on-surface font-body overflow-hidden">
@@ -41,7 +43,9 @@ export default function CompleteView({ username, displayName, city, avatarUrl }:
               You&apos;re all set, {firstName}! 🎉
             </h1>
             <p className="text-on-surface-variant font-medium leading-relaxed font-body">
-              Your WIMC page is ready. Let&apos;s make it yours.
+              {isExplorer
+                ? 'Your explorer profile is ready. Discover events in your city.'
+                : 'Your WIMC page is ready. Let\'s make it yours.'}
             </p>
           </div>
 
@@ -94,18 +98,29 @@ export default function CompleteView({ username, displayName, city, avatarUrl }:
 
           {/* Actions */}
           <div className="w-full flex flex-col gap-3">
-            <button
-              onClick={() => router.push(`/${username}`)}
-              className="w-full py-4 px-6 bg-primary text-white font-headline font-bold rounded-lg shadow-[0_8px_20px_rgba(232,87,42,0.3)] active:scale-95 transition-all duration-150"
-            >
-              Go to my page
-            </button>
-            <button
-              onClick={() => router.push('/dashboard')}
-              className="w-full py-4 px-6 bg-surface-container-high text-on-surface font-headline font-semibold rounded-lg hover:bg-surface-container-highest transition-colors active:scale-95 border border-white/5"
-            >
-              Set up dashboard
-            </button>
+            {isExplorer ? (
+              <button
+                onClick={() => router.push('/explore')}
+                className="w-full py-4 px-6 bg-primary text-white font-headline font-bold rounded-lg shadow-[0_8px_20px_rgba(232,87,42,0.3)] active:scale-95 transition-all duration-150"
+              >
+                Start exploring
+              </button>
+            ) : (
+              <>
+                <button
+                  onClick={() => router.push(`/${username}`)}
+                  className="w-full py-4 px-6 bg-primary text-white font-headline font-bold rounded-lg shadow-[0_8px_20px_rgba(232,87,42,0.3)] active:scale-95 transition-all duration-150"
+                >
+                  Go to my page
+                </button>
+                <button
+                  onClick={() => router.push('/dashboard')}
+                  className="w-full py-4 px-6 bg-surface-container-high text-on-surface font-headline font-semibold rounded-lg hover:bg-surface-container-highest transition-colors active:scale-95 border border-white/5"
+                >
+                  Set up dashboard
+                </button>
+              </>
+            )}
           </div>
         </main>
 

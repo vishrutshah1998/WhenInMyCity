@@ -12,6 +12,7 @@ import WeekStrip from '@/components/adda/dashboard/WeekStrip'
 import PendingRequests from '@/components/adda/dashboard/PendingRequests'
 import RevenueTrend from '@/components/adda/dashboard/RevenueTrend'
 import type { MonthlyRevenue } from '@/components/adda/dashboard/charts/RevenueTrendChart'
+import type { AddaProfile, AddaTier } from '@/types/database'
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -58,6 +59,132 @@ function buildMockRevenueTrend(totalRevenuePaise: number): MonthlyRevenue[] {
     const net   = Math.round(gross * 0.35)  // adda share ≈ 35% of gross
     return { month, gross_paise: gross, net_paise: net }
   })
+}
+
+// ---------------------------------------------------------------------------
+// Tier progress card
+// ---------------------------------------------------------------------------
+
+const TIER_COLORS: Record<AddaTier, { bg: string; border: string; color: string; icon: string }> = {
+  open:      { bg: 'rgba(255,255,255,0.04)', border: 'var(--adda-border-subtle)', color: 'var(--adda-text-muted)',  icon: 'storefront' },
+  verified:  { bg: 'rgba(77,210,177,0.08)',  border: 'rgba(77,210,177,0.3)',      color: '#4dd2b1',               icon: 'verified' },
+  beloved:   { bg: 'rgba(245,168,0,0.08)',   border: 'rgba(245,168,0,0.3)',       color: '#f5a800',               icon: 'favorite' },
+  legendary: { bg: 'rgba(168,85,247,0.08)',  border: 'rgba(168,85,247,0.3)',      color: '#a855f7',               icon: 'workspace_premium' },
+}
+
+const TIER_LABELS: Record<AddaTier, string> = {
+  open: 'Open', verified: 'Verified', beloved: 'Beloved', legendary: 'Legendary',
+}
+
+const TIER_ORDER: AddaTier[] = ['open', 'verified', 'beloved', 'legendary']
+
+function Gate({ met, label, detail }: { met: boolean; label: string; detail: string }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '8px 0' }}>
+      <span
+        className="material-symbols-outlined"
+        style={{ fontSize: 16, color: met ? '#4dd2b1' : 'var(--adda-text-muted)', flexShrink: 0, marginTop: 1 }}
+      >
+        {met ? 'check_circle' : 'radio_button_unchecked'}
+      </span>
+      <div>
+        <div style={{ fontSize: 13, fontWeight: 600, color: met ? 'var(--adda-text-primary)' : 'var(--adda-text-muted)' }}>{label}</div>
+        <div style={{ fontSize: 11, color: 'var(--adda-text-muted)', fontFamily: 'var(--font-jetbrains-mono)', marginTop: 1 }}>{detail}</div>
+      </div>
+    </div>
+  )
+}
+
+function TierProgressCard({ adda, reviewCount }: { adda: AddaProfile; reviewCount: number }) {
+  const currentTier = adda.adda_tier as AddaTier
+  const currentIndex = TIER_ORDER.indexOf(currentTier)
+  const nextTier = TIER_ORDER[currentIndex + 1] as AddaTier | undefined
+  const c = TIER_COLORS[currentTier]
+  const isTrending = adda.trending_until ? new Date(adda.trending_until) > new Date() : false
+
+  const belovedYears = adda.beloved_since
+    ? (Date.now() - new Date(adda.beloved_since).getTime()) / (365 * 24 * 60 * 60 * 1000)
+    : 0
+
+  // Gates for next tier
+  let gates: Array<{ met: boolean; label: string; detail: string }> = []
+  if (nextTier === 'verified') {
+    gates = [
+      { met: adda.total_events_hosted >= 3,   label: '3+ events hosted (lifetime)',    detail: `You have ${adda.total_events_hosted}` },
+      { met: reviewCount >= 10,                label: '10+ reviews',                   detail: `You have ${reviewCount}` },
+      { met: adda.average_maker_rating >= 4.0, label: '4.0★ average rating',          detail: `Your rating: ${adda.average_maker_rating.toFixed(1)}★` },
+      { met: adda.is_verified,                 label: 'Claimed & profile complete',    detail: adda.is_verified ? 'Profile verified' : 'Awaiting admin verification' },
+    ]
+  } else if (nextTier === 'beloved') {
+    gates = [
+      { met: reviewCount >= 100,                              label: '100+ reviews',                      detail: `You have ${reviewCount}` },
+      { met: adda.average_maker_rating >= 4.6,               label: '4.6★ average rating',              detail: `Your rating: ${adda.average_maker_rating.toFixed(1)}★` },
+      { met: adda.unique_lantern_beacon_hosts >= 3,          label: '3+ Lantern/Beacon hosts',          detail: `You have ${adda.unique_lantern_beacon_hosts}` },
+      { met: adda.complaint_rate <= 0.02,                    label: '<2% complaint rate',               detail: `Yours: ${(adda.complaint_rate * 100).toFixed(1)}%` },
+      { met: adda.on_time_rate >= 0.90,                      label: '≥90% on-time rate',               detail: `Yours: ${(adda.on_time_rate * 100).toFixed(0)}%` },
+    ]
+  } else if (nextTier === 'legendary') {
+    gates = [
+      { met: reviewCount >= 500,                              label: '500+ reviews',                     detail: `You have ${reviewCount}` },
+      { met: adda.average_maker_rating >= 4.7,               label: '4.7★ average rating',             detail: `Your rating: ${adda.average_maker_rating.toFixed(1)}★` },
+      { met: adda.unique_lantern_beacon_hosts >= 10,         label: '10+ Beacon hosts',                 detail: `You have ${adda.unique_lantern_beacon_hosts}` },
+      { met: adda.repeat_attendee_rate >= 0.40,              label: '≥40% repeat attendee rate',       detail: `Yours: ${(adda.repeat_attendee_rate * 100).toFixed(0)}%` },
+      { met: belovedYears >= 2,                              label: '2+ years at Beloved tier',        detail: belovedYears >= 2 ? `${belovedYears.toFixed(1)} years` : `${(belovedYears * 12).toFixed(0)} months in` },
+    ]
+  }
+
+  return (
+    <div style={{
+      background: c.bg, border: `1px solid ${c.border}`, borderRadius: 16,
+      padding: 24, marginBottom: 24,
+    }}>
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div style={{
+            width: 40, height: 40, borderRadius: 12,
+            background: `${c.color}22`, display: 'grid', placeItems: 'center', color: c.color,
+          }}>
+            <span className="material-symbols-outlined" style={{ fontSize: 20 }}>{c.icon}</span>
+          </div>
+          <div>
+            <div style={{ fontSize: 11, fontFamily: 'var(--font-jetbrains-mono)', color: 'var(--adda-text-muted)', textTransform: 'uppercase', letterSpacing: '0.7px', marginBottom: 2 }}>
+              Current Tier
+            </div>
+            <div style={{ fontFamily: 'var(--font-syne)', fontWeight: 800, fontSize: 20, color: c.color }}>
+              {TIER_LABELS[currentTier]}
+            </div>
+          </div>
+        </div>
+        {isTrending && (
+          <span style={{
+            display: 'flex', alignItems: 'center', gap: 5,
+            padding: '5px 12px', borderRadius: 9999, fontSize: 12, fontWeight: 700,
+            background: 'rgba(232,87,42,0.15)', border: '1px solid rgba(232,87,42,0.4)',
+            color: '#ff7a45', fontFamily: 'var(--font-jetbrains-mono)',
+          }}>
+            🔥 Trending
+          </span>
+        )}
+      </div>
+
+      {/* Next tier gates or max tier message */}
+      {nextTier ? (
+        <>
+          <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--adda-text-secondary)', fontFamily: 'var(--font-jetbrains-mono)', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: 8 }}>
+            Requirements for {TIER_LABELS[nextTier]}
+          </div>
+          <div style={{ borderTop: '1px solid var(--adda-border-subtle)' }}>
+            {gates.map((g) => <Gate key={g.label} {...g} />)}
+          </div>
+        </>
+      ) : (
+        <div style={{ fontSize: 13, color: 'var(--adda-text-secondary)', textAlign: 'center', padding: '8px 0' }}>
+          You have reached the highest Adda tier. Keep the flame alive!
+        </div>
+      )}
+    </div>
+  )
 }
 
 // ---------------------------------------------------------------------------
@@ -179,6 +306,23 @@ export default async function AddaDashboardPage() {
     availabilityThisMonth,
     stats,
   } = result
+
+  // Review count for tier progress card
+  const { data: eventIds } = await admin
+    .from('events')
+    .select('id')
+    .eq('venue_adda_id', adda.id)
+    .in('status', ['published', 'completed'])
+
+  const eventIdList = (eventIds ?? []).map((e) => e.id)
+  const reviewCount = eventIdList.length > 0
+    ? ((await admin
+        .from('explorer_event_history')
+        .select('id', { count: 'exact', head: true })
+        .in('event_id', eventIdList)
+        .not('rating', 'is', null)
+      ).count ?? 0)
+    : 0
 
   // Sidebar owner info from auth metadata
   const ownerName =
@@ -336,6 +480,9 @@ export default async function AddaDashboardPage() {
 
           {/* Row 4: Revenue trend (full width) */}
           <RevenueTrend data={revenueTrendData} />
+
+          {/* Row 5: Tier progress card */}
+          <TierProgressCard adda={addaProfile} reviewCount={reviewCount} />
 
         </main>
       </div>

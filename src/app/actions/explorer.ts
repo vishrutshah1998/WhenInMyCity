@@ -7,6 +7,7 @@ import { CreateExplorerSchema, type CreateExplorerInput } from '@/types/marketpl
 import type { Event, ExplorerProfile, Rsvp } from '@/types/database'
 import { evaluateMakerTier } from '@/app/actions/tier'
 import { sendWhatsAppMessage } from '@/lib/whatsapp'
+import { bumpUserMetric } from '@/lib/metrics'
 
 // ---------------------------------------------------------------------------
 // Internal helpers
@@ -38,7 +39,7 @@ async function getExplorerForUser(userId: string): Promise<ExplorerProfile | nul
 export async function createExplorerProfile(
   data: CreateExplorerInput,
 ): Promise<{ error: string | null }> {
-  const { user } = await requireAuth('/onboarding/explorer')
+  const { user } = await requireAuth('/onboarding')
 
   const parsed = CreateExplorerSchema.safeParse(data)
   if (!parsed.success) {
@@ -274,6 +275,8 @@ export async function followMaker(makerId: string): Promise<{ error: string | nu
     return { error: 'Failed to follow Maker. Please try again.' }
   }
 
+  bumpUserMetric(admin, user.id, 'creators_followed_count', 1, 'followMaker')
+
   return { error: null }
 }
 
@@ -305,6 +308,8 @@ export async function unfollowMaker(makerId: string): Promise<{ error: string | 
     console.error('[unfollowMaker]', error.message)
     return { error: 'Failed to unfollow Maker. Please try again.' }
   }
+
+  bumpUserMetric(admin, user.id, 'creators_followed_count', -1, 'unfollowMaker')
 
   return { error: null }
 }
@@ -338,6 +343,8 @@ export async function saveEvent(eventId: string): Promise<{ error: string | null
     return { error: 'Failed to save event. Please try again.' }
   }
 
+  bumpUserMetric(admin, user.id, 'events_saved_count', 1, 'saveEvent')
+
   return { error: null }
 }
 
@@ -364,6 +371,8 @@ export async function unsaveEvent(eventId: string): Promise<{ error: string | nu
     console.error('[unsaveEvent]', error.message)
     return { error: 'Failed to unsave event. Please try again.' }
   }
+
+  bumpUserMetric(admin, user.id, 'events_saved_count', -1, 'unsaveEvent')
 
   return { error: null }
 }
@@ -783,6 +792,8 @@ export async function submitEventRating(
     return { error: 'Your attendance for this event has not been confirmed yet.' }
   }
 
+  const isFirstReview = historyRow.rating === null
+
   // Write the rating.
   const { error: rateError } = await admin
     .from('explorer_event_history')
@@ -796,6 +807,10 @@ export async function submitEventRating(
   if (rateError) {
     console.error('[submitEventRating] history update failed', rateError.message)
     return { error: 'Failed to save your rating. Please try again.' }
+  }
+
+  if (isFirstReview) {
+    bumpUserMetric(admin, user.id, 'reviews_posted_count', 1, 'submitEventRating')
   }
 
   // Recalculate event aggregate via SECURITY DEFINER RPC.

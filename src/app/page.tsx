@@ -26,6 +26,73 @@ const STATS = [
   { value: '3', label: 'Sides of one community' },
 ]
 
+const TIERS = [
+  {
+    num:   '01',
+    id:    'wanderer',
+    name:  'Wanderer',
+    story: 'I\'m exploring my city.',
+    color: '#9896B0',
+    bg:    'rgba(152,150,176,0.07)',
+    border:'rgba(152,150,176,0.15)',
+    icon:  'explore',
+    perks: [
+      'Weekly digest curated to your taste',
+      'Save events & follow creators',
+      'Attendance streak & city leaderboard',
+    ],
+    gate: 'Default on sign-up',
+  },
+  {
+    num:   '02',
+    id:    'local',
+    name:  'Local',
+    story: 'I belong to this scene.',
+    color: '#F5A800',
+    bg:    'rgba(245,168,0,0.07)',
+    border:'rgba(245,168,0,0.2)',
+    icon:  'home_pin',
+    perks: [
+      'Early access before public ticket sales',
+      'Local-only pricing at partner Addas',
+      'Streak freeze tokens — life happens',
+    ],
+    gate: '6 events attended in 90 days',
+  },
+  {
+    num:   '03',
+    id:    'lantern',
+    name:  'Lantern',
+    story: 'I bring people together.',
+    color: '#5DD9D0',
+    bg:    'rgba(93,217,208,0.07)',
+    border:'rgba(93,217,208,0.2)',
+    icon:  'light_mode',
+    perks: [
+      'Lantern Studio: full creator toolkit',
+      'Platform fee drops from 10% → 8%',
+      'Priority placement when events go live',
+    ],
+    gate: '3 events hosted, ≥4.5★ rating',
+  },
+  {
+    num:   '04',
+    id:    'beacon',
+    name:  'Beacon',
+    story: 'My passion is my livelihood.',
+    color: '#a855f7',
+    bg:    'rgba(168,85,247,0.07)',
+    border:'rgba(168,85,247,0.22)',
+    icon:  'workspace_premium',
+    perks: [
+      'Platform fee as low as 5%',
+      'Beacon Fund grants for ambitious events',
+      'Permanent Hall of Lights listing',
+    ],
+    gate: '36 events hosted, ≥4.7★, ≥30% repeat',
+  },
+]
+
 const MISSION_ROWS = [
   {
     prefix: 'A platform for building',
@@ -80,15 +147,22 @@ export default function LandingPage() {
         <Link href="/">
           <WimcLogo color="white" size="sm" />
         </Link>
-        <div className="flex items-center gap-3">
-          <Link href="/explore" className="hidden md:block text-sm text-[#5C5A72] hover:text-[#9896B0] transition-colors">
-            Explore events
+        <div className="flex items-center gap-1">
+          <a href="#mission" className="hidden md:flex items-center justify-center w-24 text-sm text-[#5C5A72] hover:text-[#9896B0] transition-colors">
+            Mission
+          </a>
+          <Link href="/explore" className="hidden md:flex items-center justify-center w-24 text-sm text-[#5C5A72] hover:text-[#9896B0] transition-colors">
+            Explore
           </Link>
+          <a href="#tiers" className="hidden md:flex items-center justify-center w-24 text-sm text-[#5C5A72] hover:text-[#9896B0] transition-colors">
+            Growth
+          </a>
+          <div className="w-5" />
           <Link
             href="/signin"
             className="px-5 py-2 rounded-full text-sm font-semibold bg-white text-[#07070A] hover:bg-[#E8E7F0] transition-colors"
           >
-            Sign in
+            Login
           </Link>
         </div>
       </nav>
@@ -127,7 +201,7 @@ export default function LandingPage() {
             >
               offline.
             </span>
-            <span className="block" style={{ color: '#2C2B3E' }}>We keep it</span>
+            <span className="block" style={{ color: '#7878A0' }}>We keep it</span>
             <span className="block text-white">connected.</span>
           </h1>
 
@@ -169,8 +243,8 @@ export default function LandingPage() {
         <div className="flex items-center whitespace-nowrap marquee-normal" style={{ width: 'max-content' }}>
           {marqueeCities.map((city, i) => (
             <span key={i} className="flex items-center gap-4 mx-4">
-              <span className="text-[11px] font-bold tracking-[0.2em] uppercase text-[#25243A]">{city}</span>
-              <span className="w-0.5 h-0.5 rounded-full bg-[#18172A]" />
+              <span className="text-[11px] font-bold tracking-[0.2em] uppercase text-[#5C5A72]">{city}</span>
+              <span className="w-0.5 h-0.5 rounded-full bg-[#3C3A52]" />
             </span>
           ))}
         </div>
@@ -185,7 +259,7 @@ export default function LandingPage() {
       >
         <div className="max-w-7xl mx-auto">
 
-          <p className="text-[11px] font-bold uppercase tracking-[0.2em] mb-12" style={{ color: '#2C2B3E' }}>
+          <p className="text-[11px] font-bold uppercase tracking-[0.2em] mb-12" style={{ color: '#5C5A72' }}>
             The platform for
           </p>
 
@@ -236,14 +310,14 @@ export default function LandingPage() {
                 >
                   {p.label}
                 </h3>
-                <p className="text-[13px] leading-relaxed" style={{ color: '#5C5A72' }}>
+                <p className="text-[13px] leading-relaxed" style={{ color: '#9896B0' }}>
                   {p.desc}
                 </p>
               </div>
             ))}
           </div>
 
-          <p className="mt-10 text-[13px] leading-relaxed max-w-2xl" style={{ color: '#2C2B3E' }}>
+          <p className="mt-10 text-[13px] leading-relaxed max-w-2xl" style={{ color: '#9896B0' }}>
             When makers find addas and communities show up — that&apos;s when a city stops being a place you live in and starts being a place you belong to.
           </p>
 
@@ -267,7 +341,7 @@ export default function LandingPage() {
             >
               Choose<br />your role.
             </h2>
-            <p className="text-sm leading-relaxed max-w-xs" style={{ color: '#5C5A72' }}>
+            <p className="text-sm leading-relaxed max-w-xs" style={{ color: '#9896B0' }}>
               Two paths, one platform. Whether you make the culture or make the space — WIMC has a home for you.
             </p>
           </div>
@@ -332,7 +406,7 @@ export default function LandingPage() {
 
                 <ul className="space-y-3">
                   {MAKER_FEATURES.map((f) => (
-                    <li key={f} className="flex items-center gap-3 text-[13px]" style={{ color: '#5C5A72' }}>
+                    <li key={f} className="flex items-center gap-3 text-[13px]" style={{ color: '#9896B0' }}>
                       <span
                         className="w-1.5 h-1.5 rounded-full flex-shrink-0"
                         style={{ background: '#E8705A' }}
@@ -350,7 +424,7 @@ export default function LandingPage() {
                     Start for free
                     <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>arrow_forward</span>
                   </div>
-                  <span className="text-[11px] font-medium" style={{ color: '#2C2B3E' }}>Free forever</span>
+                  <span className="text-[11px] font-medium" style={{ color: '#9896B0' }}>Free forever</span>
                 </div>
               </div>
             </Link>
@@ -412,7 +486,7 @@ export default function LandingPage() {
 
                 <ul className="space-y-3">
                   {ADDA_FEATURES.map((f) => (
-                    <li key={f} className="flex items-center gap-3 text-[13px]" style={{ color: '#5C5A72' }}>
+                    <li key={f} className="flex items-center gap-3 text-[13px]" style={{ color: '#9896B0' }}>
                       <span
                         className="w-1.5 h-1.5 rounded-full flex-shrink-0"
                         style={{ background: '#5DD9D0' }}
@@ -430,7 +504,7 @@ export default function LandingPage() {
                     List your Adda
                     <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>arrow_forward</span>
                   </div>
-                  <span className="text-[11px] font-medium" style={{ color: '#2C2B3E' }}>Free to list</span>
+                  <span className="text-[11px] font-medium" style={{ color: '#9896B0' }}>Free to list</span>
                 </div>
               </div>
             </Link>
@@ -455,7 +529,7 @@ export default function LandingPage() {
               >
                 {s.value}
               </div>
-              <div className="text-[12px] font-medium" style={{ color: '#3C3A52' }}>{s.label}</div>
+              <div className="text-[12px] font-medium" style={{ color: '#9896B0' }}>{s.label}</div>
             </div>
           ))}
         </div>
@@ -465,11 +539,12 @@ export default function LandingPage() {
           MISSION / MANIFESTO
       ════════════════════════════════════════ */}
       <section
+        id="mission"
         className="relative z-10 px-6 py-20 md:px-14"
         style={{ background: '#05050A', borderBottom: '1px solid rgba(255,255,255,0.06)' }}
       >
         <div className="max-w-7xl mx-auto">
-          <p className="text-[11px] font-bold uppercase tracking-[0.2em] mb-10" style={{ color: '#2C2B3E' }}>
+          <p className="text-[11px] font-bold uppercase tracking-[0.2em] mb-10" style={{ color: '#5C5A72' }}>
             Our mission
           </p>
 
@@ -481,7 +556,7 @@ export default function LandingPage() {
                   style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 4 }}
                 >
                   <span
-                    className="font-display font-bold text-[#3A384E]"
+                    className="font-display font-bold text-[#9896B0]"
                     style={{ fontSize: 'clamp(15px, 2.6vw, 26px)', letterSpacing: '-0.02em' }}
                   >
                     {row.prefix}
@@ -502,11 +577,147 @@ export default function LandingPage() {
             ))}
           </div>
 
-          <p className="mt-10 text-sm leading-relaxed max-w-xl" style={{ color: '#3C3A52' }}>
+          <p className="mt-10 text-sm leading-relaxed max-w-xl" style={{ color: '#9896B0' }}>
             Every creator, venue, and explorer in{' '}
             <span style={{ color: '#F5C842', fontWeight: 600 }}>OURCITY</span>
             {' '}is on their own unique path to becoming a City Zen™.
           </p>
+        </div>
+      </section>
+
+      {/* ════════════════════════════════════════
+          TIERS — the progression ladder
+      ════════════════════════════════════════ */}
+      <section
+        id="tiers"
+        className="relative z-10 px-6 py-20 md:px-14"
+        style={{ background: '#06060A', borderBottom: '1px solid rgba(255,255,255,0.06)' }}
+      >
+        <div className="max-w-7xl mx-auto">
+
+          {/* Section header */}
+          <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-14">
+            <div>
+              <p className="text-[11px] font-bold uppercase tracking-[0.2em] mb-4" style={{ color: '#5C5A72' }}>
+                How you grow
+              </p>
+              <h2
+                className="font-display font-black tracking-[-0.045em] leading-[0.88] text-white"
+                style={{ fontSize: 'clamp(36px, 5.5vw, 68px)' }}
+              >
+                Your path<br />through the city.
+              </h2>
+            </div>
+            <p className="text-sm leading-relaxed max-w-xs" style={{ color: '#9896B0' }}>
+              Every WIMC member earns their place. The more you show up, the more the city opens up for you.
+            </p>
+          </div>
+
+          {/* Tier cards — horizontal ladder */}
+          <div className="grid md:grid-cols-4 gap-4">
+            {TIERS.map((tier, i) => (
+              <div
+                key={tier.id}
+                className="relative flex flex-col rounded-2xl overflow-hidden"
+                style={{ border: `1px solid ${tier.border}`, background: '#07070A' }}
+              >
+                {/* Top accent band */}
+                <div
+                  className="h-1 w-full"
+                  style={{ background: tier.color, opacity: 0.7 }}
+                />
+
+                <div className="p-6 flex flex-col gap-5 flex-1">
+
+                  {/* Number + icon row */}
+                  <div className="flex items-start justify-between">
+                    <span
+                      className="text-[11px] font-bold uppercase tracking-[0.22em]"
+                      style={{ color: tier.color }}
+                    >
+                      {tier.num}
+                    </span>
+                    <div
+                      className="w-8 h-8 rounded-lg flex items-center justify-center"
+                      style={{ background: tier.bg }}
+                    >
+                      <span
+                        className="material-symbols-outlined"
+                        style={{ color: tier.color, fontSize: '16px', fontVariationSettings: "'FILL' 1" }}
+                      >
+                        {tier.icon}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Tier name */}
+                  <div>
+                    <h3
+                      className="font-display font-black text-white tracking-tight leading-none mb-2"
+                      style={{ fontSize: 'clamp(22px, 2.5vw, 30px)' }}
+                    >
+                      {tier.name}
+                    </h3>
+                    <p className="text-[12px] italic" style={{ color: tier.color, opacity: 0.85 }}>
+                      &ldquo;{tier.story}&rdquo;
+                    </p>
+                  </div>
+
+                  {/* Perks */}
+                  <ul className="space-y-2.5 flex-1">
+                    {tier.perks.map((perk) => (
+                      <li key={perk} className="flex items-start gap-2.5 text-[12.5px]" style={{ color: '#9896B0' }}>
+                        <span
+                          className="w-1 h-1 rounded-full mt-1.5 flex-shrink-0"
+                          style={{ background: tier.color }}
+                        />
+                        {perk}
+                      </li>
+                    ))}
+                  </ul>
+
+                  {/* Gate */}
+                  <div
+                    className="mt-auto pt-4 flex items-center gap-2"
+                    style={{ borderTop: `1px solid ${tier.border}` }}
+                  >
+                    <span className="material-symbols-outlined" style={{ fontSize: 13, color: '#5C5A72' }}>
+                      {i === 0 ? 'radio_button_checked' : 'lock'}
+                    </span>
+                    <span className="text-[11px] font-medium" style={{ color: '#5C5A72' }}>
+                      {tier.gate}
+                    </span>
+                  </div>
+
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Arrow connectors — desktop only */}
+          <div className="hidden md:flex items-center justify-center gap-0 mt-6">
+            {TIERS.map((tier, i) => (
+              <div key={tier.id} className="flex items-center">
+                <div
+                  className="w-3 h-3 rounded-full"
+                  style={{ background: tier.color, opacity: 0.5 }}
+                />
+                {i < TIERS.length - 1 && (
+                  <div
+                    className="h-px flex-1"
+                    style={{
+                      width: '200px',
+                      background: `linear-gradient(90deg, ${tier.color}44, ${TIERS[i + 1].color}44)`,
+                    }}
+                  />
+                )}
+              </div>
+            ))}
+          </div>
+          <p className="hidden md:block text-center text-[11px] mt-3 font-medium" style={{ color: '#5C5A72' }}>
+            Every tier earned — never bought.
+          </p>
+
         </div>
       </section>
 
@@ -517,11 +728,11 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
           <div>
             <WimcLogo color="white" size="xs" />
-            <p className="text-[10px] mt-2 font-bold tracking-widest uppercase" style={{ color: '#2C2B3E' }}>
+            <p className="text-[10px] mt-2 font-bold tracking-widest uppercase" style={{ color: '#5C5A72' }}>
               wheninmycity.com
             </p>
           </div>
-          <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-[12px]" style={{ color: '#3C3A52' }}>
+          <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-[12px]" style={{ color: '#5C5A72' }}>
             <Link href="/explore" className="hover:text-[#9896B0] transition-colors">Explore events</Link>
             <Link href="/signin?next=/onboarding/screen-1" className="hover:text-[#9896B0] transition-colors">For Creators</Link>
             <Link href="/signin?next=/adda/onboard" className="hover:text-[#9896B0] transition-colors">For Venues</Link>

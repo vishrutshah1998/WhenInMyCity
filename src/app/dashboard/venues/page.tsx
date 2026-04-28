@@ -13,7 +13,7 @@ export default async function VenuesPage() {
       <VenuesClient
         profileId={profile.id}
         defaultCity={profile.city ?? ''}
-        makerTier={profile.maker_tier ?? 'mohalla'}
+        makerTier={profile.user_tier ?? 'wanderer'}
         proposals={proposals}
       />
     </Suspense>

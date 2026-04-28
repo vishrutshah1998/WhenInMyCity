@@ -102,7 +102,15 @@ export async function createEvent(
     capacity,
     whatsapp_group_url,
     google_maps_url,
+    early_access_at,
+    ticket_tiers,
   } = parsed.data
+
+  // When fan tiers are set, derive a representative flat price for Razorpay
+  // catalog registration (use min paid tier price, or 0 if all free).
+  const effectiveTicketPrice = ticket_tiers?.length
+    ? (ticket_tiers.filter((t) => t.price_paise > 0).map((t) => t.price_paise).sort((a, b) => a - b)[0] ?? 0)
+    : ticket_price
 
   // Guard: event must be in the future
   if (new Date(starts_at) <= new Date()) {
@@ -134,11 +142,13 @@ export async function createEvent(
       venue_lng: venue_lng ?? null,
       starts_at,
       ends_at: ends_at ?? null,
-      ticket_price,
+      ticket_price: effectiveTicketPrice,
       capacity: capacity ?? null,
       status: 'draft',
       whatsapp_group_url: whatsapp_group_url || null,
       // google_maps_url: google_maps_url || null,  // re-enable after migration 004 is applied
+      early_access_at: early_access_at ?? null,
+      ticket_tiers: ticket_tiers?.length ? (ticket_tiers as unknown as import('@/types/database').Json) : null,
       slug,
     })
     .select()
@@ -385,6 +395,7 @@ export async function updateEvent(
     google_maps_url?: string | null
     capacity?: number | null
     whatsapp_group_url?: string | null
+    ticket_tiers?: import('@/types/database').Json | null
   },
 ): Promise<{ event: Event | null; error: string | null }> {
   const { user } = await requireAuth()

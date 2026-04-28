@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import type { LinkClickStats } from '@/app/actions/analytics'
+import type { LinkClickStats, AudienceBreakdown } from '@/app/actions/analytics'
 
 interface SlimBlock {
   id: string
@@ -24,9 +24,96 @@ interface AnalyticsClientProps {
   blocks:     SlimBlock[]
   username:   string
   eventStats: EventStat[]
+  audience:   AudienceBreakdown
 }
 
 type Window = '7d' | '30d' | 'all'
+
+// ---------------------------------------------------------------------------
+// Concentric ring audience chart
+// ---------------------------------------------------------------------------
+
+const TIER_RING: Array<{ key: keyof Omit<AudienceBreakdown,'total'>; label: string; color: string; r: number; stroke: number }> = [
+  { key: 'wanderer', label: 'Wanderers', color: 'rgba(255,255,255,0.18)', r: 80, stroke: 18 },
+  { key: 'local',    label: 'Locals',    color: 'var(--wimc-teal)',        r: 56, stroke: 18 },
+  { key: 'lantern',  label: 'Lanterns',  color: 'var(--wimc-amber)',       r: 32, stroke: 18 },
+  { key: 'beacon',   label: 'Beacons',   color: '#a855f7',                 r: 12, stroke: 10 },
+]
+
+function AudienceSection({ audience }: { audience: AudienceBreakdown }) {
+  const total = audience.total
+
+  return (
+    <div style={{
+      background: 'var(--wimc-bg-elevated)', border: '1px solid var(--wimc-border-default)',
+      borderRadius: 18, overflow: 'hidden',
+    }}>
+      <div style={{ padding: '16px 24px', borderBottom: '1px solid var(--wimc-border-subtle)', fontFamily: 'var(--font-syne)', fontWeight: 700, fontSize: 15 }}>
+        Your Audience
+      </div>
+
+      {total === 0 ? (
+        <div style={{ padding: '40px 24px', textAlign: 'center', color: 'var(--wimc-text-secondary)', fontSize: 13 }}>
+          No followers yet. Share your profile to grow your audience.
+        </div>
+      ) : (
+        <div style={{ padding: 24, display: 'flex', gap: 40, alignItems: 'center', flexWrap: 'wrap' }}>
+
+          {/* SVG concentric rings */}
+          <div style={{ flexShrink: 0 }}>
+            <svg width={200} height={200} viewBox="0 0 200 200">
+              <circle cx={100} cy={100} r={96} fill="none" stroke="var(--wimc-border-subtle)" strokeWidth={2} />
+              {TIER_RING.map(({ key, color, r, stroke }) =>
+                audience[key] > 0 ? (
+                  <circle
+                    key={key}
+                    cx={100} cy={100} r={r}
+                    fill="none"
+                    stroke={color}
+                    strokeWidth={stroke}
+                    opacity={0.85}
+                  />
+                ) : null
+              )}
+              {/* Centre label */}
+              <text x={100} y={95} textAnchor="middle" fill="var(--wimc-text-primary)" fontSize={22} fontWeight={800} fontFamily="var(--font-syne)">
+                {total}
+              </text>
+              <text x={100} y={113} textAnchor="middle" fill="var(--wimc-text-muted)" fontSize={10} fontFamily="var(--font-jetbrains-mono)">
+                FOLLOWERS
+              </text>
+            </svg>
+          </div>
+
+          {/* Legend + counts */}
+          <div style={{ flex: 1, minWidth: 160, display: 'flex', flexDirection: 'column', gap: 14 }}>
+            {TIER_RING.map(({ key, label, color }) => {
+              const count = audience[key]
+              const pct   = total > 0 ? Math.round((count / total) * 100) : 0
+              return (
+                <div key={key} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <div style={{ width: 10, height: 10, borderRadius: '50%', background: color, flexShrink: 0 }} />
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 4 }}>
+                      <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--wimc-text-primary)' }}>{label}</span>
+                      <span style={{ fontSize: 12, color: 'var(--wimc-text-secondary)', fontFamily: 'var(--font-jetbrains-mono)' }}>
+                        {count} · {pct}%
+                      </span>
+                    </div>
+                    <div style={{ height: 4, borderRadius: 2, background: 'var(--wimc-border-subtle)', overflow: 'hidden' }}>
+                      <div style={{ height: '100%', width: `${pct}%`, background: color, borderRadius: 2, transition: 'width 600ms ease' }} />
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+
+        </div>
+      )}
+    </div>
+  )
+}
 
 function formatInr(paise: number): string {
   return '₹' + Math.round(paise / 100).toLocaleString('en-IN')
@@ -43,7 +130,7 @@ const STATUS_COLORS: Record<string, string> = {
   completed:  'var(--wimc-text-secondary)',
 }
 
-export default function AnalyticsClient({ stats7, stats30, stats365, blocks, username, eventStats }: AnalyticsClientProps) {
+export default function AnalyticsClient({ stats7, stats30, stats365, blocks, username, eventStats, audience }: AnalyticsClientProps) {
   const [win, setWin] = useState<Window>('30d')
 
   const stats = win === '7d' ? stats7 : win === '30d' ? stats30 : stats365
@@ -273,6 +360,9 @@ export default function AnalyticsClient({ stats7, stats30, stats365, blocks, use
             </div>
           </div>
         )}
+
+        {/* Audience breakdown */}
+        <AudienceSection audience={audience} />
 
         {/* Public page link */}
         <div style={{ background: 'var(--wimc-bg-elevated)', border: '1px solid var(--wimc-border-default)', borderRadius: 14, padding: '16px 24px', display: 'flex', alignItems: 'center', gap: 14 }}>

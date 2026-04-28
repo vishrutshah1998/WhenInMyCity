@@ -4,6 +4,7 @@ import { useRef, useState } from 'react'
 import Image from 'next/image'
 import { uploadEventCover } from '@/app/actions/upload'
 import { THEMES, getTheme, type Theme } from './themes'
+import EventCanvasRenderer, { type CanvasEventData } from './EventCanvasRenderer'
 
 interface CoverImagePanelProps {
   themeId: string
@@ -11,6 +12,7 @@ interface CoverImagePanelProps {
   onThemeChange: (id: string) => void
   onUpload: (url: string) => void
   onClearCustom: () => void
+  eventData?: CanvasEventData
 }
 
 export function CoverImagePanel({
@@ -19,11 +21,30 @@ export function CoverImagePanel({
   onThemeChange,
   onUpload,
   onClearCustom,
+  eventData,
 }: CoverImagePanelProps) {
   const [sheetOpen,   setSheetOpen  ] = useState(false)
   const [uploading,   setUploading  ] = useState(false)
   const [uploadError, setUploadError] = useState<string | null>(null)
+  const [sheetTab,    setSheetTab   ] = useState<'upload' | 'generate'>('upload')
+  const [genUploading, setGenUploading] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
+
+  async function handleUseGeneratedCover(blob: Blob) {
+    setGenUploading(true)
+    setUploadError(null)
+    const file = new File([blob], 'generated-cover.jpg', { type: 'image/jpeg' })
+    const fd = new FormData()
+    fd.append('file', file)
+    const result = await uploadEventCover(fd)
+    setGenUploading(false)
+    if (result.error || !result.url) {
+      setUploadError(result.error ?? 'Upload failed.')
+    } else {
+      onUpload(result.url)
+      setSheetOpen(false)
+    }
+  }
 
   const theme = getTheme(themeId)
   const CoverComponent = theme.Cover
@@ -105,7 +126,46 @@ export function CoverImagePanel({
             <div className="px-5 pt-4 pb-6 space-y-5">
               <h3 className="text-white font-bold text-base">Cover Image</h3>
 
+              {/* Tab bar */}
+              {eventData && (
+                <div className="flex gap-1 p-1 bg-[#222] rounded-xl">
+                  {(['upload', 'generate'] as const).map((t) => (
+                    <button
+                      key={t}
+                      type="button"
+                      onClick={() => setSheetTab(t)}
+                      className="flex-1 py-2 rounded-lg text-xs font-semibold transition-colors capitalize"
+                      style={{
+                        background: sheetTab === t ? '#333' : 'transparent',
+                        color: sheetTab === t ? '#fff' : '#777',
+                      }}
+                    >
+                      {t === 'generate' ? '✦ Generate' : 'Upload / Theme'}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {/* Generate tab */}
+              {eventData && sheetTab === 'generate' && (
+                <div className="flex flex-col items-center gap-3">
+                  <p className="text-[11px] text-[#555] uppercase tracking-widest self-start">Live preview</p>
+                  <EventCanvasRenderer
+                    data={eventData}
+                    size={800}
+                    displaySize={312}
+                    onAction={handleUseGeneratedCover}
+                    actionLabel="Use as Cover"
+                    isPending={genUploading}
+                  />
+                  {uploadError && (
+                    <p className="text-red-400 text-xs">{uploadError}</p>
+                  )}
+                </div>
+              )}
+
               {/* Upload option */}
+              {(!eventData || sheetTab === 'upload') && (
               <div>
                 <button
                   type="button"
@@ -141,8 +201,10 @@ export function CoverImagePanel({
                   <p className="text-red-400 text-xs mt-2">{uploadError}</p>
                 )}
               </div>
+              )}
 
               {/* Theme swatches */}
+              {(!eventData || sheetTab === 'upload') && (
               <div>
                 <p className="text-[11px] text-[#555] uppercase tracking-widest mb-3">Choose a theme</p>
                 <div className="flex gap-3 overflow-x-auto pb-1">
@@ -167,6 +229,7 @@ export function CoverImagePanel({
                   ))}
                 </div>
               </div>
+              )}
             </div>
           </div>
         </div>

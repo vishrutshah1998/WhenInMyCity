@@ -80,26 +80,50 @@ export async function getPayableEvents(): Promise<{ data: PayableEvent[] | null;
   const freeIds = freeEvents.map((e) => e.id)
   const { data: rsvps } = await admin
     .from('rsvps')
-    .select('event_id, amount_paid')
+    .select('event_id, amount_paid, maker_payout_paise, platform_fee_paise')
     .in('event_id', freeIds)
     .eq('payment_status', 'captured')
 
-  // Build per-event aggregates
-  const rsvpMap = new Map<string, { count: number; total: number }>()
+  // Build per-event aggregates.
+  // When all RSVPs for an event have stored split columns (migration 017+),
+  // use those values so the creator's tier at sale time is honoured.
+  // Older rows fall back to a live recalculation using the current tier.
+  type EventAgg = { count: number; gross: number; makerStored: number; platformStored: number; allHaveSplit: boolean }
+  const rsvpMap = new Map<string, EventAgg>()
+
   for (const r of rsvps ?? []) {
-    const agg = rsvpMap.get(r.event_id) ?? { count: 0, total: 0 }
-    agg.count += 1
-    agg.total += r.amount_paid ?? 0
+    const agg = rsvpMap.get(r.event_id) ?? { count: 0, gross: 0, makerStored: 0, platformStored: 0, allHaveSplit: true }
+    agg.count  += 1
+    agg.gross  += r.amount_paid ?? 0
+    if (r.maker_payout_paise != null) {
+      agg.makerStored    += r.maker_payout_paise
+      agg.platformStored += r.platform_fee_paise ?? 0
+    } else {
+      agg.allHaveSplit = false
+    }
     rsvpMap.set(r.event_id, agg)
   }
 
-  const makerTier = profile.maker_tier ?? 'mohalla'
+  const makerTier = profile.user_tier ?? 'wanderer'
 
   const payable: PayableEvent[] = freeEvents
     .filter((e) => (rsvpMap.get(e.id)?.count ?? 0) > 0)
     .map((e) => {
-      const agg     = rsvpMap.get(e.id)!
-      const split   = calculateRevenueSplit(e.ticket_price, agg.count, makerTier, e.venue_adda_id !== null)
+      const agg = rsvpMap.get(e.id)!
+      let makerPaise: number
+      let platformPaise: number
+
+      if (agg.allHaveSplit) {
+        // All tickets sold with a locked split — use stored values.
+        makerPaise    = agg.makerStored
+        platformPaise = agg.platformStored
+      } else {
+        // Legacy rows: recalculate using current tier.
+        const split = calculateRevenueSplit(e.ticket_price, agg.count, makerTier, e.venue_adda_id !== null)
+        makerPaise    = split.makerPaise
+        platformPaise = split.platformPaise
+      }
+
       return {
         id:             e.id,
         title:          e.title,
@@ -107,9 +131,9 @@ export async function getPayableEvents(): Promise<{ data: PayableEvent[] | null;
         ticket_price:   e.ticket_price,
         venue_adda_id:  e.venue_adda_id,
         rsvp_count:     agg.count,
-        gross_paise:    agg.total,
-        maker_paise:    split.makerPaise,
-        platform_paise: split.platformPaise,
+        gross_paise:    agg.gross,
+        maker_paise:    makerPaise,
+        platform_paise: platformPaise,
       }
     })
 

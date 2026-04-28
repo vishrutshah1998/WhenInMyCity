@@ -12,9 +12,11 @@ interface Props {
   events: BrowseEvent[]
   savedEventIds: string[]
   currentFilters: { city: string; interest_tag: string; date: string }
+  attendanceStreak: number
+  streakFreezeTokens: number
 }
 
-export default function BrowseClient({ events, savedEventIds, currentFilters }: Props) {
+export default function BrowseClient({ events, savedEventIds, currentFilters, attendanceStreak, streakFreezeTokens }: Props) {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [, startTransition] = useTransition()
@@ -52,6 +54,46 @@ export default function BrowseClient({ events, savedEventIds, currentFilters }: 
 
   return (
     <div>
+      {/* Streak widget */}
+      {attendanceStreak > 0 && (
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 12,
+          marginBottom: 20, padding: '12px 18px',
+          background: 'linear-gradient(135deg, rgba(245,168,0,0.1) 0%, rgba(232,87,42,0.08) 100%)',
+          border: '1px solid rgba(245,168,0,0.3)',
+          borderRadius: 12,
+        }}>
+          <div style={{
+            width: 40, height: 40, borderRadius: 10, flexShrink: 0,
+            background: 'rgba(245,168,0,0.15)', border: '1px solid rgba(245,168,0,0.35)',
+            display: 'grid', placeItems: 'center',
+            fontSize: 20,
+          }}>
+            🔥
+          </div>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontWeight: 700, fontSize: 14, fontFamily: 'var(--font-syne)' }}>
+              {attendanceStreak}-week streak
+            </div>
+            <div style={{ fontSize: 12, color: 'var(--wimc-text-secondary)', marginTop: 1 }}>
+              Keep attending events each week to grow your streak
+            </div>
+          </div>
+          {streakFreezeTokens > 0 && (
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: 5,
+              padding: '5px 10px', borderRadius: 8,
+              background: 'rgba(77,210,177,0.1)', border: '1px solid rgba(77,210,177,0.25)',
+              fontSize: 12, color: 'var(--wimc-teal)', fontWeight: 600,
+              flexShrink: 0,
+            }}>
+              <span style={{ fontSize: 14 }}>❄️</span>
+              {streakFreezeTokens} freeze{streakFreezeTokens !== 1 ? 's' : ''}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Filter bar */}
       <div style={{
         display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 24,

@@ -2,7 +2,7 @@
 
 import Image from 'next/image'
 import Link from 'next/link'
-import type { AddaProfile, Event, UserProfile } from '@/types/database'
+import type { AddaProfile, AddaTier, Event, UserProfile } from '@/types/database'
 import type { PricingConfig } from '@/types/marketplace'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -106,6 +106,34 @@ function whatsappHref(phone: string): string {
   return `https://wa.me/${number}`
 }
 
+// ─── Tier badges ─────────────────────────────────────────────────────────────
+
+const TIER_META: Record<Exclude<AddaTier, 'open'>, {
+  label: string; icon: string; bg: string; border: string; color: string
+}> = {
+  verified:  { label: 'Verified Adda',  icon: 'verified',          bg: 'rgba(77,210,177,0.15)',  border: 'rgba(77,210,177,0.4)',  color: 'var(--wimc-teal)' },
+  beloved:   { label: 'Beloved Adda',   icon: 'favorite',          bg: 'rgba(245,168,0,0.15)',   border: 'rgba(245,168,0,0.4)',   color: 'var(--wimc-amber)' },
+  legendary: { label: 'Legendary Adda', icon: 'workspace_premium', bg: 'rgba(168,85,247,0.15)',  border: 'rgba(168,85,247,0.4)',  color: '#a855f7' },
+}
+
+function AddaTierBadge({ tier, size = 'md' }: { tier: AddaTier; size?: 'sm' | 'md' }) {
+  if (tier === 'open') return null
+  const m = TIER_META[tier]
+  return (
+    <span style={{
+      display: 'inline-flex', alignItems: 'center', gap: 4,
+      padding: size === 'sm' ? '2px 8px' : '3px 10px', borderRadius: 9999,
+      background: m.bg, border: `1px solid ${m.border}`, color: m.color,
+      fontSize: size === 'sm' ? 10 : 11, fontWeight: 600,
+      fontFamily: 'var(--font-jetbrains-mono)',
+      textTransform: 'uppercase', letterSpacing: '0.04em',
+    }}>
+      <span className="material-symbols-outlined" style={{ fontSize: size === 'sm' ? 11 : 12 }}>{m.icon}</span>
+      {m.label}
+    </span>
+  )
+}
+
 function Stars({ rating }: { rating: number }) {
   const full = Math.floor(rating)
   const half = rating - full >= 0.5
@@ -186,7 +214,7 @@ export default function AddaPublicPage({ adda, upcomingEvents, pastEvents, stats
           padding: '0 24px 24px',
           maxWidth: 800, margin: '0 auto',
         }}>
-          {/* Type chips */}
+          {/* Type chips + tier badge + trending */}
           <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 10 }}>
             {adda.adda_type.map((t) => (
               <span key={t} style={{
@@ -200,6 +228,20 @@ export default function AddaPublicPage({ adda, upcomingEvents, pastEvents, stats
                 {ADDA_TYPE_LABELS[t] ?? t}
               </span>
             ))}
+            <AddaTierBadge tier={adda.adda_tier} />
+            {adda.trending_until && new Date(adda.trending_until) > new Date() && (
+              <span style={{
+                display: 'inline-flex', alignItems: 'center', gap: 4,
+                padding: '3px 10px', borderRadius: 9999,
+                background: 'rgba(232,87,42,0.25)',
+                border: '1px solid rgba(232,87,42,0.55)',
+                color: '#ff7a45', fontSize: 11, fontWeight: 600,
+                fontFamily: 'var(--font-jetbrains-mono)',
+                textTransform: 'uppercase', letterSpacing: '0.04em',
+              }}>
+                🔥 Trending
+              </span>
+            )}
           </div>
 
           {/* Name + verified */}

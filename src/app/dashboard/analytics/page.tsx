@@ -1,17 +1,18 @@
 import { Suspense } from 'react'
 import { requireProfile } from '@/lib/auth/requireAuth'
 import { createClient } from '@/lib/supabase/server'
-import { getLinkClickStats } from '@/app/actions/analytics'
+import { getLinkClickStats, getAudienceBreakdown } from '@/app/actions/analytics'
 import AnalyticsClient from './AnalyticsClient'
 
 export default async function AnalyticsPage() {
   const { profile } = await requireProfile()
   const supabase = await createClient()
 
-  const [stats7, stats30, stats365, blocksResult, eventsResult] = await Promise.all([
+  const [stats7, stats30, stats365, audience, blocksResult, eventsResult] = await Promise.all([
     getLinkClickStats(profile.id, 7),
     getLinkClickStats(profile.id, 30),
     getLinkClickStats(profile.id, 365),
+    getAudienceBreakdown(),
     supabase
       .from('page_blocks')
       .select('id, block_type')
@@ -61,6 +62,7 @@ export default async function AnalyticsPage() {
         blocks={blocks}
         username={profile.username ?? ''}
         eventStats={eventStats}
+        audience={audience}
       />
     </Suspense>
   )

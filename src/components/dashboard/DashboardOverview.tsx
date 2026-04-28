@@ -147,7 +147,7 @@ export default function DashboardOverview({ profile, events, bookings, linkClick
   // Tier display
   const TIER_EMOJI: Record<string, string> = { mohalla: '🏘️', nukkad: '🏙️', chowk: '🏛️', maidan: '🌆' }
   const TIER_NEXT: Record<string, string> = { mohalla: 'Nukkad', nukkad: 'Chowk', chowk: 'Maidan', maidan: '—' }
-  const tierKey = profile.maker_tier ?? 'mohalla'
+  const tierKey = profile.user_tier ?? 'wanderer'
   const tierLabel = tierKey.charAt(0).toUpperCase() + tierKey.slice(1)
   const nextTier = TIER_NEXT[tierKey]
 

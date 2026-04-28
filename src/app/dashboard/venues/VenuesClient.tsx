@@ -3,8 +3,8 @@
 import { useState, useTransition } from 'react'
 import { searchAddas, getAddaPublicPage, sendProposal } from '@/app/actions/adda'
 import { CITIES } from '@/lib/constants/interests'
-import type { AddaProfile, MakerAddaProposal } from '@/types/database'
-import type { MakerTier } from '@/types/database'
+import type { AddaProfile, AddaTier, MakerAddaProposal } from '@/types/database'
+import type { UserTier } from '@/types/database'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -17,7 +17,7 @@ type ProposalWithAdda = MakerAddaProposal & {
 interface Props {
   profileId:   string
   defaultCity: string
-  makerTier:   MakerTier
+  makerTier:   UserTier
   proposals:   ProposalWithAdda[]
 }
 
@@ -57,6 +57,33 @@ function formatDate(iso: string) {
 
 function formatInr(paise: number) {
   return '₹' + Math.round(paise / 100).toLocaleString('en-IN')
+}
+
+// ---------------------------------------------------------------------------
+// Tier badge
+// ---------------------------------------------------------------------------
+
+const TIER_META: Record<Exclude<AddaTier, 'open'>, { label: string; icon: string; color: string; border: string; bg: string }> = {
+  verified:  { label: 'Verified',  icon: 'verified',          color: 'var(--wimc-teal)',  border: 'rgba(77,210,177,0.35)',  bg: 'rgba(77,210,177,0.1)' },
+  beloved:   { label: 'Beloved',   icon: 'favorite',          color: 'var(--wimc-amber)', border: 'rgba(245,168,0,0.35)',   bg: 'rgba(245,168,0,0.1)' },
+  legendary: { label: 'Legendary', icon: 'workspace_premium', color: '#a855f7',           border: 'rgba(168,85,247,0.35)',  bg: 'rgba(168,85,247,0.1)' },
+}
+
+function AddaTierBadge({ tier, size = 'sm' }: { tier: AddaTier; size?: 'sm' | 'md' }) {
+  if (tier === 'open') return null
+  const m = TIER_META[tier]
+  return (
+    <span style={{
+      display: 'inline-flex', alignItems: 'center', gap: 3,
+      padding: size === 'sm' ? '2px 7px' : '3px 10px', borderRadius: 9999,
+      background: m.bg, border: `1px solid ${m.border}`, color: m.color,
+      fontSize: size === 'sm' ? 10 : 11, fontWeight: 600,
+      fontFamily: 'var(--font-jetbrains-mono)', textTransform: 'capitalize',
+    }}>
+      <span className="material-symbols-outlined" style={{ fontSize: size === 'sm' ? 11 : 12 }}>{m.icon}</span>
+      {m.label}
+    </span>
+  )
 }
 
 // ---------------------------------------------------------------------------
@@ -101,8 +128,16 @@ function VenueCard({ adda, onSelect }: { adda: AddaProfile; onSelect: (a: AddaPr
             </span>
           )}
         </div>
-        <div style={{ marginTop: 10, fontSize: 11, color: 'var(--wimc-coral)', fontWeight: 600, fontFamily: 'var(--font-jetbrains-mono)' }}>
-          {pricingLabel[adda.pricing_model] ?? adda.pricing_model}
+        <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+          <span style={{ fontSize: 11, color: 'var(--wimc-coral)', fontWeight: 600, fontFamily: 'var(--font-jetbrains-mono)' }}>
+            {pricingLabel[adda.pricing_model] ?? adda.pricing_model}
+          </span>
+          <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+            {adda.trending_until && new Date(adda.trending_until) > new Date() && (
+              <span style={{ fontSize: 10, fontWeight: 700 }}>🔥</span>
+            )}
+            <AddaTierBadge tier={adda.adda_tier} size="sm" />
+          </div>
         </div>
       </div>
     </button>
@@ -162,7 +197,13 @@ function DetailDrawer({
         <div style={{ padding: 24, flex: 1, display: 'flex', flexDirection: 'column', gap: 20 }}>
           {/* Name + city */}
           <div>
-            <div style={{ fontFamily: 'var(--font-syne)', fontWeight: 800, fontSize: 22, marginBottom: 4 }}>{adda.name}</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 4 }}>
+              <div style={{ fontFamily: 'var(--font-syne)', fontWeight: 800, fontSize: 22 }}>{adda.name}</div>
+              <AddaTierBadge tier={adda.adda_tier} size="md" />
+              {adda.trending_until && new Date(adda.trending_until) > new Date() && (
+                <span style={{ fontSize: 12, fontWeight: 700 }}>🔥 Trending</span>
+              )}
+            </div>
             <div style={{ fontSize: 13, color: 'var(--wimc-text-secondary)', fontFamily: 'var(--font-jetbrains-mono)' }}>
               {adda.neighbourhood ? `${adda.neighbourhood}, ` : ''}{adda.city.replace(/_/g, ' ')}
             </div>
@@ -306,7 +347,12 @@ function ProposalModal({
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
           <div>
             <div style={{ fontFamily: 'var(--font-syne)', fontWeight: 700, fontSize: 18 }}>Propose a Booking</div>
-            <div style={{ fontSize: 12, color: 'var(--wimc-text-secondary)', fontFamily: 'var(--font-jetbrains-mono)', marginTop: 2 }}>{adda.name}</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 2 }}>
+              <span style={{ fontSize: 12, color: 'var(--wimc-text-secondary)', fontFamily: 'var(--font-jetbrains-mono)' }}>{adda.name}</span>
+              {(adda.adda_tier === 'beloved' || adda.adda_tier === 'legendary') && (
+                <AddaTierBadge tier={adda.adda_tier} size="sm" />
+              )}
+            </div>
           </div>
           <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--wimc-text-secondary)', display: 'grid', placeItems: 'center' }}>
             <span className="material-symbols-outlined">close</span>
@@ -379,8 +425,15 @@ export default function VenuesClient({ profileId, defaultCity, makerTier, propos
   const [proposalTarget, setProposalTarget] = useState<AddaProfile | null>(null)
   const [proposals, setProposals] = useState(initialProposals)
   const [proposalSuccess, setProposalSuccess] = useState(false)
+  const [tierFilter, setTierFilter] = useState<string>('')
 
-  const isGated = makerTier === 'mohalla'
+  const now = Date.now()
+  const trendingAddas = results.filter((a) => a.trending_until && new Date(a.trending_until).getTime() > now)
+  const filteredResults = tierFilter
+    ? results.filter((a) => a.adda_tier === tierFilter)
+    : results
+
+  const isGated = makerTier === 'wanderer'
 
   function handleSearch() {
     if (!city) { setSearchError('Please select a city.'); return }
@@ -412,7 +465,7 @@ export default function VenuesClient({ profileId, defaultCity, makerTier, propos
         <div style={{ fontFamily: 'var(--font-syne)', fontSize: 20, fontWeight: 700 }}>Find a Venue</div>
         {isGated && (
           <span style={{ fontSize: 11, padding: '4px 12px', borderRadius: 9999, fontFamily: 'var(--font-jetbrains-mono)', fontWeight: 700, background: 'var(--wimc-amber-dim)', color: 'var(--wimc-amber)', border: '1px solid rgba(245,168,0,0.3)' }}>
-            Nukkad+ required
+            Local+ required
           </span>
         )}
       </header>
@@ -424,8 +477,8 @@ export default function VenuesClient({ profileId, defaultCity, makerTier, propos
           <div style={{ background: 'rgba(245,168,0,0.08)', border: '1px solid rgba(245,168,0,0.3)', borderRadius: 14, padding: '16px 20px', display: 'flex', gap: 12, alignItems: 'center' }}>
             <span className="material-symbols-outlined" style={{ color: 'var(--wimc-amber)', fontSize: 22 }}>lock</span>
             <div>
-              <div style={{ fontWeight: 600, fontSize: 13, color: 'var(--wimc-amber)', marginBottom: 2 }}>Venue search is a Nukkad+ feature</div>
-              <div style={{ fontSize: 12, color: 'var(--wimc-text-secondary)' }}>Host more events to reach Nukkad tier and unlock the Adda marketplace.</div>
+              <div style={{ fontWeight: 600, fontSize: 13, color: 'var(--wimc-amber)', marginBottom: 2 }}>Venue search is a Local+ feature</div>
+              <div style={{ fontSize: 12, color: 'var(--wimc-text-secondary)' }}>Host more events to reach Local tier and unlock the Adda marketplace.</div>
             </div>
           </div>
         )}
@@ -470,11 +523,84 @@ export default function VenuesClient({ profileId, defaultCity, makerTier, propos
               No venues found matching your filters. Try a different city or remove the date filter.
             </div>
           ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
-              {results.map((a) => (
-                <VenueCard key={a.id} adda={a} onSelect={setSelectedAdda} />
-              ))}
-            </div>
+            <>
+              {/* Trending banner */}
+              {trendingAddas.length > 0 && (
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+                    <span style={{ fontSize: 16 }}>🔥</span>
+                    <span style={{ fontFamily: 'var(--font-syne)', fontWeight: 700, fontSize: 14, color: 'var(--wimc-text-primary)' }}>
+                      Trending in {city.replace(/_/g, ' ')}
+                    </span>
+                  </div>
+                  <div style={{ display: 'flex', gap: 12, overflowX: 'auto', paddingBottom: 8, scrollbarWidth: 'none' }}>
+                    {trendingAddas.map((a) => (
+                      <button
+                        key={a.id}
+                        onClick={() => setSelectedAdda(a)}
+                        style={{
+                          flexShrink: 0, width: 220, background: 'var(--wimc-bg-elevated)',
+                          border: '1px solid rgba(232,87,42,0.45)', borderRadius: 14,
+                          overflow: 'hidden', textAlign: 'left', cursor: 'pointer',
+                        }}
+                      >
+                        <div style={{ height: 80, background: a.cover_image_url ? `url(${a.cover_image_url}) center/cover` : 'linear-gradient(135deg, rgba(232,112,90,0.3) 0%, rgba(77,210,177,0.15) 100%)' }} />
+                        <div style={{ padding: '10px 12px' }}>
+                          <div style={{ fontFamily: 'var(--font-syne)', fontWeight: 700, fontSize: 13, marginBottom: 3 }}>{a.name}</div>
+                          <div style={{ fontSize: 11, color: 'var(--wimc-text-secondary)', fontFamily: 'var(--font-jetbrains-mono)' }}>
+                            {a.neighbourhood ? `${a.neighbourhood}, ` : ''}{a.city.replace(/_/g, ' ')}
+                          </div>
+                          <div style={{ marginTop: 6, display: 'flex', gap: 4, alignItems: 'center' }}>
+                            <span style={{ fontSize: 11, fontWeight: 700 }}>🔥 Trending</span>
+                            <AddaTierBadge tier={a.adda_tier} size="sm" />
+                          </div>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Tier filter chips */}
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+                <span style={{ fontSize: 11, color: 'var(--wimc-text-muted)', fontFamily: 'var(--font-jetbrains-mono)', textTransform: 'uppercase', letterSpacing: '0.6px' }}>
+                  Filter by tier:
+                </span>
+                {([
+                  { id: '', label: 'All' },
+                  { id: 'verified', label: 'Verified' },
+                  { id: 'beloved', label: 'Beloved' },
+                  { id: 'legendary', label: 'Legendary' },
+                ] as const).map(({ id, label }) => (
+                  <button
+                    key={id || 'all'}
+                    onClick={() => setTierFilter(id)}
+                    style={{
+                      padding: '4px 14px', borderRadius: 9999, fontSize: 12, fontWeight: 600,
+                      fontFamily: 'var(--font-jetbrains-mono)', cursor: 'pointer', border: 'none',
+                      background: tierFilter === id ? 'var(--wimc-coral)' : 'var(--wimc-bg-overlay)',
+                      color: tierFilter === id ? '#fff' : 'var(--wimc-text-secondary)',
+                      transition: 'background 150ms',
+                    }}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+
+              {/* Results grid */}
+              {filteredResults.length === 0 ? (
+                <div style={{ textAlign: 'center', color: 'var(--wimc-text-secondary)', fontSize: 13, padding: '24px 0' }}>
+                  No {tierFilter} venues found. Try a different tier filter.
+                </div>
+              ) : (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
+                  {filteredResults.map((a) => (
+                    <VenueCard key={a.id} adda={a} onSelect={setSelectedAdda} />
+                  ))}
+                </div>
+              )}
+            </>
           )
         )}
 

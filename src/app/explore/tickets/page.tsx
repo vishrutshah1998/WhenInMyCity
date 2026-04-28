@@ -14,7 +14,7 @@ export default async function MyTicketsPage() {
     .eq('auth_user_id', user.id)
     .maybeSingle()
 
-  if (!ep) redirect('/onboarding/explorer')
+  if (!ep) redirect('/onboarding')
 
   const { tickets, error } = await getMyTickets()
 

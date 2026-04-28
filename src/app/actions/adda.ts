@@ -18,7 +18,7 @@ import type {
   Json,
   Event,
   UserProfile,
-  MakerTier,
+  UserTier,
 } from '@/types/database'
 
 // ---------------------------------------------------------------------------
@@ -45,8 +45,8 @@ const SendProposalSchema = z.object({
 export type SendProposalInput = z.infer<typeof SendProposalSchema>
 
 /** Tier ordering for gate checks. */
-const TIER_ORDER: Record<MakerTier, number> = {
-  mohalla: 0, nukkad: 1, chowk: 2, maidan: 3,
+const TIER_ORDER: Record<UserTier, number> = {
+  wanderer: 0, local: 1, lantern: 2, beacon: 3,
 }
 
 // ---------------------------------------------------------------------------
@@ -464,7 +464,7 @@ export async function searchAddas(
   // Enforce Nukkad+ tier gating.
   const { data: maker } = await admin
     .from('user_profiles')
-    .select('maker_tier, user_role')
+    .select('user_tier, user_role')
     .eq('id', user.id)
     .maybeSingle()
 
@@ -472,11 +472,11 @@ export async function searchAddas(
     return { addas: [], error: 'Only Makers can search for Addas.' }
   }
 
-  const tierOrder: Record<string, number> = { mohalla: 0, nukkad: 1, chowk: 2, maidan: 3 }
-  if ((tierOrder[maker.maker_tier] ?? 0) < 1) {
+  const tierOrder: Record<string, number> = { wanderer: 0, local: 1, lantern: 2, beacon: 3 }
+  if ((tierOrder[maker.user_tier] ?? 0) < 1) {
     return {
       addas: [],
-      error: 'Adda search is available from the Nukkad tier onwards. Keep hosting events to unlock this feature!',
+      error: 'Adda search is available from the Local tier onwards. Keep hosting events to unlock this feature!',
     }
   }
 
@@ -589,14 +589,14 @@ export async function sendProposal(
   // Gate: caller must be a Maker at Nukkad+
   const { data: maker } = await admin
     .from('user_profiles')
-    .select('display_name, maker_tier, user_role')
+    .select('display_name, user_tier, user_role')
     .eq('id', user.id)
     .maybeSingle()
 
   if (!maker || maker.user_role !== 'maker') {
     return { proposalId: '', error: 'Only Makers can send venue proposals.' }
   }
-  if ((TIER_ORDER[maker.maker_tier as MakerTier] ?? 0) < TIER_ORDER['nukkad']) {
+  if ((TIER_ORDER[maker.user_tier as UserTier] ?? 0) < TIER_ORDER['local']) {
     return {
       proposalId: '',
       error: 'Adda proposals are available from the Nukkad tier. Keep hosting events to unlock this!',
@@ -651,7 +651,7 @@ export async function sendProposal(
   const { data: inserted, error: insertError } = await admin
     .from('maker_adda_proposals')
     .insert({
-      maker_id:               user.id,
+      maker_id: user.id,
       adda_id:                d.adda_id,
       event_id:               d.event_id ?? null,
       proposed_date:          d.proposed_date,

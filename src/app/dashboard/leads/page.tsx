@@ -16,7 +16,7 @@ export default async function LeadsPage() {
     <LeadsClient
       subscribers={subscribers ?? []}
       total={count ?? 0}
-      tier={profile.maker_tier ?? 'mohalla'}
+      tier={profile.user_tier ?? 'wanderer'}
     />
   )
 }

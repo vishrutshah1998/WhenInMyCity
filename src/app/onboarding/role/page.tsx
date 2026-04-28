@@ -19,11 +19,13 @@ export default async function RolePage() {
   const admin = createAdminClient()
 
   const [{ data: creatorProfile }, { data: explorerProfile }] = await Promise.all([
-    admin.from('user_profiles').select('id').eq('id', user.id).maybeSingle(),
+    admin.from('user_profiles').select('id, creator_type').eq('id', user.id).maybeSingle(),
     admin.from('explorer_profiles').select('id').eq('auth_user_id', user.id).maybeSingle(),
   ])
 
-  if (creatorProfile) redirect('/dashboard')
+  if (creatorProfile) {
+    redirect(creatorProfile.creator_type === 'exploring' ? '/explore' : '/dashboard')
+  }
   if (explorerProfile) redirect('/explore')
 
   return <RolePickerClient />

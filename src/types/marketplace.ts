@@ -12,7 +12,7 @@ import { INTEREST_TAGS } from '@/lib/constants/interests'
 
 export type UserRole = 'maker' | 'explorer'
 
-export type MakerTier = 'mohalla' | 'nukkad' | 'chowk' | 'maidan'
+export type UserTier = 'wanderer' | 'local' | 'lantern' | 'beacon'
 
 export type AddaType =
   | 'cafe'
@@ -48,6 +48,7 @@ export type AvailabilityStatus = 'available' | 'blocked' | 'pending' | 'confirme
 // ---------------------------------------------------------------------------
 
 export interface TierMetrics {
+  // Creator-side metrics
   cumulative_events_hosted: number
   cumulative_unique_attendees: number
   cumulative_gmv_paise: number
@@ -56,28 +57,41 @@ export interface TierMetrics {
   monthly_page_visitors: number
   last_event_hosted_at: string | null
   is_founding_maker: boolean
+  // Explorer-side metrics (Phase 2: populated by tracking hooks)
+  events_attended_count: number
+  rsvps_total_count: number
+  no_shows_count: number
+  reviews_posted_count: number
+  // Beacon gate proxy until Phase 2 subscriber infrastructure
+  whatsapp_subscriber_count: number
 }
 
 export interface TierGap {
-  events?: number
-  attendees?: number
-  gmv?: number       // paise
+  // Explorer gates (Wanderer→Local)
+  eventsAttended?: number
+  noShowRate?: number
+  reviewRate?: number
+  // Creator gates (Local→Lantern, Lantern→Beacon)
+  eventsHosted?: number
   rating?: number
+  cancellationRate?: number
   repeatRate?: number
-  pageVisitors?: number
+  paidTickets?: number
+  activeSubscribers?: number
 }
 
 export interface NextTierProgress {
-  currentTier: MakerTier
-  nextTier: MakerTier | null    // null when already at Maidan
+  currentTier: UserTier
+  nextTier: UserTier | null
   gaps: TierGap
   meetsAll: boolean
 }
 
 export interface TierEvaluationResult {
-  currentTier: MakerTier
-  newTier: MakerTier
+  currentTier: UserTier
+  newTier: UserTier
   tierChanged: boolean
+  recoveryStarted: boolean
   metricsSnapshot: TierMetrics
   nextTierProgress: NextTierProgress
 }

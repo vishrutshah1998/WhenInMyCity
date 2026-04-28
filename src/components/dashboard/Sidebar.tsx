@@ -2,13 +2,13 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import type { MakerTier } from '@/types/database'
+import type { UserTier } from '@/types/database'
 
-const TIER_LABELS: Record<MakerTier, string> = {
-  mohalla: 'Mohalla Tier',
-  nukkad:  'Nukkad Tier',
-  chowk:   'Chowk Tier',
-  maidan:  'Maidan Tier',
+const TIER_LABELS: Record<UserTier, string> = {
+  wanderer: 'Wanderer',
+  local:    'Local',
+  lantern:  'Lantern',
+  beacon:   'Beacon',
 }
 
 interface NavItem {
@@ -48,14 +48,15 @@ const ACCOUNT_NAV: NavItem[] = [
 interface SidebarProps {
   username: string
   displayName: string
-  tier: MakerTier
+  tier: UserTier
   initials: string
   hasAnyEvent: boolean
   hasPublishedEvent: boolean
   hasAnyRsvp: boolean
+  unreadHubMessages?: number
 }
 
-export default function Sidebar({ username, displayName, tier, initials, hasAnyEvent, hasPublishedEvent, hasAnyRsvp }: SidebarProps) {
+export default function Sidebar({ username, displayName, tier, initials, hasAnyEvent, hasPublishedEvent, hasAnyRsvp, unreadHubMessages = 0 }: SidebarProps) {
   const pathname = usePathname()
 
   function isActive(item: NavItem) {
@@ -114,6 +115,12 @@ export default function Sidebar({ username, displayName, tier, initials, hasAnyE
             {GROWTH_NAV.map((item) => (
               <NavLink key={item.href} item={item} active={isActive(item)} />
             ))}
+            {(tier === 'lantern' || tier === 'beacon') && (
+              <NavLink
+                item={{ href: '/hub', icon: 'hub', label: 'Creator Hub', badge: unreadHubMessages > 0 ? unreadHubMessages : undefined }}
+                active={isActive({ href: '/hub', icon: 'hub', label: 'Creator Hub' })}
+              />
+            )}
 
             <SectionLabel>Spaces</SectionLabel>
             {SPACES_NAV.map((item) => (

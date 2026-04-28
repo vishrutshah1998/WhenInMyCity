@@ -36,6 +36,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { fetchPaymentStatus, refundPayment, RazorpayApiError } from '@/lib/razorpay'
 import { triggerPostEventRating } from '@/app/actions/explorer'
 import { sendWhatsAppMessage } from '@/lib/whatsapp'
+import { bumpUserMetric } from '@/lib/metrics'
 
 // ---------------------------------------------------------------------------
 // Auth guard
@@ -261,6 +262,24 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       triggerPostEventRating(ev.id).catch((err) => {
         console.error('[reconcile] triggerPostEventRating failed', { eventId: ev.id }, String(err))
       })
+
+      // Mark unchecked-in attendees as no-shows.
+      const { data: noShows } = await admin
+        .from('rsvps')
+        .select('id, attendee_user_id')
+        .eq('event_id', ev.id)
+        .eq('payment_status', 'captured')
+        .eq('checked_in', false)
+        .not('attendee_user_id', 'is', null)
+
+      for (const rsvp of noShows ?? []) {
+        if (!rsvp.attendee_user_id) continue
+        bumpUserMetric(admin, rsvp.attendee_user_id, 'no_shows_count', 1, 'reconcile:no_shows')
+      }
+
+      if (noShows?.length) {
+        console.info(`[reconcile] recorded ${noShows.length} no-show(s) for event ${ev.id}`)
+      }
     }
   }
 

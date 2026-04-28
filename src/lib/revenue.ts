@@ -3,7 +3,7 @@
 // Three-way split: Maker / Adda / Platform, net of Razorpay processing fees.
 // =============================================================================
 
-import type { MakerTier } from '@/types/database'
+import type { UserTier } from '@/types/database'
 import { REVENUE_SPLITS } from '@/lib/constants/interests'
 
 // ---------------------------------------------------------------------------
@@ -20,7 +20,7 @@ export interface RevenueSplitConfig {
   venueFraction: number    // e.g. 0.15
   platformFraction: number // e.g. 0.10
   payoutDays: number       // T+ days until maker payout
-  makerTier: MakerTier
+  makerTier: UserTier
   hasVenue: boolean
 }
 
@@ -77,7 +77,7 @@ export interface RevenueSplitResult {
  *
  * @example
  * // Nukkad maker, ₹500 ticket, 20 attendees, with venue
- * calculateRevenueSplit(50000, 20, 'nukkad', true)
+ * calculateRevenueSplit(50000, 20, 'local', true)
  * // total = 1,000,000 paise (₹10,000)
  * // maker = 750,000  (75 %)
  * // venue = 150,000  (15 %)
@@ -89,10 +89,10 @@ export interface RevenueSplitResult {
 export function calculateRevenueSplit(
   ticketPricePaise: number,
   quantity: number,
-  makerTier: MakerTier,
+  makerTier: UserTier,
   hasVenue: boolean,
 ): RevenueSplitResult {
-  const split = REVENUE_SPLITS[makerTier] ?? REVENUE_SPLITS['mohalla']
+  const split = REVENUE_SPLITS[makerTier] ?? REVENUE_SPLITS['wanderer']
 
   const totalPaise = ticketPricePaise * quantity
 
@@ -158,7 +158,7 @@ export function calculateRevenueSplit(
  * @param makerTier  Maker's current tier.
  * @returns Estimated payout `Date`.
  */
-export function calculatePayoutDate(eventDate: Date, makerTier: MakerTier): Date {
+export function calculatePayoutDate(eventDate: Date, makerTier: UserTier): Date {
   const payoutDays = REVENUE_SPLITS[makerTier]?.payoutDays ?? 7
   const payout = new Date(eventDate)
   payout.setDate(payout.getDate() + payoutDays)

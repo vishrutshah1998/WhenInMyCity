@@ -41,7 +41,7 @@ export default async function EventSlugPage({
   const [{ data: creator }, { data: reviewHistory }, { rsvp: myRSVP }] = await Promise.all([
     admin
       .from('user_profiles')
-      .select('display_name, avatar_url, username, creator_type, is_verified')
+      .select('display_name, avatar_url, username, creator_type, is_verified, user_tier, lantern_since, beacon_since, tier_recovery_until')
       .eq('id', event.creator_id)
       .maybeSingle(),
     admin

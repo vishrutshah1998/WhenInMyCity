@@ -4,7 +4,7 @@ import { useState, useTransition, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { saveOnboardingScreen } from '@/app/actions/onboarding'
 import { getCategoryConfig, getCategoryColors, CREATOR_CATEGORIES, EXPLORING_OPTION } from '@/lib/constants/categories'
-import { CITIES } from '@/lib/constants/interests'
+import { CITIES, INTEREST_TAGS } from '@/lib/constants/interests'
 import type { CreatorType } from '@/types/database'
 import type { Screen1Data } from '@/types/onboarding'
 
@@ -17,6 +17,14 @@ function loadScreen1(): Screen1Data | null {
   }
 }
 
+const INTEREST_CATEGORIES = [
+  { id: 'performance', label: '🎭 Performance' },
+  { id: 'arts',        label: '🎨 Arts' },
+  { id: 'education',  label: '📚 Education' },
+  { id: 'lifestyle',  label: '🌿 Lifestyle' },
+  { id: 'tech',       label: '💡 Tech' },
+] as const
+
 export default function Screen2Page() {
   const router = useRouter()
 
@@ -25,7 +33,7 @@ export default function Screen2Page() {
   const [city, setCity] = useState('')
   const [citySearch, setCitySearch] = useState('')
   const [cityFocused, setCityFocused] = useState(false)
-  const [offlineActivities, setOfflineActivities] = useState<string[]>([])
+  const [interestTags, setInterestTags] = useState<string[]>([])
   const [error, setError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
 
@@ -36,13 +44,12 @@ export default function Screen2Page() {
       return
     }
     setS1(data)
-    // Restore previous screen-2 data if present
     try {
       const s2 = JSON.parse(sessionStorage.getItem('wimc_s2') || 'null')
       if (s2) {
         if (s2.subTypes) setSubTypes(s2.subTypes)
         if (s2.city) { setCity(s2.city); setCitySearch(s2.city) }
-        if (s2.offlineActivities) setOfflineActivities(s2.offlineActivities)
+        if (s2.interestTags) setInterestTags(s2.interestTags)
       }
     } catch { /* ignore */ }
   }, [router])
@@ -61,12 +68,9 @@ export default function Screen2Page() {
     return CREATOR_CATEGORIES.find((c) => c.id === s1.creatorType)?.label ?? ''
   }, [s1])
 
-  const showOfflineBlock = categoryConfig?.offlineActivities != null
-
   const filteredCities = useMemo(() => {
     const q = citySearch.trim().toLowerCase()
     if (!q) {
-      // Tier-2 focus cities float to the top; rest follow alphabetically
       const tier2 = new Set([
         'jaipur', 'ahmedabad', 'surat', 'vadodara', 'lucknow', 'kanpur',
         'nagpur', 'indore', 'bhopal', 'chandigarh', 'patna', 'visakhapatnam',
@@ -94,15 +98,12 @@ export default function Screen2Page() {
     )
   }
 
-  function toggleOfflineActivity(id: string) {
-    if (id === 'not_right_now') {
-      setOfflineActivities(['not_right_now'])
-      return
-    }
-    setOfflineActivities((prev) => {
-      const without = prev.filter((x) => x !== 'not_right_now')
-      return without.includes(id) ? without.filter((x) => x !== id) : [...without, id]
-    })
+  function toggleInterestTag(id: string) {
+    setInterestTags((prev) =>
+      prev.includes(id)
+        ? prev.filter((t) => t !== id)
+        : prev.length < 5 ? [...prev, id] : prev,
+    )
   }
 
   function handleCitySelect(name: string) {
@@ -112,19 +113,23 @@ export default function Screen2Page() {
 
   function handleContinue() {
     if (categoryConfig && subTypes.length === 0) {
-      setError('Please select at least one option above.')
+      setError('Please select at least one event type.')
       return
     }
     if (!city) {
       setError('Please select your city.')
       return
     }
+    if (interestTags.length < 3) {
+      setError('Pick at least 3 interests to continue.')
+      return
+    }
     setError(null)
 
     startTransition(async () => {
-      const result = await saveOnboardingScreen(2, { subTypes, city, offlineActivities })
+      const result = await saveOnboardingScreen(2, { subTypes, city, interestTags })
       if (result.error) { setError(result.error); return }
-      sessionStorage.setItem('wimc_s2', JSON.stringify({ subTypes, city, offlineActivities }))
+      sessionStorage.setItem('wimc_s2', JSON.stringify({ subTypes, city, interestTags }))
       router.push('/onboarding/screen-3')
     })
   }
@@ -220,7 +225,6 @@ export default function Screen2Page() {
             />
           </div>
 
-          {/* City results — show on focus or while typing */}
           {cityFocused && !city && (
             <div className="bg-surface-container rounded-xl border border-outline-variant/20 overflow-hidden max-h-52 overflow-y-auto shadow-sm">
               {filteredCities.length === 0 ? (
@@ -261,42 +265,45 @@ export default function Screen2Page() {
           )}
         </section>
 
-        {/* 2C — Offline activities (conditional) */}
-        {showOfflineBlock && (
-          <section className="space-y-4">
+        {/* 2C — Interests */}
+        <section className="space-y-4">
+          <div>
             <label className="block text-base font-semibold text-on-surface">
-              What makes you want to step out?
+              What do you step out for?{' '}
+              <span className="text-on-surface-variant font-normal text-sm">— pick 3 to 5</span>
             </label>
-            <div className="flex flex-wrap gap-2">
-              {categoryConfig!.offlineActivities!.map((act) => {
-                const isSelected = offlineActivities.includes(act.id)
-                const isNone = act.id === 'not_right_now'
-                return (
-                  <button
-                    key={act.id}
-                    type="button"
-                    onClick={() => toggleOfflineActivity(act.id)}
-                    className="px-4 py-2 rounded-full text-sm font-medium transition-all duration-150 active:scale-95 border-2"
-                    style={
-                      isSelected
-                        ? {
-                            backgroundColor: isNone ? '#e9ecef' : colors.primary,
-                            borderColor: isNone ? '#adb5bd' : colors.primary,
-                            color: isNone ? '#495057' : '#ffffff',
-                          }
-                        : {
-                            backgroundColor: 'transparent',
-                            borderColor: 'rgba(255, 255, 255, 0.2)',
-                          }
-                    }
-                  >
-                    {act.label}
-                  </button>
-                )
-              })}
+            <p className="text-xs text-on-surface-variant mt-1">{interestTags.length}/5 selected</p>
+          </div>
+
+          {INTEREST_CATEGORIES.map((cat) => (
+            <div key={cat.id} className="space-y-2">
+              <p className="text-xs font-medium text-on-surface-variant tracking-wide">{cat.label}</p>
+              <div className="flex flex-wrap gap-2">
+                {INTEREST_TAGS.filter((t) => t.category === cat.id).map((tag) => {
+                  const isSelected = interestTags.includes(tag.id)
+                  const isDisabled = interestTags.length >= 5 && !isSelected
+                  return (
+                    <button
+                      key={tag.id}
+                      type="button"
+                      onClick={() => !isDisabled && toggleInterestTag(tag.id)}
+                      className="px-3 py-1.5 rounded-full text-sm font-medium transition-all duration-150 active:scale-95 border-2"
+                      style={{
+                        backgroundColor: isSelected ? colors.primary : 'transparent',
+                        borderColor: isSelected ? colors.primary : 'rgba(255, 255, 255, 0.2)',
+                        color: isSelected ? '#ffffff' : 'inherit',
+                        opacity: isDisabled ? 0.4 : 1,
+                        cursor: isDisabled ? 'not-allowed' : 'pointer',
+                      }}
+                    >
+                      {tag.emoji} {tag.label}
+                    </button>
+                  )
+                })}
+              </div>
             </div>
-          </section>
-        )}
+          ))}
+        </section>
 
         {error && <p className="text-error text-sm font-medium">{error}</p>}
       </main>

@@ -4,6 +4,8 @@ import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import type { Event, EventStatus } from '@/types/database'
 import { updateEvent, cancelEvent, extendCapacity, duplicateEvent } from '@/app/actions/events'
+import { generateReferralCode } from '@/app/actions/referral'
+import EventCanvasRenderer from '@/components/events/EventCanvasRenderer'
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -56,9 +58,10 @@ function Section({ title, icon, children }: SectionProps) {
 interface Props {
   event: Event
   rsvpCount: number
+  creatorTier: string
 }
 
-export default function EventManageClient({ event: initial, rsvpCount }: Props) {
+export default function EventManageClient({ event: initial, rsvpCount, creatorTier }: Props) {
   const router = useRouter()
   const [event, setEvent] = useState(initial)
 
@@ -95,6 +98,32 @@ export default function EventManageClient({ event: initial, rsvpCount }: Props) 
   // Duplicate state
   const [dupError, setDupError]       = useState<string | null>(null)
   const [isPendingDup, startDuplicate] = useTransition()
+
+  // Bring-a-Wanderer referral state
+  const isLocalPlus = creatorTier === 'local' || creatorTier === 'lantern' || creatorTier === 'beacon'
+  const [refCode, setRefCode]         = useState<string | null>(null)
+  const [refError, setRefError]       = useState<string | null>(null)
+  const [refCopied, setRefCopied]     = useState(false)
+  const [isPendingRef, startRef]      = useTransition()
+
+  function handleGenerateCode() {
+    setRefError(null)
+    startRef(async () => {
+      const res = await generateReferralCode(event.id)
+      if (res.success && res.code) {
+        setRefCode(res.code)
+      } else {
+        setRefError(res.error ?? 'Failed to generate code.')
+      }
+    })
+  }
+
+  function handleCopyCode() {
+    if (!refCode) return
+    navigator.clipboard.writeText(refCode).catch(() => {})
+    setRefCopied(true)
+    setTimeout(() => setRefCopied(false), 2000)
+  }
 
   // ── handlers ──────────────────────────────────────────────────────────────
 
@@ -432,6 +461,116 @@ export default function EventManageClient({ event: initial, rsvpCount }: Props) 
             <div style={{ fontSize: 15, fontWeight: 700, color: '#EF4444', marginBottom: 6 }}>This event has been cancelled</div>
             <div style={{ fontSize: 14, color: 'var(--wimc-text-secondary)' }}>All refunds have been initiated. Use Duplicate to create a new event.</div>
           </div>
+        )}
+
+        {/* ── Event Poster ──────────────────────────────────────────────────── */}
+        {isPublished && (
+          <Section title="Share Poster" icon="share">
+            <div style={{ fontSize: 13.5, color: 'var(--wimc-text-secondary)', lineHeight: 1.6, marginBottom: 18 }}>
+              Download a ready-to-share 1080×1080 poster for Instagram, WhatsApp Stories, and more.
+            </div>
+            <EventCanvasRenderer
+              data={{
+                title:       event.title,
+                startsAt:    new Date(event.starts_at),
+                venueName:   event.venue_name,
+                ticketPrice: event.ticket_price,
+                creatorTier: creatorTier,
+              }}
+              size={1080}
+              displaySize={260}
+              onAction={(blob) => {
+                const url = URL.createObjectURL(blob)
+                const a = document.createElement('a')
+                a.href = url
+                a.download = `${event.title.replace(/\s+/g, '-').toLowerCase()}-poster.jpg`
+                a.click()
+                URL.revokeObjectURL(url)
+              }}
+              actionLabel="Download Poster"
+            />
+          </Section>
+        )}
+
+        {/* ── Bring a Wanderer ──────────────────────────────────────────────── */}
+        {isPublished && isLocalPlus && (
+          <Section title="Bring a Wanderer" icon="person_add">
+            <div style={{ fontSize: 13.5, color: 'var(--wimc-text-secondary)', lineHeight: 1.6, marginBottom: 18 }}>
+              Invite one Wanderer-tier guest with a free ticket — your way of growing the community. One code per quarter, shareable directly.
+            </div>
+
+            {refCode ? (
+              <div>
+                <div style={{ fontSize: 11, letterSpacing: '1.5px', textTransform: 'uppercase', color: 'var(--wimc-text-muted)', fontFamily: 'var(--font-jetbrains-mono)', marginBottom: 8 }}>
+                  Your referral code
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <div style={{
+                    fontFamily: 'var(--font-jetbrains-mono)', fontSize: 26, fontWeight: 700,
+                    letterSpacing: '0.15em', color: 'var(--wimc-text-primary)',
+                    background: 'var(--wimc-bg-base)', border: '1.5px dashed var(--wimc-border-strong)',
+                    borderRadius: 12, padding: '12px 20px', flex: 1, textAlign: 'center',
+                  }}>
+                    {refCode}
+                  </div>
+                  <button
+                    onClick={handleCopyCode}
+                    style={{
+                      display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
+                      background: refCopied ? 'rgba(77,210,177,0.12)' : 'var(--wimc-bg-overlay)',
+                      border: `1px solid ${refCopied ? 'rgba(77,210,177,0.4)' : 'var(--wimc-border-default)'}`,
+                      borderRadius: 10, padding: '10px 14px', cursor: 'pointer',
+                      color: refCopied ? 'var(--wimc-teal)' : 'var(--wimc-text-secondary)',
+                    }}
+                  >
+                    <span className="material-symbols-outlined" style={{ fontSize: 20 }}>
+                      {refCopied ? 'check' : 'content_copy'}
+                    </span>
+                    <span style={{ fontSize: 10, fontWeight: 600, fontFamily: 'var(--font-dm-sans)' }}>
+                      {refCopied ? 'Copied' : 'Copy'}
+                    </span>
+                  </button>
+                </div>
+                <div style={{ fontSize: 12, color: 'var(--wimc-text-muted)', marginTop: 10 }}>
+                  Share this code with your guest — they enter it in the RSVP flow to claim their free ticket. Expires at quarter end.
+                </div>
+              </div>
+            ) : (
+              <div>
+                {refError && (
+                  <div style={{ fontSize: 13, color: '#F97316', background: 'rgba(249,115,22,0.08)', border: '1px solid rgba(249,115,22,0.2)', borderRadius: 8, padding: '10px 14px', marginBottom: 14 }}>
+                    {refError}
+                  </div>
+                )}
+                <button
+                  onClick={handleGenerateCode}
+                  disabled={isPendingRef}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 8,
+                    background: 'rgba(77,210,177,0.1)', border: '1px solid rgba(77,210,177,0.3)',
+                    color: 'var(--wimc-teal)', borderRadius: 10, padding: '10px 20px',
+                    fontSize: 14, fontWeight: 600, cursor: isPendingRef ? 'wait' : 'pointer',
+                    opacity: isPendingRef ? 0.6 : 1, fontFamily: 'var(--font-dm-sans)',
+                  }}
+                >
+                  <span className="material-symbols-outlined" style={{ fontSize: 18 }}>card_giftcard</span>
+                  {isPendingRef ? 'Generating…' : 'Generate referral code'}
+                </button>
+              </div>
+            )}
+          </Section>
+        )}
+
+        {/* Locked state for Wanderer/Local */}
+        {isPublished && !isLocalPlus && (
+          <Section title="Bring a Wanderer" icon="person_add">
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, opacity: 0.6 }}>
+              <span className="material-symbols-outlined" style={{ fontSize: 20, color: 'var(--wimc-text-muted)' }}>lock</span>
+              <span style={{ fontSize: 13.5, color: 'var(--wimc-text-muted)' }}>
+                Reach Local tier to unlock one free referral code per quarter for this event.
+              </span>
+            </div>
+          </Section>
         )}
 
       </div>

@@ -41,6 +41,26 @@ export function calculateChargeAmount(
 }
 
 // ---------------------------------------------------------------------------
+// TicketTier — Patreon-style fan ticket tier
+// ---------------------------------------------------------------------------
+
+export interface TicketTier {
+  id:          string          // client-generated nanoid for stable keys
+  name:        string          // e.g. "General", "Supporter", "Patron"
+  price_paise: number          // 0 = free tier
+  description: string          // perks / what's included
+  capacity:    number | null   // null = uses event-level capacity
+}
+
+export const TicketTierSchema = z.object({
+  id:          z.string().min(1),
+  name:        z.string().min(1, 'Tier name is required').max(50),
+  price_paise: z.number().int().min(0).max(10_000_000),
+  description: z.string().max(200).default(''),
+  capacity:    z.number().int().min(1).nullable().optional().transform((v) => v ?? null),
+})
+
+// ---------------------------------------------------------------------------
 // CreateEventInput — validated input for createEvent()
 // ---------------------------------------------------------------------------
 
@@ -112,6 +132,25 @@ export const CreateEventSchema = z
       .url('google_maps_url must be a valid URL')
       .optional()
       .or(z.literal('')),
+
+    /**
+     * Optional early-access window. If set, Wanderer-tier explorers cannot RSVP
+     * until this timestamp passes. Local+ explorers bypass the gate.
+     * Must be before starts_at.
+     */
+    early_access_at: z
+      .string()
+      .datetime({ message: 'early_access_at must be an ISO-8601 datetime' })
+      .optional(),
+
+    /**
+     * Fan ticket tiers (Lantern+). When non-empty, overrides flat ticket_price.
+     * ticket_price is still required but set to 0 (or min tier price) by the form.
+     */
+    ticket_tiers: z
+      .array(TicketTierSchema)
+      .max(5, 'Maximum 5 ticket tiers')
+      .optional(),
   })
   .refine(
     (data) => {
@@ -130,6 +169,15 @@ export const CreateEventSchema = z
       return hasLat === hasLng
     },
     { message: 'venue_lat and venue_lng must both be provided or both omitted' },
+  )
+  .refine(
+    (data) => {
+      if (data.early_access_at && data.starts_at) {
+        return new Date(data.early_access_at) < new Date(data.starts_at)
+      }
+      return true
+    },
+    { message: 'early_access_at must be before the event start time', path: ['early_access_at'] },
   )
 
 export type CreateEventInput = z.infer<typeof CreateEventSchema>

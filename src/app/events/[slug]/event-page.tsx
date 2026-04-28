@@ -5,6 +5,7 @@ import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { initiateRSVP, checkRSVPStatus, getConfirmedRSVPToken, confirmRSVPPayment } from '@/app/actions/rsvp'
 import type { MyRSVP } from '@/app/actions/rsvp'
+import { validateReferralCode } from '@/app/actions/referral'
 import type { Event } from '@/types/database'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -15,6 +16,38 @@ interface CreatorProfile {
   username: string
   creator_type: string
   is_verified: boolean
+  user_tier: string | null
+  lantern_since: string | null
+  beacon_since: string | null
+  tier_recovery_until: string | null
+}
+
+function yearsSince(iso: string | null): number {
+  if (!iso) return 0
+  return (Date.now() - new Date(iso).getTime()) / (365.25 * 24 * 60 * 60 * 1000)
+}
+
+function creatorTierBadge(creator: CreatorProfile): { label: string; color: string; bg: string; border: string; icon: string } | null {
+  const inRecovery = creator.user_tier === 'beacon' &&
+    !!creator.tier_recovery_until &&
+    new Date(creator.tier_recovery_until) > new Date()
+
+  if (creator.user_tier === 'beacon') {
+    if (inRecovery) {
+      return { label: 'Beacon · Reviewing', color: 'rgba(168,85,247,0.5)', bg: 'rgba(168,85,247,0.06)', border: 'rgba(168,85,247,0.2)', icon: 'schedule' }
+    }
+    const yrs = yearsSince(creator.beacon_since)
+    return yrs >= 5
+      ? { label: 'Hall of Lights', color: '#a855f7', bg: 'rgba(168,85,247,0.15)', border: 'rgba(168,85,247,0.3)', icon: 'auto_awesome' }
+      : { label: 'Beacon Creator', color: '#a855f7', bg: 'rgba(168,85,247,0.12)', border: 'rgba(168,85,247,0.25)', icon: 'workspace_premium' }
+  }
+  if (creator.user_tier === 'lantern') {
+    const yrs = yearsSince(creator.lantern_since)
+    return yrs >= 3
+      ? { label: 'Lantern Mentor', color: '#F5A800', bg: 'rgba(245,168,0,0.15)', border: 'rgba(245,168,0,0.3)', icon: 'local_fire_department' }
+      : { label: 'Lantern Creator', color: '#F5A800', bg: 'rgba(245,168,0,0.12)', border: 'rgba(245,168,0,0.25)', icon: 'light_mode' }
+  }
+  return null
 }
 
 export interface EventReview {
@@ -121,11 +154,25 @@ export default function EventPage({ event, rsvpCount, spotsLeft, creator, review
   const [sheet, setSheet] = useState<Sheet>(() => myRSVP ? 'confirmed' : 'none')
   const [descExpanded, setDescExpanded] = useState(false)
 
+  // Fan tiers
+  type RawTier = { id: string; name: string; price_paise: number; description: string; capacity: number | null }
+  const fanTiers = (event.ticket_tiers as RawTier[] | null) ?? []
+  const hasFanTiers = fanTiers.length > 0
+  const [selectedTierId, setSelectedTierId] = useState<string>(hasFanTiers ? fanTiers[0].id : '')
+  const selectedTier = hasFanTiers ? (fanTiers.find((t) => t.id === selectedTierId) ?? fanTiers[0]) : null
+
   // Step 1 form
   const [name, setName] = useState('')
   const [phoneDigits, setPhoneDigits] = useState('')
   const [quantity, setQuantity] = useState(1)
   const [step1Error, setStep1Error] = useState<string | null>(null)
+
+  // Referral code
+  const [refExpanded, setRefExpanded] = useState(false)
+  const [refInput, setRefInput] = useState('')
+  const [refApplied, setRefApplied] = useState<string | null>(null)  // validated code
+  const [refError, setRefError] = useState<string | null>(null)
+  const [refPending, startRefValidation] = useTransition()
 
   // Step 2 / confirmed data — pre-populate from server-fetched existing booking
   const [confirmed, setConfirmed] = useState<ConfirmedData | null>(
@@ -147,8 +194,16 @@ export default function EventPage({ event, rsvpCount, spotsLeft, creator, review
   const isPast = new Date(event.starts_at) <= new Date()
   const canBook = event.status === 'published' && !soldOut && !isPast
   const maxQty = Math.min(10, spotsLeft ?? 10)
-  const totalPaise = event.ticket_price * quantity
-  const gstApplies = event.ticket_price >= 50000 // ₹500+ per ticket
+  const effectivePrice = refApplied ? 0 : hasFanTiers ? (selectedTier?.price_paise ?? 0) : event.ticket_price
+  const totalPaise = effectivePrice * quantity
+  const gstApplies = effectivePrice >= 50000 // ₹500+ per ticket
+
+  // For the sticky CTA: show cheapest paid tier as the "from" price
+  const paidTierPrices = hasFanTiers ? fanTiers.map((t) => t.price_paise).filter((p) => p > 0) : []
+  const minPaidPrice = paidTierPrices.length ? Math.min(...paidTierPrices) : event.ticket_price
+  const ctaLabel = hasFanTiers
+    ? (paidTierPrices.length === 0 ? 'RSVP Now — Free' : `Get Tickets — from ${formatPrice(minPaidPrice)}`)
+    : (event.ticket_price === 0 ? 'RSVP Now — Free' : `Get Tickets — ${formatPrice(event.ticket_price)}`)
 
   // ── Share ─────────────────────────────────────────────────────────────────
 
@@ -167,6 +222,22 @@ export default function EventPage({ event, rsvpCount, spotsLeft, creator, review
     }
   }, [event.slug, event.title])
 
+  // ── Referral code apply ────────────────────────────────────────────────────
+
+  function handleApplyReferral() {
+    setRefError(null)
+    if (!refInput.trim()) return
+    startRefValidation(async () => {
+      const result = await validateReferralCode(refInput.trim(), event.id)
+      if (result.valid) {
+        setRefApplied(refInput.trim().toUpperCase())
+        setRefError(null)
+      } else {
+        setRefError(result.error ?? 'Invalid code.')
+      }
+    })
+  }
+
   // ── Step 1 submit ──────────────────────────────────────────────────────────
 
   function handleStep1Submit() {
@@ -183,6 +254,8 @@ export default function EventPage({ event, rsvpCount, spotsLeft, creator, review
         attendeeName: name.trim(),
         attendeePhone: phone,
         quantity,
+        ...(refApplied ? { referralCode: refApplied } : {}),
+        ...(hasFanTiers && selectedTier ? { ticketTierId: selectedTier.id } : {}),
       })
 
       if (result.error) { setStep1Error(result.error); return }
@@ -528,6 +601,21 @@ export default function EventPage({ event, rsvpCount, spotsLeft, creator, review
                   <div>
                     <p className="font-bold text-on-surface leading-tight">Hosted by {creator.display_name}</p>
                     <p className="text-sm text-on-surface-variant">{formatCreatorType(creator.creator_type)}</p>
+                    {(() => {
+                      const meta = creatorTierBadge(creator)
+                      if (!meta) return null
+                      return (
+                        <span
+                          className="inline-flex items-center gap-1 mt-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold"
+                          style={{ background: meta.bg, color: meta.color, border: `1px solid ${meta.border}` }}
+                        >
+                          <span className="material-symbols-outlined" style={{ fontSize: 11, fontVariationSettings: "'FILL' 1" }}>
+                            {meta.icon}
+                          </span>
+                          {meta.label}
+                        </span>
+                      )
+                    })()}
                   </div>
                 </div>
                 <button
@@ -682,7 +770,7 @@ export default function EventPage({ event, rsvpCount, spotsLeft, creator, review
               className="bg-gradient-to-r from-[#AB2E00] to-[#CF4519] text-white rounded-lg px-8 py-4 w-full flex items-center justify-center gap-2 font-headline font-bold text-sm uppercase tracking-wider shadow-[0_-8px_24px_rgba(171,46,0,0.12)] hover:brightness-110 transition-all active:scale-95"
             >
               <span className="material-symbols-outlined">confirmation_number</span>
-              {event.ticket_price === 0 ? 'RSVP Now — Free' : `Get Tickets — ${formatPrice(event.ticket_price)}`}
+              {ctaLabel}
             </button>
           ) : (
             <div className="w-full py-4 text-center text-on-surface-variant text-sm font-semibold bg-surface-container-low rounded-lg">
@@ -708,6 +796,51 @@ export default function EventPage({ event, rsvpCount, spotsLeft, creator, review
                 </header>
 
                 <div className="space-y-6">
+                  {/* Fan Tier Picker */}
+                  {hasFanTiers && (
+                    <div>
+                      <label className="block text-xs font-bold text-on-surface-variant uppercase tracking-widest mb-3 px-1">
+                        Choose Your Tier
+                      </label>
+                      <div className="space-y-2">
+                        {fanTiers.map((tier) => {
+                          const isSelected = selectedTierId === tier.id
+                          return (
+                            <button
+                              key={tier.id}
+                              type="button"
+                              onClick={() => setSelectedTierId(tier.id)}
+                              className={`w-full text-left p-4 rounded-xl border-2 transition-all ${
+                                isSelected
+                                  ? 'border-primary bg-primary/8'
+                                  : 'border-outline-variant/30 bg-surface-container-low hover:border-outline-variant'
+                              }`}
+                            >
+                              <div className="flex items-center justify-between gap-3">
+                                <div className="flex items-center gap-3 min-w-0">
+                                  <div className={`w-4 h-4 rounded-full border-2 shrink-0 flex items-center justify-center ${
+                                    isSelected ? 'border-primary' : 'border-outline-variant'
+                                  }`}>
+                                    {isSelected && <div className="w-2 h-2 rounded-full bg-primary" />}
+                                  </div>
+                                  <div className="min-w-0">
+                                    <span className="font-headline font-bold text-on-surface text-sm">{tier.name}</span>
+                                    {tier.description && (
+                                      <p className="text-xs text-on-surface-variant truncate mt-0.5">{tier.description}</p>
+                                    )}
+                                  </div>
+                                </div>
+                                <span className={`font-headline font-bold text-sm shrink-0 ${isSelected ? 'text-primary' : 'text-on-surface'}`}>
+                                  {tier.price_paise === 0 ? 'Free' : formatPrice(tier.price_paise)}
+                                </span>
+                              </div>
+                            </button>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  )}
+
                   {/* Name */}
                   <div>
                     <label className="block text-xs font-bold text-on-surface-variant uppercase tracking-widest mb-2 px-1">
@@ -768,21 +901,81 @@ export default function EventPage({ event, rsvpCount, spotsLeft, creator, review
                   </div>
 
                   {/* Pricing summary */}
-                  {event.ticket_price > 0 && (
+                  {effectivePrice > 0 && (
                     <div className="grid grid-cols-2 gap-3">
                       <div className="bg-surface-container-low p-4 rounded-xl flex flex-col justify-center">
                         <span className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">Ticket Price</span>
                         <span className="font-headline font-bold text-on-surface">
-                          {formatPrice(event.ticket_price)} <span className="text-xs font-normal">/ person</span>
+                          {formatPrice(effectivePrice)} <span className="text-xs font-normal">/ person</span>
                         </span>
                       </div>
                       <div className="bg-secondary-fixed/30 p-4 rounded-xl flex flex-col justify-center border border-secondary-fixed/20">
                         <span className="text-[10px] font-bold text-on-secondary-fixed-variant uppercase tracking-wider">Total</span>
                         <span className="font-headline font-bold text-secondary">
-                          {quantity} × {formatPrice(event.ticket_price)} = {formatPrice(totalPaise)}
+                          {quantity} × {formatPrice(effectivePrice)} = {formatPrice(totalPaise)}
                           {gstApplies && <span className="text-[10px] font-normal block text-on-surface-variant">+GST</span>}
                         </span>
                       </div>
+                    </div>
+                  )}
+
+                  {/* Referral code */}
+                  {!refApplied ? (
+                    <div>
+                      <button
+                        type="button"
+                        onClick={() => setRefExpanded((v) => !v)}
+                        className="flex items-center gap-1.5 text-xs text-on-surface-variant hover:text-on-surface transition-colors"
+                      >
+                        <span className="material-symbols-outlined" style={{ fontSize: 14 }}>card_giftcard</span>
+                        Have a referral code?
+                        <span className="material-symbols-outlined" style={{ fontSize: 14 }}>
+                          {refExpanded ? 'expand_less' : 'expand_more'}
+                        </span>
+                      </button>
+                      {refExpanded && (
+                        <div className="mt-3 flex gap-2">
+                          <input
+                            type="text"
+                            value={refInput}
+                            onChange={(e) => setRefInput(e.target.value.toUpperCase())}
+                            placeholder="XXXXXX"
+                            maxLength={10}
+                            className="flex-1 bg-surface-container-low border-none rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-outline transition-all text-on-surface placeholder:text-outline-variant font-mono text-sm tracking-widest uppercase"
+                          />
+                          <button
+                            type="button"
+                            onClick={handleApplyReferral}
+                            disabled={refPending || !refInput.trim()}
+                            className="px-4 py-3 rounded-xl bg-surface-container-high text-on-surface text-sm font-semibold disabled:opacity-40 hover:bg-surface-container-highest transition-colors"
+                          >
+                            {refPending ? '…' : 'Apply'}
+                          </button>
+                        </div>
+                      )}
+                      {refError && (
+                        <p className="mt-2 text-error text-xs flex items-center gap-1">
+                          <span className="material-symbols-outlined text-sm">error</span>
+                          {refError}
+                        </p>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-between gap-3 bg-[rgba(77,210,177,0.08)] border border-[rgba(77,210,177,0.25)] rounded-xl px-4 py-3">
+                      <div className="flex items-center gap-2">
+                        <span className="material-symbols-outlined text-[color:var(--wimc-teal)]" style={{ fontSize: 18, fontVariationSettings: "'FILL' 1" }}>check_circle</span>
+                        <div>
+                          <span className="block text-xs font-bold text-[color:var(--wimc-teal)] uppercase tracking-wider">Free ticket applied</span>
+                          <span className="font-mono text-sm text-on-surface tracking-widest">{refApplied}</span>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => { setRefApplied(null); setRefInput(''); setRefExpanded(false) }}
+                        className="text-on-surface-variant hover:text-on-surface transition-colors"
+                      >
+                        <span className="material-symbols-outlined" style={{ fontSize: 18 }}>close</span>
+                      </button>
                     </div>
                   )}
 
@@ -803,14 +996,14 @@ export default function EventPage({ event, rsvpCount, spotsLeft, creator, review
                   >
                     {isPending
                       ? 'Processing…'
-                      : event.ticket_price === 0
+                      : effectivePrice === 0
                         ? 'Confirm RSVP'
                         : `Pay ${formatPrice(totalPaise)}`}
                     {!isPending && <span className="material-symbols-outlined">arrow_forward</span>}
                   </button>
 
                   <p className="text-center text-xs text-on-surface-variant">
-                    By clicking {event.ticket_price === 0 ? 'Confirm' : 'Pay'}, you agree to our{' '}
+                    By clicking {effectivePrice === 0 ? 'Confirm' : 'Pay'}, you agree to our{' '}
                     <span className="underline font-semibold cursor-pointer">Terms of Service</span>
                   </p>
                 </div>

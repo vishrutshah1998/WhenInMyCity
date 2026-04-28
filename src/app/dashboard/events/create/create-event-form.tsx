@@ -4,7 +4,8 @@ import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import { createEvent, publishEvent } from '@/app/actions/events'
-import type { CreateEventInput } from '@/types/events'
+import type { CreateEventInput, TicketTier } from '@/types/events'
+import type { UserTier } from '@/types/database'
 import { CoverImagePanel } from '@/components/events/CoverImagePanel'
 import { ThemePicker } from '@/components/events/ThemePicker'
 import { DateTimePicker } from '@/components/events/DateTimePicker'
@@ -15,6 +16,7 @@ import { InlineExpandRow, StaticRow, PillToggle, ToggleSwitch } from '@/componen
 interface ProfileData {
   display_name: string | null
   avatar_url: string | null
+  user_tier?: UserTier | null
 }
 
 interface VenueRow {
@@ -143,6 +145,29 @@ export default function CreateEventForm({
   const [capacityType, setCapacityType] = useState<'unlimited' | 'limited'>('unlimited')
   const [capacityValue, setCapacityValue] = useState('')
 
+  // Early access
+  const [earlyAccessAt, setEarlyAccessAt] = useState('')
+
+  // Fan tiers (Lantern+)
+  const isLanternPlus = profile?.user_tier === 'lantern' || profile?.user_tier === 'beacon'
+  const [fanTiersEnabled, setFanTiersEnabled] = useState(false)
+  const [fanTiers, setFanTiers] = useState<TicketTier[]>([
+    { id: crypto.randomUUID(), name: 'General', price_paise: 0, description: 'Standard entry', capacity: null },
+  ])
+
+  function addFanTier() {
+    if (fanTiers.length >= 5) return
+    setFanTiers((prev) => [...prev, { id: crypto.randomUUID(), name: '', price_paise: 0, description: '', capacity: null }])
+  }
+
+  function removeFanTier(id: string) {
+    setFanTiers((prev) => prev.filter((t) => t.id !== id))
+  }
+
+  function updateFanTier(id: string, patch: Partial<TicketTier>) {
+    setFanTiers((prev) => prev.map((t) => t.id === id ? { ...t, ...patch } : t))
+  }
+
   // Error
   const [error, setError] = useState<string | null>(null)
 
@@ -172,11 +197,21 @@ export default function CreateEventForm({
       return
     }
 
-    const ticketPricePaise =
-      pricingType === 'free' ? 0 : Math.round(parseFloat(priceRupees || '0') * 100)
-    if (pricingType === 'paid' && ticketPricePaise <= 0) {
-      setError('Please enter a ticket price greater than ₹0.')
-      return
+    let ticketPricePaise = 0
+    if (fanTiersEnabled && isLanternPlus) {
+      // Validate fan tiers — at least one must have a name
+      if (fanTiers.some((t) => !t.name.trim())) {
+        setError('Each ticket tier needs a name.'); return
+      }
+      // Flat ticket_price = min paid tier price (0 if all free)
+      const paidPrices = fanTiers.filter((t) => t.price_paise > 0).map((t) => t.price_paise)
+      ticketPricePaise = paidPrices.length ? Math.min(...paidPrices) : 0
+    } else {
+      ticketPricePaise = pricingType === 'free' ? 0 : Math.round(parseFloat(priceRupees || '0') * 100)
+      if (pricingType === 'paid' && ticketPricePaise <= 0) {
+        setError('Please enter a ticket price greater than ₹0.')
+        return
+      }
     }
 
     const input: CreateEventInput = {
@@ -195,6 +230,8 @@ export default function CreateEventForm({
         capacityType === 'limited' && capacityValue
           ? parseInt(capacityValue, 10)
           : undefined,
+      early_access_at: earlyAccessAt ? new Date(earlyAccessAt).toISOString() : undefined,
+      ticket_tiers:    fanTiersEnabled && isLanternPlus ? fanTiers : undefined,
     }
 
     startTransition(async () => {
@@ -278,6 +315,13 @@ export default function CreateEventForm({
             onThemeChange={setThemeId}
             onUpload={setCustomCoverUrl}
             onClearCustom={() => setCustomCoverUrl(null)}
+            eventData={{
+              title,
+              startsAt: startDate,
+              venueName,
+              ticketPrice: pricingType === 'free' ? 0 : (parseFloat(priceRupees) || 0) * 100,
+              creatorTier: profile?.user_tier ?? null,
+            }}
           />
           <div className="mt-3">
             <ThemePicker
@@ -518,6 +562,83 @@ export default function CreateEventForm({
                 )}
               </InlineExpandRow>
 
+              {/* Fan Ticket Tiers — Lantern+ only */}
+              {isLanternPlus && (
+                <StaticRow
+                  grouped
+                  icon="local_activity"
+                  label="Fan Tiers"
+                  rightContent={
+                    <ToggleSwitch checked={fanTiersEnabled} onChange={() => setFanTiersEnabled((v) => !v)} />
+                  }
+                  note={
+                    fanTiersEnabled ? (
+                      <div className="px-4 pb-4 space-y-3">
+                        <p className="text-xs text-on-surface-variant">
+                          Up to 5 tiers — e.g. Free entry, ₹99 Supporter, ₹299 Patron.
+                          Replaces the flat ticket price above.
+                        </p>
+                        {fanTiers.map((tier, idx) => (
+                          <div key={tier.id} className="rounded-lg border border-white/8 bg-surface-container-low p-3 space-y-2">
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs font-bold text-primary w-5">{idx + 1}</span>
+                              <input
+                                type="text"
+                                placeholder="Tier name (e.g. General)"
+                                value={tier.name}
+                                onChange={(e) => updateFanTier(tier.id, { name: e.target.value })}
+                                className={`${inputCls} flex-1 text-sm`}
+                              />
+                              {fanTiers.length > 1 && (
+                                <button
+                                  type="button"
+                                  onClick={() => removeFanTier(tier.id)}
+                                  className="text-error/60 hover:text-error transition-colors"
+                                >
+                                  <span className="material-symbols-outlined text-[18px]">delete</span>
+                                </button>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <div className="flex items-center bg-surface-container border border-white/5 rounded-lg px-2 py-1.5 flex-1">
+                                <span className="text-sm font-bold text-primary mr-1.5">₹</span>
+                                <input
+                                  type="number"
+                                  min="0"
+                                  step="1"
+                                  placeholder="0"
+                                  value={tier.price_paise === 0 ? '' : String(tier.price_paise / 100)}
+                                  onChange={(e) => updateFanTier(tier.id, { price_paise: Math.round(parseFloat(e.target.value || '0') * 100) })}
+                                  className="flex-1 bg-transparent border-none outline-none text-sm font-bold text-on-surface placeholder:text-outline-variant w-20"
+                                />
+                              </div>
+                              <span className="text-xs text-on-surface-variant">{tier.price_paise === 0 ? 'Free' : ''}</span>
+                            </div>
+                            <input
+                              type="text"
+                              placeholder="Perks / description (optional)"
+                              value={tier.description}
+                              onChange={(e) => updateFanTier(tier.id, { description: e.target.value })}
+                              className={`${inputCls} text-xs`}
+                            />
+                          </div>
+                        ))}
+                        {fanTiers.length < 5 && (
+                          <button
+                            type="button"
+                            onClick={addFanTier}
+                            className="flex items-center gap-1.5 text-xs font-semibold text-primary hover:opacity-80 transition-opacity"
+                          >
+                            <span className="material-symbols-outlined text-[16px]">add_circle</span>
+                            Add tier
+                          </button>
+                        )}
+                      </div>
+                    ) : null
+                  }
+                />
+              )}
+
               {/* Require Approval */}
               <StaticRow
                 grouped
@@ -574,6 +695,50 @@ export default function CreateEventForm({
               </InlineExpandRow>
             </div>
           </div>
+
+              {/* Early Access (Local+ only) */}
+              {profile?.user_tier && profile.user_tier !== 'wanderer' && (
+                <InlineExpandRow
+                  grouped={false}
+                  icon="lock_open"
+                  label="Early Access"
+                  rightContent={
+                    <span className="text-sm text-on-surface-variant">
+                      {earlyAccessAt
+                        ? new Date(earlyAccessAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', hour12: true })
+                        : 'Optional'}
+                    </span>
+                  }
+                >
+                  {(collapse) => (
+                    <div className="px-4 pb-4 pt-4 space-y-3">
+                      <p className="text-xs text-on-surface-variant">
+                        Set a window during which only <strong>Local+</strong> explorers can RSVP. Wanderers get access after this time passes.
+                      </p>
+                      <input
+                        type="datetime-local"
+                        value={earlyAccessAt}
+                        onChange={(e) => setEarlyAccessAt(e.target.value)}
+                        min={new Date().toISOString().slice(0, 16)}
+                        max={startDate ? startDate.toISOString().slice(0, 16) : undefined}
+                        className={inputCls}
+                      />
+                      {earlyAccessAt && (
+                        <button
+                          type="button"
+                          onClick={() => setEarlyAccessAt('')}
+                          className="text-xs text-error/70 hover:text-error transition-colors"
+                        >
+                          Remove early access window
+                        </button>
+                      )}
+                      <button type="button" onClick={collapse} className="text-xs text-primary font-semibold hover:opacity-80 transition-opacity">
+                        Done ✓
+                      </button>
+                    </div>
+                  )}
+                </InlineExpandRow>
+              )}
 
           {/* Error */}
           {error && (

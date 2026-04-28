@@ -8,6 +8,7 @@ const TABS = [
   { href: '/explore/saved',    label: 'Saved',     icon: 'bookmark',             exact: false },
   { href: '/explore/feed',     label: 'Following', icon: 'people',               exact: false },
   { href: '/explore/tickets',  label: 'Tickets',   icon: 'confirmation_number',  exact: false },
+  { href: '/explore/city',     label: 'City',      icon: 'local_fire_department', exact: false },
 ]
 
 export default function ExploreNav() {

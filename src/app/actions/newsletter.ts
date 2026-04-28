@@ -5,7 +5,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { requireAuth } from '@/lib/auth/requireAuth'
 import { meetsMinimumTier } from '@/lib/constants/blocks'
 import { checkNewsletterRateLimit } from '@/lib/ratelimit'
-import type { MakerSubscriber, MakerTier } from '@/types/database'
+import type { MakerSubscriber, UserTier } from '@/types/database'
 
 // ---------------------------------------------------------------------------
 // subscribeToMakerNewsletter
@@ -134,7 +134,7 @@ export async function getMakerSubscribers(): Promise<MakerSubscribersResult> {
   const [profileResult, countResult, recentResult] = await Promise.all([
     admin
       .from('user_profiles')
-      .select('maker_tier')
+      .select('user_tier')
       .eq('id', user.id)
       .maybeSingle(),
 
@@ -153,12 +153,12 @@ export async function getMakerSubscribers(): Promise<MakerSubscribersResult> {
       .limit(10),
   ])
 
-  const currentTier = (profileResult.data?.maker_tier ?? 'mohalla') as MakerTier
+  const currentTier = (profileResult.data?.user_tier ?? 'wanderer') as UserTier
   const total       = countResult.count ?? 0
   const recent      = recentResult.data ?? []
 
   // Export is a Chowk+ feature.
-  if (!meetsMinimumTier(currentTier, 'chowk')) {
+  if (!meetsMinimumTier(currentTier, 'lantern')) {
     return { total, recent, exports: [] }
   }
 

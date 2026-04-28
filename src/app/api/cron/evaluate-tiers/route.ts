@@ -1,9 +1,9 @@
 // =============================================================================
-// WIMC — Maker Tier Evaluation Cron
+// WIMC — User Tier Evaluation Cron
 //
 // Runs daily at 2am IST (20:30 UTC previous day) via Vercel Cron.
-// Fetches all active Makers (last event within 30 days) and re-evaluates
-// their tier against the TIER_THRESHOLDS constants.
+// Evaluates all active users against the unified Wanderer→Local→Lantern→Beacon
+// tier ladder and updates user_profiles accordingly.
 //
 // Protection:
 //   Vercel automatically injects `Authorization: Bearer <CRON_SECRET>` when
@@ -14,8 +14,9 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { evaluateMakerTier, triggerTierCelebration } from '@/app/actions/tier'
-import type { MakerTier } from '@/types/marketplace'
+import { evaluateUserTier, triggerTierCelebration } from '@/app/actions/tier'
+import { sendWhatsAppMessage } from '@/lib/whatsapp'
+import type { UserTier } from '@/types/marketplace'
 
 // ---------------------------------------------------------------------------
 // Auth guard
@@ -35,11 +36,11 @@ function isAuthorized(request: NextRequest): boolean {
 // Tier ordering helper
 // ---------------------------------------------------------------------------
 
-const TIER_ORDER: Record<MakerTier, number> = {
-  mohalla: 0,
-  nukkad:  1,
-  chowk:   2,
-  maidan:  3,
+const TIER_ORDER: Record<UserTier, number> = {
+  wanderer: 0,
+  local:    1,
+  lantern:  2,
+  beacon:   3,
 }
 
 // ---------------------------------------------------------------------------
@@ -53,64 +54,55 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
   const admin = createAdminClient()
 
-  // Fetch Makers who have hosted at least one event in the last 30 days.
-  // These are the accounts most likely to have tier-affecting activity.
-  // Inactive Makers (> 180 days) are still included so downgrade logic can fire.
+  // Evaluate users active in the last 30 days (attended or hosted events).
   const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
 
-  const { data: activeMakers, error: fetchError } = await admin
+  const { data: activeUsers, error: fetchError } = await admin
     .from('user_profiles')
-    .select('id, maker_tier')
-    .eq('user_role', 'maker')
-    .gte('last_event_hosted_at', thirtyDaysAgo)
-    .order('last_event_hosted_at', { ascending: false })
+    .select('id, user_tier, phone')
+    .or(`last_event_hosted_at.gte.${thirtyDaysAgo},events_attended_count.gt.0`)
+    .order('updated_at', { ascending: false })
 
   if (fetchError) {
-    console.error('[evaluate-tiers] failed to fetch makers', fetchError.message)
-    return NextResponse.json({ error: 'Failed to fetch makers' }, { status: 500 })
+    console.error('[evaluate-tiers] failed to fetch users', fetchError.message)
+    return NextResponse.json({ error: 'Failed to fetch users' }, { status: 500 })
   }
 
-  // Also fetch Makers who may be eligible for downgrade (inactive > 180 days).
+  // Also catch Local/Lantern users at risk of downgrade due to inactivity.
   const oneEightyDaysAgo = new Date(Date.now() - 180 * 24 * 60 * 60 * 1000).toISOString()
 
-  const { data: staleMakers } = await admin
+  const { data: staleUsers } = await admin
     .from('user_profiles')
-    .select('id, maker_tier')
-    .eq('user_role', 'maker')
+    .select('id, user_tier, phone')
+    .in('user_tier', ['local', 'lantern'])
     .lt('last_event_hosted_at', oneEightyDaysAgo)
-    // Only look at non-Mohalla tiers (Mohalla can't be downgraded further).
-    .in('maker_tier', ['nukkad', 'chowk'])
-    // Exclude Maidan — never auto-downgraded.
-    .neq('maker_tier', 'maidan')
 
-  // Merge and deduplicate by id.
-  const allMakers = [
-    ...(activeMakers ?? []),
-    ...(staleMakers ?? []).filter(
-      (s) => !(activeMakers ?? []).find((a) => a.id === s.id),
-    ),
-  ]
+  // Merge and deduplicate.
+  const seen = new Set<string>()
+  const allUsers: { id: string; user_tier: string; phone: string | null }[] = []
+  for (const u of [...(activeUsers ?? []), ...(staleUsers ?? [])]) {
+    if (!seen.has(u.id)) { seen.add(u.id); allUsers.push(u) }
+  }
 
-  if (!allMakers.length) {
+  if (!allUsers.length) {
     return NextResponse.json({ evaluated: 0, upgraded: 0, downgraded: 0 })
   }
 
-  console.info(`[evaluate-tiers] evaluating ${allMakers.length} makers`)
+  console.info(`[evaluate-tiers] evaluating ${allUsers.length} users`)
 
-  let upgraded  = 0
+  let upgraded   = 0
   let downgraded = 0
   const errors: string[] = []
 
-  // Process in batches of 10 to avoid overwhelming the DB.
   const BATCH_SIZE = 10
 
-  for (let i = 0; i < allMakers.length; i += BATCH_SIZE) {
-    const batch = allMakers.slice(i, i + BATCH_SIZE)
+  for (let i = 0; i < allUsers.length; i += BATCH_SIZE) {
+    const batch = allUsers.slice(i, i + BATCH_SIZE)
 
     await Promise.all(
-      batch.map(async (maker) => {
+      batch.map(async (user) => {
         try {
-          const result = await evaluateMakerTier(maker.id)
+          const result = await evaluateUserTier(user.id)
 
           if (result.tierChanged) {
             const previousRank = TIER_ORDER[result.currentTier]
@@ -118,45 +110,52 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
             if (newRank > previousRank) {
               upgraded++
-              // Trigger celebration flag so the dashboard can show upgrade UI.
-              await triggerTierCelebration(maker.id)
-
-              // Log the WhatsApp notification message (actual sending TBD).
-              console.info('[evaluate-tiers] UPGRADE — WhatsApp notification queued', {
-                makerId:      maker.id,
-                previousTier: result.currentTier,
-                newTier:      result.newTier,
-                message:      buildUpgradeMessage(result.newTier),
+              await triggerTierCelebration(user.id)
+              console.info('[evaluate-tiers] UPGRADE', {
+                userId: user.id, previousTier: result.currentTier, newTier: result.newTier,
               })
+              // Grant 3 streak freeze tokens when reaching Local tier for the first time.
+              if (result.newTier === 'local' && result.currentTier === 'wanderer') {
+                await admin
+                  .from('user_profiles')
+                  .update({ streak_freeze_tokens: 3 })
+                  .eq('id', user.id)
+              }
+              if (user.phone) {
+                await sendWhatsAppMessage(user.phone, buildUpgradeMessage(result.newTier))
+              }
             } else {
               downgraded++
-
-              console.info('[evaluate-tiers] DOWNGRADE — WhatsApp notification queued', {
-                makerId:      maker.id,
-                previousTier: result.currentTier,
-                newTier:      result.newTier,
-                message:      buildDowngradeMessage(result.newTier),
+              console.info('[evaluate-tiers] DOWNGRADE', {
+                userId: user.id, previousTier: result.currentTier, newTier: result.newTier,
               })
+              if (user.phone) {
+                await sendWhatsAppMessage(user.phone, buildDowngradeMessage(result.newTier))
+              }
+            }
+          } else if (result.recoveryStarted) {
+            console.info('[evaluate-tiers] BEACON RECOVERY START', { userId: user.id })
+            if (user.phone) {
+              await sendWhatsAppMessage(user.phone, buildRecoveryMessage())
             }
           }
         } catch (err) {
           const msg = err instanceof Error ? err.message : String(err)
-          console.error('[evaluate-tiers] error processing maker', { makerId: maker.id, error: msg })
-          errors.push(`maker:${maker.id} — ${msg}`)
+          console.error('[evaluate-tiers] error processing user', { userId: user.id, error: msg })
+          errors.push(`user:${user.id} — ${msg}`)
         }
       }),
     )
   }
 
   const result = {
-    evaluated: allMakers.length,
+    evaluated: allUsers.length,
     upgraded,
     downgraded,
     ...(errors.length ? { errors } : {}),
   }
 
   console.info('[evaluate-tiers] run complete', result)
-
   return NextResponse.json(result)
 }
 
@@ -164,28 +163,31 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 // WhatsApp notification message builders (logged for now)
 // ---------------------------------------------------------------------------
 
-function buildUpgradeMessage(newTier: MakerTier): string {
-  const tierLabels: Record<MakerTier, string> = {
-    mohalla: 'Mohalla',
-    nukkad:  'Nukkad',
-    chowk:   'Chowk',
-    maidan:  'Maidan',
-  }
+const TIER_LABELS: Record<UserTier, string> = {
+  wanderer: 'Wanderer',
+  local:    'Local',
+  lantern:  'Lantern',
+  beacon:   'Beacon',
+}
+
+function buildUpgradeMessage(newTier: UserTier): string {
   return (
-    `🎉 Congratulations! You've been upgraded to the *${tierLabels[newTier]}* tier on WIMC! ` +
-    `Your community is growing — keep hosting amazing events. Open the app to see your new perks.`
+    `🎉 You've been upgraded to *${TIER_LABELS[newTier]}* on WIMC! ` +
+    `Your city is noticing — keep showing up. Open the app to see your new perks.`
   )
 }
 
-function buildDowngradeMessage(newTier: MakerTier): string {
-  const tierLabels: Record<MakerTier, string> = {
-    mohalla: 'Mohalla',
-    nukkad:  'Nukkad',
-    chowk:   'Chowk',
-    maidan:  'Maidan',
-  }
+function buildDowngradeMessage(newTier: UserTier): string {
   return (
-    `Hi! Your WIMC tier has been updated to *${tierLabels[newTier]}* due to inactivity. ` +
-    `Host your next event to climb back up — your community is waiting! 🙌`
+    `Hi! Your WIMC tier has been updated to *${TIER_LABELS[newTier]}*. ` +
+    `Keep attending and hosting events to climb back up — your community is waiting! 🙌`
+  )
+}
+
+function buildRecoveryMessage(): string {
+  return (
+    `⚠️ Your *Beacon* status has entered a 90-day recovery period on WIMC. ` +
+    `Your badge is dimmed and perks are frozen, but your rank won't drop yet. ` +
+    `Meet all Beacon criteria before the window closes to stay at Beacon. Open the app for details.`
   )
 }
