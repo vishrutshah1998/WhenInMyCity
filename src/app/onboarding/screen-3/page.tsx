@@ -10,7 +10,7 @@ import { recommendScheme, getValueAxis, VALUE_CALLOUT } from '@/lib/theme/hsv'
 import type { ValueCluster } from '@/lib/theme/hsv'
 import type { CreatorType } from '@/types/database'
 import type { Screen1Data, Screen2Data } from '@/types/onboarding'
-import { PLATFORM_REGISTRY } from '@/app/onboarding/platforms/page'
+import { PLATFORM_REGISTRY } from '@/lib/platforms'
 
 function normalizeUrl(url: string, platform: string): string {
   if (platform === 'whatsapp') return url
