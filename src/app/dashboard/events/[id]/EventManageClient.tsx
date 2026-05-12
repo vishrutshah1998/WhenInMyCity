@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import type { Event, EventStatus } from '@/types/database'
+import type { TicketTier } from '@/types/events'
 import { updateEvent, cancelEvent, extendCapacity, duplicateEvent } from '@/app/actions/events'
 import { generateReferralCode } from '@/app/actions/referral'
 import EventCanvasRenderer from '@/components/events/EventCanvasRenderer'
@@ -98,6 +99,41 @@ export default function EventManageClient({ event: initial, rsvpCount, creatorTi
   // Duplicate state
   const [dupError, setDupError]       = useState<string | null>(null)
   const [isPendingDup, startDuplicate] = useTransition()
+
+  // Fan tier state (draft-only, Lantern+)
+  const isLanternPlus = creatorTier === 'lantern' || creatorTier === 'beacon'
+  const existingTiers = (event.ticket_tiers as TicketTier[] | null) ?? []
+  const [fanTiersEnabled, setFanTiersEnabled] = useState(existingTiers.length > 0)
+  const [fanTiers, setFanTiers] = useState<TicketTier[]>(
+    existingTiers.length > 0
+      ? existingTiers.map(t => ({ ...t, benefits: t.benefits ?? [] }))
+      : [{ id: crypto.randomUUID(), name: 'General', price_paise: 0, description: 'Standard entry', benefits: [], capacity: null }]
+  )
+
+  function addFanTier() {
+    if (fanTiers.length >= 5) return
+    setFanTiers(prev => [...prev, { id: crypto.randomUUID(), name: '', price_paise: 0, description: '', benefits: [], capacity: null }])
+  }
+  function removeFanTier(id: string) { setFanTiers(prev => prev.filter(t => t.id !== id)) }
+  function updateFanTier(id: string, patch: Partial<TicketTier>) {
+    setFanTiers(prev => prev.map(t => t.id === id ? { ...t, ...patch } : t))
+  }
+
+  const [tierSaveError,   setTierSaveError]   = useState<string | null>(null)
+  const [tierSaveSuccess, setTierSaveSuccess] = useState(false)
+  const [isPendingTiers,  startTiers]         = useTransition()
+
+  function handleSaveTiers() {
+    setTierSaveError(null)
+    setTierSaveSuccess(false)
+    startTiers(async () => {
+      const tiers = fanTiersEnabled ? fanTiers : []
+      const { error } = await updateEvent(event.id, {
+        ticket_tiers: tiers.length > 0 ? (tiers as unknown as import('@/types/database').Json) : null,
+      })
+      if (error) { setTierSaveError(error) } else { setTierSaveSuccess(true) }
+    })
+  }
 
   // Bring-a-Wanderer referral state
   const isLocalPlus = creatorTier === 'local' || creatorTier === 'lantern' || creatorTier === 'beacon'
@@ -328,6 +364,122 @@ export default function EventManageClient({ event: initial, rsvpCount, creatorTi
           </Section>
         )}
 
+        {/* ── Fan Ticket Tiers (draft + Lantern+) ────────────────────────── */}
+        {isDraft && isLanternPlus && (
+          <Section title="Fan Ticket Tiers" icon="confirmation_number">
+            <div style={{ fontSize: 13, color: 'var(--wimc-text-secondary)', marginBottom: 14 }}>
+              Offer Patreon-style tiers — Free entry, ₹99 Supporter, ₹299 Patron — to segment your audience. Replaces the flat ticket price on your event page.
+            </div>
+
+            {/* Enable toggle */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: fanTiersEnabled ? 20 : 0 }}>
+              <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--wimc-text-primary)' }}>Enable fan tiers</span>
+              <button
+                type="button"
+                onClick={() => setFanTiersEnabled(v => !v)}
+                style={{
+                  width: 44, height: 24, borderRadius: 12, border: 'none', cursor: 'pointer',
+                  background: fanTiersEnabled ? 'var(--wimc-coral)' : 'var(--wimc-border-default)',
+                  position: 'relative', transition: 'background 200ms',
+                }}
+              >
+                <span style={{
+                  position: 'absolute', top: 2, left: fanTiersEnabled ? 22 : 2, width: 20, height: 20,
+                  borderRadius: '50%', background: '#fff', transition: 'left 200ms',
+                }} />
+              </button>
+            </div>
+
+            {fanTiersEnabled && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                {fanTiers.map((tier, idx) => (
+                  <div key={tier.id} style={{ background: 'var(--wimc-bg-base)', border: '1px solid var(--wimc-border-default)', borderRadius: 12, padding: 14, display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--wimc-coral)', width: 20 }}>{idx + 1}</span>
+                      <input
+                        type="text"
+                        placeholder="Tier name (e.g. General)"
+                        value={tier.name}
+                        onChange={e => updateFanTier(tier.id, { name: e.target.value })}
+                        style={{ ...inputStyle, flex: 1, fontSize: 13 }}
+                      />
+                      {fanTiers.length > 1 && (
+                        <button type="button" onClick={() => removeFanTier(tier.id)}
+                          style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#EF4444', fontSize: 13, padding: '0 4px' }}>
+                          ✕
+                        </button>
+                      )}
+                    </div>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', background: 'var(--wimc-bg-base)', border: '1px solid var(--wimc-border-default)', borderRadius: 10, padding: '8px 12px', gap: 4 }}>
+                        <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--wimc-coral)' }}>₹</span>
+                        <input
+                          type="number" min="0" step="1" placeholder="0"
+                          value={tier.price_paise === 0 ? '' : tier.price_paise / 100}
+                          onChange={e => updateFanTier(tier.id, { price_paise: Math.round(parseFloat(e.target.value || '0') * 100) })}
+                          style={{ background: 'transparent', border: 'none', outline: 'none', fontSize: 13, fontWeight: 700, color: 'var(--wimc-text-primary)', width: 72, fontFamily: 'var(--font-dm-sans)' }}
+                        />
+                      </div>
+                      <span style={{ fontSize: 12, color: 'var(--wimc-text-secondary)', alignSelf: 'center' }}>{tier.price_paise === 0 ? 'Free' : ''}</span>
+                    </div>
+                    <input
+                      type="text"
+                      placeholder="Tagline (e.g. Standard entry + Q&A access)"
+                      value={tier.description}
+                      onChange={e => updateFanTier(tier.id, { description: e.target.value })}
+                      style={{ ...inputStyle, fontSize: 13 }}
+                    />
+                    <textarea
+                      placeholder={'Benefits (one per line):\nEntry to event\nMeet & greet\nExclusive merch'}
+                      value={tier.benefits.join('\n')}
+                      onChange={e => updateFanTier(tier.id, { benefits: e.target.value.split('\n').map(s => s.trim()).filter(Boolean) })}
+                      rows={3}
+                      style={{ ...inputStyle, fontSize: 12, resize: 'vertical', lineHeight: 1.6 }}
+                    />
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{ fontSize: 12, color: 'var(--wimc-text-secondary)' }}>Capacity</span>
+                      <input
+                        type="number" min="1" placeholder="Unlimited"
+                        value={tier.capacity ?? ''}
+                        onChange={e => updateFanTier(tier.id, { capacity: e.target.value ? parseInt(e.target.value) : null })}
+                        style={{ ...inputStyle, width: 110, fontSize: 13 }}
+                      />
+                      <span style={{ fontSize: 12, color: 'var(--wimc-text-secondary)' }}>spots (blank = event cap)</span>
+                    </div>
+                  </div>
+                ))}
+
+                {fanTiers.length < 5 && (
+                  <button type="button" onClick={addFanTier}
+                    style={{ background: 'none', border: '1px dashed var(--wimc-border-default)', borderRadius: 10, padding: '8px 16px', fontSize: 13, fontWeight: 600, color: 'var(--wimc-coral)', cursor: 'pointer' }}>
+                    + Add tier
+                  </button>
+                )}
+              </div>
+            )}
+
+            {tierSaveError && (
+              <div style={{ marginTop: 12, fontSize: 13, color: '#EF4444', background: 'rgba(239,68,68,0.08)', borderRadius: 8, padding: '8px 12px' }}>{tierSaveError}</div>
+            )}
+            {tierSaveSuccess && (
+              <div style={{ marginTop: 12, fontSize: 13, color: '#22C55E', background: 'rgba(34,197,94,0.08)', borderRadius: 8, padding: '8px 12px' }}>Tiers saved.</div>
+            )}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 16 }}>
+              <button
+                onClick={handleSaveTiers}
+                disabled={isPendingTiers}
+                style={{
+                  background: 'var(--wimc-coral)', color: '#fff', border: 'none',
+                  borderRadius: 10, padding: '10px 24px', fontSize: 14, fontWeight: 700,
+                  cursor: isPendingTiers ? 'wait' : 'pointer', opacity: isPendingTiers ? 0.7 : 1,
+                }}
+              >
+                {isPendingTiers ? 'Saving…' : 'Save Tiers'}
+              </button>
+            </div>
+          </Section>
+        )}
+
         {/* ── Extend capacity ─────────────────────────────────────────────── */}
         {isPublished && (
           <Section title="Extend Capacity" icon="group_add">
@@ -367,6 +519,35 @@ export default function EventManageClient({ event: initial, rsvpCount, creatorTi
             {extendSuccess && (
               <div style={{ fontSize: 13, color: '#22C55E', background: 'rgba(34,197,94,0.08)', borderRadius: 8, padding: '8px 12px', marginTop: 10 }}>{extendSuccess}</div>
             )}
+          </Section>
+        )}
+
+        {/* ── Download Poster (Lantern+) ──────────────────────────────────── */}
+        {isLanternPlus && (
+          <Section title="Event Poster" icon="download">
+            <div style={{ fontSize: 14, color: 'var(--wimc-text-secondary)', marginBottom: 16, lineHeight: 1.6 }}>
+              Download a shareable 1080×1080 poster for this event — ready for Instagram, WhatsApp, and Stories.
+            </div>
+            <EventCanvasRenderer
+              data={{
+                title:       event.title,
+                startsAt:    new Date(event.starts_at),
+                venueName:   event.venue_name,
+                ticketPrice: event.ticket_price,
+                creatorTier: creatorTier,
+              }}
+              size={1080}
+              displaySize={280}
+              onAction={(blob) => {
+                const url = URL.createObjectURL(blob)
+                const a = document.createElement('a')
+                a.href = url
+                a.download = `${event.slug ?? 'event'}-poster.png`
+                a.click()
+                URL.revokeObjectURL(url)
+              }}
+              actionLabel="Download PNG"
+            />
           </Section>
         )}
 

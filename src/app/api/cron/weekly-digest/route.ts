@@ -15,6 +15,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getPersonalisedFeed } from '@/lib/recommendations'
+import { sendWhatsAppMessage } from '@/lib/whatsapp'
 
 // ---------------------------------------------------------------------------
 // Auth guard
@@ -50,7 +51,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   while (hasMore) {
     const { data: explorers, error: fetchError } = await admin
       .from('explorer_profiles')
-      .select('id, auth_user_id, display_name, city, notification_preferences')
+      .select('id, auth_user_id, display_name, city, notification_preferences, interest_tags')
       .range(offset, offset + PAGE_SIZE - 1)
 
     if (fetchError) {
@@ -63,13 +64,28 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       break
     }
 
+    // Batch-fetch phones for all explorers in this page to avoid N+1 queries.
+    const authUserIds = explorers.map((e) => e.auth_user_id)
+    const { data: phoneRows } = await admin
+      .from('user_profiles')
+      .select('id, phone')
+      .in('id', authUserIds)
+
+    const phoneByUserId = new Map<string, string | null>(
+      (phoneRows ?? []).map((r) => [r.id, r.phone])
+    )
+
     for (const explorer of explorers) {
       const prefs = explorer.notification_preferences as
         | { whatsapp?: boolean; digest_frequency?: string }
         | null
 
-      // Skip explorers who don't want a weekly digest.
+      // Skip explorers who don't want a weekly digest or have WhatsApp off.
       if (prefs?.digest_frequency !== 'weekly') continue
+      if (prefs?.whatsapp === false) continue
+
+      const phone = phoneByUserId.get(explorer.auth_user_id) ?? null
+      if (!phone) continue
 
       try {
         const feed = await getPersonalisedFeed(explorer.id, {
@@ -79,21 +95,21 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
         if (!feed.length) continue
 
-        // v2: send via WhatsApp Business API.
-        // For now, log what would be sent.
         const eventSummaries = feed.map((e, i) =>
           `${i + 1}. ${e.title} — ${new Date(e.starts_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })} @ ${e.venue_name}`,
         )
 
-        console.log('[weekly-digest] [v2-whatsapp]', {
-          explorerId: explorer.id,
-          message: [
-            `Hey ${explorer.display_name}! Here's what's happening in ${explorer.city} this week:`,
-            ...eventSummaries,
-            `Explore more: ${process.env.NEXT_PUBLIC_APP_URL ?? ''}/explore`,
-          ].join('\n'),
-        })
+        const message = [
+          `Hey ${explorer.display_name}! Here's your week in ${explorer.city} ✨`,
+          '',
+          ...eventSummaries,
+          '',
+          `Explore more: ${process.env.NEXT_PUBLIC_APP_URL ?? ''}/explore`,
+          '',
+          'Reply STOP to unsubscribe from these digests.',
+        ].join('\n')
 
+        await sendWhatsAppMessage(phone, message)
         processed++
       } catch (err) {
         console.error(

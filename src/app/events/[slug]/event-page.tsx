@@ -47,6 +47,9 @@ function creatorTierBadge(creator: CreatorProfile): { label: string; color: stri
       ? { label: 'Lantern Mentor', color: '#F5A800', bg: 'rgba(245,168,0,0.15)', border: 'rgba(245,168,0,0.3)', icon: 'local_fire_department' }
       : { label: 'Lantern Creator', color: '#F5A800', bg: 'rgba(245,168,0,0.12)', border: 'rgba(245,168,0,0.25)', icon: 'light_mode' }
   }
+  if (creator.user_tier === 'local') {
+    return { label: 'Local Creator', color: '#16a34a', bg: 'rgba(34,197,94,0.12)', border: 'rgba(34,197,94,0.25)', icon: 'where_to_vote' }
+  }
   return null
 }
 
@@ -74,6 +77,7 @@ interface ConfirmedData {
   razorpayOrderId: string | null
   amount: number
   rsvpId: string
+  tierName: string | null
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -155,7 +159,7 @@ export default function EventPage({ event, rsvpCount, spotsLeft, creator, review
   const [descExpanded, setDescExpanded] = useState(false)
 
   // Fan tiers
-  type RawTier = { id: string; name: string; price_paise: number; description: string; capacity: number | null }
+  type RawTier = { id: string; name: string; price_paise: number; description: string; benefits: string[]; capacity: number | null }
   const fanTiers = (event.ticket_tiers as RawTier[] | null) ?? []
   const hasFanTiers = fanTiers.length > 0
   const [selectedTierId, setSelectedTierId] = useState<string>(hasFanTiers ? fanTiers[0].id : '')
@@ -177,7 +181,7 @@ export default function EventPage({ event, rsvpCount, spotsLeft, creator, review
   // Step 2 / confirmed data — pre-populate from server-fetched existing booking
   const [confirmed, setConfirmed] = useState<ConfirmedData | null>(
     myRSVP
-      ? { qrToken: myRSVP.qrToken, isFree: !myRSVP.orderId, razorpayOrderId: myRSVP.orderId, amount: 0, rsvpId: myRSVP.rsvpId }
+      ? { qrToken: myRSVP.qrToken, isFree: !myRSVP.orderId, razorpayOrderId: myRSVP.orderId, amount: 0, rsvpId: myRSVP.rsvpId, tierName: myRSVP.tierName ?? null }
       : null,
   )
 
@@ -260,6 +264,8 @@ export default function EventPage({ event, rsvpCount, spotsLeft, creator, review
 
       if (result.error) { setStep1Error(result.error); return }
 
+      const tierName = hasFanTiers && selectedTier ? selectedTier.name : null
+
       if (result.isFree) {
         setConfirmed({
           qrToken: result.qrToken,
@@ -267,6 +273,7 @@ export default function EventPage({ event, rsvpCount, spotsLeft, creator, review
           razorpayOrderId: null,
           amount: 0,
           rsvpId: result.orderId,
+          tierName,
         })
         setSheet('confirmed')
         return
@@ -279,6 +286,7 @@ export default function EventPage({ event, rsvpCount, spotsLeft, creator, review
         razorpayOrderId: result.razorpayOrderId!,
         amount: result.amount,
         rsvpId: result.orderId,
+        tierName,
       }
       setConfirmed(orderData)
       await openRazorpayCheckout(orderData, name.trim(), phone)
@@ -826,7 +834,17 @@ export default function EventPage({ event, rsvpCount, spotsLeft, creator, review
                                   <div className="min-w-0">
                                     <span className="font-headline font-bold text-on-surface text-sm">{tier.name}</span>
                                     {tier.description && (
-                                      <p className="text-xs text-on-surface-variant truncate mt-0.5">{tier.description}</p>
+                                      <p className="text-xs text-on-surface-variant mt-0.5">{tier.description}</p>
+                                    )}
+                                    {tier.benefits?.length > 0 && (
+                                      <ul className="mt-1.5 space-y-0.5">
+                                        {tier.benefits.map((b, i) => (
+                                          <li key={i} className="flex items-center gap-1.5 text-xs text-on-surface-variant">
+                                            <span className="material-symbols-outlined text-[12px] text-primary shrink-0" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
+                                            {b}
+                                          </li>
+                                        ))}
+                                      </ul>
                                     )}
                                   </div>
                                 </div>
@@ -1234,8 +1252,15 @@ export default function EventPage({ event, rsvpCount, spotsLeft, creator, review
                 </div>
               )}
               <div className="px-6 pb-6 -mt-8 relative z-10">
-                <div className="inline-flex px-3 py-1 bg-secondary-fixed rounded-full text-on-secondary-fixed-variant text-xs font-bold uppercase tracking-wider mb-3">
-                  Confirmed
+                <div className="flex items-center gap-2 flex-wrap mb-3">
+                  <div className="inline-flex px-3 py-1 bg-secondary-fixed rounded-full text-on-secondary-fixed-variant text-xs font-bold uppercase tracking-wider">
+                    Confirmed
+                  </div>
+                  {confirmed.tierName && (
+                    <div className="inline-flex px-3 py-1 bg-primary/10 border border-primary/20 rounded-full text-primary text-xs font-bold">
+                      {confirmed.tierName}
+                    </div>
+                  )}
                 </div>
                 <h3 className="font-headline font-bold text-2xl text-on-surface mb-2">{event.title}</h3>
                 <div className="flex items-center gap-4 text-on-surface-variant text-sm flex-wrap">

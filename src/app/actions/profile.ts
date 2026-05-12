@@ -91,6 +91,8 @@ export interface UpdateProfileInput {
   offline_activities: string[]
   social_links: Record<string, string>
   avatar_url?: string
+  neighbourhood?: string
+  show_city_mastery?: boolean
 }
 
 export async function updateProfile(
@@ -146,6 +148,8 @@ export async function updateProfile(
       offline_activities: input.offline_activities,
       social_links:       socialLinks,
       ...(input.avatar_url ? { avatar_url: input.avatar_url } : {}),
+      neighbourhood:      input.neighbourhood?.trim() || null,
+      ...(input.show_city_mastery !== undefined ? { show_city_mastery: input.show_city_mastery } : {}),
       updated_at:         new Date().toISOString(),
     })
     .eq('id', user.id)
@@ -158,6 +162,35 @@ export async function updateProfile(
 
   revalidatePath('/dashboard')
   revalidatePath(`/${user.id}`)
+  return { error: null }
+}
+
+// ---------------------------------------------------------------------------
+// dismissChecklistTask
+// ---------------------------------------------------------------------------
+
+export async function dismissChecklistTask(taskId: string): Promise<{ error: string | null }> {
+  const supabase = await createClient()
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  if (authError || !user) return { error: 'Not authenticated.' }
+
+  const { data: profile } = await supabase
+    .from('user_profiles')
+    .select('setup_checklist_dismissed')
+    .eq('id', user.id)
+    .single()
+
+  const current: string[] = profile?.setup_checklist_dismissed ?? []
+  if (current.includes(taskId)) return { error: null }
+
+  const { error } = await supabase
+    .from('user_profiles')
+    .update({ setup_checklist_dismissed: [...current, taskId] })
+    .eq('id', user.id)
+
+  if (error) return { error: error.message }
+
+  revalidatePath('/dashboard')
   return { error: null }
 }
 

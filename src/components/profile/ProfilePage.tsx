@@ -28,9 +28,18 @@ const THEME_PRESETS: Record<ProfileTheme['colorScheme'], ThemeTokens> = {
   gulaal:   { bg: '#1A1108', primary: '#E8342A', text: '#F7F2E8', textMuted: 'rgba(247,242,232,0.55)', surface: 'rgba(255,255,255,0.06)' },
   neel:     { bg: '#0B1420', primary: '#F5A800', text: '#F7F2E8', textMuted: 'rgba(247,242,232,0.55)', surface: 'rgba(255,255,255,0.06)' },
   turmeric: { bg: '#1A1108', primary: '#F5A800', text: '#F7F2E8', textMuted: 'rgba(247,242,232,0.55)', surface: 'rgba(255,255,255,0.06)' },
-  steel:    { bg: '#14130E', primary: '#F5A800', text: '#E7E2D8', textMuted: 'rgba(231,226,216,0.55)', surface: 'rgba(255,255,255,0.06)' },
+  steel:    { bg: '#14130E', primary: '#5B8DEF', text: '#E7E2D8', textMuted: 'rgba(231,226,216,0.55)', surface: 'rgba(255,255,255,0.06)' },
   sienna:   { bg: '#1A1108', primary: '#C04A00', text: '#F7F2E8', textMuted: 'rgba(247,242,232,0.55)', surface: 'rgba(255,255,255,0.06)' },
   indigo:   { bg: '#1A1108', primary: '#818CF8', text: '#F7F2E8', textMuted: 'rgba(247,242,232,0.55)', surface: 'rgba(255,255,255,0.06)' },
+  aurora:      { bg: '#0F0B1A', primary: '#D946EF', text: '#f5eeff', textMuted: 'rgba(245,238,255,0.55)', surface: 'rgba(255,255,255,0.06)' },
+  sage:        { bg: '#F4F7F2', primary: '#3D7F53', text: '#1a2e1d', textMuted: 'rgba(26,46,29,0.55)',    surface: 'rgba(0,0,0,0.04)'       },
+  mint:        { bg: '#EFF9F6', primary: '#0C8B6B', text: '#0d2b24', textMuted: 'rgba(13,43,36,0.55)',    surface: 'rgba(0,0,0,0.04)'       },
+  electric:    { bg: '#080C10', primary: '#00E5FF', text: '#E0FAFF', textMuted: 'rgba(224,250,255,0.55)', surface: 'rgba(255,255,255,0.06)' },
+  velvet:      { bg: '#0C0508', primary: '#8B2340', text: '#F5E8EC', textMuted: 'rgba(245,232,236,0.55)', surface: 'rgba(255,255,255,0.06)' },
+  nightforest: { bg: '#060E08', primary: '#7EC8A0', text: '#D4F5E2', textMuted: 'rgba(212,245,226,0.55)', surface: 'rgba(255,255,255,0.06)' },
+  parchment:   { bg: '#F7F3E9', primary: '#4A3728', text: '#2E1F14', textMuted: 'rgba(46,31,20,0.55)',    surface: 'rgba(0,0,0,0.04)'       },
+  gallery:     { bg: '#FAFAFA', primary: '#1A1A1A', text: '#0A0A0A', textMuted: 'rgba(10,10,10,0.55)',    surface: 'rgba(0,0,0,0.04)'       },
+  terracotta:  { bg: '#FAF0E6', primary: '#C4552A', text: '#2C1A0E', textMuted: 'rgba(44,26,14,0.55)',    surface: 'rgba(0,0,0,0.04)'       },
 }
 
 // ---------------------------------------------------------------------------
@@ -90,6 +99,15 @@ const AVATAR_RADIUS: Record<ProfileTheme['colorScheme'], string> = {
   steel:    '4px',
   sienna:   '8px',
   indigo:   '50%',
+  aurora:      '50%',
+  sage:        '16px',
+  mint:        '16px',
+  electric:    '4px',
+  velvet:      '8px',
+  nightforest: '16px',
+  parchment:   '12px',
+  gallery:     '4px',
+  terracotta:  '12px',
 }
 
 // ---------------------------------------------------------------------------

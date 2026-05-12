@@ -1,9 +1,10 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useState, useTransition, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import { createEvent, publishEvent } from '@/app/actions/events'
+import { uploadEventCover } from '@/app/actions/upload'
 import type { CreateEventInput, TicketTier } from '@/types/events'
 import type { UserTier } from '@/types/database'
 import { CoverImagePanel } from '@/components/events/CoverImagePanel'
@@ -110,6 +111,7 @@ export default function CreateEventForm({
   // Cover
   const [themeId, setThemeId] = useState('minimal')
   const [customCoverUrl, setCustomCoverUrl] = useState<string | null>(null)
+  const coverCanvasRef = useRef<HTMLCanvasElement | null>(null)
 
   // Visibility
   const [isPrivate, setIsPrivate] = useState(false)
@@ -152,12 +154,12 @@ export default function CreateEventForm({
   const isLanternPlus = profile?.user_tier === 'lantern' || profile?.user_tier === 'beacon'
   const [fanTiersEnabled, setFanTiersEnabled] = useState(false)
   const [fanTiers, setFanTiers] = useState<TicketTier[]>([
-    { id: crypto.randomUUID(), name: 'General', price_paise: 0, description: 'Standard entry', capacity: null },
+    { id: crypto.randomUUID(), name: 'General', price_paise: 0, description: 'Standard entry', benefits: [], capacity: null },
   ])
 
   function addFanTier() {
     if (fanTiers.length >= 5) return
-    setFanTiers((prev) => [...prev, { id: crypto.randomUUID(), name: '', price_paise: 0, description: '', capacity: null }])
+    setFanTiers((prev) => [...prev, { id: crypto.randomUUID(), name: '', price_paise: 0, description: '', benefits: [], capacity: null }])
   }
 
   function removeFanTier(id: string) {
@@ -214,10 +216,13 @@ export default function CreateEventForm({
       }
     }
 
-    const input: CreateEventInput = {
+    // Snapshot canvas ref and title length before entering startTransition
+    const canvasSnapshot = coverCanvasRef.current
+    const hasCanvasCover = !customCoverUrl && title.trim().length >= 3 && !!canvasSnapshot
+
+    const baseInput: Omit<CreateEventInput, 'cover_image_url'> = {
       title:           title.trim(),
       description:     description.trim() || undefined,
-      cover_image_url: customCoverUrl || undefined,
       venue_name:      venueName.trim(),
       venue_address:   venueAddress.trim(),
       venue_lat:       venueLat ?? undefined,
@@ -235,6 +240,20 @@ export default function CreateEventForm({
     }
 
     startTransition(async () => {
+      // If no custom cover was uploaded but we have a live canvas, upload it now
+      let resolvedCoverUrl: string | undefined = customCoverUrl ?? undefined
+      if (hasCanvasCover && canvasSnapshot) {
+        const blob = await new Promise<Blob | null>((res) => canvasSnapshot.toBlob(res, 'image/jpeg', 0.92))
+        if (blob) {
+          const file = new File([blob], 'generated-cover.jpg', { type: 'image/jpeg' })
+          const fd = new FormData()
+          fd.append('file', file)
+          const uploadResult = await uploadEventCover(fd)
+          if (uploadResult.url) resolvedCoverUrl = uploadResult.url
+        }
+      }
+
+      const input: CreateEventInput = { ...baseInput, cover_image_url: resolvedCoverUrl }
       const result = await createEvent(input)
       if (result.error || !result.event) {
         setError(result.error ?? 'Failed to create event.')
@@ -315,6 +334,7 @@ export default function CreateEventForm({
             onThemeChange={setThemeId}
             onUpload={setCustomCoverUrl}
             onClearCustom={() => setCustomCoverUrl(null)}
+            coverCanvasRef={coverCanvasRef}
             eventData={{
               title,
               startsAt: startDate,
@@ -616,11 +636,30 @@ export default function CreateEventForm({
                             </div>
                             <input
                               type="text"
-                              placeholder="Perks / description (optional)"
+                              placeholder="Tagline (e.g. Standard entry + Q&A access)"
                               value={tier.description}
                               onChange={(e) => updateFanTier(tier.id, { description: e.target.value })}
                               className={`${inputCls} text-xs`}
                             />
+                            <textarea
+                              placeholder={"Benefits (one per line):\nEntry to event\nMeet & greet\nExclusive merch"}
+                              value={tier.benefits.join('\n')}
+                              onChange={(e) => updateFanTier(tier.id, { benefits: e.target.value.split('\n').map(s => s.trim()).filter(Boolean) })}
+                              rows={3}
+                              className={`${inputCls} text-xs resize-none leading-relaxed`}
+                            />
+                            <div className="flex items-center gap-2">
+                              <label className="text-[11px] font-semibold text-on-surface-variant uppercase tracking-wider shrink-0">Capacity</label>
+                              <input
+                                type="number"
+                                min="1"
+                                placeholder="Unlimited"
+                                value={tier.capacity ?? ''}
+                                onChange={(e) => updateFanTier(tier.id, { capacity: e.target.value ? parseInt(e.target.value) : null })}
+                                className={`${inputCls} text-xs w-28`}
+                              />
+                              <span className="text-[11px] text-on-surface-variant">spots (blank = unlimited)</span>
+                            </div>
                           </div>
                         ))}
                         {fanTiers.length < 5 && (

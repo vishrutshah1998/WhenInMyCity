@@ -1,4 +1,3 @@
-import { redirect } from 'next/navigation'
 import { requireAuth } from '@/lib/auth/requireAuth'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { browseEvents } from '@/app/actions/explorer'
@@ -12,7 +11,6 @@ export default async function ExplorePage({
   const { user } = await requireAuth('/explore')
   const admin = createAdminClient()
 
-  // Require an explorer profile — redirect to setup if missing.
   const [{ data: explorerRow }, { data: userProfile }] = await Promise.all([
     admin
       .from('explorer_profiles')
@@ -21,12 +19,10 @@ export default async function ExplorePage({
       .maybeSingle(),
     admin
       .from('user_profiles')
-      .select('attendance_streak, streak_freeze_tokens')
+      .select('attendance_streak, streak_freeze_tokens, setup_checklist_dismissed, events_attended_count, created_at')
       .eq('id', user.id)
       .maybeSingle(),
   ])
-
-  if (!explorerRow) redirect('/onboarding')
 
   const params = await searchParams
 
@@ -42,7 +38,16 @@ export default async function ExplorePage({
     date:         filters.date         || undefined,
   })
 
-  const savedEventIds: string[] = explorerRow.saved_event_ids ?? []
+  const savedEventIds: string[] = explorerRow?.saved_event_ids ?? []
+
+  // Show the onboarding challenge card for new users who haven't attended any events yet
+  const dismissed         = userProfile?.setup_checklist_dismissed ?? []
+  const createdAt         = userProfile?.created_at ?? new Date().toISOString()
+  const daysSinceSignup   = (Date.now() - new Date(createdAt).getTime()) / (1000 * 60 * 60 * 24)
+  const showChallengeCard =
+    !dismissed.includes('challenge_card') &&
+    (userProfile?.events_attended_count ?? 0) === 0 &&
+    daysSinceSignup < 14
 
   return (
     <BrowseClient
@@ -51,6 +56,9 @@ export default async function ExplorePage({
       currentFilters={filters}
       attendanceStreak={userProfile?.attendance_streak ?? 0}
       streakFreezeTokens={userProfile?.streak_freeze_tokens ?? 0}
+      showChallengeCard={showChallengeCard}
+      signupDate={createdAt}
+      city={explorerRow?.city ?? ''}
     />
   )
 }

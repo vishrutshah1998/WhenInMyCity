@@ -532,6 +532,7 @@ export default function HubClient({ currentUserId, currentTier, currentCity, cre
   const [tierFilter, setTierFilter] = useState<'all' | 'lantern' | 'beacon'>('all')
   const [search, setSearch] = useState('')
   const [showOtherCities, setShowOtherCities] = useState(false)
+  const [expandedCities, setExpandedCities] = useState<Set<string>>(new Set())
 
   const isGated = currentTier === 'wanderer' || currentTier === 'local'
 
@@ -739,35 +740,104 @@ export default function HubClient({ currentUserId, currentTier, currentCity, cre
           </div>
 
           {/* ── Other cities ─────────────────────────────────────────────── */}
-          {otherCityCreators.length > 0 && (
-            <div>
-              <button
-                onClick={() => setShowOtherCities((v) => !v)}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: 8, marginBottom: showOtherCities ? 16 : 0,
-                  background: 'none', border: 'none', cursor: 'pointer', padding: 0,
-                  fontFamily: 'var(--font-dm-sans)',
-                }}
-              >
-                <div style={{ flex: 1, height: 1, background: 'var(--wimc-border-subtle)' }} />
-                <span style={{ fontSize: 12, color: 'var(--wimc-text-secondary)', fontWeight: 600, whiteSpace: 'nowrap' }}>
-                  {showOtherCities ? 'Hide' : `Other cities — ${otherCityCreators.length} creator${otherCityCreators.length !== 1 ? 's' : ''}`}
-                </span>
-                <span className="material-symbols-outlined" style={{ fontSize: 16, color: 'var(--wimc-text-muted)' }}>
-                  {showOtherCities ? 'expand_less' : 'expand_more'}
-                </span>
-                <div style={{ flex: 1, height: 1, background: 'var(--wimc-border-subtle)' }} />
-              </button>
+          {otherCityCreators.length > 0 && (() => {
+            // Group by city, sorted by count desc
+            const cityGroups: { city: string; creators: HubCreator[] }[] = []
+            const seen = new Map<string, HubCreator[]>()
+            for (const c of otherCityCreators) {
+              const key = c.city
+              if (!seen.has(key)) seen.set(key, [])
+              seen.get(key)!.push(c)
+            }
+            for (const [city, list] of Array.from(seen.entries()).sort((a, b) => b[1].length - a[1].length)) {
+              cityGroups.push({ city, creators: list })
+            }
 
-              {showOtherCities && (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 18 }}>
-                  {otherCityCreators.map((c) => (
-                    <CreatorCard key={c.id} creator={c} currentUserId={currentUserId} />
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
+            return (
+              <div>
+                {/* Section toggle */}
+                <button
+                  onClick={() => setShowOtherCities((v) => !v)}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 8,
+                    marginBottom: showOtherCities ? 20 : 0,
+                    background: 'none', border: 'none', cursor: 'pointer', padding: 0,
+                    fontFamily: 'var(--font-dm-sans)', width: '100%',
+                  }}
+                >
+                  <div style={{ flex: 1, height: 1, background: 'var(--wimc-border-subtle)' }} />
+                  <span style={{ fontSize: 12, color: 'var(--wimc-text-secondary)', fontWeight: 600, whiteSpace: 'nowrap' }}>
+                    {showOtherCities
+                      ? 'Hide other cities'
+                      : `Other cities — ${cityGroups.length} cit${cityGroups.length !== 1 ? 'ies' : 'y'}, ${otherCityCreators.length} creator${otherCityCreators.length !== 1 ? 's' : ''}`
+                    }
+                  </span>
+                  <span className="material-symbols-outlined" style={{ fontSize: 16, color: 'var(--wimc-text-muted)' }}>
+                    {showOtherCities ? 'expand_less' : 'expand_more'}
+                  </span>
+                  <div style={{ flex: 1, height: 1, background: 'var(--wimc-border-subtle)' }} />
+                </button>
+
+                {/* Per-city sub-sections */}
+                {showOtherCities && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+                    {cityGroups.map(({ city, creators: cityCreators }) => {
+                      const isExpanded = expandedCities.has(city)
+                      function toggle() {
+                        setExpandedCities((prev) => {
+                          const next = new Set(prev)
+                          if (next.has(city)) next.delete(city)
+                          else next.add(city)
+                          return next
+                        })
+                      }
+                      return (
+                        <div key={city}>
+                          {/* City header row */}
+                          <button
+                            onClick={toggle}
+                            style={{
+                              display: 'flex', alignItems: 'center', gap: 8,
+                              background: 'none', border: 'none', cursor: 'pointer',
+                              padding: '0 0 12px', width: '100%',
+                              fontFamily: 'var(--font-dm-sans)',
+                            }}
+                          >
+                            <span className="material-symbols-outlined" style={{ fontSize: 15, color: 'var(--wimc-text-muted)' }}>
+                              location_city
+                            </span>
+                            <span style={{
+                              fontSize: 11, letterSpacing: '1.5px', textTransform: 'uppercase',
+                              color: 'var(--wimc-text-secondary)',
+                              fontFamily: 'var(--font-jetbrains-mono)', fontWeight: 700,
+                            }}>
+                              {city}
+                            </span>
+                            <span style={{ fontSize: 11, color: 'var(--wimc-text-muted)', fontFamily: 'var(--font-dm-sans)' }}>
+                              · {cityCreators.length} creator{cityCreators.length !== 1 ? 's' : ''}
+                            </span>
+                            <span className="material-symbols-outlined" style={{
+                              fontSize: 16, color: 'var(--wimc-text-muted)', marginLeft: 'auto',
+                            }}>
+                              {isExpanded ? 'expand_less' : 'expand_more'}
+                            </span>
+                          </button>
+
+                          {isExpanded && (
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 18 }}>
+                              {cityCreators.map((c) => (
+                                <CreatorCard key={c.id} creator={c} currentUserId={currentUserId} />
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+            )
+          })()}
 
           {baseFiltered.length === 0 && (
             <div style={{ textAlign: 'center', padding: '60px 0', color: 'var(--wimc-text-muted)', fontSize: 14 }}>

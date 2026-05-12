@@ -244,3 +244,161 @@ export async function getAudienceBreakdown(): Promise<AudienceBreakdown> {
 
   return breakdown
 }
+
+// ---------------------------------------------------------------------------
+// getSupportedCreators
+// ---------------------------------------------------------------------------
+
+export interface SupportedCreator {
+  creatorId:    string
+  displayName:  string
+  username:     string
+  avatarUrl:    string | null
+  creatorType:  string
+  userTier:     string
+  rsvpCount:    number
+  supportLevel: string
+}
+
+function supportLevel(count: number): string {
+  if (count >= 11) return 'Superfan'
+  if (count >= 7)  return 'Devoted Fan'
+  if (count >= 4)  return 'Fan'
+  if (count >= 2)  return 'Regular'
+  return 'First Timer'
+}
+
+/**
+ * Returns the top-5 creators this user has attended most (by captured/free RSVP count).
+ * Gated to Local+ — callers should check user_tier before calling.
+ */
+export async function getSupportedCreators(): Promise<SupportedCreator[]> {
+  const { user } = await requireAuth()
+  const admin = createAdminClient()
+
+  // 1. All confirmed RSVPs by this user
+  const { data: rsvps } = await admin
+    .from('rsvps')
+    .select('event_id, payment_status')
+    .eq('attendee_user_id', user.id)
+    .eq('payment_status', 'captured')
+
+  if (!rsvps?.length) return []
+
+  // 2. Resolve event_id → creator_id
+  const eventIds = [...new Set(rsvps.map((r) => r.event_id))]
+  const { data: events } = await admin
+    .from('events')
+    .select('id, creator_id')
+    .in('id', eventIds)
+
+  if (!events?.length) return []
+
+  const eventCreatorMap = new Map(events.map((e) => [e.id, e.creator_id]))
+
+  // 3. Count RSVPs per creator
+  const countMap = new Map<string, number>()
+  for (const r of rsvps) {
+    const cid = eventCreatorMap.get(r.event_id)
+    if (!cid) continue
+    countMap.set(cid, (countMap.get(cid) ?? 0) + 1)
+  }
+
+  // 4. Top 5 creators by count
+  const top5 = [...countMap.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5)
+
+  if (!top5.length) return []
+
+  // 5. Fetch creator profiles
+  const creatorIds = top5.map(([id]) => id)
+  const { data: profiles } = await admin
+    .from('user_profiles')
+    .select('id, display_name, username, avatar_url, creator_type, user_tier')
+    .in('id', creatorIds)
+
+  if (!profiles?.length) return []
+
+  const profileMap = new Map(profiles.map((p) => [p.id, p]))
+
+  const results: SupportedCreator[] = []
+  for (const [creatorId, rsvpCount] of top5) {
+    const p = profileMap.get(creatorId)
+    if (!p) continue
+    results.push({
+      creatorId,
+      displayName:  p.display_name,
+      username:     p.username,
+      avatarUrl:    p.avatar_url ?? null,
+      creatorType:  p.creator_type as string,
+      userTier:     (p.user_tier ?? 'wanderer') as string,
+      rsvpCount,
+      supportLevel: supportLevel(rsvpCount),
+    })
+  }
+  return results
+}
+
+// =============================================================================
+// getCityMasteryMap
+// =============================================================================
+
+export interface MasteryNeighbourhood {
+  label:      string   // neighbourhood name or venue name fallback
+  city:       string
+  eventCount: number
+}
+
+/**
+ * Returns the distinct neighbourhoods (or venue names) where a user has
+ * attended events (payment_status = 'captured'), sorted by event count desc.
+ * Used to render the city mastery sticker grid on the public profile.
+ */
+export async function getCityMasteryMap(profileId: string): Promise<MasteryNeighbourhood[]> {
+  const admin = createAdminClient()
+
+  // Fetch all confirmed RSVPs for this user, joined to events + adda_profiles
+  const { data: rows } = await admin
+    .from('rsvps')
+    .select(`
+      event:events (
+        venue_name,
+        venue_adda_id,
+        adda:adda_profiles ( neighbourhood, city )
+      )
+    `)
+    .eq('attendee_user_id', profileId)
+    .eq('payment_status', 'captured')
+
+  if (!rows?.length) return []
+
+  // Tally events per neighbourhood label
+  const counts = new Map<string, { city: string; count: number }>()
+
+  for (const row of rows) {
+    const event = (row.event as unknown) as {
+      venue_name: string
+      venue_adda_id: string | null
+      adda: { neighbourhood: string | null; city: string } | { neighbourhood: string | null; city: string }[] | null
+    } | null
+    if (!event) continue
+
+    const addaRaw = event.adda
+    const adda = Array.isArray(addaRaw) ? addaRaw[0] ?? null : addaRaw
+    const neighbourhood = adda?.neighbourhood ?? null
+    const label = neighbourhood ?? event.venue_name
+    const city  = adda?.city ?? 'Other'
+
+    const existing = counts.get(label)
+    if (existing) {
+      existing.count += 1
+    } else {
+      counts.set(label, { city, count: 1 })
+    }
+  }
+
+  return Array.from(counts.entries())
+    .map(([label, { city, count }]) => ({ label, city, eventCount: count }))
+    .sort((a, b) => b.eventCount - a.eventCount)
+}

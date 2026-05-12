@@ -11,8 +11,7 @@ import {
   type Screen1Data,
   type Screen2Data,
 } from '@/types/onboarding'
-import { getCategoryColors } from '@/lib/constants/categories'
-import type { SocialPlatform, BlockType, Json } from '@/types/database'
+import type { SocialPlatform, Json } from '@/types/database'
 
 // ---------------------------------------------------------------------------
 // Internal helpers
@@ -160,7 +159,7 @@ export async function completeOnboarding(
       subTypes,
       interestTags,
       socialLinks,
-      themeVariant,
+      colorScheme,
     } = parsed.data
 
     // Authenticate
@@ -172,31 +171,8 @@ export async function completeOnboarding(
 
     const admin = createAdminClient()
 
-    // Guard: already onboarded
-    const { data: existingProfile } = await admin
-      .from('user_profiles')
-      .select('username')
-      .eq('id', user.id)
-      .maybeSingle()
-
-    if (existingProfile) {
-      return { username: existingProfile.username, error: null }
-    }
-
-    // Confirm username still available
-    const { data: taken } = await admin
-      .from('user_profiles')
-      .select('username')
-      .ilike('username', username)
-      .maybeSingle()
-
-    if (taken) {
-      return { ...EMPTY, error: 'That username was just taken. Please choose another.' }
-    }
-
-    // Build page_theme from category + variant
-    const colors = getCategoryColors(creatorType)
-    const pageTheme = buildTheme(colors.primary, colors.secondary, themeVariant)
+    // Build page_theme from selected colorScheme or fall back to creator-type default
+    const pageTheme = buildThemeFromScheme(colorScheme, creatorType)
 
     // Build social_links record for user_profiles
     const socialLinksRecord: Record<string, string> = {}
@@ -207,7 +183,47 @@ export async function completeOnboarding(
       }
     }
 
-    // Insert user_profiles (social_links stored here, rendered as inline icon row)
+    // Check if profile already exists (e.g. re-running onboarding)
+    const { data: existingProfile } = await admin
+      .from('user_profiles')
+      .select('username, avatar_url')
+      .eq('id', user.id)
+      .maybeSingle()
+
+    if (existingProfile) {
+      // Update all mutable fields; preserve username and avatar_url
+      const { error: updateError } = await admin.from('user_profiles').update({
+        display_name: displayName,
+        bio: bio ?? null,
+        city,
+        creator_type: creatorType,
+        interest_tags: interestTags,
+        sub_types: subTypes,
+        offline_activities: [],
+        social_links: socialLinksRecord,
+        page_theme: pageTheme,
+      }).eq('id', user.id)
+
+      if (updateError) {
+        console.error('[completeOnboarding] profile update', updateError.message)
+        return { ...EMPTY, error: 'Failed to update your profile. Please try again.' }
+      }
+
+      return { username: existingProfile.username, error: null }
+    }
+
+    // Confirm username still available for new profiles
+    const { data: taken } = await admin
+      .from('user_profiles')
+      .select('username')
+      .ilike('username', username)
+      .maybeSingle()
+
+    if (taken) {
+      return { ...EMPTY, error: 'That username was just taken. Please choose another.' }
+    }
+
+    // Insert new profile
     const { error: profileError } = await admin.from('user_profiles').insert({
       id: user.id,
       username,
@@ -230,30 +246,6 @@ export async function completeOnboarding(
         return { ...EMPTY, error: 'That username was just taken. Please choose another.' }
       }
       return { ...EMPTY, error: 'Failed to create your profile. Please try again.' }
-    }
-
-    // Insert text_bio block
-    type BlockInsert = {
-      profile_id: string
-      block_type: BlockType
-      position: number
-      is_visible: boolean
-      config: Json
-    }
-
-    const blocks: BlockInsert[] = [
-      {
-        profile_id: user.id,
-        block_type: 'text_bio',
-        position: 0,
-        is_visible: true,
-        config: { body: bio ?? '' },
-      },
-    ]
-
-    const { error: blocksError } = await admin.from('page_blocks').insert(blocks)
-    if (blocksError) {
-      console.error('[completeOnboarding] default blocks', blocksError.message)
     }
 
     // Also create an explorer profile so the user can discover events
@@ -359,32 +351,46 @@ export async function uploadOnboardingAvatar(
 }
 
 // ---------------------------------------------------------------------------
-// Internal: build page_theme object from category colors + variant
+// Internal: build page_theme from colorScheme + creator type
 // ---------------------------------------------------------------------------
 
-function buildTheme(
-  primary: string,
-  secondary: string,
-  variant: 'soft' | 'bold' | 'dark',
-): Json {
-  switch (variant) {
-    case 'soft':
-      return { color_primary: primary, color_bg: secondary, background_type: 'solid' }
-    case 'bold':
-      return { color_primary: '#ffffff', color_bg: primary, background_type: 'solid' }
-    case 'dark': {
-      const darkened = darkenHex(primary, 0.4)
-      return { color_primary: primary, color_bg: darkened, background_type: 'solid' }
-    }
-  }
+// Maps every color scheme to its recommended ProfileTheme preset.
+const SCHEME_PRESETS: Record<string, Json> = {
+  default:  { colorScheme: 'default',  fontFamily: 'archivo-black', backgroundStyle: 'solid' },
+  midnight: { colorScheme: 'midnight', fontFamily: 'inter',         backgroundStyle: 'aurora',   auroraStyle: 'nebula' },
+  ocean:    { colorScheme: 'ocean',    fontFamily: 'space-grotesk', backgroundStyle: 'aurora',   auroraStyle: 'mesh' },
+  forest:   { colorScheme: 'forest',   fontFamily: 'playfair',      backgroundStyle: 'pattern',  patternStyle: 'dots', patternColorCombo: 'cool' },
+  blush:    { colorScheme: 'blush',    fontFamily: 'playfair',      backgroundStyle: 'solid' },
+  sand:     { colorScheme: 'sand',     fontFamily: 'inter',         backgroundStyle: 'solid' },
+  pista:    { colorScheme: 'pista',    fontFamily: 'archivo-black', backgroundStyle: 'solid',    noiseBg: true, heavyBorders: true },
+  gulaal:   { colorScheme: 'gulaal',   fontFamily: 'archivo-black', backgroundStyle: 'solid',    noiseBg: true },
+  neel:     { colorScheme: 'neel',     fontFamily: 'archivo-black', backgroundStyle: 'solid' },
+  turmeric: { colorScheme: 'turmeric', fontFamily: 'archivo-black', backgroundStyle: 'solid',    noiseBg: true, heavyBorders: true },
+  steel:    { colorScheme: 'steel',    fontFamily: 'space-grotesk', backgroundStyle: 'solid',    noiseBg: true, heavyBorders: true },
+  sienna:   { colorScheme: 'sienna',   fontFamily: 'inter',         backgroundStyle: 'solid' },
+  indigo:   { colorScheme: 'indigo',   fontFamily: 'archivo-black', backgroundStyle: 'solid',    noiseBg: true },
+  aurora:   { colorScheme: 'aurora',   fontFamily: 'playfair',      backgroundStyle: 'aurora',   auroraStyle: 'nebula' },
+  sage:     { colorScheme: 'sage',     fontFamily: 'inter',         backgroundStyle: 'solid' },
+  mint:     { colorScheme: 'mint',     fontFamily: 'space-grotesk', backgroundStyle: 'solid' },
 }
 
-function darkenHex(hex: string, amount: number): string {
-  const n = parseInt(hex.replace('#', ''), 16)
-  const r = Math.max(0, Math.round(((n >> 16) & 0xff) * (1 - amount)))
-  const g = Math.max(0, Math.round(((n >> 8) & 0xff) * (1 - amount)))
-  const b = Math.max(0, Math.round((n & 0xff) * (1 - amount)))
-  return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`
+// Default scheme per V2 creator type.
+const CREATOR_TYPE_DEFAULT_SCHEME: Record<string, string> = {
+  music:                  'indigo',
+  comedy_theatre:         'turmeric',
+  art_design:             'gulaal',
+  video_content:          'steel',
+  teaching_coaching:      'pista',
+  lifestyle_wellness:     'sienna',
+  business_brand:         'sand',
+  professional_portfolio: 'steel',
+  community_impact:       'forest',
+  exploring:              'default',
+}
+
+function buildThemeFromScheme(colorScheme: string | undefined, creatorType: string): Json {
+  const scheme = colorScheme || CREATOR_TYPE_DEFAULT_SCHEME[creatorType] || 'default'
+  return SCHEME_PRESETS[scheme] ?? SCHEME_PRESETS['default']
 }
 
 function normalizeUrl(url: string, platform: SocialPlatform): string {

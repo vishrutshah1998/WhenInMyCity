@@ -58,7 +58,7 @@ export type Screen1Data = z.infer<typeof Screen1Schema>
 export const Screen2Schema = z.object({
   subTypes: z.array(z.string().min(1)).default([]),
   city: z.string().min(1, 'Please select a city'),
-  interestTags: z.array(z.string()).min(3, 'Pick at least 3 interests').max(5, 'Pick at most 5 interests'),
+  interestTags: z.array(z.string()).min(3, 'Pick at least 3 interests'),
 })
 
 export type Screen2Data = z.infer<typeof Screen2Schema>
@@ -77,10 +77,17 @@ export const SocialLinkEntrySchema = z.object({
   url: z.string().url('Please enter a valid URL').or(z.string().startsWith('+91', 'Enter a valid WhatsApp number')),
 })
 
+const COLOR_SCHEME_IDS = [
+  'default', 'midnight', 'ocean', 'forest', 'blush', 'sand',
+  'pista', 'gulaal', 'neel', 'turmeric', 'steel', 'sienna', 'indigo',
+  'aurora', 'sage', 'mint',
+  'electric', 'velvet', 'nightforest', 'parchment', 'gallery', 'terracotta',
+] as const
+
 export const Screen3Schema = z.object({
   bio: z.string().max(160, 'Bio must be at most 160 characters').optional(),
   socialLinks: z.array(SocialLinkEntrySchema).default([]),
-  themeVariant: z.enum(['soft', 'bold', 'dark']).default('soft'),
+  colorScheme: z.enum(COLOR_SCHEME_IDS).optional(),
 })
 
 export type Screen3Data = z.infer<typeof Screen3Schema>
@@ -97,11 +104,11 @@ export const CompleteOnboardingSchema = z.object({
   // Screen 2
   subTypes: z.array(z.string().min(1)).default([]),
   city: z.string().min(1),
-  interestTags: z.array(z.string()).min(3).max(5),
+  interestTags: z.array(z.string()).min(3),
   // Screen 3
   bio: z.string().max(160).optional(),
   socialLinks: z.array(SocialLinkEntrySchema).default([]),
-  themeVariant: z.enum(['soft', 'bold', 'dark']).default('soft'),
+  colorScheme: z.enum(COLOR_SCHEME_IDS).optional(),
 })
 
 export type CompleteOnboardingData = z.infer<typeof CompleteOnboardingSchema> & {

@@ -40,6 +40,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
         hasAnyEvent={hasAnyEvent}
         hasPublishedEvent={hasPublishedEvent}
         hasAnyRsvp={hasAnyRsvp}
+        eventsHostedCount={profile.cumulative_events_hosted ?? 0}
         unreadHubMessages={unreadHub}
       />
       <div style={{ marginLeft: 'var(--wimc-sidebar-w)', flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>

@@ -6,13 +6,21 @@ export default async function BookingsPage() {
   const { profile } = await requireProfile()
   const supabase = await createClient()
 
-  const { data: events } = await supabase
-    .from('events')
-    .select('id, title, starts_at, status, ticket_price')
-    .eq('creator_id', profile.id)
-    .order('starts_at', { ascending: false })
+  const [eventsResult, inquiriesResult] = await Promise.all([
+    supabase
+      .from('events')
+      .select('id, title, starts_at, status, ticket_price')
+      .eq('creator_id', profile.id)
+      .order('starts_at', { ascending: false }),
+    supabase
+      .from('booking_inquiries')
+      .select('id, requester_name, requester_email, event_type, message, status, created_at')
+      .eq('creator_id', profile.id)
+      .order('created_at', { ascending: false }),
+  ])
 
-  const eventIds = (events ?? []).map((e) => e.id)
+  const events = eventsResult.data ?? []
+  const eventIds = events.map((e) => e.id)
 
   const { data: rsvps } = eventIds.length > 0
     ? await supabase
@@ -23,5 +31,11 @@ export default async function BookingsPage() {
         .order('created_at', { ascending: false })
     : { data: [] }
 
-  return <BookingsClient events={events ?? []} rsvps={rsvps ?? []} />
+  return (
+    <BookingsClient
+      events={events}
+      rsvps={rsvps ?? []}
+      inquiries={inquiriesResult.data ?? []}
+    />
+  )
 }

@@ -1,5 +1,6 @@
 'use client'
 
+import { Fragment } from 'react'
 import Link from 'next/link'
 import type { HourDayCell } from '@/lib/adda/mock/analyticsData'
 import { demandIntensity, DEMAND_GRID_MAX, DEMAND_PEAK_DESCRIPTION } from '@/lib/adda/mock/analyticsData'
@@ -119,10 +120,9 @@ export default function DemandHeatmap({ grid, venueSlug }: Props) {
 
           {/* Data rows: hour label + 7 day cells */}
           {HOURS.map((hourLabel, hour) => (
-            <>
+            <Fragment key={hour}>
               {/* Hour label */}
               <div
-                key={`lbl-${hour}`}
                 style={{
                   fontSize: 9,
                   color: 'var(--adda-text-muted)',
@@ -166,7 +166,7 @@ export default function DemandHeatmap({ grid, venueSlug }: Props) {
                   </div>
                 )
               })}
-            </>
+            </Fragment>
           ))}
         </div>
       </div>

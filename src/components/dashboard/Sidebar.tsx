@@ -1,8 +1,10 @@
 'use client'
 
+import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import type { UserTier } from '@/types/database'
+import { WimcLogo } from '@/components/WimcLogo'
 
 const TIER_LABELS: Record<UserTier, string> = {
   wanderer: 'Wanderer',
@@ -26,6 +28,7 @@ const CORE_NAV: NavItem[] = [
   { href: '/dashboard/events', icon: 'event',     label: 'Events' },
 ]
 
+const EARN_ITEM: NavItem     = { href: '/dashboard/earn',     icon: 'sell',                label: 'Earn' }
 const BOOKINGS_ITEM: NavItem = { href: '/dashboard/bookings', icon: 'calendar_today',     label: 'Bookings' }
 const TICKETS_ITEM: NavItem  = { href: '/dashboard/tickets',  icon: 'confirmation_number', label: 'Tickets' }
 
@@ -37,9 +40,11 @@ const GROWTH_NAV: NavItem[] = [
 ]
 
 const SPACES_NAV: NavItem[] = [
-  { href: '/dashboard/venues', icon: 'apartment',         label: 'Venues' },
-  { href: '/dashboard/tier',   icon: 'workspace_premium', label: 'Tier Progress' },
+  { href: '/dashboard/venues',    icon: 'apartment',         label: 'Venues' },
+  { href: '/dashboard/tier',      icon: 'workspace_premium', label: 'Tier Progress' },
 ]
+
+const COMMUNITY_ITEM: NavItem = { href: '/dashboard/community', icon: 'diversity_3', label: 'My Circles' }
 
 const ACCOUNT_NAV: NavItem[] = [
   { href: '/dashboard/profile', icon: 'manage_accounts', label: 'Profile Settings' },
@@ -53,11 +58,14 @@ interface SidebarProps {
   hasAnyEvent: boolean
   hasPublishedEvent: boolean
   hasAnyRsvp: boolean
+  eventsHostedCount: number
   unreadHubMessages?: number
 }
 
-export default function Sidebar({ username, displayName, tier, initials, hasAnyEvent, hasPublishedEvent, hasAnyRsvp, unreadHubMessages = 0 }: SidebarProps) {
+export default function Sidebar({ username, displayName, tier, initials, hasAnyEvent, hasPublishedEvent, hasAnyRsvp, eventsHostedCount, unreadHubMessages = 0 }: SidebarProps) {
   const pathname = usePathname()
+  const [moreOpen, setMoreOpen] = useState(false)
+  const isNewCreator = eventsHostedCount < 3
 
   function isActive(item: NavItem) {
     if (item.exact) return pathname === item.href
@@ -81,21 +89,13 @@ export default function Sidebar({ username, displayName, tier, initials, hasAnyE
       {/* Brand */}
       <div style={{ padding: '0 20px 28px', borderBottom: '1px solid var(--wimc-border-subtle)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <WimcLogo size="sm" color="white" />
           <div style={{
-            width: 32, height: 32, background: 'var(--wimc-coral)',
-            borderRadius: 8, display: 'grid', placeItems: 'center',
+            fontSize: 10, fontWeight: 500, color: 'var(--wimc-coral)',
+            letterSpacing: '1.5px', textTransform: 'uppercase',
+            fontFamily: 'var(--font-jetbrains-mono)',
           }}>
-            <span style={{ fontSize: 16, fontWeight: 900, color: '#fff', fontFamily: 'var(--font-syne)' }}>W</span>
-          </div>
-          <div>
-            <div style={{ fontFamily: 'var(--font-syne)', fontWeight: 800, fontSize: 18 }}>WIMC</div>
-            <div style={{
-              fontSize: 10, fontWeight: 500, color: 'var(--wimc-coral)',
-              letterSpacing: '1.5px', textTransform: 'uppercase', marginTop: 3,
-              fontFamily: 'var(--font-jetbrains-mono)',
-            }}>
-              {TIER_LABELS[tier]}
-            </div>
+            {TIER_LABELS[tier]}
           </div>
         </div>
       </div>
@@ -106,26 +106,83 @@ export default function Sidebar({ username, displayName, tier, initials, hasAnyE
         {CORE_NAV.map((item) => (
           <NavLink key={item.href} item={item} active={isActive(item)} />
         ))}
-        {hasAnyEvent && <NavLink item={BOOKINGS_ITEM} active={isActive(BOOKINGS_ITEM)} />}
-        {hasAnyRsvp  && <NavLink item={TICKETS_ITEM}  active={isActive(TICKETS_ITEM)} />}
+        <NavLink item={EARN_ITEM} active={isActive(EARN_ITEM)} />
 
-        {hasPublishedEvent && (
+        {isNewCreator ? (
+          /* Progressive disclosure: new creators see "More tools" collapsible */
           <>
-            <SectionLabel>Growth</SectionLabel>
-            {GROWTH_NAV.map((item) => (
-              <NavLink key={item.href} item={item} active={isActive(item)} />
-            ))}
-            {(tier === 'lantern' || tier === 'beacon') && (
-              <NavLink
-                item={{ href: '/hub', icon: 'hub', label: 'Creator Hub', badge: unreadHubMessages > 0 ? unreadHubMessages : undefined }}
-                active={isActive({ href: '/hub', icon: 'hub', label: 'Creator Hub' })}
-              />
-            )}
+            {/* More tools toggle */}
+            <button
+              onClick={() => setMoreOpen((o) => !o)}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 10,
+                padding: '9px 10px', borderRadius: 6, cursor: 'pointer',
+                fontSize: 13.5, fontWeight: 500, background: 'transparent', border: 'none',
+                color: 'var(--wimc-text-secondary)', width: '100%', textAlign: 'left',
+                fontFamily: 'var(--font-dm-sans)',
+                transition: 'background 220ms ease, color 220ms ease',
+              }}
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: 20 }}>
+                {moreOpen ? 'expand_less' : 'expand_more'}
+              </span>
+              More tools
+            </button>
 
-            <SectionLabel>Spaces</SectionLabel>
-            {SPACES_NAV.map((item) => (
-              <NavLink key={item.href} item={item} active={isActive(item)} />
-            ))}
+            {moreOpen && (
+              <>
+                {hasAnyEvent && <NavLink item={BOOKINGS_ITEM} active={isActive(BOOKINGS_ITEM)} />}
+                {hasAnyRsvp  && <NavLink item={TICKETS_ITEM}  active={isActive(TICKETS_ITEM)} />}
+                {hasPublishedEvent && (
+                  <>
+                    {GROWTH_NAV.map((item) => (
+                      <NavLink key={item.href} item={item} active={isActive(item)} />
+                    ))}
+                    {(tier === 'lantern' || tier === 'beacon') && (
+                      <NavLink
+                        item={{ href: '/hub', icon: 'hub', label: 'Creator Hub', badge: unreadHubMessages > 0 ? unreadHubMessages : undefined }}
+                        active={isActive({ href: '/hub', icon: 'hub', label: 'Creator Hub' })}
+                      />
+                    )}
+                    {SPACES_NAV.map((item) => (
+                      <NavLink key={item.href} item={item} active={isActive(item)} />
+                    ))}
+                    {(tier === 'local' || tier === 'lantern' || tier === 'beacon') && (
+                      <NavLink item={COMMUNITY_ITEM} active={isActive(COMMUNITY_ITEM)} />
+                    )}
+                  </>
+                )}
+              </>
+            )}
+          </>
+        ) : (
+          /* Established creators: full nav */
+          <>
+            {hasAnyEvent && <NavLink item={BOOKINGS_ITEM} active={isActive(BOOKINGS_ITEM)} />}
+            {hasAnyRsvp  && <NavLink item={TICKETS_ITEM}  active={isActive(TICKETS_ITEM)} />}
+
+            {hasPublishedEvent && (
+              <>
+                <SectionLabel>Growth</SectionLabel>
+                {GROWTH_NAV.map((item) => (
+                  <NavLink key={item.href} item={item} active={isActive(item)} />
+                ))}
+                {(tier === 'lantern' || tier === 'beacon') && (
+                  <NavLink
+                    item={{ href: '/hub', icon: 'hub', label: 'Creator Hub', badge: unreadHubMessages > 0 ? unreadHubMessages : undefined }}
+                    active={isActive({ href: '/hub', icon: 'hub', label: 'Creator Hub' })}
+                  />
+                )}
+
+                <SectionLabel>Spaces</SectionLabel>
+                {SPACES_NAV.map((item) => (
+                  <NavLink key={item.href} item={item} active={isActive(item)} />
+                ))}
+                {(tier === 'local' || tier === 'lantern' || tier === 'beacon') && (
+                  <NavLink item={COMMUNITY_ITEM} active={isActive(COMMUNITY_ITEM)} />
+                )}
+              </>
+            )}
           </>
         )}
 

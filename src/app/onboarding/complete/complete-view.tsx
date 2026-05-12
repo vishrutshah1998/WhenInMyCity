@@ -1,7 +1,9 @@
 'use client'
 
-import { useRouter } from 'next/navigation'
-import Image from 'next/image'
+import { useState, useEffect } from 'react'
+import Link from 'next/link'
+import { getValueAxis, VALUE_CALLOUT } from '@/lib/theme/hsv'
+import { WimcLogo } from '@/components/WimcLogo'
 
 interface CompleteViewProps {
   username: string
@@ -9,133 +11,179 @@ interface CompleteViewProps {
   city: string
   avatarUrl: string | null
   creatorType?: string
+  bio?: string | null
+  pageTheme?: { colorScheme?: string } | null
+  interestTags?: string[]
 }
 
-export default function CompleteView({ username, displayName, city, avatarUrl, creatorType }: CompleteViewProps) {
-  const router = useRouter()
+// Scheme → primary colour, used only for button shadow tint and callout
+const SCHEME_PRIMARY: Record<string, string> = {
+  default: '#E8572A', midnight: '#818CF8', ocean: '#22D3EE', forest: '#6EE7B7',
+  blush: '#E11D48', sand: '#B45309', pista: '#2D7A4F', gulaal: '#E8342A',
+  neel: '#F5A800', turmeric: '#F5A800', steel: '#5B8DEF', sienna: '#C04A00',
+  indigo: '#818CF8', aurora: '#D946EF', sage: '#3D7F53', mint: '#0C8B6B',
+  electric: '#00E5FF', velvet: '#8B2340', nightforest: '#7EC8A0',
+  parchment: '#4A3728', gallery: '#1A1A1A', terracotta: '#C4552A',
+}
+
+// Phone frame: 390 × 844 viewport scaled to fit a 216px-wide frame (scale ≈ 0.554)
+const PHONE_W = 216
+const VIEWPORT_W = 390
+const VIEWPORT_H = 844
+const SCALE = PHONE_W / VIEWPORT_W              // 0.5538…
+const PHONE_H = Math.round(VIEWPORT_H * SCALE)  // 467px
+
+export default function CompleteView({
+  username, displayName, creatorType, pageTheme, interestTags,
+}: CompleteViewProps) {
   const firstName = displayName.split(' ')[0]
   const isExplorer = creatorType === 'exploring'
 
+  const scheme = pageTheme?.colorScheme ?? 'default'
+  const primary = SCHEME_PRIMARY[scheme] ?? '#E8572A'
+
+  const { cluster } = getValueAxis(interestTags ?? [])
+  const hsvCallout = (cluster !== 'mixed' && scheme !== 'default')
+    ? VALUE_CALLOUT[cluster]
+    : null
+
+  const schemeName = scheme.charAt(0).toUpperCase() + scheme.slice(1)
+
+  // Add a timestamp query param after hydration to bypass Next.js's Data Cache.
+  // The profile was just written — without this the iframe gets the pre-onboarding render.
+  const [iframeSrc, setIframeSrc] = useState(`/${username}`)
+  useEffect(() => {
+    setIframeSrc(`/${username}?_t=${Date.now()}`)
+  }, [username])
+
   return (
-    <div className="flex flex-col min-h-screen bg-background text-on-surface font-body overflow-hidden">
-      <div className="flex flex-col min-h-screen max-w-md mx-auto relative overflow-hidden w-full">
-        {/* Progress bar — full */}
-        <header className="pt-6 px-6 z-10">
+    <div className="flex flex-col min-h-screen bg-background text-on-surface font-body">
+      <div className="flex flex-col min-h-screen max-w-sm mx-auto w-full px-6">
+
+        {/* Progress bar — complete */}
+        <header className="pt-6 pb-2 shrink-0">
           <div className="w-full h-1.5 bg-surface-container-highest rounded-full overflow-hidden">
-            <div className="h-full w-full bg-primary rounded-full" />
+            <div className="h-full w-full rounded-full" style={{ backgroundColor: primary }} />
           </div>
         </header>
 
-        {/* Confetti decorations */}
-        <div className="absolute inset-0 pointer-events-none opacity-20 z-0">
-          <div className="absolute top-[10%] left-[20%] w-3 h-3 bg-secondary rotate-45 rounded-sm" />
-          <div className="absolute top-[15%] right-[25%] w-2 h-4 bg-primary rotate-12" />
-          <div className="absolute top-[40%] left-[10%] w-4 h-2 bg-tertiary -rotate-12 rounded-full" />
-          <div className="absolute top-[30%] right-[15%] w-3 h-3 bg-secondary rotate-45" />
-          <div className="absolute top-[60%] left-[25%] w-2 h-5 bg-primary -rotate-45" />
-          <div className="absolute top-[50%] right-[30%] w-4 h-4 bg-tertiary rounded-full opacity-60" />
+        {/* Heading */}
+        <div className="text-center pt-6 pb-5 shrink-0">
+          <div className="flex justify-center mb-4">
+            <WimcLogo size="md" />
+          </div>
+          <h1 className="text-2xl font-headline font-extrabold tracking-tight text-on-surface">
+            You&apos;re live, {firstName}! 🎉
+          </h1>
+          <p className="text-sm text-on-surface-variant mt-1.5 leading-relaxed">
+            {isExplorer
+              ? 'Your profile is ready — start discovering events.'
+              : 'This is exactly how your page looks to visitors.'}
+          </p>
         </div>
 
-        <main className="flex-1 flex flex-col items-center justify-center px-8 text-center z-10 pt-4 pb-8">
-          {/* Heading */}
-          <div className="mb-8 space-y-3">
-            <h1 className="text-3xl font-headline font-extrabold tracking-tight text-on-surface">
-              You&apos;re all set, {firstName}! 🎉
-            </h1>
-            <p className="text-on-surface-variant font-medium leading-relaxed font-body">
-              {isExplorer
-                ? 'Your explorer profile is ready. Discover events in your city.'
-                : 'Your WIMC page is ready. Let\'s make it yours.'}
-            </p>
-          </div>
+        {/* Phone frame + iframe */}
+        <div className="flex-1 flex flex-col items-center justify-center gap-4 py-2">
+          <div className="relative" style={{ width: PHONE_W }}>
+            {/* Outer frame */}
+            <div
+              className="relative overflow-hidden shadow-[0_24px_60px_rgba(0,0,0,0.6)]"
+              style={{
+                width: PHONE_W,
+                height: PHONE_H,
+                borderRadius: 28,
+                border: '4px solid rgba(255,255,255,0.12)',
+                backgroundColor: '#000',
+              }}
+            >
+              {/* Dynamic island */}
+              <div
+                className="absolute top-2 left-1/2 -translate-x-1/2 z-10 rounded-full"
+                style={{ width: 72, height: 10, backgroundColor: '#000' }}
+              />
 
-          {/* Profile preview card */}
-          <div className="w-full max-w-xs relative group mb-12" style={{ aspectRatio: '3/4' }}>
-            {/* Background layer */}
-            <div className="absolute inset-0 rounded-[2rem] overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.5)] bg-gradient-to-br from-surface-container to-surface-container-high">
-              {/* Gradient overlay always shown */}
-              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
+              {/* Iframe — scaled down to phone frame size */}
+              <iframe
+                src={iframeSrc}
+                title="Your page preview"
+                scrolling="no"
+                style={{
+                  width: VIEWPORT_W,
+                  height: VIEWPORT_H,
+                  transform: `scale(${SCALE})`,
+                  transformOrigin: 'top left',
+                  border: 'none',
+                  pointerEvents: 'none',
+                  display: 'block',
+                }}
+              />
+
+              {/* Bottom fade to hide page scroll edge */}
+              <div
+                className="absolute inset-x-0 bottom-0 h-12 pointer-events-none"
+                style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.5) 0%, transparent 100%)' }}
+              />
             </div>
 
-            {/* Top-left avatar */}
-            <div className="absolute top-6 left-6 flex items-center gap-3">
-              <div className="w-12 h-12 rounded-lg border-2 border-white/20 overflow-hidden glass">
-                {avatarUrl ? (
-                  <Image
-                    src={avatarUrl}
-                    alt={displayName}
-                    width={48}
-                    height={48}
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <div className="w-full h-full bg-primary/30 flex items-center justify-center">
-                    <span className="material-symbols-outlined text-white/60" style={{ fontVariationSettings: "'FILL' 1" }}>person</span>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Bottom info overlay */}
-            <div className="absolute bottom-6 left-6 right-6 glass bg-surface-container-high/60 p-4 rounded-lg border border-white/5">
-              <div className="flex items-center gap-2 mb-1">
-                <span className="material-symbols-outlined text-primary text-sm" style={{ fontVariationSettings: "'FILL' 1" }}>verified</span>
-                <span className="text-primary font-headline font-bold text-sm tracking-tight">Verified Resident</span>
-              </div>
-              <h3 className="text-on-surface font-headline font-extrabold text-xl">{displayName}</h3>
-              <div className="flex items-center gap-1.5 mt-0.5">
-                <span className="material-symbols-outlined text-on-surface-variant text-[16px]">location_on</span>
-                <span className="text-on-surface-variant text-xs font-medium font-body">{city}</span>
-              </div>
-            </div>
-
-            {/* LIVE / NEW badge */}
-            <div className="absolute -top-4 -right-4 bg-primary text-white w-20 h-20 rounded-full flex flex-col items-center justify-center rotate-12 shadow-2xl border-4 border-background">
-              <span className="text-[10px] font-bold uppercase tracking-widest leading-none">LIVE</span>
-              <span className="text-lg font-headline font-black">NEW</span>
+            {/* Live badge */}
+            <div
+              className="absolute -top-2 -right-3 flex flex-col items-center justify-center rounded-full border-4 border-background shadow-xl"
+              style={{ width: 52, height: 52, backgroundColor: primary }}
+            >
+              <span className="text-[7px] font-bold uppercase tracking-widest leading-none text-white">LIVE</span>
+              <span className="text-xs font-headline font-black text-white leading-tight">NEW</span>
             </div>
           </div>
 
-          {/* Actions */}
-          <div className="w-full flex flex-col gap-3">
-            {isExplorer ? (
-              <button
-                onClick={() => router.push('/explore')}
-                className="w-full py-4 px-6 bg-primary text-white font-headline font-bold rounded-lg shadow-[0_8px_20px_rgba(232,87,42,0.3)] active:scale-95 transition-all duration-150"
+          {/* HSV callout */}
+          {hsvCallout && (
+            <div
+              className="w-full flex items-start gap-2 px-3 py-2.5 rounded-xl text-xs font-medium"
+              style={{ backgroundColor: `${primary}14`, color: primary }}
+            >
+              <span style={{ fontSize: 13, lineHeight: 1.2, flexShrink: 0 }}>✦</span>
+              <span>
+                <span className="font-bold">{schemeName} · </span>
+                {hsvCallout}
+              </span>
+            </div>
+          )}
+        </div>
+
+        {/* CTAs */}
+        <div className="shrink-0 pb-10 pt-4 flex flex-col gap-3">
+          {isExplorer ? (
+            <Link
+              href="/explore"
+              className="w-full py-4 px-6 font-headline font-bold rounded-xl text-center text-white active:scale-95 transition-all duration-150"
+              style={{ backgroundColor: primary }}
+            >
+              Start exploring →
+            </Link>
+          ) : (
+            <>
+              <Link
+                href={`/${username}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full py-4 px-6 font-headline font-bold rounded-xl text-center text-white active:scale-95 transition-all duration-150 flex items-center justify-center gap-2"
+                style={{ backgroundColor: primary }}
               >
-                Start exploring
-              </button>
-            ) : (
-              <>
-                <button
-                  onClick={() => router.push(`/${username}`)}
-                  className="w-full py-4 px-6 bg-primary text-white font-headline font-bold rounded-lg shadow-[0_8px_20px_rgba(232,87,42,0.3)] active:scale-95 transition-all duration-150"
-                >
-                  Go to my page
-                </button>
-                <button
-                  onClick={() => router.push('/dashboard')}
-                  className="w-full py-4 px-6 bg-surface-container-high text-on-surface font-headline font-semibold rounded-lg hover:bg-surface-container-highest transition-colors active:scale-95 border border-white/5"
-                >
-                  Set up dashboard
-                </button>
-              </>
-            )}
-          </div>
-        </main>
-
-        {/* Footer decoration */}
-        <footer className="py-8 px-6 flex justify-center opacity-20">
-          <div className="flex gap-2 items-center">
-            <div className="w-1.5 h-1.5 rounded-full bg-primary" />
-            <div className="w-1.5 h-1.5 rounded-full bg-primary" />
-            <div className="w-1.5 h-1.5 rounded-full bg-primary" />
-          </div>
-        </footer>
+                Visit my page
+                <span className="text-sm opacity-80">↗</span>
+              </Link>
+              <Link
+                href="/dashboard/studio"
+                className="w-full py-4 px-6 bg-surface-container-high text-on-surface font-headline font-semibold rounded-xl text-center hover:bg-surface-container-highest transition-colors active:scale-95 border border-white/5"
+              >
+                Edit my page
+              </Link>
+            </>
+          )}
+        </div>
       </div>
 
       <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" />
-      <style>{`.material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }`}</style>
     </div>
   )
 }

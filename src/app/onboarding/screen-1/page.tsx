@@ -1,29 +1,118 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useState, useTransition, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   generateUsernameFromName,
   saveOnboardingScreen,
 } from '@/app/actions/onboarding'
-import { CREATOR_CATEGORIES, getCategoryColors } from '@/lib/constants/categories'
+import { WimcLogo } from '@/components/WimcLogo'
+import { CREATOR_CATEGORIES, EXPLORING_OPTION, getCategoryColors } from '@/lib/constants/categories'
 import type { V2_CREATOR_TYPES } from '@/types/onboarding'
 
 type V2CreatorType = typeof V2_CREATOR_TYPES[number]
+type PersonaType = 'creator' | 'business' | 'personal'
+
+const PERSONA_LIST = [
+  {
+    id: 'creator' as PersonaType,
+    label: 'Creator',
+    emoji: '🎨',
+    description: 'Musicians, artists, comedians & educators',
+    accent: '#E8572A',
+    bg: 'rgba(232, 87, 42, 0.12)',
+    border: 'rgba(232, 87, 42, 0.40)',
+  },
+  {
+    id: 'business' as PersonaType,
+    label: 'Business',
+    emoji: '🏢',
+    description: 'Brands, local shops & professional services',
+    accent: '#5B8DEF',
+    bg: 'rgba(91, 141, 239, 0.12)',
+    border: 'rgba(91, 141, 239, 0.40)',
+  },
+  {
+    id: 'personal' as PersonaType,
+    label: 'Personal',
+    emoji: '✨',
+    description: 'Lifestyle, wellness & community builders',
+    accent: '#3D7F53',
+    bg: 'rgba(61, 127, 83, 0.12)',
+    border: 'rgba(61, 127, 83, 0.40)',
+  },
+]
+
+interface MinCategory {
+  id: string
+  emoji: string
+  label: string
+  primaryColor: string
+  secondaryColor: string
+  nextLabel?: string
+}
+
+const ALL_CATEGORIES: MinCategory[] = [
+  ...CREATOR_CATEGORIES,
+  { ...EXPLORING_OPTION, nextLabel: undefined },
+]
+
+// Grouped for section headers — accents aligned to PERSONA_LIST and corresponding theme families
+const GROUPED_CATEGORIES = [
+  {
+    label:   'Creator',
+    persona: 'creator' as PersonaType,
+    accent:  '#E8572A',
+    ids: ['music', 'comedy_theatre', 'art_design', 'video_content', 'teaching_coaching'],
+  },
+  {
+    label:   'Business',
+    persona: 'business' as PersonaType,
+    accent:  '#5B8DEF',
+    ids: ['business_brand', 'professional_portfolio'],
+  },
+  {
+    label:   'Personal',
+    persona: 'personal' as PersonaType,
+    accent:  '#3D7F53',
+    ids: ['lifestyle_wellness', 'community_impact', 'exploring'],
+  },
+].map((s) => ({
+  ...s,
+  categories: s.ids.map((id) => ALL_CATEGORIES.find((c) => c.id === id)!).filter(Boolean),
+}))
 
 export default function Screen1Page() {
   const router = useRouter()
 
+  const [persona, setPersona] = useState<PersonaType | null>(null)
   const [displayName, setDisplayName] = useState('')
   const [username, setUsername] = useState('')
   const [creatorType, setCreatorType] = useState<V2CreatorType | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
-
   const [nameSuggestTimer, setNameSuggestTimer] = useState<ReturnType<typeof setTimeout> | null>(null)
 
+  useEffect(() => {
+    try {
+      const savedPersona = sessionStorage.getItem('wimc_persona') as PersonaType | null
+      const s1 = JSON.parse(sessionStorage.getItem('wimc_s1') || 'null')
+      const claimedUsername = sessionStorage.getItem('wimc_claimed_username')
+      if (savedPersona) setPersona(savedPersona)
+      if (s1?.displayName) setDisplayName(s1.displayName)
+      if (s1?.username)    setUsername(s1.username)
+      else if (claimedUsername) setUsername(claimedUsername)
+      if (s1?.creatorType) setCreatorType(s1.creatorType)
+    } catch { /* ignore */ }
+  }, [])
+
   const colors = getCategoryColors(creatorType)
-  const selectedCategory = CREATOR_CATEGORIES.find((c) => c.id === (creatorType as string))
+
+  function handlePersonaSelect(p: PersonaType) {
+    setPersona(p)
+    setError(null)
+    sessionStorage.setItem('wimc_persona', p)
+  }
 
   function handleNameChange(value: string) {
     setDisplayName(value)
@@ -43,44 +132,53 @@ export default function Screen1Page() {
   function handleCategorySelect(id: V2CreatorType) {
     setCreatorType(id)
     setError(null)
+    // Auto-set persona when user taps a category tile before picking a persona
+    if (!persona) {
+      const section = GROUPED_CATEGORIES.find((s) => s.ids.includes(id))
+      if (section) {
+        setPersona(section.persona)
+        sessionStorage.setItem('wimc_persona', section.persona)
+      }
+    }
   }
 
   function handleContinue() {
     if (!displayName.trim()) { setError('Please enter your name.'); return }
-    if (!creatorType) { setError('Please select a category.'); return }
+    if (!creatorType)         { setError('Please select a category.'); return }
     setError(null)
 
     startTransition(async () => {
-      // Generate username now if the debounce timer hasn't fired yet
       const finalUsername = username || await generateUsernameFromName(displayName)
-
       const result = await saveOnboardingScreen(1, {
         displayName: displayName.trim(),
         username: finalUsername,
         creatorType,
       })
       if (result.error) { setError(result.error); return }
-      sessionStorage.setItem('wimc_s1', JSON.stringify({ displayName: displayName.trim(), username: finalUsername, creatorType }))
+      sessionStorage.setItem('wimc_s1', JSON.stringify({
+        displayName: displayName.trim(), username: finalUsername, creatorType,
+      }))
       router.push('/onboarding/screen-2')
     })
   }
 
-  const ctaLabel = selectedCategory?.nextLabel ?? 'Continue →'
+  const selectedCat = [...CREATOR_CATEGORIES, EXPLORING_OPTION].find((c) => c.id === creatorType)
+  const ctaLabel = (selectedCat as MinCategory | undefined)?.nextLabel ?? 'Continue →'
   const isValid = displayName.trim().length > 0 && creatorType !== null
+  const selectedPersona = PERSONA_LIST.find((p) => p.id === persona)
 
   return (
     <div className="flex flex-col min-h-screen bg-background text-on-surface font-body transition-colors duration-500">
-      {/* Ambient color glow from selected category */}
+      {/* Ambient glow */}
       <div
         className="fixed inset-0 -z-10 pointer-events-none transition-opacity duration-700"
         style={{ background: `radial-gradient(ellipse 60% 40% at 70% 10%, ${colors.secondary}80, transparent)` }}
       />
 
-      {/* Header */}
-      <header className="w-full flex items-center justify-between px-6 py-4">
-        <span className="brand-text text-primary text-xl font-bold">WIMCity</span>
+      <header className="w-full flex items-center justify-between px-5 py-3">
+        <WimcLogo size="xs" />
         <div className="flex items-center gap-2">
-          <div className="h-1.5 w-32 bg-surface-container-high rounded-full overflow-hidden">
+          <div className="h-1.5 w-28 bg-surface-container-high rounded-full overflow-hidden">
             <div
               className="h-full rounded-full transition-all duration-500"
               style={{ width: '25%', backgroundColor: colors.primary }}
@@ -90,94 +188,154 @@ export default function Screen1Page() {
         </div>
       </header>
 
-      {/* Content */}
-      <main className="flex-1 px-6 pt-6 pb-40 max-w-xl mx-auto w-full space-y-10">
-        {/* Greeting */}
+      <main className="flex-1 px-5 pt-3 pb-28 max-w-xl mx-auto w-full space-y-5">
+        {/* Title */}
         <div>
-          <p className="text-sm font-medium text-on-surface-variant mb-1">Hey there 👋</p>
-          <h1 className="text-3xl font-headline font-extrabold text-on-surface tracking-tight leading-tight">
-            Let&rsquo;s set up<br />your page.
+          <p className="text-xs font-semibold text-on-surface-variant mb-1 tracking-wide uppercase">Hey there 👋</p>
+          <h1 className="text-2xl font-headline font-extrabold text-on-surface tracking-tight leading-tight">
+            Let&rsquo;s set up your page.
           </h1>
         </div>
 
-        {/* Q1 — Name */}
-        <section className="space-y-3">
-          <label className="block text-base font-semibold text-on-surface" htmlFor="display-name">
-            What should we call you?
+        {/* Name */}
+        <section className="space-y-1.5">
+          <label className="block text-xs font-semibold text-on-surface-variant" htmlFor="display-name">
+            Who are you?
           </label>
           <input
             id="display-name"
             type="text"
-            placeholder="Your name or stage name"
+            placeholder="Your name or brand name"
             value={displayName}
             onChange={(e) => handleNameChange(e.target.value)}
             maxLength={80}
-            className="w-full px-5 py-4 rounded-xl bg-surface-container-low border-2 border-transparent focus:border-primary/30 focus:bg-surface-container transition-all text-on-surface placeholder:text-on-surface-variant/40 outline-none text-base"
+            className="w-full px-4 py-3 rounded-xl bg-surface-container-low border-2 border-transparent focus:border-primary/30 focus:bg-surface-container transition-all text-on-surface placeholder:text-on-surface-variant/40 outline-none text-base"
           />
-          {/* Auto-generated handle preview */}
           {username && (
-            <p className="text-xs text-on-surface-variant px-1">
-              Your page:{' '}
-              <span className="font-semibold" style={{ color: colors.primary }}>
-                wimcity.in/{username}
-              </span>
-              <span className="ml-2 text-on-surface-variant/60">· you can change this later</span>
+            <p className="text-xs text-on-surface-variant/55 px-0.5">
+              wimcity.in/<span className="font-semibold" style={{ color: colors.primary }}>{username}</span>
+              {' '}· change later
             </p>
           )}
         </section>
 
-        {/* Q2 — Category */}
-        <section className="space-y-4">
-          <label className="block text-base font-semibold text-on-surface">
-            What best describes you?
+        {/* Persona / type selection */}
+        <section className="space-y-2">
+          <label className="block text-xs font-semibold text-on-surface-variant">
+            What do you do?
           </label>
-          <div className="grid grid-cols-2 gap-3">
-            {CREATOR_CATEGORIES.map((cat) => {
-              const isSelected = creatorType === cat.id
+          <div className="flex gap-2">
+            {PERSONA_LIST.map((p) => {
+              const isSelected = persona === p.id
               return (
                 <button
-                  key={cat.id}
+                  key={p.id}
                   type="button"
-                  onClick={() => handleCategorySelect(cat.id as V2CreatorType)}
-                  className="relative flex flex-col items-start p-4 rounded-xl text-left transition-all duration-200 active:scale-95 border-2"
+                  onClick={() => handlePersonaSelect(p.id)}
+                  className="flex-1 flex flex-col items-center justify-center gap-1 py-3 px-1 rounded-xl border-2 transition-all duration-200 active:scale-95"
                   style={{
-                    backgroundColor: isSelected ? cat.secondaryColor : undefined,
-                    borderColor: isSelected ? cat.primaryColor : 'transparent',
+                    backgroundColor: isSelected ? p.bg : 'transparent',
+                    borderColor: isSelected ? p.border : 'rgba(255,255,255,0.08)',
                   }}
                 >
-                  {isSelected && (
-                    <div
-                      className="absolute top-3 right-3 w-5 h-5 rounded-full flex items-center justify-center"
-                      style={{ backgroundColor: cat.primaryColor }}
-                    >
-                      <span className="material-symbols-outlined text-white text-xs" style={{ fontVariationSettings: "'wght' 700, 'FILL' 1" }}>check</span>
-                    </div>
-                  )}
-                  <span className="text-2xl mb-2">{cat.emoji}</span>
+                  <span className="text-xl leading-none">{p.emoji}</span>
                   <span
-                    className={`font-headline font-bold text-sm leading-tight ${!isSelected ? 'text-on-surface-variant' : ''}`}
-                    style={isSelected ? { color: '#1a1a1a' } : undefined}
+                    className="text-[11px] font-bold leading-none"
+                    style={{ color: isSelected ? p.accent : 'rgba(255,255,255,0.45)' }}
                   >
-                    {cat.label}
+                    {p.label}
                   </span>
                 </button>
               )
             })}
           </div>
-
+          {selectedPersona && (
+            <p
+              key={selectedPersona.id}
+              className="text-xs px-0.5 transition-all duration-300"
+              style={{ color: selectedPersona.accent + 'BB' }}
+            >
+              {selectedPersona.description}
+            </p>
+          )}
         </section>
 
-        {error && <p className="text-error text-sm font-medium">{error}</p>}
+        {/* Category grid — always visible, persona selection focuses the matching section */}
+        <section className="space-y-2">
+          <label className="block text-xs font-semibold text-on-surface-variant">
+            How do you do what you do?
+          </label>
+          <div className="space-y-3">
+            {GROUPED_CATEGORIES.map((section) => {
+              return (
+                <div key={section.label}>
+                  {/* Section divider */}
+                  <div className="flex items-center gap-2 mb-1.5">
+                    <div className="h-px flex-1 rounded-full" style={{ backgroundColor: `${section.accent}22` }} />
+                    <span className="text-[10px] font-bold tracking-widest uppercase" style={{ color: `${section.accent}66` }}>
+                      {section.label}
+                    </span>
+                    <div className="h-px flex-1 rounded-full" style={{ backgroundColor: `${section.accent}22` }} />
+                  </div>
+                  {/* 2-col grid within section */}
+                  <div className="grid grid-cols-2 gap-2">
+                    {section.categories.map((cat, i) => {
+                      const isSelected = creatorType === cat.id
+                      // Use this section's own accent so each group previews its colour family
+                      const tileAccent = section.accent
+                      const isLastOdd = i === section.categories.length - 1 && section.categories.length % 2 !== 0
+                      return (
+                        <button
+                          key={cat.id}
+                          type="button"
+                          onClick={() => handleCategorySelect(cat.id as V2CreatorType)}
+                          className={`relative flex items-center gap-3 p-3 rounded-xl text-left transition-all duration-200 active:scale-95 border-2${isLastOdd ? ' col-span-2' : ''}`}
+                          style={{
+                            backgroundColor: isSelected ? `${tileAccent}18` : 'rgba(255,255,255,0.04)',
+                            borderColor: isSelected ? tileAccent : 'transparent',
+                          }}
+                        >
+                          {isSelected && (
+                            <div
+                              className="absolute top-2 right-2 w-4 h-4 rounded-full flex items-center justify-center"
+                              style={{ backgroundColor: tileAccent }}
+                            >
+                              <span
+                                className="material-symbols-outlined text-white"
+                                style={{ fontSize: 11, fontVariationSettings: "'wght' 700, 'FILL' 1", lineHeight: 1 }}
+                              >
+                                check
+                              </span>
+                            </div>
+                          )}
+                          <span className="text-xl flex-shrink-0 leading-none">{cat.emoji}</span>
+                          <span
+                            className="font-headline font-bold text-xs leading-tight"
+                            style={{ color: isSelected ? tileAccent : 'rgba(255,255,255,0.65)' }}
+                          >
+                            {cat.label}
+                          </span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </section>
+
+        {error && <p className="text-error text-xs font-medium">{error}</p>}
       </main>
 
-      {/* Fixed CTA */}
-      <footer className="fixed bottom-0 left-0 w-full z-50 px-6 py-5 bg-background/90 backdrop-blur-sm border-t border-outline-variant/10">
+      {/* Sticky CTA */}
+      <footer className="fixed bottom-0 left-0 w-full z-50 px-5 py-4 bg-background/90 backdrop-blur-sm border-t border-outline-variant/10">
         <div className="max-w-xl mx-auto">
           <button
             type="button"
             onClick={handleContinue}
             disabled={!isValid || isPending}
-            className="w-full py-4 px-6 font-headline font-bold rounded-xl shadow-lg active:scale-[0.98] transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed text-white"
+            className="w-full py-4 px-6 font-headline font-bold rounded-xl shadow-lg active:scale-[0.98] transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-35 disabled:cursor-not-allowed text-white"
             style={{ backgroundColor: colors.primary }}
           >
             {isPending ? 'Saving…' : ctaLabel}

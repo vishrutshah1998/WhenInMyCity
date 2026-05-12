@@ -57,6 +57,18 @@ const DEFAULT_CONFIGS: Record<BlockType, unknown> = {
   support_tip:         { message: 'Support my work', upi_vpa: '', upi_vpa_encrypted: '', preset_amounts_paise: [5000, 10000, 20000], thank_you_message: 'Thank you so much! 🙏' },
   collab_invite:       { collab_types: [], availability_note: '', message: '' },
   white_label_event:   { partner_name: '', event_title: '' },
+  // Wave 2
+  whatsapp_community:  { label: 'Join my WhatsApp community', invite_url: '', member_count_label: '' },
+  music_player:        { platform: 'soundcloud', embed_url: '', track_title: '', artist: '' },
+  booking_request:     { label: 'Book me for your event', description: '', categories: ['Corporate Events', 'Private Parties', 'Festivals', 'Weddings', 'College Fests'] },
+  // Wave 3
+  press_feature:       { features: [{ outlet: '' }], heading: 'As seen in' },
+  twitter_embed:       { tweet_url: '' },
+  awards_badges:       { badges: [{ label: '' }], heading: 'Awards & Recognition' },
+  // Wave 4
+  digital_product:     { title: '', description: '', price_paise: 9900, file_url: '' },
+  waitlist:            { label: 'Join the waitlist', description: '' },
+  fan_membership:      { tiers: [{ name: 'Supporter', price_label: '₹99/mo', benefits: ['Early access to events', 'Behind-the-scenes content'] }], heading: 'Join my community' },
 }
 
 // ---------------------------------------------------------------------------

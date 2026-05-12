@@ -71,9 +71,10 @@ export default function ProfileForm() {
   const [creatorType, setCreatorType] = useState<V2CreatorType | null>(null)
   const [subTypes, setSubTypes]       = useState<string[]>([])
 
-  // City (stored as name string, same as onboarding)
+  // City + neighbourhood
   const [city, setCity]               = useState('')
   const [citySearch, setCitySearch]   = useState('')
+  const [neighbourhood, setNeighbourhood] = useState('')
 
   // Offline activities / vibes
   const [offlineActivities, setOfflineActivities] = useState<string[]>([])
@@ -87,6 +88,9 @@ export default function ProfileForm() {
   // Social links — keyed by platform id
   const [socialInputs, setSocialInputs]           = useState<Record<string, string>>({})
   const [expandedPlatforms, setExpandedPlatforms] = useState<Set<string>>(new Set())
+
+  // Privacy
+  const [showCityMastery, setShowCityMastery] = useState(false)
 
   // Avatar upload
   const fileInputRef                              = useRef<HTMLInputElement>(null)
@@ -135,7 +139,7 @@ export default function ProfileForm() {
       if (!user) { setFetchError('Not signed in.'); setLoading(false); return }
       supabase
         .from('user_profiles')
-        .select('display_name, bio, avatar_url, username, creator_type, city, sub_types, offline_activities, social_links')
+        .select('display_name, bio, avatar_url, username, creator_type, city, neighbourhood, sub_types, offline_activities, social_links, show_city_mastery')
         .eq('id', user.id)
         .single()
         .then(({ data, error }) => {
@@ -153,9 +157,10 @@ export default function ProfileForm() {
             setCreatorType(ct as V2CreatorType)
           }
 
-          // City stored as name string
+          // City + neighbourhood
           setCity(data.city ?? '')
           setCitySearch(data.city ?? '')
+          setNeighbourhood((data as { neighbourhood?: string | null }).neighbourhood ?? '')
 
           // v2 profile fields
           setSubTypes((data.sub_types as string[]) ?? [])
@@ -163,6 +168,8 @@ export default function ProfileForm() {
 
           // Social links — stored JSONB
           setSocialInputs((data.social_links as Record<string, string>) ?? {})
+
+          setShowCityMastery(data.show_city_mastery ?? false)
 
           setLoading(false)
         })
@@ -283,6 +290,8 @@ export default function ProfileForm() {
         offline_activities: offlineActivities,
         social_links:       socialInputs,
         avatar_url:         newAvatarUrl,
+        neighbourhood,
+        show_city_mastery:  showCityMastery,
       })
 
       if (result.error) {
@@ -553,6 +562,31 @@ export default function ProfileForm() {
             ))}
           </div>
         )}
+
+        {/* Neighbourhood — shown once city is confirmed */}
+        {city && (
+          <div>
+            <label className="block text-xs font-semibold text-on-surface-variant uppercase tracking-wider mb-1.5">
+              Neighbourhood <span className="normal-case font-normal opacity-60">(optional)</span>
+            </label>
+            <div className="relative">
+              <span className="absolute left-4 top-1/2 -translate-y-1/2 material-symbols-outlined text-on-surface-variant text-xl pointer-events-none">
+                near_me
+              </span>
+              <input
+                type="text"
+                placeholder="e.g. Koramangala, Bandra, Karol Bagh"
+                value={neighbourhood}
+                onChange={(e) => setNeighbourhood(e.target.value)}
+                maxLength={80}
+                className={`${inputCls} pl-11`}
+              />
+            </div>
+            <p className="text-xs text-on-surface-variant mt-1.5 opacity-60">
+              Used for micro-local leaderboards and city discovery.
+            </p>
+          </div>
+        )}
       </Section>
 
       {/* ── Vibes / offline activities ─────────────────────────────────── */}
@@ -638,6 +672,29 @@ export default function ProfileForm() {
             })}
           </div>
         )}
+      </Section>
+
+      {/* ── Privacy ───────────────────────────────────────────────────── */}
+      <Section title="Privacy">
+        <button
+          type="button"
+          onClick={() => setShowCityMastery((v) => !v)}
+          className="flex items-center justify-between w-full px-4 py-3 rounded-xl bg-surface-container-low hover:bg-surface-container-high transition-colors"
+        >
+          <div className="flex flex-col items-start gap-0.5">
+            <span className="text-sm font-semibold text-on-surface">Share city mastery map</span>
+            <span className="text-xs text-on-surface-variant">Show your explored neighbourhoods on your public profile</span>
+          </div>
+          <div
+            className="relative flex-shrink-0 ml-4 w-11 h-6 rounded-full transition-colors duration-200"
+            style={{ background: showCityMastery ? 'var(--color-primary)' : 'var(--color-outline-variant)' }}
+          >
+            <div
+              className="absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-200"
+              style={{ transform: showCityMastery ? 'translateX(20px)' : 'translateX(0)' }}
+            />
+          </div>
+        </button>
       </Section>
 
       {/* ── Save button ────────────────────────────────────────────────── */}

@@ -3,6 +3,7 @@
 import { useState, useTransition, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { saveOnboardingScreen } from '@/app/actions/onboarding'
+import { WimcLogo } from '@/components/WimcLogo'
 import { getCategoryConfig, getCategoryColors, CREATOR_CATEGORIES, EXPLORING_OPTION } from '@/lib/constants/categories'
 import { CITIES, INTEREST_TAGS } from '@/lib/constants/interests'
 import type { CreatorType } from '@/types/database'
@@ -18,11 +19,13 @@ function loadScreen1(): Screen1Data | null {
 }
 
 const INTEREST_CATEGORIES = [
-  { id: 'performance', label: '🎭 Performance' },
-  { id: 'arts',        label: '🎨 Arts' },
-  { id: 'education',  label: '📚 Education' },
-  { id: 'lifestyle',  label: '🌿 Lifestyle' },
-  { id: 'tech',       label: '💡 Tech' },
+  { id: 'performance',  label: '🎭 Performance' },
+  { id: 'arts',         label: '🎨 Arts' },
+  { id: 'education',    label: '📚 Education' },
+  { id: 'lifestyle',    label: '🌿 Lifestyle' },
+  { id: 'food_culture', label: '🍽️ Food & Culture' },
+  { id: 'outdoors',     label: '⛰️ Outdoors & Adventure' },
+  { id: 'tech',         label: '💡 Tech' },
 ] as const
 
 export default function Screen2Page() {
@@ -93,16 +96,22 @@ export default function Screen2Page() {
   }, [citySearch])
 
   function toggleSubType(id: string) {
-    setSubTypes((prev) =>
-      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
-    )
+    if (id === 'not_yet') {
+      // Exclusive — selecting "Not hosting events yet" clears all others
+      setSubTypes((prev) => (prev.includes('not_yet') ? [] : ['not_yet']))
+      return
+    }
+    setSubTypes((prev) => {
+      const withoutNotYet = prev.filter((x) => x !== 'not_yet')
+      return withoutNotYet.includes(id)
+        ? withoutNotYet.filter((x) => x !== id)
+        : [...withoutNotYet, id]
+    })
   }
 
   function toggleInterestTag(id: string) {
     setInterestTags((prev) =>
-      prev.includes(id)
-        ? prev.filter((t) => t !== id)
-        : prev.length < 5 ? [...prev, id] : prev,
+      prev.includes(id) ? prev.filter((t) => t !== id) : [...prev, id],
     )
   }
 
@@ -113,7 +122,7 @@ export default function Screen2Page() {
 
   function handleContinue() {
     if (categoryConfig && subTypes.length === 0) {
-      setError('Please select at least one event type.')
+      setError('Select the events you host, or choose "Not hosting events yet".')
       return
     }
     if (!city) {
@@ -124,13 +133,14 @@ export default function Screen2Page() {
       setError('Pick at least 3 interests to continue.')
       return
     }
+
     setError(null)
 
     startTransition(async () => {
       const result = await saveOnboardingScreen(2, { subTypes, city, interestTags })
       if (result.error) { setError(result.error); return }
       sessionStorage.setItem('wimc_s2', JSON.stringify({ subTypes, city, interestTags }))
-      router.push('/onboarding/screen-3')
+      router.push('/onboarding/platforms')
     })
   }
 
@@ -145,13 +155,14 @@ export default function Screen2Page() {
       />
 
       {/* Header */}
-      <header className="w-full flex items-center justify-between px-6 py-4">
+      <header className="w-full flex items-center justify-between px-6 py-4 relative">
         <button
           onClick={() => router.back()}
           className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-surface-container-high transition-colors active:scale-95"
         >
           <span className="material-symbols-outlined" style={{ color: colors.primary }}>arrow_back</span>
         </button>
+        <span className="absolute left-1/2 -translate-x-1/2"><WimcLogo size="xs" /></span>
         <div className="flex items-center gap-2">
           <div className="h-1.5 w-32 bg-surface-container-high rounded-full overflow-hidden">
             <div
@@ -179,13 +190,17 @@ export default function Screen2Page() {
 
         {/* 2A — Sub-types (only if category has them) */}
         {categoryConfig && (
-          <section className="space-y-4">
-            <label className="block text-base font-semibold text-on-surface">
-              What kind of events do you host?
-            </label>
+          <section className="space-y-3">
+            <div>
+              <label className="block text-base font-semibold text-on-surface">
+                What kind of events do you host?
+              </label>
+              <p className="text-xs text-on-surface-variant mt-0.5">Pick all that apply.</p>
+            </div>
             <div className="flex flex-wrap gap-2">
               {categoryConfig.subTypes.map((st) => {
                 const isSelected = subTypes.includes(st.id)
+                const isNotYet = st.id === 'not_yet'
                 return (
                   <button
                     key={st.id}
@@ -193,9 +208,13 @@ export default function Screen2Page() {
                     onClick={() => toggleSubType(st.id)}
                     className="px-4 py-2 rounded-full text-sm font-medium transition-all duration-150 active:scale-95 border-2"
                     style={{
-                      backgroundColor: isSelected ? colors.primary : 'transparent',
-                      borderColor: isSelected ? colors.primary : 'rgba(255, 255, 255, 0.2)',
-                      color: isSelected ? '#ffffff' : 'inherit',
+                      backgroundColor: isSelected
+                        ? isNotYet ? 'rgba(255,255,255,0.10)' : colors.primary
+                        : 'transparent',
+                      borderColor: isSelected
+                        ? isNotYet ? 'rgba(255,255,255,0.25)' : colors.primary
+                        : 'rgba(255, 255, 255, 0.2)',
+                      color: isSelected ? '#ffffff' : isNotYet ? 'rgba(255,255,255,0.45)' : 'inherit',
                     }}
                   >
                     {st.label}
@@ -266,43 +285,59 @@ export default function Screen2Page() {
         </section>
 
         {/* 2C — Interests */}
-        <section className="space-y-4">
-          <div>
+        <section className="space-y-2">
+          <div className="flex items-baseline justify-between">
             <label className="block text-base font-semibold text-on-surface">
-              What do you step out for?{' '}
-              <span className="text-on-surface-variant font-normal text-sm">— pick 3 to 5</span>
+              What do you step out for?
             </label>
-            <p className="text-xs text-on-surface-variant mt-1">{interestTags.length}/5 selected</p>
+            <span className="text-xs text-on-surface-variant">
+              {interestTags.length} selected
+              {interestTags.length < 3 && (
+                <span style={{ color: colors.primary }}> · pick at least 3</span>
+              )}
+            </span>
           </div>
+          <p className="text-sm text-on-surface-variant pb-2">Pick as many as you like.</p>
 
-          {INTEREST_CATEGORIES.map((cat) => (
-            <div key={cat.id} className="space-y-2">
-              <p className="text-xs font-medium text-on-surface-variant tracking-wide">{cat.label}</p>
-              <div className="flex flex-wrap gap-2">
-                {INTEREST_TAGS.filter((t) => t.category === cat.id).map((tag) => {
-                  const isSelected = interestTags.includes(tag.id)
-                  const isDisabled = interestTags.length >= 5 && !isSelected
-                  return (
-                    <button
-                      key={tag.id}
-                      type="button"
-                      onClick={() => !isDisabled && toggleInterestTag(tag.id)}
-                      className="px-3 py-1.5 rounded-full text-sm font-medium transition-all duration-150 active:scale-95 border-2"
-                      style={{
-                        backgroundColor: isSelected ? colors.primary : 'transparent',
-                        borderColor: isSelected ? colors.primary : 'rgba(255, 255, 255, 0.2)',
-                        color: isSelected ? '#ffffff' : 'inherit',
-                        opacity: isDisabled ? 0.4 : 1,
-                        cursor: isDisabled ? 'not-allowed' : 'pointer',
-                      }}
-                    >
-                      {tag.emoji} {tag.label}
-                    </button>
-                  )
-                })}
-              </div>
-            </div>
-          ))}
+          <div className="space-y-8">
+            {INTEREST_CATEGORIES.map((cat) => {
+              const tags = INTEREST_TAGS.filter((t) => t.category === cat.id)
+              if (tags.length === 0) return null
+              return (
+                <div key={cat.id}>
+                  {/* Category header */}
+                  <div
+                    className="flex items-center gap-3 mb-4"
+                  >
+                    <span className="text-sm font-bold text-on-surface tracking-wide">{cat.label}</span>
+                    <div className="flex-1 h-px" style={{ backgroundColor: 'rgba(255,255,255,0.08)' }} />
+                  </div>
+
+                  {/* Tags */}
+                  <div className="flex flex-wrap gap-2.5">
+                    {tags.map((tag) => {
+                      const isSelected = interestTags.includes(tag.id)
+                      return (
+                        <button
+                          key={tag.id}
+                          type="button"
+                          onClick={() => toggleInterestTag(tag.id)}
+                          className="px-4 py-2 rounded-full text-sm font-medium transition-all duration-150 active:scale-95 border"
+                          style={{
+                            backgroundColor: isSelected ? colors.primary : 'transparent',
+                            borderColor: isSelected ? colors.primary : 'rgba(255,255,255,0.15)',
+                            color: isSelected ? '#fff' : 'rgba(255,255,255,0.75)',
+                          }}
+                        >
+                          {tag.emoji} {tag.label}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
         </section>
 
         {error && <p className="text-error text-sm font-medium">{error}</p>}

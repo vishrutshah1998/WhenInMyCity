@@ -5,6 +5,7 @@ import { useTransition, useState } from 'react'
 import Link from 'next/link'
 import type { BrowseEvent } from '@/app/actions/explorer'
 import { saveEvent, unsaveEvent } from '@/app/actions/explorer'
+import { dismissChecklistTask } from '@/app/actions/profile'
 import { CITIES } from '@/lib/constants/interests'
 import { INTEREST_TAGS } from '@/lib/constants/interests'
 
@@ -14,15 +15,120 @@ interface Props {
   currentFilters: { city: string; interest_tag: string; date: string }
   attendanceStreak: number
   streakFreezeTokens: number
+  showChallengeCard?: boolean
+  signupDate?: string
+  city?: string
 }
 
-export default function BrowseClient({ events, savedEventIds, currentFilters, attendanceStreak, streakFreezeTokens }: Props) {
+// Challenge card: shown to new users (< 14 days, 0 events attended)
+function ChallengeCard({
+  signupDate,
+  city,
+  onDismiss,
+}: {
+  signupDate: string
+  city: string
+  onDismiss: () => void
+}) {
+  const deadline    = new Date(new Date(signupDate).getTime() + 14 * 24 * 60 * 60 * 1000)
+  const daysLeft    = Math.max(0, Math.ceil((deadline.getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
+  const cityLabel   = CITIES.find(c => c.id === city)?.name ?? city
+
+  return (
+    <div style={{
+      marginBottom: 20,
+      padding: '16px 20px',
+      borderRadius: 14,
+      background: 'linear-gradient(135deg, rgba(232,87,42,0.10) 0%, rgba(232,87,42,0.04) 100%)',
+      border: '1px solid rgba(232,87,42,0.25)',
+      position: 'relative',
+    }}>
+      {/* Dismiss */}
+      <button
+        onClick={onDismiss}
+        style={{
+          position: 'absolute', top: 12, right: 14,
+          background: 'none', border: 'none', cursor: 'pointer',
+          fontSize: 18, color: 'var(--wimc-text-muted)', lineHeight: 1,
+        }}
+        aria-label="Dismiss challenge"
+      >
+        ×
+      </button>
+
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14 }}>
+        {/* Icon */}
+        <div style={{
+          width: 42, height: 42, borderRadius: 11, flexShrink: 0,
+          background: 'rgba(232,87,42,0.15)',
+          border: '1px solid rgba(232,87,42,0.3)',
+          display: 'grid', placeItems: 'center', fontSize: 20,
+        }}>
+          🎯
+        </div>
+
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{
+            fontFamily: 'var(--font-syne)', fontWeight: 800,
+            fontSize: 15, marginBottom: 3,
+          }}>
+            Attend your first event in {cityLabel}
+          </div>
+          <div style={{ fontSize: 13, color: 'var(--wimc-text-secondary)', lineHeight: 1.5 }}>
+            Challenge ends in <span style={{ fontWeight: 700, color: 'var(--wimc-coral)' }}>
+              {daysLeft} {daysLeft === 1 ? 'day' : 'days'}
+            </span> · {deadline.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
+          </div>
+
+          <div style={{ marginTop: 12, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <Link
+              href="/explore"
+              style={{
+                display: 'inline-block',
+                padding: '7px 16px', borderRadius: 9999,
+                background: 'var(--wimc-coral)', color: '#fff',
+                fontSize: 13, fontWeight: 700, textDecoration: 'none',
+                letterSpacing: '0.01em',
+              }}
+            >
+              Find an event →
+            </Link>
+            <button
+              onClick={onDismiss}
+              style={{
+                padding: '7px 14px', borderRadius: 9999,
+                background: 'none',
+                border: '1px solid var(--wimc-border-subtle)',
+                color: 'var(--wimc-text-muted)', fontSize: 13,
+                cursor: 'pointer', fontWeight: 500,
+              }}
+            >
+              Maybe later
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+export default function BrowseClient({
+  events, savedEventIds, currentFilters,
+  attendanceStreak, streakFreezeTokens,
+  showChallengeCard = false, signupDate = '', city = '',
+}: Props) {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [, startTransition] = useTransition()
 
   const [saved, setSaved] = useState<Set<string>>(new Set(savedEventIds))
   const [saving, setSaving] = useState<string | null>(null)
+  const [challengeVisible, setChallengeVisible] = useState(showChallengeCard)
+
+  function dismissChallenge() {
+    setChallengeVisible(false)
+    dismissChecklistTask('challenge_card').catch(() => {})
+  }
 
   function updateFilter(key: string, value: string) {
     const params = new URLSearchParams(searchParams.toString())
@@ -54,6 +160,11 @@ export default function BrowseClient({ events, savedEventIds, currentFilters, at
 
   return (
     <div>
+      {/* Onboarding challenge card */}
+      {challengeVisible && signupDate && (
+        <ChallengeCard signupDate={signupDate} city={city} onDismiss={dismissChallenge} />
+      )}
+
       {/* Streak widget */}
       {attendanceStreak > 0 && (
         <div style={{

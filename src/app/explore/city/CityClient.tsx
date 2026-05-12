@@ -1,7 +1,12 @@
 'use client'
 
-import type { CityPulseEntry, CityLeaderboard } from '@/app/actions/gamification'
+import { useState, useEffect } from 'react'
+import Link from 'next/link'
+import Image from 'next/image'
+import type { CityPulseEntry, CityLeaderboard, NeighbourhoodLeaderboard, FriendLeaderboardEntry } from '@/app/actions/gamification'
 import type { UserTier } from '@/types/marketplace'
+
+const HIDE_FRIENDS_KEY = 'wimc_hide_friend_leaderboard'
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -65,6 +70,8 @@ function FlameBar({ intensity }: { intensity: number }) {
 interface Props {
   pulse:              CityPulseEntry[]
   leaderboard:        CityLeaderboard
+  neighbourhoods:     NeighbourhoodLeaderboard[]
+  friends:            FriendLeaderboardEntry[]
   userCity:           string
   attendanceStreak:   number
   streakFreezeTokens: number
@@ -75,8 +82,19 @@ interface Props {
 // ---------------------------------------------------------------------------
 
 export default function CityClient({
-  pulse, leaderboard, userCity, attendanceStreak, streakFreezeTokens,
+  pulse, leaderboard, neighbourhoods, friends, userCity, attendanceStreak, streakFreezeTokens,
 }: Props) {
+  const [friendsHidden, setFriendsHidden] = useState(false)
+
+  useEffect(() => {
+    setFriendsHidden(localStorage.getItem(HIDE_FRIENDS_KEY) === '1')
+  }, [])
+
+  function toggleFriendsHidden() {
+    const next = !friendsHidden
+    setFriendsHidden(next)
+    localStorage.setItem(HIDE_FRIENDS_KEY, next ? '1' : '0')
+  }
   const maxRecent = Math.max(...pulse.map((c) => c.recentCount), 1)
 
   const card: React.CSSProperties = {
@@ -302,6 +320,235 @@ export default function CityClient({
           </div>
         )}
       </div>
+
+      {/* ── Friend Leaderboard ───────────────────────────────────────────── */}
+      {friends.length > 0 && (
+        <div style={card}>
+          {/* Header */}
+          <div style={{
+            padding: '14px 24px',
+            borderBottom: friendsHidden ? 'none' : '1px solid var(--wimc-border-subtle)',
+            display: 'flex', alignItems: 'center', gap: 10,
+          }}>
+            <span style={{ fontFamily: 'var(--font-syne)', fontWeight: 700, fontSize: 15, flex: 1 }}>
+              Among Your Connections
+            </span>
+            <span style={{
+              fontSize: 11, color: 'var(--wimc-text-secondary)',
+              fontFamily: 'var(--font-jetbrains-mono)', marginRight: 8,
+            }}>
+              {friends.length} followed in {leaderboard.cityName}
+            </span>
+            <button
+              onClick={toggleFriendsHidden}
+              style={{
+                background: 'none', border: '1px solid var(--wimc-border-subtle)', cursor: 'pointer',
+                fontSize: 11, fontWeight: 700, color: 'var(--wimc-text-muted)',
+                fontFamily: 'var(--font-jetbrains-mono)', padding: '2px 8px',
+                borderRadius: 9999,
+              }}
+            >
+              {friendsHidden ? 'show' : 'hide'}
+            </button>
+          </div>
+
+          {!friendsHidden && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+              {friends.map((entry, i, arr) => (
+                <Link
+                  key={entry.username}
+                  href={`/${entry.username}`}
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: '36px 40px 1fr auto',
+                    alignItems: 'center',
+                    gap: 12,
+                    padding: '13px 24px',
+                    borderBottom: i < arr.length - 1 ? '1px solid var(--wimc-border-subtle)' : 'none',
+                    textDecoration: 'none',
+                    color: 'inherit',
+                  }}
+                >
+                  {/* Rank */}
+                  <div style={{
+                    fontFamily: 'var(--font-jetbrains-mono)',
+                    fontSize: entry.rank <= 3 ? 17 : 13,
+                    fontWeight: 700, textAlign: 'center',
+                    color: entry.rank === 1 ? '#F5A800'
+                         : entry.rank === 2 ? '#94a3b8'
+                         : entry.rank === 3 ? '#cd7c4a'
+                         : 'var(--wimc-text-secondary)',
+                  }}>
+                    {entry.rank === 1 ? '🥇' : entry.rank === 2 ? '🥈' : entry.rank === 3 ? '🥉' : `#${entry.rank}`}
+                  </div>
+
+                  {/* Avatar */}
+                  <div style={{
+                    width: 36, height: 36, borderRadius: '50%', overflow: 'hidden',
+                    flexShrink: 0, background: 'var(--wimc-bg-overlay)', position: 'relative',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}>
+                    {entry.avatarUrl ? (
+                      <Image src={entry.avatarUrl} alt={entry.displayName} fill style={{ objectFit: 'cover' }} />
+                    ) : (
+                      <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--wimc-text-secondary)' }}>
+                        {entry.displayName.charAt(0).toUpperCase()}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Name + tier */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 3, minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{
+                        fontSize: 13, fontWeight: 500,
+                        overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                      }}>
+                        {entry.displayName}
+                      </span>
+                      <TierBadge tier={entry.userTier} />
+                    </div>
+                    <div style={{ fontSize: 12, color: 'var(--wimc-text-secondary)' }}>
+                      {entry.eventsAttendedCount} events attended
+                    </div>
+                  </div>
+
+                  {/* Streak */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexShrink: 0 }}>
+                    {entry.attendanceStreak > 0 ? (
+                      <>
+                        <span style={{ fontSize: 14 }}>🔥</span>
+                        <span style={{
+                          fontFamily: 'var(--font-jetbrains-mono)', fontSize: 13,
+                          fontWeight: 700, color: 'var(--wimc-amber)',
+                        }}>
+                          {entry.attendanceStreak}w
+                        </span>
+                      </>
+                    ) : (
+                      <span style={{ fontSize: 11, color: 'var(--wimc-text-muted)', fontFamily: 'var(--font-jetbrains-mono)' }}>
+                        —
+                      </span>
+                    )}
+                  </div>
+                </Link>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── Neighbourhood Leaderboards ───────────────────────────────────── */}
+      {neighbourhoods.length > 0 && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <div style={{
+            display: 'flex', alignItems: 'baseline', gap: 10, paddingLeft: 2,
+          }}>
+            <span style={{ fontFamily: 'var(--font-syne)', fontWeight: 700, fontSize: 15 }}>
+              Top Lanterns by Neighbourhood
+            </span>
+            <span style={{ fontSize: 12, color: 'var(--wimc-text-secondary)', fontFamily: 'var(--font-jetbrains-mono)' }}>
+              {leaderboard.cityName}
+            </span>
+          </div>
+
+          {neighbourhoods.map((nb) => (
+            <div key={nb.neighbourhood} style={card}>
+              <div style={{
+                padding: '12px 20px',
+                borderBottom: '1px solid var(--wimc-border-subtle)',
+                fontFamily: 'var(--font-jetbrains-mono)',
+                fontSize: 12,
+                fontWeight: 700,
+                color: 'var(--wimc-text-secondary)',
+                letterSpacing: '0.06em',
+                textTransform: 'uppercase',
+              }}>
+                {nb.neighbourhood}
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                {nb.creators.map((creator, i, arr) => (
+                  <Link
+                    key={creator.username}
+                    href={`/${creator.username}`}
+                    style={{
+                      display: 'grid',
+                      gridTemplateColumns: '28px 40px 1fr auto',
+                      alignItems: 'center',
+                      gap: 12,
+                      padding: '11px 20px',
+                      borderBottom: i < arr.length - 1 ? '1px solid var(--wimc-border-subtle)' : 'none',
+                      textDecoration: 'none',
+                      color: 'inherit',
+                      transition: 'background 150ms',
+                    }}
+                  >
+                    {/* Rank */}
+                    <div style={{
+                      fontFamily: 'var(--font-jetbrains-mono)', fontSize: 11,
+                      fontWeight: 700, textAlign: 'center',
+                      color: creator.rank === 1 ? '#F5A800'
+                           : creator.rank === 2 ? '#94a3b8'
+                           : creator.rank === 3 ? '#cd7c4a'
+                           : 'var(--wimc-text-secondary)',
+                    }}>
+                      {creator.rank === 1 ? '🥇' : creator.rank === 2 ? '🥈' : creator.rank === 3 ? '🥉' : `#${creator.rank}`}
+                    </div>
+
+                    {/* Avatar */}
+                    <div style={{
+                      width: 36, height: 36, borderRadius: '50%', overflow: 'hidden', flexShrink: 0,
+                      background: 'var(--wimc-bg-overlay)', position: 'relative',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    }}>
+                      {creator.avatarUrl ? (
+                        <Image
+                          src={creator.avatarUrl}
+                          alt={creator.displayName}
+                          fill
+                          style={{ objectFit: 'cover' }}
+                        />
+                      ) : (
+                        <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--wimc-text-secondary)' }}>
+                          {creator.displayName.charAt(0).toUpperCase()}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Name + tier */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 3, minWidth: 0 }}>
+                      <span style={{
+                        fontSize: 13, fontWeight: 600,
+                        color: 'var(--wimc-text-primary)',
+                        overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                      }}>
+                        {creator.displayName}
+                      </span>
+                      <TierBadge tier={creator.userTier} />
+                    </div>
+
+                    {/* Events hosted */}
+                    <div style={{
+                      textAlign: 'right', flexShrink: 0,
+                    }}>
+                      <div style={{
+                        fontFamily: 'var(--font-jetbrains-mono)', fontSize: 13,
+                        fontWeight: 700, color: 'var(--wimc-amber)',
+                      }}>
+                        {creator.eventsHosted}
+                      </div>
+                      <div style={{ fontSize: 10, color: 'var(--wimc-text-secondary)', marginTop: 1 }}>
+                        hosted
+                      </div>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
     </div>
   )

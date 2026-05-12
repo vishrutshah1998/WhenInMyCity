@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useEffect, useCallback, useState } from 'react'
+import { useRef, useEffect, useCallback, useState, type MutableRefObject } from 'react'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -15,12 +15,14 @@ export interface CanvasEventData {
 }
 
 interface Props {
-  data:         CanvasEventData
-  size?:        number        // canvas pixel resolution (default 800)
-  displaySize?: number        // CSS display width in px (default 280)
-  onAction?:    (blob: Blob) => void
-  actionLabel?: string
-  isPending?:   boolean
+  data:           CanvasEventData
+  size?:          number        // canvas pixel resolution (default 800)
+  displaySize?:   number        // CSS display width in px (default 280); ignored when fill=true
+  fill?:          boolean       // stretch canvas to 100% of parent container
+  onAction?:      (blob: Blob) => void
+  actionLabel?:   string
+  isPending?:     boolean
+  canvasRefOut?:  MutableRefObject<HTMLCanvasElement | null>
 }
 
 // ---------------------------------------------------------------------------
@@ -237,9 +239,11 @@ export default function EventCanvasRenderer({
   data,
   size        = 800,
   displaySize = 280,
+  fill        = false,
   onAction,
   actionLabel = 'Use as cover',
   isPending   = false,
+  canvasRefOut,
 }: Props) {
   const canvasRef   = useRef<HTMLCanvasElement>(null)
   const [busy, setBusy] = useState(true)
@@ -255,21 +259,36 @@ export default function EventCanvasRenderer({
 
   useEffect(() => { draw() }, [draw])
 
+  // Expose the canvas element to the parent when requested
+  useEffect(() => {
+    if (canvasRefOut && canvasRef.current) {
+      canvasRefOut.current = canvasRef.current
+    }
+  })
+
   function handleAction() {
     const canvas = canvasRef.current
     if (!canvas || !onAction) return
     canvas.toBlob((blob) => { if (blob) onAction(blob) }, 'image/jpeg', 0.92)
   }
 
+  const canvasStyle: React.CSSProperties = fill
+    ? { width: '100%', height: '100%', display: 'block' }
+    : { width: displaySize, height: displaySize, display: 'block' }
+
+  const wrapStyle: React.CSSProperties = fill
+    ? { position: 'absolute', inset: 0, overflow: 'hidden' }
+    : { position: 'relative', width: displaySize, height: displaySize, borderRadius: 10, overflow: 'hidden' }
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+    <div style={{ display: fill ? 'contents' : 'flex', flexDirection: 'column', gap: 12 }}>
       {/* Canvas preview */}
-      <div style={{ position: 'relative', width: displaySize, height: displaySize, borderRadius: 10, overflow: 'hidden' }}>
+      <div style={wrapStyle}>
         <canvas
           ref={canvasRef}
-          style={{ width: displaySize, height: displaySize, display: 'block' }}
+          style={canvasStyle}
         />
-        {busy && (
+        {busy && !fill && (
           <div style={{
             position: 'absolute', inset: 0,
             display: 'grid', placeItems: 'center',
@@ -288,7 +307,7 @@ export default function EventCanvasRenderer({
       </div>
 
       {/* Action button */}
-      {onAction && (
+      {!fill && onAction && (
         <button
           type="button"
           onClick={handleAction}

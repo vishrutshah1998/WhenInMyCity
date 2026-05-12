@@ -25,6 +25,8 @@ const nextConfig: NextConfig = {
       { protocol: 'https', hostname: 'img.youtube.com' },
       // Supabase Storage — avatars, gallery images, event covers, adda covers.
       { protocol: 'https', hostname: supabaseHost },
+      // Instagram CDN — thumbnails in instagram_embed blocks.
+      { protocol: 'https', hostname: '*.cdninstagram.com' },
     ],
   },
 }

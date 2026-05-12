@@ -48,7 +48,8 @@ export interface TicketTier {
   id:          string          // client-generated nanoid for stable keys
   name:        string          // e.g. "General", "Supporter", "Patron"
   price_paise: number          // 0 = free tier
-  description: string          // perks / what's included
+  description: string          // one-line tagline shown under the tier name
+  benefits:    string[]        // bullet-point list of what's included
   capacity:    number | null   // null = uses event-level capacity
 }
 
@@ -57,6 +58,7 @@ export const TicketTierSchema = z.object({
   name:        z.string().min(1, 'Tier name is required').max(50),
   price_paise: z.number().int().min(0).max(10_000_000),
   description: z.string().max(200).default(''),
+  benefits:    z.string().max(100).array().max(8).default([]),
   capacity:    z.number().int().min(1).nullable().optional().transform((v) => v ?? null),
 })
 

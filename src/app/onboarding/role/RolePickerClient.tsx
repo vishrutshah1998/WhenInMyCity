@@ -1,88 +1,128 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
+import { WimcLogo } from '@/components/WimcLogo'
+
+const GOALS = [
+  {
+    id: 'creator',
+    icon: '🎤',
+    title: 'Creator',
+    description: 'Host events, build your stage, sell tickets',
+    color: '#E8705A',
+    bg: 'rgba(232,112,90,0.08)',
+    border: 'rgba(232,112,90,0.3)',
+  },
+  {
+    id: 'business',
+    icon: '🏢',
+    title: 'Business',
+    description: 'Promote your venue, brand, or space',
+    color: '#3B6BCC',
+    bg: 'rgba(59,107,204,0.08)',
+    border: 'rgba(59,107,204,0.3)',
+  },
+  {
+    id: 'personal',
+    icon: '✨',
+    title: 'Personal',
+    description: 'Share your links and connect with people',
+    color: '#5DD9D0',
+    bg: 'rgba(93,217,208,0.08)',
+    border: 'rgba(93,217,208,0.3)',
+  },
+] as const
 
 export default function RolePickerClient() {
   const router = useRouter()
 
+  function handleSelect(goalId: string) {
+    sessionStorage.setItem('wimc_goal', goalId)
+    router.push('/onboarding/screen-1')
+  }
+
   return (
-    <div className="flex flex-col min-h-screen bg-background text-on-surface font-body">
+    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', background: '#0a0a0b', color: '#fff', fontFamily: 'var(--font-dm-sans), sans-serif' }}>
+
+      {/* Ambient glow */}
+      <div style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none' }}>
+        <div style={{ position: 'absolute', top: -100, right: -100, width: 500, height: 500, background: 'radial-gradient(circle, rgba(232,112,90,0.08) 0%, transparent 70%)', borderRadius: '50%' }} />
+        <div style={{ position: 'absolute', bottom: -80, left: -80, width: 350, height: 350, background: 'radial-gradient(circle, rgba(93,217,208,0.06) 0%, transparent 70%)', borderRadius: '50%' }} />
+      </div>
 
       {/* Header */}
-      <header className="w-full flex items-center justify-center px-6 py-4">
-        <div className="brand-text text-primary text-xl">
-          WHEN <span className="brand-script text-2xl">in</span> MY{' '}
-          <span className="brand-script text-2xl">city</span>
-        </div>
+      <header style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px 24px', position: 'relative', zIndex: 1 }}>
+        <WimcLogo size="sm" color="white" />
       </header>
 
       {/* Content */}
-      <main className="flex-1 flex flex-col items-center justify-center px-6 pb-16">
-        <div className="w-full max-w-md">
+      <main style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '0 24px 80px', position: 'relative', zIndex: 1 }}>
+        <div style={{ width: '100%', maxWidth: 420 }}>
 
-          <div className="mb-10 text-center">
-            <h1 className="font-headline font-bold text-3xl text-on-surface tracking-tight mb-3">
-              Welcome to WIMC
+          <div style={{ textAlign: 'center', marginBottom: 36 }}>
+            <div style={{ fontSize: 13, fontWeight: 600, color: 'rgba(255,255,255,0.45)', letterSpacing: '2px', textTransform: 'uppercase', fontFamily: 'var(--font-jetbrains-mono, monospace)', marginBottom: 12 }}>
+              Welcome
+            </div>
+            <h1 style={{ fontFamily: 'var(--font-syne, serif)', fontSize: 32, fontWeight: 800, lineHeight: 1.15, margin: 0, marginBottom: 10 }}>
+              What brings you<br />to WIMC?
             </h1>
-            <p className="text-on-surface-variant font-medium">
-              What would you like to do?
+            <p style={{ fontSize: 14.5, color: 'rgba(255,255,255,0.5)', margin: 0 }}>
+              We'll tailor your setup based on your goal.
             </p>
           </div>
 
-          <div className="flex flex-col gap-4">
-            <button
-              onClick={() => router.push('/onboarding/screen-1')}
-              className="w-full flex items-center gap-4 p-5 bg-surface-container-low border-2 border-primary/30 rounded-2xl text-left hover:border-primary hover:bg-surface-container-high transition-all duration-200 active:scale-[0.98]"
-            >
-              <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center flex-shrink-0">
-                <span className="material-symbols-outlined text-primary text-2xl">mic</span>
-              </div>
-              <div className="flex-1">
-                <div className="font-headline font-bold text-on-surface text-lg">Host Events</div>
-                <div className="text-on-surface-variant text-sm">
-                  Create your creator page and sell tickets
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {GOALS.map((goal) => (
+              <button
+                key={goal.id}
+                onClick={() => handleSelect(goal.id)}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 16,
+                  padding: '18px 20px', borderRadius: 16, textAlign: 'left',
+                  background: goal.bg, border: `2px solid ${goal.border}`,
+                  cursor: 'pointer', transition: 'all 200ms ease', width: '100%',
+                }}
+                onMouseEnter={(e) => {
+                  const el = e.currentTarget
+                  el.style.background = goal.bg.replace('0.08', '0.14')
+                  el.style.borderColor = goal.color
+                  el.style.transform = 'translateY(-1px)'
+                }}
+                onMouseLeave={(e) => {
+                  const el = e.currentTarget
+                  el.style.background = goal.bg
+                  el.style.borderColor = goal.border
+                  el.style.transform = ''
+                }}
+              >
+                <div style={{
+                  width: 48, height: 48, borderRadius: 12, flexShrink: 0,
+                  display: 'grid', placeItems: 'center', fontSize: 24,
+                  background: `${goal.color}18`,
+                }}>
+                  {goal.icon}
                 </div>
-              </div>
-              <span className="material-symbols-outlined text-on-surface-variant">chevron_right</span>
-            </button>
-
-            <button
-              onClick={() => router.push('/onboarding')}
-              className="w-full flex items-center gap-4 p-5 bg-surface-container-low border-2 border-outline-variant/30 rounded-2xl text-left hover:border-primary hover:bg-surface-container-high transition-all duration-200 active:scale-[0.98]"
-            >
-              <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center flex-shrink-0">
-                <span className="material-symbols-outlined text-primary text-2xl">explore</span>
-              </div>
-              <div className="flex-1">
-                <div className="font-headline font-bold text-on-surface text-lg">Discover Events</div>
-                <div className="text-on-surface-variant text-sm">
-                  Find and attend events near you
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 17, fontWeight: 700, color: '#fff', fontFamily: 'var(--font-syne, serif)', marginBottom: 3 }}>
+                    {goal.title}
+                  </div>
+                  <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.5)', fontWeight: 500 }}>
+                    {goal.description}
+                  </div>
                 </div>
-              </div>
-              <span className="material-symbols-outlined text-on-surface-variant">chevron_right</span>
-            </button>
+                <span style={{ color: goal.color, fontSize: 20, opacity: 0.7 }}>›</span>
+              </button>
+            ))}
           </div>
 
-          <p className="mt-10 text-center text-on-surface-variant text-xs leading-relaxed">
+          <p style={{ textAlign: 'center', marginTop: 28, fontSize: 12, color: 'rgba(255,255,255,0.3)', lineHeight: 1.6 }}>
             By continuing, you agree to our{' '}
-            <a href="#" className="text-primary font-bold hover:underline">Terms of Service</a>
+            <a href="#" style={{ color: '#E8705A', textDecoration: 'none' }}>Terms</a>
             {' '}and{' '}
-            <a href="#" className="text-primary font-bold hover:underline">Privacy Policy</a>
+            <a href="#" style={{ color: '#E8705A', textDecoration: 'none' }}>Privacy Policy</a>
           </p>
         </div>
       </main>
-
-      {/* Background glow */}
-      <div className="fixed inset-0 -z-10 pointer-events-none">
-        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-primary/5 rounded-full blur-[120px] -mr-40 -mt-20" />
-        <div className="absolute bottom-0 left-0 w-[300px] h-[300px] bg-primary/5 rounded-full blur-[80px] -ml-20 -mb-20" />
-      </div>
-
-      <link
-        rel="stylesheet"
-        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
-      />
-      <style>{`.material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }`}</style>
     </div>
   )
 }

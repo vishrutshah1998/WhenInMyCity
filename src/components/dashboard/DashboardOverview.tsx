@@ -1,9 +1,11 @@
 'use client'
 
+import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import type { UserProfile, Event, BookingRow } from '@/types/database'
 import type { LinkClickStats } from '@/app/actions/analytics'
+import SetupChecklist from '@/components/dashboard/SetupChecklist'
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -92,37 +94,33 @@ function EventPill({ status }: { status: Event['status'] }) {
   )
 }
 
-// ── Nudge card ────────────────────────────────────────────────────────────────
+// ── Share page button ─────────────────────────────────────────────────────────
 
-function NudgeCard({ icon, iconColor, iconBg, title, description, href }: {
-  icon: string; iconColor: string; iconBg: string
-  title: string; description: string; href: string
-}) {
+function SharePageButton({ username }: { username: string }) {
+  const [copied, setCopied] = useState(false)
+
+  async function handleCopy() {
+    await navigator.clipboard.writeText(`${window.location.origin}/${username}`)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+
   return (
-    <Link href={href} style={{
-      display: 'flex', alignItems: 'center', gap: 14,
-      background: 'var(--wimc-bg-elevated)',
-      border: '1px solid var(--wimc-border-default)',
-      borderRadius: 12, padding: '14px 18px',
-      textDecoration: 'none', color: 'inherit',
-      transition: 'border-color 200ms ease, transform 200ms ease',
-      flex: 1, minWidth: 0,
-    }}
-      onMouseEnter={e => { const el = e.currentTarget as HTMLAnchorElement; el.style.borderColor = 'var(--wimc-border-strong)'; el.style.transform = 'translateY(-1px)' }}
-      onMouseLeave={e => { const el = e.currentTarget as HTMLAnchorElement; el.style.borderColor = 'var(--wimc-border-default)'; el.style.transform = '' }}
+    <button
+      onClick={handleCopy}
+      style={{
+        display: 'inline-flex', alignItems: 'center', gap: 6,
+        padding: '9px 20px', borderRadius: 6, fontSize: 13, fontWeight: 700,
+        background: 'transparent', color: 'var(--wimc-text-secondary)',
+        border: '1px solid var(--wimc-border-default)', cursor: 'pointer',
+        fontFamily: 'var(--font-dm-sans)',
+      }}
     >
-      <div style={{
-        width: 36, height: 36, borderRadius: 8, flexShrink: 0,
-        display: 'grid', placeItems: 'center', background: iconBg, color: iconColor,
-      }}>
-        <span className="material-symbols-outlined" style={{ fontSize: 18 }}>{icon}</span>
-      </div>
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: 13, fontWeight: 700, fontFamily: 'var(--font-dm-sans)' }}>{title}</div>
-        <div style={{ fontSize: 12, color: 'var(--wimc-text-secondary)', marginTop: 2 }}>{description}</div>
-      </div>
-      <span className="material-symbols-outlined" style={{ fontSize: 18, color: 'var(--wimc-text-muted)', flexShrink: 0 }}>arrow_forward</span>
-    </Link>
+      <span className="material-symbols-outlined" style={{ fontSize: 15 }}>
+        {copied ? 'check' : 'content_copy'}
+      </span>
+      {copied ? 'Copied!' : 'Share my page'}
+    </button>
   )
 }
 
@@ -150,10 +148,6 @@ export default function DashboardOverview({ profile, events, bookings, linkClick
   const tierKey = profile.user_tier ?? 'wanderer'
   const tierLabel = tierKey.charAt(0).toUpperCase() + tierKey.slice(1)
   const nextTier = TIER_NEXT[tierKey]
-
-  const hasSocials = profile.social_links != null &&
-    typeof profile.social_links === 'object' &&
-    Object.keys(profile.social_links as Record<string, unknown>).length > 0
 
   // Booking counts per event
   const bookingsByEvent: Record<string, number> = {}
@@ -272,30 +266,45 @@ export default function DashboardOverview({ profile, events, bookings, linkClick
           </div>
         </div>
 
-        {/* Setup nudges — shown until socials are added */}
-        {!hasSocials && (
-          <div>
-            <div style={{ fontSize: 11, fontFamily: 'var(--font-jetbrains-mono)', color: 'var(--wimc-text-muted)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: 10 }}>
-              Finish setting up your page
+        {/* Setup checklist */}
+        <SetupChecklist profile={profile} />
+
+        {/* First-event empty-state CTAs */}
+        {events.length === 0 && (
+          <div style={{
+            background: 'linear-gradient(135deg, var(--wimc-coral-dim) 0%, var(--wimc-amber-dim) 100%)',
+            border: '1px solid rgba(232,112,90,0.25)',
+            borderRadius: 18, padding: '28px 32px',
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 24,
+          }}>
+            <div>
+              <div style={{ fontFamily: 'var(--font-syne)', fontSize: 19, fontWeight: 800, marginBottom: 6 }}>
+                Ready to host your first event?
+              </div>
+              <div style={{ fontSize: 13.5, color: 'var(--wimc-text-secondary)', maxWidth: 400 }}>
+                Set a date, add a venue, and start selling tickets — it takes under 5 minutes.
+              </div>
+              <div style={{ display: 'flex', gap: 10, marginTop: 18 }}>
+                <Link
+                  href="/dashboard/events/create"
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 6,
+                    padding: '9px 20px', borderRadius: 6, fontSize: 13, fontWeight: 700,
+                    background: 'var(--wimc-coral)', color: '#fff', textDecoration: 'none',
+                  }}
+                >
+                  <span className="material-symbols-outlined" style={{ fontSize: 16 }}>add</span>
+                  Create event
+                </Link>
+                <SharePageButton username={profile.username ?? ''} />
+              </div>
             </div>
-            <div style={{ display: 'flex', gap: 12 }}>
-              <NudgeCard
-                icon="share"
-                iconColor="var(--wimc-coral)"
-                iconBg="var(--wimc-coral-dim)"
-                title="Add your social links"
-                description="Let fans find you on Instagram, YouTube, and more."
-                href="/dashboard/profile"
-              />
-              <NudgeCard
-                icon="palette"
-                iconColor="var(--wimc-teal)"
-                iconBg="var(--wimc-teal-dim)"
-                title="Customize your look"
-                description="Pick a theme that matches your vibe."
-                href="/dashboard/studio"
-              />
-            </div>
+            <span className="material-symbols-outlined" style={{
+              fontSize: 72, color: 'var(--wimc-coral)', opacity: 0.15,
+              flexShrink: 0, fontVariationSettings: "'FILL' 1",
+            }}>
+              celebration
+            </span>
           </div>
         )}
 

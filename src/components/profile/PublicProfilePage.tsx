@@ -5,6 +5,7 @@ import type {
   PageBlock,
   Event,
 } from '@/types/database'
+import type { MasteryNeighbourhood } from '@/app/actions/analytics'
 import { CREATOR_CATEGORIES, EXPLORING_OPTION } from '@/lib/constants/categories'
 
 export interface PublicTestimonial {
@@ -26,9 +27,120 @@ import type {
 } from '@/types/database'
 import { type ProfileTheme, schemeToStyle, DEFAULT_PROFILE_THEME } from '@/types/theme'
 import FollowButton from './FollowButton'
+import CityMasteryMap from './CityMasteryMap'
+import NewsletterSignupBlock from './NewsletterSignupBlock'
+import SupportTipBlock from './SupportTipBlock'
+import AnnouncementBlockClient from './AnnouncementBlock'
+import WhatsAppCommunityBlock from './WhatsAppCommunityBlock'
+import MusicPlayerBlock from './MusicPlayerBlock'
+import BookingRequestBlock from './BookingRequestBlock'
+import PressFeatureBlock from './PressFeatureBlock'
+import TwitterEmbedBlock from './TwitterEmbedBlock'
+import AwardsBadgesBlock from './AwardsBadgesBlock'
+import DigitalProductBlock from './DigitalProductBlock'
+import WaitlistBlock from './WaitlistBlock'
+import FanMembershipBlock from './FanMembershipBlock'
+import type { SubstackPost } from '@/lib/validators/blocks'
 
-// Per-scheme aurora blob colours — 5 vivid, fully-saturated hues used with
-// mix-blend-mode:screen for Luma-style additive color glow
+// ---------------------------------------------------------------------------
+// Config shapes for new blocks (inlined to avoid extra imports)
+// ---------------------------------------------------------------------------
+
+interface SocialLinksRowConfig {
+  links: Array<{ platform: string; url: string; label?: string }>
+}
+interface AnnouncementConfig {
+  text: string; cta_label?: string; cta_url?: string
+  show_countdown: boolean; countdown_target?: string
+  background_style: 'primary' | 'dark' | 'accent'
+}
+interface SpotifyNowPlayingConfig {
+  spotify_user_id: string; fallback_track_url?: string
+  fallback_track_title?: string; fallback_track_artist?: string
+}
+interface NewsletterSignupConfig {
+  label: string; placeholder: string; button_label: string; success_message: string
+}
+interface EventCalendarConfig { show_past_events: boolean; months_ahead: 1 | 2 | 3 }
+interface EventSeriesConfig {
+  series_name: string; description?: string
+  frequency: 'weekly' | 'fortnightly' | 'monthly' | 'quarterly' | 'irregular'
+  episode_count: number; cover_image_url?: string; linked_event_ids: string[]
+}
+interface PastEventsGalleryConfig {
+  layout: 'grid' | 'list'; show_attendee_count: boolean
+  show_recap: boolean; max_events: number
+}
+interface RsvpLinkConfig {
+  url: string; label: string; description?: string
+  icon_emoji?: string; platform?: string
+}
+interface PodcastEpisodeConfig {
+  platform: 'spotify' | 'apple_podcasts' | 'anchor' | 'direct'
+  episode_url: string; episode_title?: string
+  episode_duration?: string; artwork_url?: string; description?: string
+}
+interface SubstackPreviewConfig {
+  publication_url: string; posts_count: 2 | 3; show_subscribe_button: boolean
+}
+interface CommunityStatsConfig {
+  show_events_hosted: boolean; show_total_attendees: boolean
+  show_average_rating: boolean; custom_label?: string
+}
+interface CreatorTypeBadgeConfig {
+  creator_type: string; custom_label?: string; show_link_to_city_feed: boolean
+}
+interface CityCommunityConfig {
+  city: string; neighbourhood?: string; show_city_feed_link: boolean
+}
+interface CollabInviteConfig {
+  collab_types: Array<'co_host' | 'workshop_partner' | 'venue_takeover' | 'brand_collab'>
+  availability_note: string; message: string
+}
+interface WhiteLabelEventConfig {
+  partner_name: string; partner_logo_url?: string; event_title: string
+  event_description?: string; event_date?: string; ticket_url?: string
+}
+interface SupportTipConfigStored {
+  message: string; upi_vpa_encrypted: string
+  preset_amounts_paise: number[]; thank_you_message: string
+}
+interface WhatsAppCommunityConfig {
+  label: string; invite_url: string; member_count_label?: string
+}
+interface MusicPlayerConfig {
+  platform: 'soundcloud' | 'bandcamp'; embed_url: string
+  track_title?: string; artist?: string
+}
+interface BookingRequestConfig {
+  label: string; description?: string; categories: string[]
+}
+interface PressFeatureConfig {
+  features: Array<{ outlet: string; url?: string; logo_url?: string }>
+  heading?: string
+}
+interface TwitterEmbedConfig {
+  tweet_url: string; handle?: string; caption?: string
+}
+interface AwardsBadgesConfig {
+  badges: Array<{ label: string; icon_url?: string; year?: number }>
+  heading?: string
+}
+interface DigitalProductConfig {
+  title: string; description?: string; price_paise: number; file_url: string; cover_image_url?: string
+}
+interface WaitlistConfig {
+  label: string; description?: string
+}
+interface FanMembershipConfig {
+  tiers: Array<{ name: string; price_label: string; benefits: string[]; is_featured?: boolean }>
+  heading?: string
+}
+
+// ---------------------------------------------------------------------------
+// Aurora, theme, pattern helpers (unchanged)
+// ---------------------------------------------------------------------------
+
 const AURORA_COLORS: Record<ProfileTheme['colorScheme'], [string, string, string, string, string]> = {
   default:  ['#FF4500', '#FF1B6B', '#FF8C00', '#E8572A', '#FF6B9D'],
   midnight: ['#7C3AED', '#2563EB', '#06B6D4', '#A855F7', '#818CF8'],
@@ -40,48 +152,67 @@ const AURORA_COLORS: Record<ProfileTheme['colorScheme'], [string, string, string
   gulaal:   ['#E8342A', '#F97316', '#EF4444', '#FF1B6B', '#DC2626'],
   neel:     ['#F5A800', '#F59E0B', '#FB923C', '#FBBF24', '#FF6B2B'],
   turmeric: ['#F5A800', '#FB923C', '#FF6B2B', '#FBBF24', '#EF4444'],
-  steel:    ['#F5A800', '#94A3B8', '#CBD5E1', '#FBBF24', '#64748B'],
+  steel:    ['#5B8DEF', '#94A3B8', '#CBD5E1', '#3B82F6', '#64748B'],
   sienna:   ['#C04A00', '#FF6B2B', '#DC6B19', '#F97316', '#FF4500'],
   indigo:   ['#818CF8', '#6366F1', '#7C3AED', '#A5B4FC', '#4F46E5'],
+  aurora:   ['#D946EF', '#A21CAF', '#7C3AED', '#F0ABFC', '#EC4899'],
+  sage:        ['#3D7F53', '#16A34A', '#65A30D', '#4ADE80', '#22C55E'],
+  mint:        ['#0C8B6B', '#0D9488', '#059669', '#34D399', '#2DD4BF'],
+  electric:    ['#00E5FF', '#22D3EE', '#38BDF8', '#67E8F9', '#06B6D4'],
+  velvet:      ['#8B2340', '#BE185D', '#9D174D', '#DB2777', '#A21CAF'],
+  nightforest: ['#7EC8A0', '#10B981', '#059669', '#34D399', '#6EE7B7'],
+  parchment:   ['#8B6F47', '#A0522D', '#D2691E', '#CD853F', '#B8860B'],
+  gallery:     ['#374151', '#4B5563', '#1F2937', '#6B7280', '#111827'],
+  terracotta:  ['#C4552A', '#E07B39', '#D2691E', '#CD853F', '#B8522A'],
 }
 
-// Per-scheme + combo pattern colours
 const PATTERN_COMBO_COLORS: Record<NonNullable<ProfileTheme['patternColorCombo']>, Record<ProfileTheme['colorScheme'], string>> = {
   default: {
-    default:  'rgba(232,87,42,0.18)',
-    midnight: 'rgba(129,140,248,0.18)',
-    ocean:    'rgba(34,211,238,0.18)',
-    forest:   'rgba(110,231,183,0.18)',
-    blush:    'rgba(225,29,72,0.14)',
-    sand:     'rgba(180,83,9,0.14)',
-    pista:    'rgba(45,122,79,0.20)',
-    gulaal:   'rgba(232,52,42,0.20)',
-    neel:     'rgba(245,168,0,0.20)',
-    turmeric: 'rgba(245,168,0,0.20)',
-    steel:    'rgba(245,168,0,0.18)',
-    sienna:   'rgba(192,74,0,0.20)',
+    default:  'rgba(232,87,42,0.18)',  midnight: 'rgba(129,140,248,0.18)',
+    ocean:    'rgba(34,211,238,0.18)', forest:   'rgba(110,231,183,0.18)',
+    blush:    'rgba(225,29,72,0.14)',  sand:     'rgba(180,83,9,0.14)',
+    pista:    'rgba(45,122,79,0.20)',  gulaal:   'rgba(232,52,42,0.20)',
+    neel:     'rgba(245,168,0,0.20)',  turmeric: 'rgba(245,168,0,0.20)',
+    steel:    'rgba(91,141,239,0.18)', sienna:   'rgba(192,74,0,0.20)',
     indigo:   'rgba(129,140,248,0.18)',
+    aurora:      'rgba(217,70,239,0.20)',  sage:        'rgba(61,127,83,0.18)',
+    mint:        'rgba(12,139,107,0.18)',  electric:    'rgba(0,229,255,0.22)',
+    velvet:      'rgba(139,35,64,0.22)',   nightforest: 'rgba(126,200,160,0.20)',
+    parchment:   'rgba(74,55,40,0.14)',    gallery:     'rgba(26,26,26,0.10)',
+    terracotta:  'rgba(196,85,42,0.18)',
   },
   warm: {
     default: 'rgba(220,120,60,0.18)', midnight: 'rgba(220,120,60,0.18)', ocean: 'rgba(220,120,60,0.18)',
     forest:  'rgba(220,120,60,0.18)', blush:    'rgba(220,100,50,0.14)', sand:  'rgba(180,100,30,0.14)',
     pista:   'rgba(220,120,60,0.18)', gulaal:   'rgba(220,120,60,0.18)', neel:  'rgba(220,120,60,0.18)',
     turmeric:'rgba(220,120,60,0.18)', steel:    'rgba(220,120,60,0.18)', sienna:'rgba(180,80,20,0.18)',
-    indigo:  'rgba(220,120,60,0.18)',
+    indigo:  'rgba(220,120,60,0.18)', aurora:   'rgba(220,120,60,0.18)', sage:  'rgba(180,100,30,0.14)',
+    mint:        'rgba(180,100,30,0.14)', electric:    'rgba(220,120,60,0.18)',
+    velvet:      'rgba(180,80,30,0.18)',   nightforest: 'rgba(180,120,60,0.18)',
+    parchment:   'rgba(160,100,40,0.14)', gallery:     'rgba(180,100,30,0.10)',
+    terracotta:  'rgba(180,80,20,0.18)',
   },
   cool: {
     default: 'rgba(60,180,220,0.18)', midnight: 'rgba(60,180,220,0.18)', ocean: 'rgba(34,211,238,0.22)',
     forest:  'rgba(60,180,220,0.18)', blush:    'rgba(60,130,200,0.14)', sand:  'rgba(60,140,200,0.14)',
     pista:   'rgba(60,180,220,0.18)', gulaal:   'rgba(60,180,220,0.18)', neel:  'rgba(60,180,220,0.18)',
     turmeric:'rgba(60,180,220,0.18)', steel:    'rgba(60,180,220,0.18)', sienna:'rgba(60,180,220,0.18)',
-    indigo:  'rgba(100,110,240,0.22)',
+    indigo:  'rgba(100,110,240,0.22)', aurora:  'rgba(150,60,220,0.22)', sage:  'rgba(60,140,200,0.14)',
+    mint:        'rgba(12,139,107,0.22)',  electric:    'rgba(0,229,255,0.25)',
+    velvet:      'rgba(60,130,200,0.18)',  nightforest: 'rgba(60,180,150,0.20)',
+    parchment:   'rgba(60,130,180,0.14)', gallery:     'rgba(60,140,200,0.12)',
+    terracotta:  'rgba(60,150,200,0.18)',
   },
   mono: {
     default: 'rgba(255,255,255,0.10)', midnight: 'rgba(255,255,255,0.09)', ocean: 'rgba(255,255,255,0.10)',
-    forest:  'rgba(255,255,255,0.10)', blush:    'rgba(0,0,0,0.08)',        sand:  'rgba(0,0,0,0.07)',
+    forest:  'rgba(255,255,255,0.10)', blush:    'rgba(0,0,0,0.08)',       sand:  'rgba(0,0,0,0.07)',
     pista:   'rgba(255,255,255,0.10)', gulaal:   'rgba(255,255,255,0.10)', neel:  'rgba(255,255,255,0.10)',
     turmeric:'rgba(255,255,255,0.10)', steel:    'rgba(255,255,255,0.10)', sienna:'rgba(255,255,255,0.10)',
-    indigo:  'rgba(255,255,255,0.10)',
+    indigo:  'rgba(255,255,255,0.10)', aurora:   'rgba(255,255,255,0.10)', sage:  'rgba(0,0,0,0.07)',
+    mint:        'rgba(0,0,0,0.07)',       electric:    'rgba(255,255,255,0.12)',
+    velvet:      'rgba(255,255,255,0.10)', nightforest: 'rgba(255,255,255,0.10)',
+    parchment:   'rgba(0,0,0,0.07)',       gallery:     'rgba(0,0,0,0.07)',
+    terracotta:  'rgba(0,0,0,0.07)',
   },
 }
 
@@ -93,12 +224,8 @@ function buildPatternUrl(style: NonNullable<ProfileTheme['patternStyle']>, color
     case 'grid':
       return `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20'%3E%3Cpath d='M20 0H0v20' fill='none' stroke='${c}' stroke-width='0.6'/%3E%3C/svg%3E")`
     case 'waves':
-      // Single cubic that starts and ends at y=12 with matching tangents — tiles seamlessly
       return `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='24'%3E%3Cpath d='M0 12 C25 2,75 22,100 12' fill='none' stroke='${c}' stroke-width='1'/%3E%3C/svg%3E")`
     case 'hex':
-      // Pointy-top hex (R≈30) where every vertex lands on a tile boundary edge,
-      // plus a stem connecting the hex bottom to the top of the next row's hex.
-      // Tile 52×90 = R√3 × 3R — the mathematically correct repeat unit.
       return `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='52' height='90'%3E%3Cpath d='M26,0 L52,15 L52,45 L26,60 L0,45 L0,15 Z M26,60 L26,90' fill='none' stroke='${c}' stroke-width='0.9'/%3E%3C/svg%3E")`
   }
 }
@@ -138,8 +265,6 @@ function buildThemeStyle(theme: ProfileTheme): React.CSSProperties {
     bgProps = { backgroundImage: patternUrl, backgroundSize: patSize[patStyle] }
   }
 
-  // Card shadow — propagated to .card-surface descendants via CSS inheritance.
-  // 'off' (Flat) intentionally sets nothing so blocks render with no shadow or border.
   const shadowVars: Record<string, string> = {}
   if (theme.dropShadow === 'natural') {
     shadowVars['--wimc-card-shadow'] = '0 0 4px 1px rgb(var(--color-on-background) / 0.12), 0 0 20px 3px rgb(var(--color-on-background) / 0.18)'
@@ -157,34 +282,21 @@ function buildThemeStyle(theme: ProfileTheme): React.CSSProperties {
   return { ...cssVarProps, ...bgProps, ...(shadowVars as React.CSSProperties), ...(fontColorVars as React.CSSProperties) }
 }
 
-// Aurora background element (rendered inside page root for 'aurora' mode)
-// All styles use vivid hues + mix-blend-mode:screen for Luma-style additive glow.
 function AuroraBackground({ scheme, style: auroraStyle = 'nebula' }: { scheme: ProfileTheme['colorScheme'], style?: ProfileTheme['auroraStyle'] }) {
   const [c1, c2, c3, c4, c5] = AURORA_COLORS[scheme]
 
-  // Shared blob style factory
   const blob = (
-    color: string,
-    w: string, h: string,
-    top: string, left: string,
-    anim: string,
-    blur = 80,
-    opacity = 0.80,
+    color: string, w: string, h: string, top: string, left: string,
+    anim: string, blur = 80, opacity = 0.80,
   ) => ({
-    position: 'absolute' as const,
-    borderRadius: '50%',
-    filter: `blur(${blur}px)`,
-    pointerEvents: 'none' as const,
-    willChange: 'transform',
-    mixBlendMode: 'screen' as const,
-    width: w, height: h, top, left,
-    opacity,
+    position: 'absolute' as const, borderRadius: '50%', filter: `blur(${blur}px)`,
+    pointerEvents: 'none' as const, willChange: 'transform', mixBlendMode: 'screen' as const,
+    width: w, height: h, top, left, opacity,
     background: `radial-gradient(circle at 40% 40%, ${color} 0%, transparent 68%)`,
     animation: anim,
   })
 
   if (auroraStyle === 'mesh') {
-    // 6 vivid blobs on tight figure-8 paths — dense, fast colour weave
     return (
       <div aria-hidden="true" className="fixed inset-0 overflow-hidden pointer-events-none" style={{ zIndex: 0 }}>
         <div style={blob(c1, '55%', '55%', '-15%',  '-10%', 'wimc-mesh-a 14s ease-in-out infinite', 70)} />
@@ -198,38 +310,25 @@ function AuroraBackground({ scheme, style: auroraStyle = 'nebula' }: { scheme: P
   }
 
   if (auroraStyle === 'rays') {
-    // Vivid conic wheel slowly spinning — each arc is a saturated scheme colour
     return (
       <div aria-hidden="true" className="fixed inset-0 overflow-hidden pointer-events-none" style={{ zIndex: 0 }}>
         <div style={{
-          position: 'absolute',
-          width: '200%', height: '200%',
-          top: '-50%', left: '-50%',
+          position: 'absolute', width: '200%', height: '200%', top: '-50%', left: '-50%',
           background: `conic-gradient(from 0deg at 50% 65%, ${c1}, ${c2}, ${c3}, ${c4}, ${c5}, ${c1}, ${c2}, ${c3})`,
-          opacity: 0.55,
-          filter: 'blur(50px)',
-          animation: 'wimc-rays-spin 28s linear infinite',
-          transformOrigin: '50% 50%',
-          mixBlendMode: 'screen',
+          opacity: 0.55, filter: 'blur(50px)', animation: 'wimc-rays-spin 28s linear infinite',
+          transformOrigin: '50% 50%', mixBlendMode: 'screen',
         }} />
-        {/* Second counter-rotating layer for depth */}
         <div style={{
-          position: 'absolute',
-          width: '150%', height: '150%',
-          top: '-25%', left: '-25%',
+          position: 'absolute', width: '150%', height: '150%', top: '-25%', left: '-25%',
           background: `conic-gradient(from 180deg at 50% 65%, ${c3}, ${c5}, ${c1}, ${c4}, ${c2}, ${c3})`,
-          opacity: 0.30,
-          filter: 'blur(70px)',
-          animation: 'wimc-rays-spin 44s linear infinite reverse',
-          transformOrigin: '50% 50%',
-          mixBlendMode: 'screen',
+          opacity: 0.30, filter: 'blur(70px)', animation: 'wimc-rays-spin 44s linear infinite reverse',
+          transformOrigin: '50% 50%', mixBlendMode: 'screen',
         }} />
       </div>
     )
   }
 
   if (auroraStyle === 'ripple') {
-    // Concentric vivid rings pulsing outward from center
     const rings = [
       { color: c1, size: '150%', anim: 'wimc-ripple-a 5s ease-in-out infinite',       blur: 60 },
       { color: c3, size: '115%', anim: 'wimc-ripple-b 7s ease-in-out infinite 0.8s',  blur: 55 },
@@ -240,25 +339,18 @@ function AuroraBackground({ scheme, style: auroraStyle = 'nebula' }: { scheme: P
       <div aria-hidden="true" className="fixed inset-0 overflow-hidden pointer-events-none" style={{ zIndex: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         {rings.map((r, i) => (
           <div key={i} style={{
-            position: 'absolute',
-            width: r.size, height: r.size,
-            borderRadius: '50%',
+            position: 'absolute', width: r.size, height: r.size, borderRadius: '50%',
             background: `radial-gradient(circle, ${r.color} 0%, transparent 65%)`,
-            filter: `blur(${r.blur}px)`,
-            animation: r.anim,
-            willChange: 'transform, opacity',
-            mixBlendMode: 'screen',
-            opacity: 0.80,
+            filter: `blur(${r.blur}px)`, animation: r.anim, willChange: 'transform, opacity',
+            mixBlendMode: 'screen', opacity: 0.80,
           }} />
         ))}
       </div>
     )
   }
 
-  // Default: nebula — 5 vivid large drifting blobs, Luma-style
   return (
     <div aria-hidden="true" className="fixed inset-0 overflow-hidden pointer-events-none" style={{ zIndex: 0 }}>
-      {/* Anchored blobs at corners + center for maximum coverage */}
       <div style={blob(c1, '85%', '85%', '-30%', '-25%', 'wimc-luma-a 22s ease-in-out infinite', 100, 0.82)} />
       <div style={blob(c2, '80%', '80%',  '45%',  '35%', 'wimc-luma-b 28s ease-in-out infinite', 100, 0.78)} />
       <div style={blob(c3, '70%', '70%', '-15%',  '50%', 'wimc-luma-c 18s ease-in-out infinite',  90, 0.72)} />
@@ -269,7 +361,7 @@ function AuroraBackground({ scheme, style: auroraStyle = 'nebula' }: { scheme: P
 }
 
 // ---------------------------------------------------------------------------
-// Creator type labels + pill styles — derived from V2 category config
+// Creator type labels + pill styles
 // ---------------------------------------------------------------------------
 
 function contrastColor(hex: string): string {
@@ -292,11 +384,9 @@ const CATEGORY_PILL_MAP: Record<string, PillData> = Object.fromEntries([
 ])
 
 // ---------------------------------------------------------------------------
-// Platform SVG icons (Phosphor-style filled paths, viewBox 0 0 256 256)
+// Platform SVG icons
 // ---------------------------------------------------------------------------
 
-// viewBox="0 0 24 24" paths (some platforms use 24×24, others 256×256)
-// We use two sets: 24px paths for the profile SVG icons (smaller, cleaner)
 const SOCIAL_SVGS_24: Record<string, string> = {
   instagram: 'M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z',
   youtube:   'M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z',
@@ -313,12 +403,14 @@ const SOCIAL_SVGS_24: Record<string, string> = {
 
 function formatEventDate(startsAt: string): string {
   return new Intl.DateTimeFormat('en-IN', {
-    weekday: 'long',
-    month:   'long',
-    day:     'numeric',
-    hour:    '2-digit',
-    minute:  '2-digit',
-    hour12:  true,
+    weekday: 'long', month: 'long', day: 'numeric',
+    hour: '2-digit', minute: '2-digit', hour12: true,
+  }).format(new Date(startsAt))
+}
+
+function formatShortDate(startsAt: string): string {
+  return new Intl.DateTimeFormat('en-IN', {
+    month: 'short', day: 'numeric', year: 'numeric',
   }).format(new Date(startsAt))
 }
 
@@ -332,10 +424,9 @@ function PlatformIcon({ platform }: { platform: string }) {
 }
 
 // ---------------------------------------------------------------------------
-// Block renderers
+// Block renderers — original set
 // ---------------------------------------------------------------------------
 
-// Platform → URL builder for handle-style inputs
 function buildSocialUrl(platform: string, value: string): string {
   if (!value) return '#'
   if (value.startsWith('http')) return value
@@ -359,9 +450,7 @@ function ProfileSocialLinks({ socialLinks }: { socialLinks: Record<string, strin
           <a
             key={platform}
             href={buildSocialUrl(platform, value)}
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label={platform}
+            target="_blank" rel="noopener noreferrer" aria-label={platform}
             className="h-14 w-14 flex items-center justify-center rounded-full bg-surface-container-highest text-on-surface hover:scale-110 hover:text-primary transition-all duration-200 active:scale-95 shrink-0"
           >
             <PlatformIcon platform={platform} />
@@ -379,9 +468,7 @@ function SocialLinkButton({ block }: { block: PageBlock }) {
   return (
     <section>
       <a
-        href={cfg.url || '#'}
-        target="_blank"
-        rel="noopener noreferrer"
+        href={cfg.url || '#'} target="_blank" rel="noopener noreferrer"
         className="card-surface group relative flex items-center w-full py-4 px-5 rounded-xl bg-surface-container-high hover:bg-surface-container-highest transition-all duration-200 active:scale-[0.98]"
       >
         <PlatformIcon platform={platform} />
@@ -402,9 +489,7 @@ function CustomLinkBlock({ block }: { block: PageBlock }) {
   return (
     <section>
       <a
-        href={cfg.url || '#'}
-        target="_blank"
-        rel="noopener noreferrer"
+        href={cfg.url || '#'} target="_blank" rel="noopener noreferrer"
         className="card-surface group relative flex items-center justify-center w-full py-4 px-8 rounded-xl bg-surface-container-high border-2 border-primary text-primary font-bold text-lg hover:bg-surface-container-highest transition-all duration-300 active:scale-[0.98]"
       >
         {cfg.description && (
@@ -429,25 +514,13 @@ function YoutubeBlock({ block }: { block: PageBlock }) {
   return (
     <section>
       <a
-        href={url}
-        target="_blank"
-        rel="noopener noreferrer"
+        href={url} target="_blank" rel="noopener noreferrer"
         className="card-surface relative aspect-video w-full overflow-hidden rounded-xl bg-surface-container-high group block"
       >
-        <Image
-          src={thumb}
-          alt={cfg.title ?? 'YouTube video'}
-          fill
-          className="object-cover transition-transform duration-500 group-hover:scale-105"
-        />
+        <Image src={thumb} alt={cfg.title ?? 'YouTube video'} fill className="object-cover transition-transform duration-500 group-hover:scale-105" />
         <div className="absolute inset-0 flex items-center justify-center bg-black/30">
           <div className="flex h-16 w-16 items-center justify-center rounded-full bg-white/20 backdrop-blur-sm text-white transition-transform group-hover:scale-110">
-            <span
-              className="material-symbols-outlined text-4xl"
-              style={{ fontVariationSettings: "'FILL' 1" }}
-            >
-              play_arrow
-            </span>
+            <span className="material-symbols-outlined text-4xl" style={{ fontVariationSettings: "'FILL' 1" }}>play_arrow</span>
           </div>
         </div>
         {cfg.title && (
@@ -464,26 +537,15 @@ function ImageGalleryBlock({ block }: { block: PageBlock }) {
   const cfg = block.config as unknown as ImageGalleryConfig
   const images = cfg.images ?? []
   if (images.length === 0) return null
-
   const isCarousel = cfg.layout === 'carousel'
-
   return (
     <section className="card-surface bg-surface-container-high flex flex-col gap-4 rounded-2xl p-4">
       <h2 className="font-headline text-xl font-bold text-on-surface">Gallery</h2>
-
       {isCarousel ? (
         <div className="flex gap-3 overflow-x-auto snap-x snap-mandatory pb-2 scrollbar-hide">
           {images.map((img, i) => (
-            <div
-              key={i}
-              className="snap-start shrink-0 w-56 aspect-[3/4] rounded-xl overflow-hidden relative shadow-md bg-surface-container-highest"
-            >
-              <Image
-                src={img.url}
-                alt={img.caption ?? ''}
-                fill
-                className="object-cover"
-              />
+            <div key={i} className="snap-start shrink-0 w-56 aspect-[3/4] rounded-xl overflow-hidden relative shadow-md bg-surface-container-highest">
+              <Image src={img.url} alt={img.caption ?? ''} fill className="object-cover" />
               {img.caption && (
                 <div className="absolute bottom-0 left-0 right-0 px-2 py-1.5 bg-black/50 backdrop-blur-sm">
                   <p className="text-white text-[11px] font-medium truncate">{img.caption}</p>
@@ -495,16 +557,8 @@ function ImageGalleryBlock({ block }: { block: PageBlock }) {
       ) : (
         <div className="grid grid-cols-2 gap-4">
           {images.map((img, i) => (
-            <div
-              key={i}
-              className="aspect-square rounded-xl overflow-hidden relative shadow-md bg-surface-container-highest"
-            >
-              <Image
-                src={img.url}
-                alt={img.caption ?? ''}
-                fill
-                className="object-cover"
-              />
+            <div key={i} className="aspect-square rounded-xl overflow-hidden relative shadow-md bg-surface-container-highest">
+              <Image src={img.url} alt={img.caption ?? ''} fill className="object-cover" />
               {img.caption && (
                 <div className="absolute bottom-0 left-0 right-0 px-2 py-1.5 bg-black/50 backdrop-blur-sm">
                   <p className="text-white text-[11px] font-medium truncate">{img.caption}</p>
@@ -523,36 +577,25 @@ function TextBioBlock({ block }: { block: PageBlock }) {
   if (!cfg.body) return null
   return (
     <section className="card-surface bg-surface-container-high rounded-xl px-5 py-4">
-      <p className="text-on-surface/80 text-sm sm:text-base leading-relaxed text-center">
-        {cfg.body}
-      </p>
+      <p className="text-on-surface/80 text-sm sm:text-base leading-relaxed text-center">{cfg.body}</p>
     </section>
   )
 }
 
-// Instagram gradient as SVG data URI for the badge
 const INSTAGRAM_GRADIENT_ICON = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0%25' y1='100%25' x2='100%25' y2='0%25'%3E%3Cstop offset='0%25' stop-color='%23f09433'/%3E%3Cstop offset='25%25' stop-color='%23e6683c'/%3E%3Cstop offset='50%25' stop-color='%23dc2743'/%3E%3Cstop offset='75%25' stop-color='%23cc2366'/%3E%3Cstop offset='100%25' stop-color='%23bc1888'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='24' height='24' rx='6' fill='url(%23g)'/%3E%3Cpath fill='white' d='M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z'/%3E%3C/svg%3E`
 
 function InstagramBlock({ block, thumbnail }: { block: PageBlock; thumbnail?: string | null }) {
   const cfg = block.config as unknown as InstagramEmbedConfig
   if (!cfg.post_url) return null
-
   return (
     <section>
       <a
-        href={cfg.post_url}
-        target="_blank"
-        rel="noopener noreferrer"
+        href={cfg.post_url} target="_blank" rel="noopener noreferrer"
         className="card-surface group relative block w-full rounded-2xl overflow-hidden bg-surface-container-high"
       >
         {thumbnail ? (
           <div className="relative w-full aspect-square">
-            <Image
-              src={thumbnail}
-              alt="Instagram post"
-              fill
-              className="object-cover transition-transform duration-500 group-hover:scale-105"
-            />
+            <Image src={thumbnail} alt="Instagram post" fill className="object-cover transition-transform duration-500 group-hover:scale-105" />
             <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-transparent to-black/20" />
           </div>
         ) : (
@@ -562,15 +605,11 @@ function InstagramBlock({ block, thumbnail }: { block: PageBlock; thumbnail?: st
             <p className="text-sm font-semibold text-on-surface-variant">View on Instagram</p>
           </div>
         )}
-
-        {/* Instagram badge */}
         <div className="absolute top-3 right-3 flex items-center gap-1.5 bg-black/50 backdrop-blur-sm rounded-full px-2.5 py-1.5">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={INSTAGRAM_GRADIENT_ICON} alt="Instagram" className="w-4 h-4 rounded-sm" />
           <span className="text-white text-[11px] font-semibold">Instagram</span>
         </div>
-
-        {/* Hover overlay */}
         <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-black/20">
           <div className="bg-white/20 backdrop-blur-sm rounded-full px-4 py-2">
             <span className="text-white text-sm font-semibold">View post</span>
@@ -586,16 +625,12 @@ function QuoteBlock({ block }: { block: PageBlock }) {
   if (!cfg.text) return null
   return (
     <section className="card-surface bg-surface-container-high rounded-2xl px-6 py-8 flex flex-col items-center gap-3 text-center">
-      <span className="material-symbols-outlined text-primary text-4xl" style={{ fontVariationSettings: "'FILL' 1" }}>
-        format_quote
-      </span>
+      <span className="material-symbols-outlined text-primary text-4xl" style={{ fontVariationSettings: "'FILL' 1" }}>format_quote</span>
       <blockquote className="font-headline text-xl sm:text-2xl font-bold text-on-surface leading-snug italic">
         &ldquo;{cfg.text}&rdquo;
       </blockquote>
       {cfg.author && (
-        <cite className="text-sm font-semibold text-on-surface-variant not-italic">
-          — {cfg.author}
-        </cite>
+        <cite className="text-sm font-semibold text-on-surface-variant not-italic">— {cfg.author}</cite>
       )}
     </section>
   )
@@ -604,36 +639,24 @@ function QuoteBlock({ block }: { block: PageBlock }) {
 function MarqueeBlock({ block }: { block: PageBlock }) {
   const cfg = block.config as unknown as MarqueeTextConfig
   if (!cfg.text) return null
-
   const speed = cfg.speed ?? 'normal'
   const bg = cfg.bg ?? 'primary'
   const speedClass = speed === 'slow' ? 'marquee-slow' : speed === 'fast' ? 'marquee-fast' : 'marquee-normal'
-
   const bgColor: React.CSSProperties = bg === 'ink'
     ? { background: 'rgb(var(--color-surface-container-lowest))' }
     : bg === 'chalk'
     ? { background: 'rgb(var(--color-on-background))' }
     : { background: 'rgb(var(--color-primary))' }
-
   const textColor: React.CSSProperties = bg === 'chalk'
     ? { color: 'rgb(var(--color-background))' }
     : bg === 'ink'
     ? { color: 'rgb(var(--color-on-surface-variant))' }
     : { color: 'rgb(var(--color-on-primary))' }
-
-  // Repeat text enough times to fill double the container width for seamless looping
   const repeated = `${cfg.text} · `.repeat(12)
-
   return (
     <section>
-      <div
-        className="card-surface w-full overflow-hidden py-3 rounded-xl"
-        style={bgColor}
-      >
-        <div
-          className={`whitespace-nowrap font-headline font-bold text-sm tracking-widest uppercase ${speedClass}`}
-          style={textColor}
-        >
+      <div className="card-surface w-full overflow-hidden py-3 rounded-xl" style={bgColor}>
+        <div className={`whitespace-nowrap font-headline font-bold text-sm tracking-widest uppercase ${speedClass}`} style={textColor}>
           {repeated}{repeated}
         </div>
       </div>
@@ -644,9 +667,7 @@ function MarqueeBlock({ block }: { block: PageBlock }) {
 function StatsGridBlock({ block }: { block: PageBlock }) {
   const cfg = block.config as unknown as StatsGridConfig
   if (!cfg.stats?.length) return null
-
   const colClass = cfg.stats.length <= 2 ? 'grid-cols-2' : cfg.stats.length === 3 ? 'grid-cols-3' : 'grid-cols-2 sm:grid-cols-4'
-
   return (
     <section className="card-surface bg-surface-container-high rounded-2xl p-5">
       <div className={`grid ${colClass} gap-4`}>
@@ -670,13 +691,9 @@ function EventCard({ event }: { event: Event }) {
         <div className="inline-flex w-fit px-2 py-0.5 rounded bg-tertiary-container/20 text-tertiary text-[10px] font-bold uppercase tracking-widest">
           Upcoming Event
         </div>
-        <h3 className="font-headline text-2xl font-bold text-on-surface leading-snug">
-          {event.title}
-        </h3>
+        <h3 className="font-headline text-2xl font-bold text-on-surface leading-snug">{event.title}</h3>
         {event.description && (
-          <p className="text-on-surface-variant text-sm leading-relaxed line-clamp-2">
-            {event.description}
-          </p>
+          <p className="text-on-surface-variant text-sm leading-relaxed line-clamp-2">{event.description}</p>
         )}
       </div>
       <div className="flex flex-col gap-3">
@@ -704,39 +721,677 @@ function EventCard({ event }: { event: Event }) {
 }
 
 // ---------------------------------------------------------------------------
+// Block renderers — new blocks
+// ---------------------------------------------------------------------------
+
+function SocialLinksRowBlock({ block }: { block: PageBlock }) {
+  const cfg = block.config as unknown as SocialLinksRowConfig
+  const links = cfg.links ?? []
+  if (links.length === 0) return null
+  return (
+    <section>
+      <div className="flex flex-wrap justify-center gap-3">
+        {links.map((link, i) => (
+          <a
+            key={i}
+            href={link.url}
+            target="_blank" rel="noopener noreferrer"
+            aria-label={link.label ?? link.platform}
+            className="h-12 w-12 flex items-center justify-center rounded-full bg-surface-container-high text-on-surface hover:scale-110 hover:text-primary transition-all duration-200 active:scale-95"
+          >
+            <PlatformIcon platform={link.platform} />
+          </a>
+        ))}
+      </div>
+    </section>
+  )
+}
+
+function RsvpLinkBlock({ block }: { block: PageBlock }) {
+  const cfg = block.config as unknown as RsvpLinkConfig
+  if (!cfg.url) return null
+  return (
+    <section>
+      <a
+        href={cfg.url} target="_blank" rel="noopener noreferrer"
+        className="card-surface group flex items-center gap-4 w-full py-4 px-5 rounded-xl bg-surface-container-high hover:bg-surface-container-highest transition-all duration-200 active:scale-[0.98]"
+      >
+        <span className="text-2xl shrink-0">{cfg.icon_emoji || '🎟'}</span>
+        <div className="flex-1 min-w-0">
+          <p className="font-bold text-sm text-on-surface truncate">{cfg.label}</p>
+          {cfg.description && (
+            <p className="text-xs text-on-surface-variant truncate">{cfg.description}</p>
+          )}
+        </div>
+        <span className="material-symbols-outlined text-outline group-hover:text-primary transition-colors text-lg shrink-0">
+          open_in_new
+        </span>
+      </a>
+    </section>
+  )
+}
+
+function SpotifyNowPlayingBlock({ block }: { block: PageBlock }) {
+  const cfg = block.config as unknown as SpotifyNowPlayingConfig
+  const spotifyGreen = '#1DB954'
+
+  if (cfg.fallback_track_title && cfg.fallback_track_url) {
+    return (
+      <section>
+        <a
+          href={cfg.fallback_track_url} target="_blank" rel="noopener noreferrer"
+          className="card-surface group flex items-center gap-4 w-full p-4 rounded-xl bg-surface-container-high hover:bg-surface-container-highest transition-all active:scale-[0.98]"
+        >
+          <div className="w-12 h-12 rounded-lg shrink-0 flex items-center justify-center" style={{ background: spotifyGreen }}>
+            <svg viewBox="0 0 24 24" fill="white" className="w-6 h-6"><path d={SOCIAL_SVGS_24.spotify} /></svg>
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: spotifyGreen }}>Listening to</p>
+            <p className="font-bold text-sm text-on-surface truncate">{cfg.fallback_track_title}</p>
+            {cfg.fallback_track_artist && (
+              <p className="text-xs text-on-surface-variant truncate">{cfg.fallback_track_artist}</p>
+            )}
+          </div>
+          <span className="material-symbols-outlined text-outline group-hover:text-primary transition-colors text-lg shrink-0">
+            open_in_new
+          </span>
+        </a>
+      </section>
+    )
+  }
+
+  return (
+    <section>
+      <a
+        href={`https://open.spotify.com/user/${cfg.spotify_user_id}`}
+        target="_blank" rel="noopener noreferrer"
+        className="card-surface group flex items-center gap-4 w-full py-4 px-5 rounded-xl bg-surface-container-high hover:bg-surface-container-highest transition-all active:scale-[0.98]"
+      >
+        <svg viewBox="0 0 24 24" className="w-6 h-6 shrink-0" style={{ fill: spotifyGreen }}><path d={SOCIAL_SVGS_24.spotify} /></svg>
+        <span className="flex-1 font-semibold text-sm text-on-surface">Follow on Spotify</span>
+        <span className="material-symbols-outlined text-outline group-hover:text-primary transition-colors text-lg shrink-0">open_in_new</span>
+      </a>
+    </section>
+  )
+}
+
+const PODCAST_PLATFORM_ICONS: Record<string, string> = {
+  spotify:       SOCIAL_SVGS_24.spotify,
+  apple_podcasts:'M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm0 3.6c1.988 0 3.6 1.612 3.6 3.6S13.988 12.8 12 12.8 8.4 11.188 8.4 9.2 10.012 5.6 12 5.6zm0 13.6c-2.496 0-4.72-1.12-6.24-2.88.06-2.08 4.16-3.224 6.24-3.224s6.18 1.144 6.24 3.224C16.72 18.08 14.496 19.2 12 19.2z',
+  anchor:        'M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm4.5 14.5c-.3.3-.75.3-1.05 0L12 13.05l-3.45 3.45c-.3.3-.75.3-1.05 0s-.3-.75 0-1.05l4.5-4.5 4.5 4.5c.3.3.3.75 0 1.05z',
+  direct:        'M12 15.5A3.5 3.5 0 0 1 8.5 12 3.5 3.5 0 0 1 12 8.5a3.5 3.5 0 0 1 3.5 3.5 3.5 3.5 0 0 1-3.5 3.5m7.43-2.92c.04-.3.07-.61.07-.93 0-.32-.03-.62-.07-.93l2.04-1.58c.18-.14.23-.41.12-.61l-1.93-3.34c-.12-.22-.37-.29-.58-.22l-2.4.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.85c-.24 0-.44.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.4-.96c-.22-.08-.46 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.31-.09.63-.09.94 0 .31.04.62.09.94l-2.03 1.58c-.18.14-.23.4-.12.6l1.93 3.34c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.04.24.24.41.47.41h3.85c.24 0 .44-.17.48-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.93-3.34c.12-.21.07-.47-.12-.6l-2.01-1.58z',
+}
+
+function PodcastEpisodeBlock({ block }: { block: PageBlock }) {
+  const cfg = block.config as unknown as PodcastEpisodeConfig
+  if (!cfg.episode_url) return null
+  const iconPath = PODCAST_PLATFORM_ICONS[cfg.platform] ?? PODCAST_PLATFORM_ICONS.direct
+  const platformLabel: Record<string, string> = {
+    spotify: 'Spotify', apple_podcasts: 'Apple Podcasts', anchor: 'Anchor', direct: 'Podcast',
+  }
+  return (
+    <section>
+      <a
+        href={cfg.episode_url} target="_blank" rel="noopener noreferrer"
+        className="card-surface group flex gap-4 w-full p-4 rounded-2xl bg-surface-container-high hover:bg-surface-container-highest transition-all active:scale-[0.98]"
+      >
+        {cfg.artwork_url ? (
+          <div className="w-16 h-16 rounded-lg overflow-hidden relative shrink-0">
+            <Image src={cfg.artwork_url} alt="Episode artwork" fill className="object-cover" />
+          </div>
+        ) : (
+          <div className="w-16 h-16 rounded-lg shrink-0 flex items-center justify-center bg-primary/10">
+            <svg viewBox="0 0 24 24" fill="currentColor" className="w-8 h-8 text-primary">
+              <path d={iconPath} />
+            </svg>
+          </div>
+        )}
+        <div className="flex-1 min-w-0 flex flex-col gap-1">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-primary">{platformLabel[cfg.platform]}</p>
+          {cfg.episode_title && (
+            <p className="font-bold text-sm text-on-surface line-clamp-2 leading-snug">{cfg.episode_title}</p>
+          )}
+          {cfg.description && (
+            <p className="text-xs text-on-surface-variant line-clamp-2">{cfg.description}</p>
+          )}
+          {cfg.episode_duration && (
+            <p className="text-[11px] text-on-surface-variant font-medium mt-auto">{cfg.episode_duration}</p>
+          )}
+        </div>
+        <span className="material-symbols-outlined text-outline group-hover:text-primary transition-colors text-lg shrink-0 self-center">open_in_new</span>
+      </a>
+    </section>
+  )
+}
+
+function SubstackPreviewBlock({ block, posts }: { block: PageBlock; posts: SubstackPost[] }) {
+  const cfg = block.config as unknown as SubstackPreviewConfig
+  const shown = posts.slice(0, cfg.posts_count ?? 3)
+  const pubHost = (() => {
+    try {
+      const url = cfg.publication_url.startsWith('http') ? cfg.publication_url : `https://${cfg.publication_url}`
+      return new URL(url).hostname.replace('www.', '')
+    } catch { return cfg.publication_url }
+  })()
+
+  if (shown.length === 0) {
+    return (
+      <section>
+        <a
+          href={`https://${pubHost}`} target="_blank" rel="noopener noreferrer"
+          className="card-surface flex items-center gap-3 w-full py-4 px-5 rounded-xl bg-surface-container-high hover:bg-surface-container-highest transition-all"
+        >
+          <span className="material-symbols-outlined text-primary text-2xl" style={{ fontVariationSettings: "'FILL' 1" }}>mail</span>
+          <span className="font-semibold text-sm text-on-surface">Read on Substack</span>
+          <span className="ml-auto material-symbols-outlined text-outline text-lg">open_in_new</span>
+        </a>
+      </section>
+    )
+  }
+
+  return (
+    <section className="card-surface bg-surface-container-high rounded-2xl overflow-hidden">
+      <div className="px-5 py-4 border-b border-outline-variant/20 flex items-center gap-2">
+        <span className="material-symbols-outlined text-primary" style={{ fontVariationSettings: "'FILL' 1" }}>mail</span>
+        <h3 className="font-headline font-bold text-on-surface">{pubHost}</h3>
+      </div>
+      <div className="divide-y divide-outline-variant/20">
+        {shown.map((post, i) => (
+          <a
+            key={i}
+            href={post.url} target="_blank" rel="noopener noreferrer"
+            className="group flex flex-col gap-1 px-5 py-4 hover:bg-surface-container-highest transition-colors"
+          >
+            <p className="font-semibold text-sm text-on-surface group-hover:text-primary transition-colors line-clamp-2">
+              {post.title}
+            </p>
+            {post.excerpt && (
+              <p className="text-xs text-on-surface-variant line-clamp-2">{post.excerpt}</p>
+            )}
+            <p className="text-[11px] text-on-surface-variant/60">{post.date}</p>
+          </a>
+        ))}
+      </div>
+      {cfg.show_subscribe_button && (
+        <div className="px-5 py-4 border-t border-outline-variant/20">
+          <a
+            href={`https://${pubHost}`} target="_blank" rel="noopener noreferrer"
+            className="block w-full text-center py-2.5 rounded-xl bg-primary text-on-primary font-bold text-sm hover:opacity-90 active:scale-[0.98] transition-all"
+          >
+            Subscribe on Substack
+          </a>
+        </div>
+      )}
+    </section>
+  )
+}
+
+function EventCalendarBlock({ block, events }: { block: PageBlock; events: Event[] }) {
+  const cfg = block.config as unknown as EventCalendarConfig
+  const now = new Date()
+  const maxDate = new Date(now.getFullYear(), now.getMonth() + (cfg.months_ahead ?? 1), 0)
+
+  const shown = events.filter((e) => {
+    const d = new Date(e.starts_at)
+    return d >= now && d <= maxDate
+  })
+
+  if (shown.length === 0) return null
+
+  // Group by month
+  const grouped: Record<string, Event[]> = {}
+  for (const ev of shown) {
+    const key = new Intl.DateTimeFormat('en-IN', { month: 'long', year: 'numeric' }).format(new Date(ev.starts_at))
+    ;(grouped[key] ??= []).push(ev)
+  }
+
+  return (
+    <section className="card-surface bg-surface-container-high rounded-2xl overflow-hidden">
+      <div className="px-5 py-4 border-b border-outline-variant/20 flex items-center gap-2">
+        <span className="material-symbols-outlined text-primary">calendar_month</span>
+        <h3 className="font-headline font-bold text-on-surface">Upcoming Events</h3>
+      </div>
+      {Object.entries(grouped).map(([month, evs]) => (
+        <div key={month}>
+          <div className="px-5 py-2 bg-surface-container-lowest/50">
+            <p className="text-[11px] font-bold uppercase tracking-widest text-on-surface-variant">{month}</p>
+          </div>
+          {evs.map((ev) => (
+            <a
+              key={ev.id}
+              href={`/events/${ev.slug}`}
+              className="group flex items-center gap-4 px-5 py-3 hover:bg-surface-container-highest transition-colors border-b border-outline-variant/10 last:border-0"
+            >
+              <div className="flex flex-col items-center w-10 shrink-0 text-center">
+                <span className="text-lg font-bold text-primary leading-none">
+                  {new Date(ev.starts_at).getDate()}
+                </span>
+                <span className="text-[10px] text-on-surface-variant uppercase">
+                  {new Intl.DateTimeFormat('en-IN', { weekday: 'short' }).format(new Date(ev.starts_at))}
+                </span>
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="font-semibold text-sm text-on-surface truncate group-hover:text-primary transition-colors">{ev.title}</p>
+                <p className="text-xs text-on-surface-variant truncate">{ev.venue_name}</p>
+              </div>
+              <span className="text-xs font-bold text-primary shrink-0">
+                {ev.ticket_price === 0 ? 'Free' : `₹${ev.ticket_price / 100}`}
+              </span>
+            </a>
+          ))}
+        </div>
+      ))}
+    </section>
+  )
+}
+
+function PastEventsGalleryBlock({ block, events }: { block: PageBlock; events: Event[] }) {
+  const cfg = block.config as unknown as PastEventsGalleryConfig
+  if (events.length === 0) return null
+
+  if (cfg.layout === 'list') {
+    return (
+      <section className="card-surface bg-surface-container-high rounded-2xl overflow-hidden">
+        <div className="px-5 py-4 border-b border-outline-variant/20">
+          <h3 className="font-headline font-bold text-on-surface">Past Events</h3>
+        </div>
+        <div className="divide-y divide-outline-variant/10">
+          {events.map((ev) => (
+            <a
+              key={ev.id}
+              href={`/events/${ev.slug}`}
+              className="group flex items-center gap-4 px-5 py-4 hover:bg-surface-container-highest transition-colors"
+            >
+              {ev.cover_image_url && (
+                <div className="w-12 h-12 rounded-lg overflow-hidden relative shrink-0">
+                  <Image src={ev.cover_image_url} alt={ev.title} fill className="object-cover" />
+                </div>
+              )}
+              <div className="flex-1 min-w-0">
+                <p className="font-semibold text-sm text-on-surface truncate group-hover:text-primary transition-colors">{ev.title}</p>
+                <p className="text-xs text-on-surface-variant" suppressHydrationWarning>{formatShortDate(ev.starts_at)}</p>
+              </div>
+            </a>
+          ))}
+        </div>
+      </section>
+    )
+  }
+
+  return (
+    <section className="flex flex-col gap-3">
+      <h3 className="font-headline font-bold text-lg text-on-surface px-1">Past Events</h3>
+      <div className="grid grid-cols-2 gap-3">
+        {events.map((ev) => (
+          <a
+            key={ev.id}
+            href={`/events/${ev.slug}`}
+            className="card-surface group relative aspect-square rounded-xl overflow-hidden bg-surface-container-high"
+          >
+            {ev.cover_image_url ? (
+              <Image src={ev.cover_image_url} alt={ev.title} fill className="object-cover transition-transform duration-500 group-hover:scale-105" />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center bg-surface-container-highest">
+                <span className="material-symbols-outlined text-on-surface-variant text-3xl">event</span>
+              </div>
+            )}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
+            <div className="absolute bottom-0 left-0 right-0 p-3">
+              <p className="text-white text-xs font-bold line-clamp-2 leading-snug">{ev.title}</p>
+              <p className="text-white/60 text-[10px] mt-0.5" suppressHydrationWarning>{formatShortDate(ev.starts_at)}</p>
+            </div>
+          </a>
+        ))}
+      </div>
+    </section>
+  )
+}
+
+function EventSeriesBlock({ block, events }: { block: PageBlock; events: Event[] }) {
+  const cfg = block.config as unknown as EventSeriesConfig
+  const seriesEvts = events.filter((e) => cfg.linked_event_ids?.includes(e.id))
+  const FREQ_LABELS: Record<string, string> = {
+    weekly: 'Weekly', fortnightly: 'Fortnightly', monthly: 'Monthly',
+    quarterly: 'Quarterly', irregular: 'Recurring',
+  }
+
+  return (
+    <section className="card-surface bg-surface-container-high rounded-2xl overflow-hidden">
+      {cfg.cover_image_url && (
+        <div className="relative w-full aspect-[21/9] overflow-hidden">
+          <Image src={cfg.cover_image_url} alt={cfg.series_name} fill className="object-cover" />
+          <div className="absolute inset-0 bg-gradient-to-t from-surface-container-high via-transparent to-transparent" />
+        </div>
+      )}
+      <div className="p-5 flex flex-col gap-3">
+        <div>
+          <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-primary/10 text-primary text-[10px] font-bold uppercase tracking-widest mb-2">
+            <span className="material-symbols-outlined text-xs">repeat</span>
+            {FREQ_LABELS[cfg.frequency] ?? 'Series'} · {cfg.episode_count} episodes
+          </div>
+          <h3 className="font-headline font-bold text-xl text-on-surface">{cfg.series_name}</h3>
+          {cfg.description && (
+            <p className="text-sm text-on-surface-variant mt-1">{cfg.description}</p>
+          )}
+        </div>
+
+        {seriesEvts.length > 0 && (
+          <div className="flex flex-col gap-2 mt-1">
+            {seriesEvts.slice(0, 4).map((ev) => (
+              <a
+                key={ev.id}
+                href={`/events/${ev.slug}`}
+                className="group flex items-center gap-3 py-2 hover:text-primary transition-colors"
+              >
+                <span className="material-symbols-outlined text-sm text-primary">calendar_today</span>
+                <span className="text-sm text-on-surface group-hover:text-primary transition-colors flex-1 truncate">{ev.title}</span>
+                <span className="text-xs text-on-surface-variant shrink-0" suppressHydrationWarning>{formatShortDate(ev.starts_at)}</span>
+              </a>
+            ))}
+          </div>
+        )}
+      </div>
+    </section>
+  )
+}
+
+function CommunityStatsBlock({ block, profile }: { block: PageBlock; profile: UserProfile }) {
+  const cfg = block.config as unknown as CommunityStatsConfig
+  const stats: { value: string; label: string; icon: string }[] = []
+
+  if (cfg.show_events_hosted && profile.cumulative_events_hosted > 0) {
+    stats.push({ value: String(profile.cumulative_events_hosted), label: 'Events Hosted', icon: 'event' })
+  }
+  if (cfg.show_total_attendees && profile.cumulative_unique_attendees > 0) {
+    stats.push({ value: profile.cumulative_unique_attendees.toLocaleString('en-IN'), label: 'Attendees', icon: 'group' })
+  }
+  if (cfg.show_average_rating && profile.average_event_rating > 0) {
+    stats.push({ value: `${profile.average_event_rating.toFixed(1)}★`, label: 'Avg Rating', icon: 'star' })
+  }
+
+  if (stats.length === 0) return null
+
+  return (
+    <section className="card-surface bg-surface-container-high rounded-2xl p-5">
+      {cfg.custom_label && (
+        <h3 className="font-headline font-bold text-on-surface text-center mb-4">{cfg.custom_label}</h3>
+      )}
+      <div className={`grid ${stats.length === 3 ? 'grid-cols-3' : 'grid-cols-2'} gap-4`}>
+        {stats.map((s, i) => (
+          <div key={i} className="flex flex-col items-center gap-1 text-center">
+            <span className="material-symbols-outlined text-primary text-xl" style={{ fontVariationSettings: "'FILL' 1" }}>
+              {s.icon}
+            </span>
+            <span className="font-headline text-2xl font-bold text-on-surface leading-none">{s.value}</span>
+            <span className="text-[11px] font-semibold text-on-surface-variant uppercase tracking-wider">{s.label}</span>
+          </div>
+        ))}
+      </div>
+    </section>
+  )
+}
+
+function CreatorTypeBadgeBlock({ block, profile }: { block: PageBlock; profile: UserProfile }) {
+  const cfg = block.config as unknown as CreatorTypeBadgeConfig
+  const pill = CATEGORY_PILL_MAP[cfg.creator_type] ?? CATEGORY_PILL_MAP[profile.creator_type]
+  if (!pill) return null
+
+  const label = cfg.custom_label ?? pill.label
+  return (
+    <section className="flex justify-center">
+      {cfg.show_link_to_city_feed ? (
+        <a
+          href={`/explore?city=${encodeURIComponent(profile.city)}`}
+          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full font-bold text-sm hover:opacity-90 active:scale-[0.98] transition-all"
+          style={{ background: pill.background, color: pill.color }}
+        >
+          {pill.emoji} {label}
+          <span className="material-symbols-outlined text-sm">arrow_forward</span>
+        </a>
+      ) : (
+        <span
+          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full font-bold text-sm"
+          style={{ background: pill.background, color: pill.color }}
+        >
+          {pill.emoji} {label}
+        </span>
+      )}
+    </section>
+  )
+}
+
+function CityCommunityBlock({ block, profile }: { block: PageBlock; profile: UserProfile }) {
+  const cfg = block.config as unknown as CityCommunityConfig
+  const city = cfg.city || profile.city
+  const label = cfg.neighbourhood ? `${cfg.neighbourhood}, ${city}` : city
+
+  return (
+    <section>
+      {cfg.show_city_feed_link ? (
+        <a
+          href={`/explore?city=${encodeURIComponent(city)}`}
+          className="card-surface group flex items-center gap-3 w-full py-4 px-5 rounded-xl bg-surface-container-high hover:bg-surface-container-highest transition-all"
+        >
+          <span className="material-symbols-outlined text-primary" style={{ fontVariationSettings: "'FILL' 1" }}>location_city</span>
+          <span className="flex-1 font-semibold text-sm text-on-surface">{label} Community</span>
+          <span className="material-symbols-outlined text-outline group-hover:text-primary transition-colors text-lg">arrow_forward</span>
+        </a>
+      ) : (
+        <div className="card-surface flex items-center gap-3 w-full py-4 px-5 rounded-xl bg-surface-container-high">
+          <span className="material-symbols-outlined text-primary" style={{ fontVariationSettings: "'FILL' 1" }}>location_city</span>
+          <span className="font-semibold text-sm text-on-surface">{label} Community</span>
+        </div>
+      )}
+    </section>
+  )
+}
+
+function CollabInviteBlock({ block, profile }: { block: PageBlock; profile: UserProfile }) {
+  const cfg = block.config as unknown as CollabInviteConfig
+  const TYPE_LABELS: Record<string, string> = {
+    co_host: 'Co-Host', workshop_partner: 'Workshop Partner',
+    venue_takeover: 'Venue Takeover', brand_collab: 'Brand Collab',
+  }
+  return (
+    <section className="card-surface bg-surface-container-high rounded-2xl p-5 flex flex-col gap-4">
+      <div className="flex items-start gap-3">
+        <span className="material-symbols-outlined text-primary text-2xl" style={{ fontVariationSettings: "'FILL' 1" }}>
+          group_add
+        </span>
+        <div className="flex-1">
+          <h3 className="font-headline font-bold text-on-surface">Open for Collabs</h3>
+          <p className="text-sm text-on-surface-variant mt-1">{cfg.message}</p>
+        </div>
+      </div>
+
+      <div className="flex flex-wrap gap-2">
+        {cfg.collab_types.map((type) => (
+          <span
+            key={type}
+            className="px-3 py-1 rounded-full text-xs font-bold bg-primary/10 text-primary"
+          >
+            {TYPE_LABELS[type] ?? type}
+          </span>
+        ))}
+      </div>
+
+      {cfg.availability_note && (
+        <p className="text-xs text-on-surface-variant bg-surface-container-lowest/50 rounded-lg px-3 py-2">
+          {cfg.availability_note}
+        </p>
+      )}
+
+      <a
+        href={`/hub?connect=${profile.username}`}
+        className="block w-full text-center py-3 rounded-xl bg-primary text-on-primary font-bold text-sm hover:opacity-90 active:scale-[0.98] transition-all"
+      >
+        Connect on WIMC Hub
+      </a>
+    </section>
+  )
+}
+
+type VenueSummary = { id: string; name: string; address: string; city: string; cover_image_url: string | null; slug: string }
+
+function VenuePartnershipBlock({ block, venueData }: { block: PageBlock; venueData: Record<string, VenueSummary> }) {
+  const cfg = block.config as unknown as { venue_ids?: string[]; display_style?: 'cards' | 'row' }
+  const venues = (cfg.venue_ids ?? []).map((id) => venueData[id]).filter(Boolean) as VenueSummary[]
+  if (venues.length === 0) return null
+
+  return (
+    <section className="flex flex-col gap-3">
+      <h3 className="font-headline font-bold text-lg text-on-surface px-1">Venue Partners</h3>
+      {cfg.display_style === 'row' ? (
+        <div className="flex gap-3 overflow-x-auto pb-1">
+          {venues.map((v) => (
+            <a
+              key={v.id}
+              href={`/addas/${v.slug}`}
+              className="card-surface group shrink-0 w-40 rounded-xl overflow-hidden bg-surface-container-high hover:bg-surface-container-highest transition-colors"
+            >
+              <div className="relative w-full aspect-video bg-surface-container-highest">
+                {v.cover_image_url && (
+                  <Image src={v.cover_image_url} alt={v.name} fill className="object-cover" />
+                )}
+              </div>
+              <div className="p-2">
+                <p className="text-xs font-bold text-on-surface truncate group-hover:text-primary transition-colors">{v.name}</p>
+                <p className="text-[10px] text-on-surface-variant truncate">{v.city}</p>
+              </div>
+            </a>
+          ))}
+        </div>
+      ) : (
+        <div className="flex flex-col gap-3">
+          {venues.map((v) => (
+            <a
+              key={v.id}
+              href={`/addas/${v.slug}`}
+              className="card-surface group flex items-center gap-3 p-3 rounded-xl bg-surface-container-high hover:bg-surface-container-highest transition-colors"
+            >
+              <div className="relative w-14 h-14 rounded-lg overflow-hidden bg-surface-container-highest shrink-0">
+                {v.cover_image_url && (
+                  <Image src={v.cover_image_url} alt={v.name} fill className="object-cover" />
+                )}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="font-semibold text-sm text-on-surface truncate group-hover:text-primary transition-colors">{v.name}</p>
+                <p className="text-xs text-on-surface-variant truncate">{v.address}</p>
+              </div>
+              <span className="material-symbols-outlined text-outline group-hover:text-primary text-lg shrink-0">arrow_forward</span>
+            </a>
+          ))}
+        </div>
+      )}
+    </section>
+  )
+}
+
+function WhiteLabelEventBlock({ block }: { block: PageBlock }) {
+  const cfg = block.config as unknown as WhiteLabelEventConfig
+  return (
+    <section className="card-surface bg-surface-container-high rounded-2xl p-5 flex flex-col gap-4">
+      <div className="flex items-center gap-3">
+        {cfg.partner_logo_url ? (
+          <div className="relative w-12 h-12 rounded-lg overflow-hidden shrink-0 bg-surface-container-highest">
+            <Image src={cfg.partner_logo_url} alt={cfg.partner_name} fill className="object-contain p-1" />
+          </div>
+        ) : (
+          <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+            <span className="material-symbols-outlined text-primary" style={{ fontVariationSettings: "'FILL' 1" }}>business</span>
+          </div>
+        )}
+        <div>
+          <p className="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">Presented by</p>
+          <p className="font-headline font-bold text-on-surface">{cfg.partner_name}</p>
+        </div>
+      </div>
+
+      <div>
+        <h3 className="font-headline font-bold text-lg text-on-surface">{cfg.event_title}</h3>
+        {cfg.event_description && (
+          <p className="text-sm text-on-surface-variant mt-1 line-clamp-3">{cfg.event_description}</p>
+        )}
+        {cfg.event_date && (
+          <p className="text-xs text-on-surface-variant mt-2 flex items-center gap-1.5">
+            <span className="material-symbols-outlined text-sm text-primary">calendar_today</span>
+            <span suppressHydrationWarning>{formatShortDate(cfg.event_date)}</span>
+          </p>
+        )}
+      </div>
+
+      {cfg.ticket_url && (
+        <a
+          href={cfg.ticket_url} target="_blank" rel="noopener noreferrer"
+          className="block w-full text-center py-3 rounded-xl bg-primary text-on-primary font-bold text-sm hover:opacity-90 active:scale-[0.98] transition-all"
+        >
+          Get Tickets
+        </a>
+      )}
+    </section>
+  )
+}
+
+// ---------------------------------------------------------------------------
 // Main component
 // ---------------------------------------------------------------------------
 
 interface PublicProfilePageProps {
-  profile:             UserProfile
-  blocks:              PageBlock[]
-  upcomingEvents:      Event[]
+  profile:              UserProfile
+  blocks:               PageBlock[]
+  upcomingEvents:       Event[]
+  calendarEvents?:      Event[]
+  pastEvents?:          Event[]
+  seriesEvents?:        Event[]
   instagramThumbnails?: Record<string, string>
-  testimonials?:       PublicTestimonial[]
-  theme?:              ProfileTheme
-  isFollowing?:        boolean
-  viewerIsExplorer?:   boolean
+  testimonials?:        PublicTestimonial[]
+  substackPosts?:       Record<string, SubstackPost[]>
+  decryptedUpiVpa?:     string | null
+  venueData?:           Record<string, VenueSummary>
+  theme?:               ProfileTheme
+  isFollowing?:         boolean
+  viewerIsExplorer?:    boolean
+  isOwner?:             boolean
+  cityMasteryMap?:      MasteryNeighbourhood[]
 }
 
 export default function PublicProfilePage({
   profile,
   blocks,
   upcomingEvents,
+  calendarEvents = [],
+  pastEvents = [],
+  seriesEvents = [],
   instagramThumbnails = {},
   testimonials = [],
+  substackPosts = {},
+  decryptedUpiVpa = null,
+  venueData = {},
   theme,
   isFollowing = false,
   viewerIsExplorer = false,
+  isOwner = false,
+  cityMasteryMap = [],
 }: PublicProfilePageProps) {
   const contentBlocks = blocks.filter((b) => b.is_visible)
   const profileSocial = (profile.social_links ?? {}) as Record<string, string>
-
   const pillData = CATEGORY_PILL_MAP[profile.creator_type]
-
   const resolvedTheme: ProfileTheme = theme ?? DEFAULT_PROFILE_THEME
-
   const fontClass = FONT_FAMILY_CLASS[resolvedTheme.fontFamily]
   const themeStyle = buildThemeStyle(resolvedTheme)
+
+  // Derive accent colour string for client components (countdown, UPI tip)
+  const ACCENT_MAP: Record<ProfileTheme['colorScheme'], string> = {
+    default:  '#E8572A', midnight: '#818CF8', ocean:    '#22D3EE',
+    forest:   '#6EE7B7', blush:    '#E11D48', sand:     '#B45309',
+    pista:    '#2D7A4F', gulaal:   '#E8342A', neel:     '#F5A800',
+    turmeric: '#F5A800', steel:    '#5B8DEF', sienna:   '#C04A00',
+    indigo:      '#818CF8', aurora:      '#D946EF', sage:        '#3D7F53',
+    mint:        '#0C8B6B', electric:    '#00E5FF', velvet:      '#8B2340',
+    nightforest: '#7EC8A0', parchment:   '#4A3728', gallery:     '#1A1A1A',
+    terracotta:  '#C4552A',
+  }
+  const accent = ACCENT_MAP[resolvedTheme.colorScheme]
 
   return (
     <div
@@ -754,17 +1409,10 @@ export default function PublicProfilePage({
 
         {/* ── Profile header ───────────────────────────────────────────── */}
         <header className="flex flex-col items-center text-center gap-4">
-
-          {/* Avatar */}
           <div className="relative">
             <div className="h-28 w-28 rounded-full border-4 border-surface-container-high bg-surface-container-highest overflow-hidden relative">
               {profile.avatar_url ? (
-                <Image
-                  src={profile.avatar_url}
-                  alt={profile.display_name}
-                  fill
-                  className="object-cover"
-                  />  
+                <Image src={profile.avatar_url} alt={profile.display_name} fill className="object-cover" />
               ) : (
                 <div className="w-full h-full flex items-center justify-center text-4xl font-bold text-primary bg-primary/10">
                   {profile.display_name.charAt(0).toUpperCase()}
@@ -773,28 +1421,20 @@ export default function PublicProfilePage({
             </div>
             {profile.is_verified && (
               <div className="absolute -bottom-1 -right-1 bg-tertiary-container text-on-tertiary-container p-1.5 rounded-full flex items-center justify-center shadow-md">
-                <span
-                  className="material-symbols-outlined text-base"
-                  style={{ fontVariationSettings: "'FILL' 1" }}
-                >
-                  verified
-                </span>
+                <span className="material-symbols-outlined text-base" style={{ fontVariationSettings: "'FILL' 1" }}>verified</span>
               </div>
             )}
           </div>
 
-          {/* Name */}
           <h1 className="font-headline text-4xl sm:text-5xl font-bold text-on-surface tracking-tight text-center">
             {profile.display_name}
           </h1>
 
-          {/* City */}
           <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-surface-container-high text-on-surface-variant text-xs font-semibold">
             <span className="material-symbols-outlined text-sm">location_on</span>
             {profile.city}
           </span>
 
-          {/* Category pill — colored per creator type */}
           {pillData && (
             <span
               className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-bold"
@@ -804,7 +1444,18 @@ export default function PublicProfilePage({
             </span>
           )}
 
-          {/* Tier badge — Lantern and Beacon only, with long-tenure upgrades */}
+          {profile.user_tier === 'local' && (
+            <span
+              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold"
+              style={{ background: 'rgba(34,197,94,0.12)', color: '#16a34a', border: '1px solid rgba(34,197,94,0.25)' }}
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: 13, fontVariationSettings: "'FILL' 1" }}>
+                where_to_vote
+              </span>
+              Local Creator
+            </span>
+          )}
+
           {profile.user_tier === 'lantern' && (() => {
             const yrs = profile.lantern_since
               ? (Date.now() - new Date(profile.lantern_since).getTime()) / (365.25 * 24 * 60 * 60 * 1000)
@@ -852,28 +1503,34 @@ export default function PublicProfilePage({
             )
           })()}
 
-          {/* Bio */}
           {profile.bio && (
             <p className="max-w-md text-on-surface/90 text-sm md:text-base leading-relaxed mt-1">
               {profile.bio}
             </p>
           )}
 
-          {/* Follow button — only shown to authenticated explorers */}
           {viewerIsExplorer && (
             <FollowButton makerId={profile.id} initialIsFollowing={isFollowing} />
           )}
         </header>
 
-        {/* ── Profile-level social links (inline icons) ────────────────── */}
+        {/* ── Profile-level social links ────────────────────────────────── */}
         <ProfileSocialLinks socialLinks={profileSocial} />
 
-        {/* ── Content blocks in position order ────────────────────────── */}
+        {/* ── City mastery map ──────────────────────────────────────────── */}
+        {(isOwner || profile.show_city_mastery) && (
+          <CityMasteryMap
+            neighbourhoods={cityMasteryMap}
+            isOwner={isOwner}
+            sharingEnabled={profile.show_city_mastery}
+          />
+        )}
+
+        {/* ── Content blocks ────────────────────────────────────────────── */}
         {contentBlocks.map((block) => {
-          // Blocks with external links or interactive embeds are wrapped in
-          // ClickTracker so every tap is recorded in link_clicks.
-          // Non-interactive blocks (text_bio, stats_grid, etc.) skip tracking.
           switch (block.block_type) {
+
+            // ── Original blocks ───────────────────────────────────────────
             case 'social_link':
               return (
                 <ClickTracker key={block.id} blockId={block.id} creatorId={profile.id}>
@@ -892,7 +1549,8 @@ export default function PublicProfilePage({
                   <YoutubeBlock block={block} />
                 </ClickTracker>
               )
-            case 'instagram_embed': {
+            case 'instagram_embed':
+            case 'instagram_post': {
               const cfg = block.config as unknown as InstagramEmbedConfig
               return (
                 <ClickTracker key={block.id} blockId={block.id} creatorId={profile.id}>
@@ -910,7 +1568,6 @@ export default function PublicProfilePage({
                   </section>
                 </ClickTracker>
               ) : null
-            // Non-interactive blocks — no tracking needed
             case 'image_gallery':
               return <ImageGalleryBlock key={block.id} block={block} />
             case 'text_bio':
@@ -921,12 +1578,14 @@ export default function PublicProfilePage({
               return <MarqueeBlock key={block.id} block={block} />
             case 'stats_grid':
               return <StatsGridBlock key={block.id} block={block} />
+
+            // ── Testimonials ──────────────────────────────────────────────
             case 'testimonial':
               return testimonials.length > 0 ? (
-                <section key={block.id} className="flex flex-col gap-4">
+                <section key={block.id} className="flex flex-col gap-3">
                   <h3 className="font-headline font-bold text-lg text-on-surface px-1">What attendees say</h3>
-                  {testimonials.slice(0, 3).map((t, i) => (
-                    <div key={i} className="bg-surface-container-low rounded-xl p-5">
+                  {testimonials.slice(0, 6).map((t, i) => (
+                    <div key={i} className="card-surface bg-surface-container-low rounded-xl p-5">
                       <div className="flex items-center gap-2 mb-3">
                         <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm shrink-0">
                           {t.reviewer_name.charAt(0).toUpperCase()}
@@ -947,6 +1606,264 @@ export default function PublicProfilePage({
                   ))}
                 </section>
               ) : null
+
+            // ── New blocks ────────────────────────────────────────────────
+            case 'social_links_row':
+              return (
+                <ClickTracker key={block.id} blockId={block.id} creatorId={profile.id}>
+                  <SocialLinksRowBlock block={block} />
+                </ClickTracker>
+              )
+            case 'announcement': {
+              const cfg = block.config as unknown as AnnouncementConfig
+              return (
+                <AnnouncementBlockClient
+                  key={block.id}
+                  text={cfg.text}
+                  ctaLabel={cfg.cta_label}
+                  ctaUrl={cfg.cta_url}
+                  showCountdown={cfg.show_countdown}
+                  countdownTarget={cfg.countdown_target}
+                  backgroundStyle={cfg.background_style ?? 'primary'}
+                  accent={accent}
+                />
+              )
+            }
+            case 'rsvp_link':
+              return (
+                <ClickTracker key={block.id} blockId={block.id} creatorId={profile.id}>
+                  <RsvpLinkBlock block={block} />
+                </ClickTracker>
+              )
+            case 'spotify_now_playing':
+              return (
+                <ClickTracker key={block.id} blockId={block.id} creatorId={profile.id}>
+                  <SpotifyNowPlayingBlock block={block} />
+                </ClickTracker>
+              )
+            case 'podcast_episode':
+              return (
+                <ClickTracker key={block.id} blockId={block.id} creatorId={profile.id}>
+                  <PodcastEpisodeBlock block={block} />
+                </ClickTracker>
+              )
+            case 'substack_preview': {
+              const cfg = block.config as unknown as SubstackPreviewConfig
+              const posts = substackPosts[cfg.publication_url] ?? []
+              return (
+                <ClickTracker key={block.id} blockId={block.id} creatorId={profile.id}>
+                  <SubstackPreviewBlock block={block} posts={posts} />
+                </ClickTracker>
+              )
+            }
+            case 'newsletter_signup': {
+              const cfg = block.config as unknown as NewsletterSignupConfig
+              return (
+                <NewsletterSignupBlock
+                  key={block.id}
+                  blockId={block.id}
+                  profileId={profile.id}
+                  config={cfg}
+                />
+              )
+            }
+            case 'support_tip': {
+              const cfg = block.config as unknown as SupportTipConfigStored
+              if (!decryptedUpiVpa) return null
+              return (
+                <SupportTipBlock
+                  key={block.id}
+                  message={cfg.message}
+                  upiVpa={decryptedUpiVpa}
+                  presetAmountsPaise={cfg.preset_amounts_paise}
+                  thankYouMessage={cfg.thank_you_message}
+                  creatorName={profile.display_name}
+                />
+              )
+            }
+            case 'event_calendar':
+              return (
+                <EventCalendarBlock
+                  key={block.id}
+                  block={block}
+                  events={calendarEvents}
+                />
+              )
+            case 'past_events_gallery':
+              return (
+                <PastEventsGalleryBlock
+                  key={block.id}
+                  block={block}
+                  events={pastEvents}
+                />
+              )
+            case 'event_series':
+              return (
+                <EventSeriesBlock
+                  key={block.id}
+                  block={block}
+                  events={seriesEvents}
+                />
+              )
+            case 'community_stats':
+              return (
+                <CommunityStatsBlock
+                  key={block.id}
+                  block={block}
+                  profile={profile}
+                />
+              )
+            case 'creator_type_badge':
+              return (
+                <CreatorTypeBadgeBlock
+                  key={block.id}
+                  block={block}
+                  profile={profile}
+                />
+              )
+            case 'city_community':
+              return (
+                <CityCommunityBlock
+                  key={block.id}
+                  block={block}
+                  profile={profile}
+                />
+              )
+            case 'collab_invite':
+              return (
+                <ClickTracker key={block.id} blockId={block.id} creatorId={profile.id}>
+                  <CollabInviteBlock block={block} profile={profile} />
+                </ClickTracker>
+              )
+            case 'venue_partnership':
+              return (
+                <VenuePartnershipBlock
+                  key={block.id}
+                  block={block}
+                  venueData={venueData}
+                />
+              )
+            case 'white_label_event':
+              return (
+                <ClickTracker key={block.id} blockId={block.id} creatorId={profile.id}>
+                  <WhiteLabelEventBlock block={block} />
+                </ClickTracker>
+              )
+
+            // ── Wave 2 — India-first engagement blocks ────────────────────
+            case 'whatsapp_community': {
+              const cfg = block.config as unknown as WhatsAppCommunityConfig
+              return (
+                <ClickTracker key={block.id} blockId={block.id} creatorId={profile.id}>
+                  <WhatsAppCommunityBlock
+                    label={cfg.label}
+                    inviteUrl={cfg.invite_url}
+                    memberCountLabel={cfg.member_count_label}
+                  />
+                </ClickTracker>
+              )
+            }
+            case 'music_player': {
+              const cfg = block.config as unknown as MusicPlayerConfig
+              return (
+                <MusicPlayerBlock
+                  key={block.id}
+                  platform={cfg.platform ?? 'soundcloud'}
+                  embedUrl={cfg.embed_url}
+                  trackTitle={cfg.track_title}
+                  artist={cfg.artist}
+                />
+              )
+            }
+            case 'booking_request': {
+              const cfg = block.config as unknown as BookingRequestConfig
+              return (
+                <BookingRequestBlock
+                  key={block.id}
+                  blockId={block.id}
+                  creatorId={profile.id}
+                  label={cfg.label}
+                  description={cfg.description}
+                  categories={cfg.categories ?? []}
+                />
+              )
+            }
+
+            // ── Wave 3 — Social proof & embeds ───────────────────────────
+            case 'press_feature': {
+              const cfg = block.config as unknown as PressFeatureConfig
+              return (
+                <PressFeatureBlock
+                  key={block.id}
+                  features={cfg.features ?? []}
+                  heading={cfg.heading}
+                  accent={accent}
+                />
+              )
+            }
+            case 'twitter_embed': {
+              const cfg = block.config as unknown as TwitterEmbedConfig
+              return (
+                <TwitterEmbedBlock
+                  key={block.id}
+                  tweetUrl={cfg.tweet_url}
+                  handle={cfg.handle}
+                  caption={cfg.caption}
+                  accent={accent}
+                />
+              )
+            }
+            case 'awards_badges': {
+              const cfg = block.config as unknown as AwardsBadgesConfig
+              return (
+                <AwardsBadgesBlock
+                  key={block.id}
+                  badges={cfg.badges ?? []}
+                  heading={cfg.heading}
+                  accent={accent}
+                />
+              )
+            }
+
+            // ── Wave 4 — Direct monetisation ─────────────────────────────
+            case 'digital_product': {
+              const cfg = block.config as unknown as DigitalProductConfig
+              return (
+                <DigitalProductBlock
+                  key={block.id}
+                  blockId={block.id}
+                  title={cfg.title}
+                  description={cfg.description}
+                  pricePaise={cfg.price_paise}
+                  coverImageUrl={cfg.cover_image_url}
+                  accent={accent}
+                />
+              )
+            }
+            case 'waitlist': {
+              const cfg = block.config as unknown as WaitlistConfig
+              return (
+                <WaitlistBlock
+                  key={block.id}
+                  blockId={block.id}
+                  label={cfg.label}
+                  description={cfg.description}
+                  accent={accent}
+                />
+              )
+            }
+            case 'fan_membership': {
+              const cfg = block.config as unknown as FanMembershipConfig
+              return (
+                <FanMembershipBlock
+                  key={block.id}
+                  tiers={cfg.tiers ?? []}
+                  heading={cfg.heading}
+                  accent={accent}
+                />
+              )
+            }
+
             default:
               return null
           }

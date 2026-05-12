@@ -48,25 +48,38 @@ export const BLOCK_TIER_GATES: Record<BlockType, UserTier> = {
   marquee_text:       'wanderer',
   stats_grid:         'wanderer',
 
-  // ── Local — 6+ events attended in 90d ────────────────────────────────────
-  newsletter_signup:  'local',
-  event_calendar:     'local',
-  community_stats:    'local',
-  venue_partnership:  'local',
-  instagram_post:     'local',
-  instagram_embed:    'local',    // legacy block — same gate as instagram_post
-  spotify_now_playing:'local',
-  past_events_gallery:'local',
-  testimonial:        'local',
+  // ── All blocks accessible to all users ───────────────────────────────────
+  newsletter_signup:  'wanderer',
+  event_calendar:     'wanderer',
+  community_stats:    'wanderer',
+  venue_partnership:  'wanderer',
+  instagram_post:     'wanderer',
+  instagram_embed:    'wanderer',
+  spotify_now_playing:'wanderer',
+  past_events_gallery:'wanderer',
+  testimonial:        'wanderer',
 
-  // ── Lantern — 3+ events hosted in 180d ───────────────────────────────────
-  podcast_episode:    'lantern',
-  substack_preview:   'lantern',
-  event_series:       'lantern',
-  collab_invite:      'lantern',
+  podcast_episode:    'wanderer',
+  substack_preview:   'wanderer',
+  event_series:       'wanderer',
+  collab_invite:      'wanderer',
 
-  // ── Beacon — 36+ events/yr, ≥4.7★, ≥30% repeat ─────────────────────────
-  white_label_event:  'beacon',
+  white_label_event:  'wanderer',
+
+  // ── Wave 2 — India-first engagement blocks ────────────────────────────────
+  whatsapp_community: 'wanderer',
+  music_player:       'wanderer',
+  booking_request:    'wanderer',
+
+  // ── Wave 3 — Social proof & embeds ────────────────────────────────────────
+  press_feature:  'wanderer',
+  twitter_embed:  'wanderer',
+  awards_badges:  'wanderer',
+
+  // ── Wave 4 — Direct monetisation blocks ───────────────────────────────────
+  digital_product: 'wanderer',
+  waitlist:        'wanderer',
+  fan_membership:  'wanderer',
 }
 
 // ---------------------------------------------------------------------------
@@ -113,6 +126,21 @@ export const BLOCK_FAMILIES: Record<BlockType, BlockFamily> = {
   support_tip:        'community',
   collab_invite:      'community',
   white_label_event:  'community',
+
+  // Wave 2
+  whatsapp_community: 'community',
+  music_player:       'content',
+  booking_request:    'community',
+
+  // Wave 3
+  press_feature: 'community',
+  twitter_embed: 'social',
+  awards_badges: 'community',
+
+  // Wave 4
+  digital_product: 'community',
+  waitlist:        'community',
+  fan_membership:  'community',
 }
 
 // ---------------------------------------------------------------------------
@@ -185,24 +213,24 @@ export const BLOCK_META: Record<BlockType, BlockMetaEntry> = {
     description:  'Embed an Instagram post',
     icon:         'Instagram',
     family:       'social',
-    minimumTier:  'local',
-    isPremium:    true,
+    minimumTier:  'wanderer',
+    isPremium:    false,
   },
   instagram_post: {
     displayName:  'Instagram Post',
     description:  'Embed an Instagram post with live preview',
     icon:         'Instagram',
     family:       'social',
-    minimumTier:  'local',
-    isPremium:    true,
+    minimumTier:  'wanderer',
+    isPremium:    false,
   },
   spotify_now_playing: {
     displayName:  'Spotify Now Playing',
     description:  "Show what you're currently listening to on Spotify",
     icon:         'Music',
     family:       'social',
-    minimumTier:  'local',
-    isPremium:    true,
+    minimumTier:  'wanderer',
+    isPremium:    false,
   },
 
   // ── Events ─────────────────────────────────────────────────────────────────
@@ -227,24 +255,24 @@ export const BLOCK_META: Record<BlockType, BlockMetaEntry> = {
     description:  'Full calendar view of your upcoming events',
     icon:         'CalendarDays',
     family:       'events',
-    minimumTier:  'local',
-    isPremium:    true,
+    minimumTier:  'wanderer',
+    isPremium:    false,
   },
   past_events_gallery: {
     displayName:  'Past Events Gallery',
     description:  'Grid or list showcase of your completed events',
     icon:         'Images',
     family:       'events',
-    minimumTier:  'local',
-    isPremium:    true,
+    minimumTier:  'wanderer',
+    isPremium:    false,
   },
   event_series: {
     displayName:  'Event Series',
     description:  'Group recurring events under a named series',
     icon:         'CalendarRange',
     family:       'events',
-    minimumTier:  'lantern',
-    isPremium:    true,
+    minimumTier:  'wanderer',
+    isPremium:    false,
   },
 
   // ── Content ────────────────────────────────────────────────────────────────
@@ -293,24 +321,24 @@ export const BLOCK_META: Record<BlockType, BlockMetaEntry> = {
     description:  'Collect email subscribers directly from your page',
     icon:         'MailPlus',
     family:       'content',
-    minimumTier:  'local',
-    isPremium:    true,
+    minimumTier:  'wanderer',
+    isPremium:    false,
   },
   podcast_episode: {
     displayName:  'Podcast Episode',
     description:  'Embed or link a podcast episode from any platform',
     icon:         'Mic',
     family:       'content',
-    minimumTier:  'lantern',
-    isPremium:    true,
+    minimumTier:  'wanderer',
+    isPremium:    false,
   },
   substack_preview: {
     displayName:  'Substack Preview',
     description:  'Show your latest Substack posts with a subscribe button',
     icon:         'Mail',
     family:       'content',
-    minimumTier:  'lantern',
-    isPremium:    true,
+    minimumTier:  'wanderer',
+    isPremium:    false,
   },
 
   // ── Community ──────────────────────────────────────────────────────────────
@@ -327,40 +355,118 @@ export const BLOCK_META: Record<BlockType, BlockMetaEntry> = {
     description:  'Display verified attendee reviews in a carousel or stack',
     icon:         'MessageSquare',
     family:       'community',
-    minimumTier:  'local',
-    isPremium:    true,
+    minimumTier:  'wanderer',
+    isPremium:    false,
   },
   community_stats: {
     displayName:  'Community Stats',
     description:  'Show your community impact: events hosted, attendees, rating',
     icon:         'TrendingUp',
     family:       'community',
-    minimumTier:  'local',
-    isPremium:    true,
+    minimumTier:  'wanderer',
+    isPremium:    false,
   },
   venue_partnership: {
     displayName:  'Venue Partnerships',
     description:  'Showcase your Adda venue partners',
     icon:         'Building2',
     family:       'community',
-    minimumTier:  'local',
-    isPremium:    true,
+    minimumTier:  'wanderer',
+    isPremium:    false,
   },
   collab_invite: {
     displayName:  'Collab Invite',
     description:  'Open invitation for creative collaborations and partnerships',
     icon:         'Users',
     family:       'community',
-    minimumTier:  'lantern',
-    isPremium:    true,
+    minimumTier:  'wanderer',
+    isPremium:    false,
   },
   white_label_event: {
     displayName:  'White Label Event',
     description:  'Host events under a partner or sponsor brand',
     icon:         'Star',
     family:       'community',
-    minimumTier:  'beacon',
-    isPremium:    true,
+    minimumTier:  'wanderer',
+    isPremium:    false,
+  },
+
+  // ── Wave 2 — India-first engagement blocks ─────────────────────────────────
+  whatsapp_community: {
+    displayName:  'WhatsApp Community',
+    description:  'Green CTA card to invite visitors into your WhatsApp group',
+    icon:         'MessageCircle',
+    family:       'community',
+    minimumTier:  'wanderer',
+    isPremium:    false,
+  },
+  music_player: {
+    displayName:  'Music Player',
+    description:  'Embed a SoundCloud or Bandcamp track directly on your page',
+    icon:         'Music2',
+    family:       'content',
+    minimumTier:  'wanderer',
+    isPremium:    false,
+  },
+  booking_request: {
+    displayName:  'Booking Request',
+    description:  '"Book me for your event" form — collect corporate and private inquiries',
+    icon:         'CalendarCheck',
+    family:       'community',
+    minimumTier:  'wanderer',
+    isPremium:    false,
+  },
+
+  // ── Wave 3 — Social proof & embeds ─────────────────────────────────────────
+  press_feature: {
+    displayName:  'Press Feature',
+    description:  '"As seen in" media logo row — show where you\'ve been featured',
+    icon:         'Newspaper',
+    family:       'community',
+    minimumTier:  'wanderer',
+    isPremium:    false,
+  },
+  twitter_embed: {
+    displayName:  'X / Twitter Post',
+    description:  'Embed a tweet or X post link on your page',
+    icon:         'Twitter',
+    family:       'social',
+    minimumTier:  'wanderer',
+    isPremium:    false,
+  },
+  awards_badges: {
+    displayName:  'Awards & Badges',
+    description:  'Showcase certifications, awards, or "Featured by" badges as a pill grid',
+    icon:         'Award',
+    family:       'community',
+    minimumTier:  'wanderer',
+    isPremium:    false,
+  },
+
+  // ── Wave 4 — Direct monetisation blocks ────────────────────────────────────
+  digital_product: {
+    displayName:  'Digital Product',
+    description:  'Sell a download (music pack, PDF, template) directly from your page',
+    icon:         'Download',
+    family:       'community',
+    minimumTier:  'wanderer',
+    isPremium:    false,
+  },
+  waitlist: {
+    displayName:  'Waitlist',
+    description:  'Collect email sign-ups for sold-out or upcoming events',
+    icon:         'ListOrdered',
+    family:       'community',
+    minimumTier:  'wanderer',
+    isPremium:    false,
+  },
+  fan_membership: {
+    displayName:  'Fan Membership',
+    description:  'Showcase your fan membership tiers and their benefits',
+    icon:         'Crown',
+    family:       'community',
+    minimumTier:  'wanderer',
+    isPremium:    false,
   },
 }
 

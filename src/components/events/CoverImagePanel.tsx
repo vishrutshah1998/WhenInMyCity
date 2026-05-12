@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useState } from 'react'
+import { useRef, useState, type MutableRefObject } from 'react'
 import Image from 'next/image'
 import { uploadEventCover } from '@/app/actions/upload'
 import { THEMES, getTheme, type Theme } from './themes'
@@ -13,6 +13,7 @@ interface CoverImagePanelProps {
   onUpload: (url: string) => void
   onClearCustom: () => void
   eventData?: CanvasEventData
+  coverCanvasRef?: MutableRefObject<HTMLCanvasElement | null>
 }
 
 export function CoverImagePanel({
@@ -22,6 +23,7 @@ export function CoverImagePanel({
   onUpload,
   onClearCustom,
   eventData,
+  coverCanvasRef,
 }: CoverImagePanelProps) {
   const [sheetOpen,   setSheetOpen  ] = useState(false)
   const [uploading,   setUploading  ] = useState(false)
@@ -76,13 +78,20 @@ export function CoverImagePanel({
 
   return (
     <>
-      {/* Square cover area */}
+      {/* Square cover area — canvas auto-renders when a title is entered */}
       <div
         className="relative w-full rounded-2xl overflow-hidden"
         style={{ aspectRatio: '1 / 1' }}
       >
         {customUrl ? (
           <Image src={customUrl} alt="Event cover" fill className="object-cover" />
+        ) : (eventData?.title ?? '').trim().length >= 3 ? (
+          <EventCanvasRenderer
+            data={eventData!}
+            size={1080}
+            fill
+            canvasRefOut={coverCanvasRef}
+          />
         ) : (
           <CoverComponent />
         )}

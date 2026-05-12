@@ -160,3 +160,126 @@ export async function getCityLeaderboard(city: string): Promise<CityLeaderboard>
 
   return { entries, currentUserRank, cityName }
 }
+
+// ---------------------------------------------------------------------------
+// getFriendLeaderboard
+// ---------------------------------------------------------------------------
+
+export interface FriendLeaderboardEntry {
+  rank:                number
+  displayName:         string
+  username:            string
+  avatarUrl:           string | null
+  userTier:            UserTier
+  attendanceStreak:    number
+  eventsAttendedCount: number
+}
+
+/**
+ * Returns the attendance-streak ranking of creators the current user follows,
+ * filtered to those in `city`. No cap — a follow graph is naturally small.
+ */
+export async function getFriendLeaderboard(city: string): Promise<FriendLeaderboardEntry[]> {
+  const { user } = await requireAuth()
+  const admin = createAdminClient()
+
+  // 1. Followed maker IDs from the explorer's profile
+  const { data: explorer } = await admin
+    .from('explorer_profiles')
+    .select('followed_maker_ids')
+    .eq('auth_user_id', user.id)
+    .maybeSingle()
+
+  const followedIds = explorer?.followed_maker_ids ?? []
+  if (!followedIds.length) return []
+
+  // 2. Filter to those in the same city, pull streak + tier
+  const { data: profiles } = await admin
+    .from('user_profiles')
+    .select('id, display_name, username, avatar_url, user_tier, attendance_streak, events_attended_count')
+    .in('id', followedIds)
+    .eq('city', city)
+
+  if (!profiles?.length) return []
+
+  return profiles
+    .slice()
+    .sort((a, b) => {
+      const sd = (b.attendance_streak ?? 0) - (a.attendance_streak ?? 0)
+      if (sd !== 0) return sd
+      return (b.events_attended_count ?? 0) - (a.events_attended_count ?? 0)
+    })
+    .map((p, i) => ({
+      rank:                i + 1,
+      displayName:         p.display_name,
+      username:            p.username,
+      avatarUrl:           p.avatar_url ?? null,
+      userTier:            (p.user_tier ?? 'wanderer') as UserTier,
+      attendanceStreak:    p.attendance_streak ?? 0,
+      eventsAttendedCount: p.events_attended_count ?? 0,
+    }))
+}
+
+// ---------------------------------------------------------------------------
+// getNeighbourhoodLeaderboards
+// ---------------------------------------------------------------------------
+
+export interface NeighbourhoodCreator {
+  rank:            number
+  displayName:     string
+  username:        string
+  avatarUrl:       string | null
+  userTier:        UserTier
+  eventsHosted:    number
+}
+
+export interface NeighbourhoodLeaderboard {
+  neighbourhood: string
+  creators:      NeighbourhoodCreator[]
+}
+
+/**
+ * Returns top-5 Lantern/Beacon creators per neighbourhood within `city`.
+ * Ranked by cumulative_events_hosted DESC.
+ * Neighbourhoods with no Lantern+ creators are omitted.
+ */
+export async function getNeighbourhoodLeaderboards(city: string): Promise<NeighbourhoodLeaderboard[]> {
+  const admin = createAdminClient()
+
+  const { data: profiles } = await admin
+    .from('user_profiles')
+    .select('id, display_name, username, avatar_url, user_tier, neighbourhood, cumulative_events_hosted')
+    .eq('city', city)
+    .in('user_tier', ['lantern', 'beacon'])
+    .not('neighbourhood', 'is', null)
+
+  if (!profiles?.length) return []
+
+  const byNeighbourhood = new Map<string, typeof profiles>()
+  for (const p of profiles) {
+    if (!p.neighbourhood) continue
+    const arr = byNeighbourhood.get(p.neighbourhood) ?? []
+    arr.push(p)
+    byNeighbourhood.set(p.neighbourhood, arr)
+  }
+
+  return [...byNeighbourhood.entries()]
+    .map(([neighbourhood, creators]) => {
+      const sorted = creators
+        .slice()
+        .sort((a, b) => (b.cumulative_events_hosted ?? 0) - (a.cumulative_events_hosted ?? 0))
+        .slice(0, 5)
+      return {
+        neighbourhood,
+        creators: sorted.map((p, i) => ({
+          rank:         i + 1,
+          displayName:  p.display_name,
+          username:     p.username,
+          avatarUrl:    p.avatar_url ?? null,
+          userTier:     (p.user_tier ?? 'lantern') as UserTier,
+          eventsHosted: p.cumulative_events_hosted ?? 0,
+        })),
+      }
+    })
+    .sort((a, b) => a.neighbourhood.localeCompare(b.neighbourhood))
+}

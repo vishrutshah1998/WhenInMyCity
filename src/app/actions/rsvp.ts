@@ -828,6 +828,7 @@ export interface MyRSVP {
   rsvpId:    string
   qrToken:   string
   orderId:   string | null
+  tierName:  string | null
 }
 
 /**
@@ -845,7 +846,7 @@ export async function getMyRSVPForEvent(
   const admin = createAdminClient()
   const { data } = await admin
     .from('rsvps')
-    .select('id, qr_code_token, razorpay_order_id')
+    .select('id, qr_code_token, razorpay_order_id, ticket_tier_name')
     .eq('event_id', eventId)
     .eq('attendee_user_id', user.id)
     .eq('payment_status', 'captured')
@@ -854,9 +855,10 @@ export async function getMyRSVPForEvent(
   if (!data) return { rsvp: null }
   return {
     rsvp: {
-      rsvpId:  data.id,
-      qrToken: data.qr_code_token,
-      orderId: data.razorpay_order_id,
+      rsvpId:   data.id,
+      qrToken:  data.qr_code_token,
+      orderId:  data.razorpay_order_id,
+      tierName: data.ticket_tier_name ?? null,
     },
   }
 }

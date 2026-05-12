@@ -14,7 +14,7 @@ export default async function CompletePage() {
 
   const { data: profile } = await supabase
     .from('user_profiles')
-    .select('username, display_name, city, avatar_url, creator_type')
+    .select('username, display_name, city, avatar_url, creator_type, bio, page_theme, interest_tags')
     .eq('id', user.id)
     .single()
 
@@ -28,6 +28,9 @@ export default async function CompletePage() {
         city={profile.city}
         avatarUrl={profile.avatar_url}
         creatorType={profile.creator_type}
+        bio={profile.bio}
+        pageTheme={profile.page_theme as { colorScheme?: string } | null}
+        interestTags={(profile.interest_tags as string[] | null) ?? []}
       />
     </Suspense>
   )

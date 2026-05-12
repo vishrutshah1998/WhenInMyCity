@@ -92,6 +92,18 @@ export type BlockType =
   | 'support_tip'
   | 'collab_invite'
   | 'white_label_event'
+  // ── Wave 2 — India-first engagement blocks ─────────────────────────────────
+  | 'whatsapp_community'
+  | 'music_player'
+  | 'booking_request'
+  // ── Wave 3 — Social proof & embeds ─────────────────────────────────────────
+  | 'press_feature'
+  | 'twitter_embed'
+  | 'awards_badges'
+  // ── Wave 4 — Direct monetisation blocks ────────────────────────────────────
+  | 'digital_product'
+  | 'waitlist'
+  | 'fan_membership'
 
 export type EventStatus = 'draft' | 'published' | 'cancelled' | 'completed'
 
@@ -183,6 +195,73 @@ export interface TestimonialConfig {
   show_event_name?: boolean
 }
 
+export interface WhatsAppCommunityConfig {
+  label:               string
+  invite_url:          string
+  member_count_label?: string
+}
+
+export interface MusicPlayerConfig {
+  platform:     'soundcloud' | 'bandcamp'
+  embed_url:    string
+  track_title?: string
+  artist?:      string
+}
+
+export interface BookingRequestConfig {
+  label:        string
+  description?: string
+  categories:   string[]
+}
+
+export interface PressFeatureConfig {
+  features: Array<{
+    outlet:    string
+    url?:      string
+    logo_url?: string
+  }>
+  heading?: string
+}
+
+export interface TwitterEmbedConfig {
+  tweet_url: string
+  handle?:   string
+  caption?:  string
+}
+
+export interface AwardsBadgesConfig {
+  badges: Array<{
+    label:    string
+    icon_url?: string
+    year?:    number
+  }>
+  heading?: string
+}
+
+export interface DigitalProductConfig {
+  title:            string
+  description?:     string
+  price_paise:      number
+  file_url:         string
+  cover_image_url?: string
+}
+
+export interface WaitlistConfig {
+  label:        string
+  description?: string
+  event_id?:    string
+}
+
+export interface FanMembershipConfig {
+  tiers: Array<{
+    name:        string
+    price_label: string
+    benefits:    string[]
+    is_featured?: boolean
+  }>
+  heading?: string
+}
+
 export type BlockConfig =
   | SocialLinkConfig
   | YoutubeEmbedConfig
@@ -195,6 +274,12 @@ export type BlockConfig =
   | MarqueeTextConfig
   | StatsGridConfig
   | TestimonialConfig
+  | PressFeatureConfig
+  | TwitterEmbedConfig
+  | AwardsBadgesConfig
+  | DigitalProductConfig
+  | WaitlistConfig
+  | FanMembershipConfig
 
 // ---------------------------------------------------------------------------
 // Database interface — mirrors Supabase generated output conventions
@@ -254,6 +339,12 @@ export interface Database {
           // Long-tenure recognition (migration 023)
           lantern_since: string | null
           beacon_since: string | null
+          // Micro-local leaderboards (migration 026)
+          neighbourhood: string | null
+          // City mastery map (migration 027)
+          show_city_mastery: boolean
+          // Setup checklist (migration 028)
+          setup_checklist_dismissed: string[]
           created_at: string
           updated_at: string
         }
@@ -301,6 +392,9 @@ export interface Database {
           last_streak_week?: string | null
           lantern_since?: string | null
           beacon_since?: string | null
+          neighbourhood?: string | null
+          show_city_mastery?: boolean
+          setup_checklist_dismissed?: string[]
           created_at?: string
           updated_at?: string
         }
@@ -348,6 +442,9 @@ export interface Database {
           last_streak_week?: string | null
           lantern_since?: string | null
           beacon_since?: string | null
+          neighbourhood?: string | null
+          show_city_mastery?: boolean
+          setup_checklist_dismissed?: string[]
           created_at?: string
           updated_at?: string
         }
@@ -1562,6 +1659,110 @@ export interface Database {
           }
         ]
       }
+      digital_purchases: {
+        Row: {
+          id:                   string
+          block_id:             string
+          creator_id:           string
+          buyer_user_id:        string | null
+          buyer_name:           string | null
+          buyer_email:          string | null
+          razorpay_order_id:    string
+          razorpay_payment_id:  string | null
+          status:               'pending' | 'paid' | 'failed'
+          amount_paise:         number
+          file_url:             string
+          created_at:           string
+        }
+        Insert: {
+          id?:                  string
+          block_id:             string
+          creator_id:           string
+          buyer_user_id?:       string | null
+          buyer_name?:          string | null
+          buyer_email?:         string | null
+          razorpay_order_id:    string
+          razorpay_payment_id?: string | null
+          status?:              'pending' | 'paid' | 'failed'
+          amount_paise:         number
+          file_url:             string
+          created_at?:          string
+        }
+        Update: {
+          razorpay_payment_id?: string | null
+          status?:              'pending' | 'paid' | 'failed'
+        }
+        Relationships: []
+      }
+      waitlist_entries: {
+        Row: {
+          id:         string
+          block_id:   string
+          creator_id: string
+          event_id:   string | null
+          name:       string | null
+          email:      string
+          created_at: string
+        }
+        Insert: {
+          id?:        string
+          block_id:   string
+          creator_id: string
+          event_id?:  string | null
+          name?:      string | null
+          email:      string
+          created_at?: string
+        }
+        Update: {
+          name?:  string | null
+          email?: string
+        }
+        Relationships: []
+      }
+      booking_inquiries: {
+        Row: {
+          id:               string
+          creator_id:       string
+          block_id:         string
+          requester_name:   string
+          requester_email:  string
+          event_type:       string | null
+          message:          string | null
+          status:           string
+          created_at:       string
+        }
+        Insert: {
+          id?:              string
+          creator_id:       string
+          block_id:         string
+          requester_name:   string
+          requester_email:  string
+          event_type?:      string | null
+          message?:         string | null
+          status?:          string
+          created_at?:      string
+        }
+        Update: {
+          id?:              string
+          creator_id?:      string
+          block_id?:        string
+          requester_name?:  string
+          requester_email?: string
+          event_type?:      string | null
+          message?:         string | null
+          status?:          string
+          created_at?:      string
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'booking_inquiries_creator_id_fkey'
+            columns: ['creator_id']
+            isOneToOne: false
+            referencedRelation: 'user_profiles'
+            referencedColumns: ['id']
+          }
+        ]
+      }
     }
 
     Views: {
@@ -1651,6 +1852,9 @@ export type SubstackCache        = Tables<'substack_cache'>
 export type AddaEventRevenue     = Tables<'adda_event_revenue'>
 export type Notification         = Tables<'notifications'>
 export type PayoutRequest        = Tables<'payout_requests'>
+export type BookingInquiry       = Tables<'booking_inquiries'>
+export type DigitalPurchase      = Tables<'digital_purchases'>
+export type WaitlistEntry        = Tables<'waitlist_entries'>
 
 // RSVP joined with its parent event — used in the attendee Tickets panel
 export interface RsvpWithEvent {

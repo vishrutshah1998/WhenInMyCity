@@ -8,6 +8,10 @@ import type { Event, EventListingConfig, InstagramEmbedConfig } from '@/types/da
 import type { PublicTestimonial } from '@/components/profile/PublicProfilePage'
 import { resolveTheme } from '@/types/theme'
 import { requireAuth } from '@/lib/auth/requireAuth'
+import { getSubstackPosts } from '@/app/actions/blocks'
+import type { SubstackPost } from '@/lib/validators/blocks'
+import { getCityMasteryMap } from '@/app/actions/analytics'
+import type { MasteryNeighbourhood } from '@/app/actions/analytics'
 
 // ---------------------------------------------------------------------------
 // Metadata
@@ -71,12 +75,11 @@ export default async function UsernamePage({
 
   const visibleBlocks = blocks ?? []
 
-  // Fetch upcoming published events for any event_listing blocks
+  // ── event_listing ─────────────────────────────────────────────────────────
   const hasEventListing = visibleBlocks.some((b) => b.block_type === 'event_listing')
   let upcomingEvents: Event[] = []
 
   if (hasEventListing) {
-    // Collect explicit event_ids from all event_listing blocks
     const explicitIds = visibleBlocks
       .filter((b) => b.block_type === 'event_listing')
       .flatMap((b) => (b.config as EventListingConfig).event_ids ?? [])
@@ -106,8 +109,59 @@ export default async function UsernamePage({
     }
   }
 
-  // Fetch Instagram thumbnails server-side for all instagram_embed blocks
-  const instagramBlocks = visibleBlocks.filter((b) => b.block_type === 'instagram_embed')
+  // ── event_calendar ────────────────────────────────────────────────────────
+  const hasEventCalendar = visibleBlocks.some((b) => b.block_type === 'event_calendar')
+  let calendarEvents: Event[] = []
+  if (hasEventCalendar && upcomingEvents.length === 0) {
+    const { data } = await supabase
+      .from('events')
+      .select('*')
+      .eq('creator_id', profile.id)
+      .eq('status', 'published')
+      .gte('starts_at', new Date().toISOString())
+      .order('starts_at')
+      .limit(20)
+    calendarEvents = data ?? []
+  } else if (hasEventCalendar) {
+    calendarEvents = upcomingEvents
+  }
+
+  // ── past_events_gallery ───────────────────────────────────────────────────
+  const pastEventsBlock = visibleBlocks.find((b) => b.block_type === 'past_events_gallery')
+  let pastEvents: Event[] = []
+  if (pastEventsBlock) {
+    const cfg = pastEventsBlock.config as { max_events?: number }
+    const limit = cfg.max_events ?? 6
+    const { data } = await supabase
+      .from('events')
+      .select('*')
+      .eq('creator_id', profile.id)
+      .eq('status', 'completed')
+      .order('starts_at', { ascending: false })
+      .limit(limit)
+    pastEvents = data ?? []
+  }
+
+  // ── event_series ──────────────────────────────────────────────────────────
+  const seriesBlocks = visibleBlocks.filter((b) => b.block_type === 'event_series')
+  let seriesEvents: Event[] = []
+  if (seriesBlocks.length > 0) {
+    const allLinkedIds = seriesBlocks.flatMap(
+      (b) => ((b.config as { linked_event_ids?: string[] }).linked_event_ids) ?? []
+    )
+    if (allLinkedIds.length > 0) {
+      const { data } = await supabase
+        .from('events')
+        .select('*')
+        .in('id', allLinkedIds)
+      seriesEvents = data ?? []
+    }
+  }
+
+  // ── instagram_embed thumbnails ─────────────────────────────────────────────
+  const instagramBlocks = visibleBlocks.filter(
+    (b) => b.block_type === 'instagram_embed' || b.block_type === 'instagram_post'
+  )
   const instagramThumbnails: Record<string, string> = {}
   await Promise.all(
     instagramBlocks.map(async (b) => {
@@ -119,7 +173,7 @@ export default async function UsernamePage({
     })
   )
 
-  // Fetch top reviews when a testimonial block exists.
+  // ── testimonial ────────────────────────────────────────────────────────────
   const hasTestimonialBlock = visibleBlocks.some((b) => b.block_type === 'testimonial')
   let testimonials: PublicTestimonial[] = []
 
@@ -161,15 +215,64 @@ export default async function UsernamePage({
     }
   }
 
+  // ── substack_preview ──────────────────────────────────────────────────────
+  const substackBlocks = visibleBlocks.filter((b) => b.block_type === 'substack_preview')
+  const substackPosts: Record<string, SubstackPost[]> = {}
+  await Promise.all(
+    substackBlocks.map(async (b) => {
+      const cfg = b.config as { publication_url?: string }
+      if (cfg.publication_url) {
+        const posts = await getSubstackPosts(cfg.publication_url)
+        if (posts.length > 0) substackPosts[cfg.publication_url] = posts
+      }
+    })
+  )
+
+  // ── support_tip — decrypt UPI VPA ─────────────────────────────────────────
+  const hasSupportTip = visibleBlocks.some((b) => b.block_type === 'support_tip')
+  let decryptedUpiVpa: string | null = null
+  if (hasSupportTip) {
+    try {
+      const admin = createAdminClient()
+      const { data } = await admin.rpc('get_decrypted_upi_vpa', { p_profile_id: profile.id })
+      decryptedUpiVpa = data ?? null
+    } catch {
+      // UPI VPA unavailable — tip block will be hidden.
+    }
+  }
+
+  // ── venue_partnership — fetch adda profile summaries ──────────────────────
+  const venuePartnershipBlocks = visibleBlocks.filter((b) => b.block_type === 'venue_partnership')
+  type VenueSummary = { id: string; name: string; address: string; city: string; cover_image_url: string | null; slug: string }
+  const venueData: Record<string, VenueSummary> = {}
+  if (venuePartnershipBlocks.length > 0) {
+    const allVenueIds = venuePartnershipBlocks.flatMap(
+      (b) => ((b.config as { venue_ids?: string[] }).venue_ids) ?? []
+    )
+    if (allVenueIds.length > 0) {
+      const admin = createAdminClient()
+      const { data: venues } = await admin
+        .from('adda_profiles')
+        .select('id, name, address, city, cover_image_url, slug')
+        .in('id', allVenueIds)
+      for (const v of venues ?? []) {
+        venueData[v.id] = v
+      }
+    }
+  }
+
   const safeProfile = { ...profile, social_links: profile.social_links ?? null }
   const resolvedTheme = resolveTheme(profile.page_theme, profile.creator_type)
 
-  // Check if the viewer is an explorer and whether they follow this creator.
+  // Check if the viewer is an explorer, whether they follow this creator,
+  // and whether they are the profile owner.
   let viewerIsExplorer = false
   let isFollowing = false
+  let isOwner = false
 
   try {
     const { user } = await requireAuth()
+    isOwner = user.id === profile.id
     const admin = createAdminClient()
     const { data: explorerRow } = await admin
       .from('explorer_profiles')
@@ -185,16 +288,30 @@ export default async function UsernamePage({
     // Unauthenticated visitor — no follow button shown.
   }
 
+  // City mastery map: fetch for the profile owner or if sharing is enabled.
+  let cityMasteryMap: MasteryNeighbourhood[] = []
+  if (isOwner || profile.show_city_mastery) {
+    cityMasteryMap = await getCityMasteryMap(profile.id)
+  }
+
   return (
     <PublicProfilePage
       profile={safeProfile}
       blocks={visibleBlocks}
-      upcomingEvents={upcomingEvents ?? []}
+      upcomingEvents={upcomingEvents}
+      calendarEvents={calendarEvents}
+      pastEvents={pastEvents}
+      seriesEvents={seriesEvents}
       instagramThumbnails={instagramThumbnails}
       testimonials={testimonials}
+      substackPosts={substackPosts}
+      decryptedUpiVpa={decryptedUpiVpa}
+      venueData={venueData}
       theme={resolvedTheme}
       isFollowing={isFollowing}
       viewerIsExplorer={viewerIsExplorer}
+      isOwner={isOwner}
+      cityMasteryMap={cityMasteryMap}
     />
   )
 }

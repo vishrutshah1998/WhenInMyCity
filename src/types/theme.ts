@@ -181,13 +181,13 @@ export const COLOR_SCHEME_VARS: Record<string, string> = {
     '--color-outline-variant: 75 58 16',
   ].join(';'),
 
-  // Steel — near-black warm bg + steel-gray surface + gold accent (content creator)
-  // Based on the content-creator design with #14130E bg and #3D3D3D steel surface
+  // Steel — near-black warm bg + steel-blue accent (content creator)
+  // Rebased from gold to steel blue to visually distinguish from turmeric
   steel: [
-    '--color-primary: 245 168 0',
-    '--color-on-primary: 20 19 14',
-    '--color-primary-container: 90 62 0',
-    '--color-on-primary-container: 255 220 120',
+    '--color-primary: 91 141 239',
+    '--color-on-primary: 255 255 255',
+    '--color-primary-container: 30 50 110',
+    '--color-on-primary-container: 195 215 255',
     '--color-background: 20 19 14',
     '--color-on-background: 231 226 216',
     '--color-surface: 20 19 14',
@@ -198,8 +198,8 @@ export const COLOR_SCHEME_VARS: Record<string, string> = {
     '--color-surface-container: 33 32 26',
     '--color-surface-container-high: 61 61 61',
     '--color-surface-container-highest: 75 74 68',
-    '--color-outline: 159 142 121',
-    '--color-outline-variant: 82 69 51',
+    '--color-outline: 130 150 190',
+    '--color-outline-variant: 60 70 110',
   ].join(';'),
 
   // Sienna — ink bg + burnt-sienna primary (food & lifestyle)
@@ -243,6 +243,186 @@ export const COLOR_SCHEME_VARS: Record<string, string> = {
     '--color-outline: 130 120 175',
     '--color-outline-variant: 58 46 95',
   ].join(';'),
+
+  // Aurora — deep dark purple bg + fuchsia/magenta aurora glow (editorial / music)
+  aurora: [
+    '--color-primary: 217 70 239',
+    '--color-on-primary: 58 0 66',
+    '--color-primary-container: 110 20 140',
+    '--color-on-primary-container: 240 190 255',
+    '--color-background: 15 11 26',
+    '--color-on-background: 245 238 255',
+    '--color-surface: 15 11 26',
+    '--color-on-surface: 245 238 255',
+    '--color-on-surface-variant: 185 165 220',
+    '--color-surface-container-lowest: 8 6 14',
+    '--color-surface-container-low: 22 16 36',
+    '--color-surface-container: 30 21 48',
+    '--color-surface-container-high: 40 28 64',
+    '--color-surface-container-highest: 52 36 82',
+    '--color-outline: 155 100 185',
+    '--color-outline-variant: 70 45 100',
+  ].join(';'),
+
+  // Sage — warm off-white bg + sage green accent (wellness / lifestyle)
+  sage: [
+    '--color-primary: 61 127 83',
+    '--color-on-primary: 255 255 255',
+    '--color-primary-container: 195 238 210',
+    '--color-on-primary-container: 20 72 40',
+    '--color-background: 244 247 242',
+    '--color-on-background: 26 46 29',
+    '--color-surface: 244 247 242',
+    '--color-on-surface: 26 46 29',
+    '--color-on-surface-variant: 90 120 96',
+    '--color-surface-container-lowest: 252 255 250',
+    '--color-surface-container-low: 234 242 232',
+    '--color-surface-container: 224 234 222',
+    '--color-surface-container-high: 214 226 212',
+    '--color-surface-container-highest: 202 216 200',
+    '--color-outline: 140 175 148',
+    '--color-outline-variant: 195 220 198',
+  ].join(';'),
+
+  // Mint — pale mint bg + deep teal accent (health / community / modern)
+  mint: [
+    '--color-primary: 12 139 107',
+    '--color-on-primary: 255 255 255',
+    '--color-primary-container: 190 240 228',
+    '--color-on-primary-container: 0 72 55',
+    '--color-background: 239 249 246',
+    '--color-on-background: 13 43 36',
+    '--color-surface: 239 249 246',
+    '--color-on-surface: 13 43 36',
+    '--color-on-surface-variant: 72 125 110',
+    '--color-surface-container-lowest: 248 254 252',
+    '--color-surface-container-low: 228 245 240',
+    '--color-surface-container: 218 238 232',
+    '--color-surface-container-high: 206 230 224',
+    '--color-surface-container-highest: 194 220 214',
+    '--color-outline: 128 180 165',
+    '--color-outline-variant: 186 225 214',
+  ].join(';'),
+
+  // Electric — near-black with electric cyan (club / EDM / DJ / night photographer)
+  electric: [
+    '--color-primary: 0 229 255',
+    '--color-on-primary: 0 30 40',
+    '--color-primary-container: 0 80 110',
+    '--color-on-primary-container: 180 248 255',
+    '--color-background: 8 12 16',
+    '--color-on-background: 224 250 255',
+    '--color-surface: 8 12 16',
+    '--color-on-surface: 224 250 255',
+    '--color-on-surface-variant: 120 190 210',
+    '--color-surface-container-lowest: 4 7 10',
+    '--color-surface-container-low: 12 20 28',
+    '--color-surface-container: 16 28 38',
+    '--color-surface-container-high: 22 38 52',
+    '--color-surface-container-highest: 28 50 68',
+    '--color-outline: 60 160 185',
+    '--color-outline-variant: 20 70 90',
+  ].join(';'),
+
+  // Velvet — deep wine-dark background (theatre / comedy / spoken word / literary)
+  velvet: [
+    '--color-primary: 139 35 64',
+    '--color-on-primary: 245 232 236',
+    '--color-primary-container: 70 12 28',
+    '--color-on-primary-container: 245 200 210',
+    '--color-background: 12 5 8',
+    '--color-on-background: 245 232 236',
+    '--color-surface: 12 5 8',
+    '--color-on-surface: 245 232 236',
+    '--color-on-surface-variant: 200 150 165',
+    '--color-surface-container-lowest: 8 3 5',
+    '--color-surface-container-low: 22 8 14',
+    '--color-surface-container: 30 12 18',
+    '--color-surface-container-high: 40 16 24',
+    '--color-surface-container-highest: 52 22 32',
+    '--color-outline: 130 70 88',
+    '--color-outline-variant: 60 28 38',
+  ].join(';'),
+
+  // Nightforest — near-black warm-green (evening wellness / mindfulness / candlelit yoga)
+  nightforest: [
+    '--color-primary: 126 200 160',
+    '--color-on-primary: 6 14 8',
+    '--color-primary-container: 20 60 35',
+    '--color-on-primary-container: 190 240 210',
+    '--color-background: 6 14 8',
+    '--color-on-background: 212 245 226',
+    '--color-surface: 6 14 8',
+    '--color-on-surface: 212 245 226',
+    '--color-on-surface-variant: 120 170 140',
+    '--color-surface-container-lowest: 4 8 5',
+    '--color-surface-container-low: 10 20 14',
+    '--color-surface-container: 16 30 20',
+    '--color-surface-container-high: 22 42 28',
+    '--color-surface-container-highest: 28 55 36',
+    '--color-outline: 80 140 105',
+    '--color-outline-variant: 28 58 38',
+  ].join(';'),
+
+  // Parchment — warm aged-paper light (writer / academic / literary educator)
+  parchment: [
+    '--color-primary: 74 55 40',
+    '--color-on-primary: 247 243 233',
+    '--color-primary-container: 210 195 170',
+    '--color-on-primary-container: 50 35 22',
+    '--color-background: 247 243 233',
+    '--color-on-background: 46 31 20',
+    '--color-surface: 247 243 233',
+    '--color-on-surface: 46 31 20',
+    '--color-on-surface-variant: 130 110 88',
+    '--color-surface-container-lowest: 255 252 245',
+    '--color-surface-container-low: 240 234 220',
+    '--color-surface-container: 228 220 202',
+    '--color-surface-container-high: 218 208 188',
+    '--color-surface-container-highest: 206 196 172',
+    '--color-outline: 165 145 118',
+    '--color-outline-variant: 210 198 178',
+  ].join(';'),
+
+  // Gallery — near-white wall with near-black primary (visual artist / designer)
+  gallery: [
+    '--color-primary: 26 26 26',
+    '--color-on-primary: 250 250 250',
+    '--color-primary-container: 200 200 200',
+    '--color-on-primary-container: 10 10 10',
+    '--color-background: 250 250 250',
+    '--color-on-background: 10 10 10',
+    '--color-surface: 250 250 250',
+    '--color-on-surface: 10 10 10',
+    '--color-on-surface-variant: 100 100 100',
+    '--color-surface-container-lowest: 255 255 255',
+    '--color-surface-container-low: 242 242 242',
+    '--color-surface-container: 232 232 232',
+    '--color-surface-container-high: 222 222 222',
+    '--color-surface-container-highest: 210 210 210',
+    '--color-outline: 160 160 160',
+    '--color-outline-variant: 210 210 210',
+  ].join(';'),
+
+  // Terracotta — warm linen background with clay primary (local business / craft / pottery)
+  terracotta: [
+    '--color-primary: 196 85 42',
+    '--color-on-primary: 255 255 255',
+    '--color-primary-container: 255 220 200',
+    '--color-on-primary-container: 100 35 15',
+    '--color-background: 250 240 230',
+    '--color-on-background: 44 26 14',
+    '--color-surface: 250 240 230',
+    '--color-on-surface: 44 26 14',
+    '--color-on-surface-variant: 130 90 60',
+    '--color-surface-container-lowest: 255 250 244',
+    '--color-surface-container-low: 242 230 215',
+    '--color-surface-container: 232 218 200',
+    '--color-surface-container-high: 222 206 185',
+    '--color-surface-container-highest: 210 192 168',
+    '--color-outline: 168 115 80',
+    '--color-outline-variant: 220 190 162',
+  ].join(';'),
 }
 
 /** Parse a COLOR_SCHEME_VARS entry into React inline style props. */
@@ -258,7 +438,7 @@ export function schemeToStyle(colorScheme: string): React.CSSProperties {
 }
 
 export const ProfileThemeSchema = z.object({
-  colorScheme: z.enum(['default', 'midnight', 'ocean', 'forest', 'blush', 'sand', 'pista', 'gulaal', 'neel', 'turmeric', 'steel', 'sienna', 'indigo']),
+  colorScheme: z.enum(['default', 'midnight', 'ocean', 'forest', 'blush', 'sand', 'pista', 'gulaal', 'neel', 'turmeric', 'steel', 'sienna', 'indigo', 'aurora', 'sage', 'mint', 'electric', 'velvet', 'nightforest', 'parchment', 'gallery', 'terracotta']),
   fontFamily: z.enum(['inter', 'playfair', 'space-grotesk', 'archivo-black']),
   backgroundStyle: z.enum(['solid', 'pattern', 'aurora']),
   solidColor: z.string().optional(),
@@ -286,7 +466,12 @@ export const DEFAULT_PROFILE_THEME: ProfileTheme = {
  * should be respected even if their creator_type changes.
  * Vernacular category schemes are NOT in this list — they're auto-assigned.
  */
-export const PICKER_SCHEME_IDS = ['default', 'midnight', 'ocean', 'forest', 'blush', 'sand'] as const
+export const PICKER_SCHEME_IDS = [
+  'default', 'midnight', 'ocean', 'forest', 'blush', 'sand',
+  'pista', 'gulaal', 'neel', 'turmeric', 'steel', 'sienna', 'indigo',
+  'aurora', 'sage', 'mint',
+  'electric', 'velvet', 'nightforest', 'parchment', 'gallery', 'terracotta',
+] as const
 
 /**
  * Per-creator-category default themes — one bespoke look per creator type.
@@ -303,7 +488,7 @@ export const PICKER_SCHEME_IDS = ['default', 'midnight', 'ocean', 'forest', 'blu
 export const CREATOR_DEFAULT_THEMES: Record<string, ProfileTheme> = {
   content_creation: {
     colorScheme: 'steel',
-    fontFamily: 'archivo-black',
+    fontFamily: 'space-grotesk',
     backgroundStyle: 'solid',
     noiseBg: true,
     heavyBorders: true,

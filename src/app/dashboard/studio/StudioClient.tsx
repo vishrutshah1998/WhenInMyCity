@@ -48,6 +48,11 @@ export default function StudioClient({
     setIsDirty(true)
   }, [])
 
+  const handleThemeReplace = useCallback((newTheme: ProfileTheme) => {
+    setTheme(newTheme)
+    setIsDirty(true)
+  }, [])
+
   async function handleSave() {
     if (!isDirty) return
     setSaveStatus('saving')
@@ -223,6 +228,7 @@ export default function StudioClient({
             <ThemeEditor
               theme={theme}
               onThemeChange={handleThemeChange}
+              onThemeReplace={handleThemeReplace}
               isDirty={isDirty}
               isSaving={isPending}
               onSave={handleSave}
