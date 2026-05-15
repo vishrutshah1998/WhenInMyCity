@@ -48,3 +48,5 @@ coverage/
 # Large design/research files — keep locally, not in git
 *.pdf
 *.bmpr
+WIMC User Interface/
+WIMC User Interface Desktop/

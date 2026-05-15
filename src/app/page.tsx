@@ -564,6 +564,8 @@ function ShowcaseFace({ revealDelay, fast }: { revealDelay: number; fast: boolea
         <div style={{ position: 'absolute', top: 0, right: 0, bottom: 0, width: '48%', backgroundImage: 'repeating-linear-gradient(-45deg, transparent, transparent 20px, rgba(245,168,0,0.014) 20px, rgba(245,168,0,0.014) 22px)', pointerEvents: 'none' }} />
         {/* Large "02" watermark */}
         <div style={{ position: 'absolute', right: '6%', top: '50%', transform: 'translateY(-50%)', fontFamily: 'var(--font-syne)', fontSize: 'clamp(200px, 28vw, 380px)', fontWeight: 900, lineHeight: 1, color: 'rgba(245,168,0,0.028)', letterSpacing: '-0.06em', userSelect: 'none', pointerEvents: 'none' }}>02</div>
+        {/* Stamp watermark — lower left */}
+        <div aria-hidden style={{ position: 'absolute', left: 10, bottom: 10, width: 260, height: 260, backgroundImage: "url('/logo.png')", backgroundSize: '494% auto', backgroundPosition: '49.96% 50.02%', backgroundRepeat: 'no-repeat', filter: 'invert(1)', opacity: 0.055, transform: 'rotate(-12deg)', pointerEvents: 'none', userSelect: 'none' }} />
       </div>
 
       <div className="relative flex-1 px-6 py-4 md:px-14 flex flex-col justify-center">
@@ -631,6 +633,8 @@ function RolesFace({ revealDelay, fast }: { revealDelay: number; fast: boolean }
         <div style={{ position: 'absolute', top: '20%', left: '45%', width: 650, height: 650, borderRadius: '50%', background: 'radial-gradient(circle, rgba(93,217,208,0.04) 0%, transparent 65%)', animation: 'wimc-blob 28s ease-in-out infinite' }} />
         {/* Large "03" watermark */}
         <div style={{ position: 'absolute', right: '6%', top: '50%', transform: 'translateY(-50%)', fontFamily: 'var(--font-syne)', fontSize: 'clamp(200px, 28vw, 380px)', fontWeight: 900, lineHeight: 1, color: 'rgba(93,217,208,0.028)', letterSpacing: '-0.06em', userSelect: 'none', pointerEvents: 'none' }}>03</div>
+        {/* Stamp watermark — upper right corner */}
+        <div aria-hidden style={{ position: 'absolute', right: 16, top: 16, width: 200, height: 200, backgroundImage: "url('/logo.png')", backgroundSize: '494% auto', backgroundPosition: '49.96% 50.02%', backgroundRepeat: 'no-repeat', filter: 'invert(1)', opacity: 0.055, transform: 'rotate(10deg)', pointerEvents: 'none', userSelect: 'none' }} />
       </div>
 
       <div className="relative flex-1 px-6 py-6 md:px-14 flex flex-col justify-center overflow-hidden">

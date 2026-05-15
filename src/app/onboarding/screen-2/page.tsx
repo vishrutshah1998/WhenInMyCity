@@ -1,366 +1,246 @@
 'use client'
 
-import { useState, useTransition, useEffect, useMemo } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { saveOnboardingScreen } from '@/app/actions/onboarding'
-import { WimcLogo } from '@/components/WimcLogo'
-import { getCategoryConfig, getCategoryColors, CREATOR_CATEGORIES, EXPLORING_OPTION } from '@/lib/constants/categories'
-import { CITIES, INTEREST_TAGS } from '@/lib/constants/interests'
-import type { CreatorType } from '@/types/database'
-import type { Screen1Data } from '@/types/onboarding'
+import { motion, AnimatePresence } from 'framer-motion'
 
-function loadScreen1(): Screen1Data | null {
-  if (typeof window === 'undefined') return null
-  try {
-    return JSON.parse(sessionStorage.getItem('wimc_s1') || 'null')
-  } catch {
-    return null
-  }
+const E = [0.22, 1, 0.36, 1] as const
+
+type OnboardingRole = 'creator' | 'business' | 'exploring'
+
+const TILES: {
+  role: OnboardingRole
+  emoji: string
+  label: string
+  description: string
+  accent: string
+  tip: string
+}[] = [
+  {
+    role:        'creator',
+    emoji:       '🎬',
+    label:       'CREATOR',
+    description: 'I make stuff — music, art, events, content.',
+    accent:      '#E8705A',
+    tip:         "Nice. Let's find your scene. 🔥",
+  },
+  {
+    role:        'business',
+    emoji:       '🏢',
+    label:       'BUSINESS',
+    description: 'I run a brand, café, studio, or shop.',
+    accent:      '#60A5FA',
+    tip:         "Got it. Let's set up your space.",
+  },
+  {
+    role:        'exploring',
+    emoji:       '✨',
+    label:       'JUST EXPLORING',
+    description: "I'm here to discover what's happening.",
+    accent:      '#34D399',
+    tip:         "Cool. You'll see what's on in your city.",
+  },
+]
+
+// Current time formatted as HH:MM AM/PM
+function getTimeStr() {
+  const d = new Date()
+  const h = d.getHours()
+  const m = d.getMinutes().toString().padStart(2, '0')
+  const ampm = h >= 12 ? 'PM' : 'AM'
+  const h12 = h % 12 || 12
+  return `${h12.toString().padStart(2, '0')}:${m} ${ampm}`
 }
-
-const INTEREST_CATEGORIES = [
-  { id: 'performance',  label: '🎭 Performance' },
-  { id: 'arts',         label: '🎨 Arts' },
-  { id: 'education',    label: '📚 Education' },
-  { id: 'lifestyle',    label: '🌿 Lifestyle' },
-  { id: 'food_culture', label: '🍽️ Food & Culture' },
-  { id: 'outdoors',     label: '⛰️ Outdoors & Adventure' },
-  { id: 'tech',         label: '💡 Tech' },
-] as const
 
 export default function Screen2Page() {
   const router = useRouter()
-
-  const [s1, setS1] = useState<Screen1Data | null>(null)
-  const [subTypes, setSubTypes] = useState<string[]>([])
-  const [city, setCity] = useState('')
-  const [citySearch, setCitySearch] = useState('')
-  const [cityFocused, setCityFocused] = useState(false)
-  const [interestTags, setInterestTags] = useState<string[]>([])
-  const [error, setError] = useState<string | null>(null)
-  const [isPending, startTransition] = useTransition()
+  const [selectedRole, setSelectedRole] = useState<OnboardingRole | null>(null)
+  const [timeStr] = useState(getTimeStr)
 
   useEffect(() => {
-    const data = loadScreen1()
-    if (!data) {
-      router.replace('/onboarding/screen-1')
-      return
-    }
-    setS1(data)
     try {
-      const s2 = JSON.parse(sessionStorage.getItem('wimc_s2') || 'null')
-      if (s2) {
-        if (s2.subTypes) setSubTypes(s2.subTypes)
-        if (s2.city) { setCity(s2.city); setCitySearch(s2.city) }
-        if (s2.interestTags) setInterestTags(s2.interestTags)
-      }
+      const s1 = JSON.parse(sessionStorage.getItem('wimc_s1') || 'null') as { displayName?: string } | null
+      if (!s1?.displayName) router.replace('/onboarding/screen-1')
     } catch { /* ignore */ }
   }, [router])
 
-  const categoryConfig = useMemo(() => {
-    if (!s1?.creatorType) return null
-    if (s1.creatorType === 'exploring') return null
-    return getCategoryConfig(s1.creatorType as CreatorType)
-  }, [s1])
-
-  const colors = useMemo(() => getCategoryColors(s1?.creatorType ?? null), [s1])
-
-  const categoryLabel = useMemo(() => {
-    if (!s1?.creatorType) return ''
-    if (s1.creatorType === 'exploring') return EXPLORING_OPTION.label
-    return CREATOR_CATEGORIES.find((c) => c.id === s1.creatorType)?.label ?? ''
-  }, [s1])
-
-  const filteredCities = useMemo(() => {
-    const q = citySearch.trim().toLowerCase()
-    if (!q) {
-      const tier2 = new Set([
-        'jaipur', 'ahmedabad', 'surat', 'vadodara', 'lucknow', 'kanpur',
-        'nagpur', 'indore', 'bhopal', 'chandigarh', 'patna', 'visakhapatnam',
-        'kochi', 'coimbatore', 'madurai', 'nashik', 'ludhiana', 'agra',
-        'varanasi', 'ranchi', 'bhubaneswar', 'amritsar', 'rajkot', 'mysuru',
-        'guwahati', 'dehradun', 'udaipur', 'jodhpur',
-      ])
-      return [...CITIES].sort((a, b) => {
-        const aT = tier2.has(a.id) ? 0 : 1
-        const bT = tier2.has(b.id) ? 0 : 1
-        if (aT !== bT) return aT - bT
-        return a.name.localeCompare(b.name)
-      })
-    }
-    return CITIES.filter(
-      (c) =>
-        c.name.toLowerCase().includes(q) ||
-        c.state.toLowerCase().includes(q),
-    )
-  }, [citySearch])
-
-  function toggleSubType(id: string) {
-    if (id === 'not_yet') {
-      // Exclusive — selecting "Not hosting events yet" clears all others
-      setSubTypes((prev) => (prev.includes('not_yet') ? [] : ['not_yet']))
-      return
-    }
-    setSubTypes((prev) => {
-      const withoutNotYet = prev.filter((x) => x !== 'not_yet')
-      return withoutNotYet.includes(id)
-        ? withoutNotYet.filter((x) => x !== id)
-        : [...withoutNotYet, id]
-    })
+  function handleTileSelect(role: OnboardingRole) {
+    if (selectedRole) return
+    setSelectedRole(role)
+    setTimeout(() => {
+      sessionStorage.setItem('wimc_role', role)
+      sessionStorage.setItem('wimc_persona', role)
+      router.push('/onboarding/screen-3')
+    }, 500)
   }
 
-  function toggleInterestTag(id: string) {
-    setInterestTags((prev) =>
-      prev.includes(id) ? prev.filter((t) => t !== id) : [...prev, id],
-    )
-  }
-
-  function handleCitySelect(name: string) {
-    setCity(name)
-    setCitySearch(name)
-  }
-
-  function handleContinue() {
-    if (categoryConfig && subTypes.length === 0) {
-      setError('Select the events you host, or choose "Not hosting events yet".')
-      return
-    }
-    if (!city) {
-      setError('Please select your city.')
-      return
-    }
-    if (interestTags.length < 3) {
-      setError('Pick at least 3 interests to continue.')
-      return
-    }
-
-    setError(null)
-
-    startTransition(async () => {
-      const result = await saveOnboardingScreen(2, { subTypes, city, interestTags })
-      if (result.error) { setError(result.error); return }
-      sessionStorage.setItem('wimc_s2', JSON.stringify({ subTypes, city, interestTags }))
-      router.push('/onboarding/platforms')
-    })
-  }
-
-  if (!s1) return null
+  const selectedTile = TILES.find(t => t.role === selectedRole)
 
   return (
-    <div className="flex flex-col min-h-screen bg-background text-on-surface font-body">
-      {/* Ambient glow */}
+    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', padding: '24px' }}>
       <div
-        className="fixed inset-0 -z-10 pointer-events-none transition-opacity duration-700"
-        style={{ background: `radial-gradient(ellipse 60% 40% at 30% 5%, ${colors.secondary}70, transparent)` }}
-      />
-
-      {/* Header */}
-      <header className="w-full flex items-center justify-between px-6 py-4 relative">
-        <button
-          onClick={() => router.back()}
-          className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-surface-container-high transition-colors active:scale-95"
+        style={{
+          maxWidth: 480,
+          width: '100%',
+          margin: '0 auto',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 20,
+        }}
+      >
+        {/* Chat bubble with icon + timestamp */}
+        <motion.div
+          initial={{ opacity: 0, y: 24 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, ease: E }}
+          style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}
         >
-          <span className="material-symbols-outlined" style={{ color: colors.primary }}>arrow_back</span>
-        </button>
-        <span className="absolute left-1/2 -translate-x-1/2"><WimcLogo size="xs" /></span>
-        <div className="flex items-center gap-2">
-          <div className="h-1.5 w-32 bg-surface-container-high rounded-full overflow-hidden">
-            <div
-              className="h-full rounded-full transition-all duration-500"
-              style={{ width: '50%', backgroundColor: colors.primary }}
-            />
+          <div
+            style={{
+              width: 40,
+              height: 40,
+              background: 'rgba(232,112,90,0.12)',
+              border: '1px solid rgba(232,112,90,0.25)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0,
+              fontSize: 18,
+            }}
+          >
+            🎟️
           </div>
-          <span className="text-xs text-on-surface-variant font-medium">2 / 4</span>
-        </div>
-      </header>
+          <div
+            style={{
+              flex: 1,
+              background: '#0D0D12',
+              border: '1px solid rgba(255,255,255,0.08)',
+              borderRadius: 12,
+              padding: '14px 18px',
+            }}
+          >
+            <p style={{ fontFamily: 'var(--font-dm-sans)', fontSize: 17, fontWeight: 700, color: '#F0EFF8', margin: 0, lineHeight: 1.4 }}>
+              You&apos;re here as a…
+            </p>
+            <p style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 10, color: '#5C5A72', margin: '6px 0 0', letterSpacing: '0.08em' }}>
+              {timeStr}
+            </p>
+          </div>
+        </motion.div>
 
-      {/* Content */}
-      <main className="flex-1 px-6 pt-4 pb-44 max-w-xl mx-auto w-full space-y-10">
-        {/* Greeting */}
-        <div>
-          <p className="text-sm font-medium text-on-surface-variant mb-1">
-            Nice,{' '}
-            <span className="font-semibold text-on-surface">{s1.displayName.split(' ')[0]}</span>
-            {categoryLabel ? ` · ${categoryLabel}` : ''}
-          </p>
-          <h1 className="text-2xl font-headline font-extrabold text-on-surface tracking-tight leading-snug">
-            What do you actually do?
-          </h1>
-        </div>
+        {/* Role tiles */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {TILES.map((tile, i) => {
+            const isSelected = selectedRole === tile.role
+            const isDisabled = selectedRole !== null && !isSelected
 
-        {/* 2A — Sub-types (only if category has them) */}
-        {categoryConfig && (
-          <section className="space-y-3">
-            <div>
-              <label className="block text-base font-semibold text-on-surface">
-                What kind of events do you host?
-              </label>
-              <p className="text-xs text-on-surface-variant mt-0.5">Pick all that apply.</p>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {categoryConfig.subTypes.map((st) => {
-                const isSelected = subTypes.includes(st.id)
-                const isNotYet = st.id === 'not_yet'
-                return (
-                  <button
-                    key={st.id}
-                    type="button"
-                    onClick={() => toggleSubType(st.id)}
-                    className="px-4 py-2 rounded-full text-sm font-medium transition-all duration-150 active:scale-95 border-2"
+            return (
+              <motion.button
+                key={tile.role}
+                type="button"
+                onClick={() => handleTileSelect(tile.role)}
+                disabled={!!selectedRole}
+                initial={{ opacity: 0, y: 24 }}
+                animate={{ opacity: isDisabled ? 0.3 : 1, y: 0 }}
+                transition={{ duration: 0.4, ease: E, delay: 0.06 * i }}
+                whileTap={{ scale: isSelected ? 1 : 0.98 }}
+                style={{
+                  width: '100%',
+                  height: 76,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 16,
+                  padding: '0 18px',
+                  background: isSelected ? `${tile.accent}12` : 'rgba(255,255,255,0.03)',
+                  border: `1px solid ${isSelected ? tile.accent : 'rgba(255,255,255,0.08)'}`,
+                  borderRadius: 0,
+                  cursor: selectedRole ? 'default' : 'pointer',
+                  textAlign: 'left',
+                  position: 'relative',
+                  transition: 'background 0.18s ease, border-color 0.18s ease',
+                }}
+              >
+                <span style={{ fontSize: 26, flexShrink: 0, lineHeight: 1 }}>{tile.emoji}</span>
+
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div
                     style={{
-                      backgroundColor: isSelected
-                        ? isNotYet ? 'rgba(255,255,255,0.10)' : colors.primary
-                        : 'transparent',
-                      borderColor: isSelected
-                        ? isNotYet ? 'rgba(255,255,255,0.25)' : colors.primary
-                        : 'rgba(255, 255, 255, 0.2)',
-                      color: isSelected ? '#ffffff' : isNotYet ? 'rgba(255,255,255,0.45)' : 'inherit',
+                      fontFamily: 'var(--font-syne)',
+                      fontSize: 14,
+                      fontWeight: 900,
+                      letterSpacing: '0.04em',
+                      color: isSelected ? tile.accent : '#F0EFF8',
+                      transition: 'color 0.18s ease',
+                      lineHeight: 1.2,
                     }}
                   >
-                    {st.label}
-                  </button>
-                )
-              })}
-            </div>
-          </section>
-        )}
-
-        {/* 2B — City */}
-        <section className="space-y-3">
-          <label className="block text-base font-semibold text-on-surface" htmlFor="city-search">
-            Where are you based out of?
-          </label>
-          <div className="relative">
-            <span className="absolute left-4 top-1/2 -translate-y-1/2 material-symbols-outlined text-on-surface-variant text-xl pointer-events-none">location_on</span>
-            <input
-              id="city-search"
-              type="text"
-              placeholder="Search or scroll to pick a city…"
-              value={citySearch}
-              onChange={(e) => { setCitySearch(e.target.value); setCity('') }}
-              onFocus={() => setCityFocused(true)}
-              onBlur={() => setCityFocused(false)}
-              className="w-full pl-11 pr-5 py-4 rounded-xl bg-surface-container-low border-2 border-transparent focus:border-primary/30 focus:bg-surface-container transition-all text-on-surface placeholder:text-on-surface-variant/40 outline-none"
-            />
-          </div>
-
-          {cityFocused && !city && (
-            <div className="bg-surface-container rounded-xl border border-outline-variant/20 overflow-hidden max-h-52 overflow-y-auto shadow-sm">
-              {filteredCities.length === 0 ? (
-                <p className="px-4 py-3 text-sm text-on-surface-variant">No cities found.</p>
-              ) : (
-                filteredCities.map((c) => (
-                  <button
-                    key={c.id}
-                    type="button"
-                    onMouseDown={(e) => e.preventDefault()}
-                    onClick={() => handleCitySelect(c.name)}
-                    className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-surface-container-high transition-colors text-sm border-b border-outline-variant/10 last:border-0"
-                  >
-                    <span className="text-base">{c.emoji}</span>
-                    <span className="font-medium text-on-surface">{c.name}</span>
-                    <span className="text-on-surface-variant text-xs ml-auto">{c.state}</span>
-                  </button>
-                ))
-              )}
-            </div>
-          )}
-
-          {city && (
-            <div
-              className="flex items-center gap-2 px-4 py-3 rounded-xl border-2 text-sm font-medium"
-              style={{ borderColor: colors.primary, backgroundColor: `${colors.secondary}50` }}
-            >
-              <span className="material-symbols-outlined text-base" style={{ color: colors.primary, fontVariationSettings: "'FILL' 1" }}>check_circle</span>
-              <span>{city}</span>
-              <button
-                type="button"
-                onClick={() => { setCity(''); setCitySearch('') }}
-                className="ml-auto text-on-surface-variant hover:text-on-surface"
-              >
-                <span className="material-symbols-outlined text-base">close</span>
-              </button>
-            </div>
-          )}
-        </section>
-
-        {/* 2C — Interests */}
-        <section className="space-y-2">
-          <div className="flex items-baseline justify-between">
-            <label className="block text-base font-semibold text-on-surface">
-              What do you step out for?
-            </label>
-            <span className="text-xs text-on-surface-variant">
-              {interestTags.length} selected
-              {interestTags.length < 3 && (
-                <span style={{ color: colors.primary }}> · pick at least 3</span>
-              )}
-            </span>
-          </div>
-          <p className="text-sm text-on-surface-variant pb-2">Pick as many as you like.</p>
-
-          <div className="space-y-8">
-            {INTEREST_CATEGORIES.map((cat) => {
-              const tags = INTEREST_TAGS.filter((t) => t.category === cat.id)
-              if (tags.length === 0) return null
-              return (
-                <div key={cat.id}>
-                  {/* Category header */}
-                  <div
-                    className="flex items-center gap-3 mb-4"
-                  >
-                    <span className="text-sm font-bold text-on-surface tracking-wide">{cat.label}</span>
-                    <div className="flex-1 h-px" style={{ backgroundColor: 'rgba(255,255,255,0.08)' }} />
+                    {tile.label}
                   </div>
-
-                  {/* Tags */}
-                  <div className="flex flex-wrap gap-2.5">
-                    {tags.map((tag) => {
-                      const isSelected = interestTags.includes(tag.id)
-                      return (
-                        <button
-                          key={tag.id}
-                          type="button"
-                          onClick={() => toggleInterestTag(tag.id)}
-                          className="px-4 py-2 rounded-full text-sm font-medium transition-all duration-150 active:scale-95 border"
-                          style={{
-                            backgroundColor: isSelected ? colors.primary : 'transparent',
-                            borderColor: isSelected ? colors.primary : 'rgba(255,255,255,0.15)',
-                            color: isSelected ? '#fff' : 'rgba(255,255,255,0.75)',
-                          }}
-                        >
-                          {tag.emoji} {tag.label}
-                        </button>
-                      )
-                    })}
+                  <div
+                    style={{
+                      fontFamily: 'var(--font-dm-sans)',
+                      fontSize: 13,
+                      color: '#5C5A72',
+                      marginTop: 3,
+                      lineHeight: 1.4,
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {tile.description}
                   </div>
                 </div>
-              )
-            })}
-          </div>
-        </section>
 
-        {error && <p className="text-error text-sm font-medium">{error}</p>}
-      </main>
-
-      {/* Fixed CTA */}
-      <footer className="fixed bottom-0 left-0 w-full z-50 px-6 py-5 bg-background/90 backdrop-blur-sm border-t border-outline-variant/10">
-        <div className="max-w-xl mx-auto">
-          <button
-            type="button"
-            onClick={handleContinue}
-            disabled={isPending}
-            className="w-full py-4 px-6 font-headline font-bold rounded-xl shadow-lg active:scale-[0.98] transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed text-white"
-            style={{ backgroundColor: colors.primary }}
-          >
-            {isPending ? 'Saving…' : 'Continue'}
-            {!isPending && <span className="material-symbols-outlined text-lg">arrow_forward</span>}
-          </button>
+                {isSelected && (
+                  <motion.div
+                    initial={{ scale: 0, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    transition={{ type: 'spring', stiffness: 400, damping: 20 }}
+                    style={{
+                      position: 'absolute',
+                      top: 10, right: 12,
+                      width: 20, height: 20,
+                      borderRadius: '50%',
+                      background: tile.accent,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
+                      <path d="M1 4L3.5 6.5L9 1" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  </motion.div>
+                )}
+              </motion.button>
+            )
+          })}
         </div>
-      </footer>
 
-      <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" />
-      <style>{`.material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }`}</style>
+        {/* Reactive tip */}
+        <AnimatePresence>
+          {selectedTile && (
+            <motion.p
+              key={selectedTile.role}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.25, ease: E, delay: 0.2 }}
+              style={{
+                fontFamily: 'var(--font-dm-sans)',
+                fontSize: 14,
+                color: selectedTile.accent,
+                margin: 0,
+                paddingLeft: 4,
+                lineHeight: 1.5,
+              }}
+            >
+              {selectedTile.tip}
+            </motion.p>
+          )}
+        </AnimatePresence>
+      </div>
     </div>
   )
 }
