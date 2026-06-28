@@ -1,8 +1,10 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import React, { useState, useRef, useMemo } from 'react'
+import { createPortal } from 'react-dom'
 import Image from 'next/image'
-import { uploadGalleryImage, addBlock, updateBlock, saveSupportTipBlock } from '@/app/actions/blocks'
+import { uploadGalleryImage, addBlock, updateBlock, saveSupportTipBlock, toggleBlockVisibility } from '@/app/actions/blocks'
+import { PERSONA_BLOCK_SETS, type PersonaKey } from '@/lib/constants/blocks'
 import type {
   BlockType,
   PageBlock,
@@ -74,6 +76,20 @@ const BLOCK_TYPES: { type: BlockType; label: string; icon: string; description: 
 ]
 
 // ---------------------------------------------------------------------------
+// Block categories for the picker
+// ---------------------------------------------------------------------------
+
+const BLOCK_CATEGORIES: { id: string; label: string; icon: string; types: BlockType[] | null }[] = [
+  { id: 'all',       label: 'All',       icon: 'apps',            types: null },
+  { id: 'basics',    label: 'Basics',    icon: 'text_fields',     types: ['text_bio', 'social_link', 'social_links_row', 'custom_link', 'image_gallery', 'quote_block', 'stats_grid', 'marquee_text'] },
+  { id: 'media',     label: 'Media',     icon: 'play_circle',     types: ['youtube_embed', 'instagram_embed', 'instagram_post', 'spotify_now_playing', 'podcast_episode', 'substack_preview', 'music_player', 'twitter_embed'] },
+  { id: 'events',    label: 'Events',    icon: 'calendar_today',  types: ['event_listing', 'event_calendar', 'past_events_gallery', 'event_series', 'rsvp_link', 'announcement'] },
+  { id: 'community', label: 'Community', icon: 'group',           types: ['newsletter_signup', 'testimonial', 'community_stats', 'collab_invite', 'whatsapp_community', 'booking_request'] },
+  { id: 'monetise',  label: 'Monetise',  icon: 'payments',        types: ['support_tip', 'digital_product', 'waitlist', 'fan_membership', 'white_label_event'] },
+  { id: 'identity',  label: 'Identity',  icon: 'badge',           types: ['creator_type_badge', 'city_community', 'venue_partnership', 'press_feature', 'awards_badges'] },
+]
+
+// ---------------------------------------------------------------------------
 // Small helpers
 // ---------------------------------------------------------------------------
 
@@ -86,7 +102,7 @@ function ToggleSwitch({ checked, onChange }: { checked: boolean; onChange: (v: b
   )
 }
 
-function BlockIcon({ blockType }: { blockType: BlockType }) {
+const BlockIcon = React.memo(function BlockIcon({ blockType }: { blockType: BlockType }) {
   const iconMap: Record<BlockType, string> = {
     // Legacy
     social_link:         'link',
@@ -142,7 +158,7 @@ function BlockIcon({ blockType }: { blockType: BlockType }) {
       <span className="material-symbols-outlined text-xl">{icon}</span>
     </div>
   )
-}
+})
 
 function formatEventDate(startsAt: string): string {
   return new Intl.DateTimeFormat('en-IN', {
@@ -150,8 +166,14 @@ function formatEventDate(startsAt: string): string {
   }).format(new Date(startsAt))
 }
 
-function BlockPreviewLabel({ block, events }: { block: PageBlock; events: Event[] }) {
+const BlockPreviewLabel = React.memo(function BlockPreviewLabel({ block, events }: { block: PageBlock; events: Event[] }) {
   const cfg = block.config as unknown
+  const eventListingEvent = useMemo(() => {
+    if (block.block_type !== 'event_listing') return undefined
+    const c = cfg as EventListingConfig
+    return events.find((e) => e.id === c.event_ids?.[0])
+  }, [block.block_type, cfg, events])
+
   switch (block.block_type) {
     case 'social_link': {
       const c = cfg as SocialLinkConfig
@@ -188,14 +210,11 @@ function BlockPreviewLabel({ block, events }: { block: PageBlock; events: Event[
       )
     }
     case 'event_listing': {
-      const c = cfg as EventListingConfig
-      const eventId = c.event_ids?.[0]
-      const ev = events.find((e) => e.id === eventId)
       return (
         <div>
-          <span className="font-headline font-bold text-white text-sm">{ev?.title ?? 'Event'}</span>
+          <span className="font-headline font-bold text-white text-sm">{eventListingEvent?.title ?? 'Event'}</span>
           <p className="text-white/50 text-xs mt-0.5">
-            {ev ? formatEventDate(ev.starts_at) : 'Tap to select an event'}
+            {eventListingEvent ? formatEventDate(eventListingEvent.starts_at) : 'Tap to select an event'}
           </p>
         </div>
       )
@@ -241,7 +260,7 @@ function BlockPreviewLabel({ block, events }: { block: PageBlock; events: Event[
     default:
       return <span className="font-headline font-bold text-white text-sm capitalize">{block.block_type.replace(/_/g, ' ')}</span>
   }
-}
+})
 
 // ---------------------------------------------------------------------------
 // Inline edit forms per block type
@@ -250,7 +269,7 @@ function BlockPreviewLabel({ block, events }: { block: PageBlock; events: Event[
 const inputCls = 'w-full bg-surface-container-low text-on-surface placeholder:text-outline-variant rounded-lg px-3 py-2.5 text-sm border border-white/5 focus:outline-none focus:ring-2 focus:ring-primary/40'
 const labelCls = 'block text-xs font-semibold text-on-surface-variant uppercase tracking-wider mb-1'
 
-function SocialLinkForm({
+const SocialLinkForm = React.memo(function SocialLinkForm({
   initial,
   onSave,
   onCancel,
@@ -299,9 +318,9 @@ function SocialLinkForm({
       <EditFormActions onSave={() => onSave({ platform, title, url })} onCancel={onCancel} isSaving={false} />
     </div>
   )
-}
+})
 
-function YouTubeForm({
+const YouTubeForm = React.memo(function YouTubeForm({
   initial,
   onSave,
   onCancel,
@@ -349,9 +368,9 @@ function YouTubeForm({
       <EditFormActions onSave={() => onSave({ video_id: videoId, title })} onCancel={onCancel} isSaving={false} />
     </div>
   )
-}
+})
 
-function InstagramForm({
+const InstagramForm = React.memo(function InstagramForm({
   initial,
   onSave,
   onCancel,
@@ -373,9 +392,9 @@ function InstagramForm({
       <EditFormActions onSave={() => onSave({ post_url: postUrl })} onCancel={onCancel} isSaving={false} />
     </div>
   )
-}
+})
 
-function TextBioForm({
+const TextBioForm = React.memo(function TextBioForm({
   initial,
   onSave,
   onCancel,
@@ -405,9 +424,9 @@ function TextBioForm({
       <EditFormActions onSave={() => onSave({ body })} onCancel={onCancel} isSaving={false} />
     </div>
   )
-}
+})
 
-function ImageGalleryForm({
+const ImageGalleryForm = React.memo(function ImageGalleryForm({
   initial,
   onSave,
   onCancel,
@@ -656,9 +675,9 @@ function ImageGalleryForm({
       />
     </div>
   )
-}
+})
 
-function CustomLinkForm({
+const CustomLinkForm = React.memo(function CustomLinkForm({
   initial,
   onSave,
   onCancel,
@@ -699,9 +718,9 @@ function CustomLinkForm({
       />
     </div>
   )
-}
+})
 
-function EventPickerForm({
+const EventPickerForm = React.memo(function EventPickerForm({
   initial,
   events,
   onSave,
@@ -768,9 +787,9 @@ function EventPickerForm({
       />
     </div>
   )
-}
+})
 
-function QuoteBlockForm({
+const QuoteBlockForm = React.memo(function QuoteBlockForm({
   initial,
   onSave,
   onCancel,
@@ -805,9 +824,9 @@ function QuoteBlockForm({
       <EditFormActions onSave={() => onSave({ text, author: author || undefined })} onCancel={onCancel} isSaving={false} />
     </div>
   )
-}
+})
 
-function MarqueeTextForm({
+const MarqueeTextForm = React.memo(function MarqueeTextForm({
   initial,
   onSave,
   onCancel,
@@ -869,9 +888,9 @@ function MarqueeTextForm({
       <EditFormActions onSave={() => onSave({ text, speed, bg })} onCancel={onCancel} isSaving={false} />
     </div>
   )
-}
+})
 
-function StatsGridForm({
+const StatsGridForm = React.memo(function StatsGridForm({
   initial,
   onSave,
   onCancel,
@@ -949,7 +968,7 @@ function StatsGridForm({
       />
     </div>
   )
-}
+})
 
 // ---------------------------------------------------------------------------
 // New block-type forms (Wave 1)
@@ -1793,7 +1812,7 @@ function EditFormActions({ onSave, onCancel, isSaving }: { onSave: () => void; o
 // Inline block edit panel — renders the right form per type
 // ---------------------------------------------------------------------------
 
-function BlockEditPanel({
+const BlockEditPanel = React.memo(function BlockEditPanel({
   block,
   events,
   onSaved,
@@ -1875,52 +1894,135 @@ function BlockEditPanel({
       {block.block_type === 'fan_membership'   && <FanMembershipForm  {...sp} />}
     </div>
   )
-}
+})
 
 // ---------------------------------------------------------------------------
 // Add Block modal
 // ---------------------------------------------------------------------------
 
-function AddBlockModal({ onClose, onAdd, isPending }: {
+function AddBlockModal({ onClose, onAdd, isPending, allowedTypes }: {
   onClose: () => void
   onAdd: (type: BlockType) => void
   isPending: boolean
+  allowedTypes: BlockType[] | null
 }) {
-  return (
-    <div className="fixed inset-0 z-[70]">
+  const [activeCategory, setActiveCategory] = useState('all')
+  const [search, setSearch] = useState('')
+
+  const personaBlockTypes = allowedTypes
+    ? BLOCK_TYPES.filter((bt) => allowedTypes.includes(bt.type))
+    : BLOCK_TYPES
+
+  const activeCat = BLOCK_CATEGORIES.find((c) => c.id === activeCategory)
+  const filtered = personaBlockTypes.filter((bt) => {
+    const matchesCategory = !activeCat?.types || activeCat.types.includes(bt.type)
+    const q = search.toLowerCase()
+    const matchesSearch = !q || bt.label.toLowerCase().includes(q) || bt.description.toLowerCase().includes(q)
+    return matchesCategory && matchesSearch
+  })
+
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[70] flex items-center justify-center p-10"
+      style={{ paddingLeft: 'calc(var(--wimc-sidebar-w, var(--adda-sidebar-w, 0px)) + 40px)' }}
+    >
       <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={onClose} />
-      <div className="fixed bottom-0 left-0 right-0 max-w-2xl mx-auto z-[80] bg-surface rounded-t-[32px] shadow-[0_-12px_40px_rgba(0,0,0,0.5)]">
-        <div className="flex justify-center pt-4 pb-2">
-          <div className="w-12 h-1.5 bg-white/10 rounded-full" />
-        </div>
-        <div className="px-8 pt-4 pb-6 flex justify-between items-center">
-          <h2 className="font-headline font-extrabold text-2xl text-on-surface tracking-tight">Add a block</h2>
-          <button onClick={onClose} className="w-10 h-10 rounded-full bg-surface-container-high flex items-center justify-center text-on-surface-variant active:scale-95">
-            <span className="material-symbols-outlined text-xl">close</span>
+      <div
+        className="relative w-full max-w-2xl z-[80] bg-surface rounded-2xl shadow-[0_24px_64px_rgba(0,0,0,0.6)] flex flex-col"
+        style={{ maxHeight: 'calc(100vh - 80px)' }}
+      >
+        {/* Header */}
+        <div className="px-6 pt-3 pb-3 flex justify-between items-center shrink-0">
+          <h2 className="font-headline font-extrabold text-xl text-on-surface tracking-tight">Add a block</h2>
+          <button
+            onClick={onClose}
+            className="w-9 h-9 rounded-full bg-surface-container-high flex items-center justify-center text-on-surface-variant active:scale-95"
+          >
+            <span className="material-symbols-outlined text-lg">close</span>
           </button>
         </div>
-        <div className="px-8 pb-12 grid grid-cols-2 gap-4">
-          {BLOCK_TYPES.map((bt) => (
-            <button
-              key={bt.type}
-              onClick={() => { onAdd(bt.type); onClose() }}
-              disabled={isPending}
-              className="bg-surface-container-lowest p-5 rounded-xl text-left border border-white/5 transition-all flex flex-col items-start gap-3 relative overflow-hidden hover:border-primary active:scale-[0.98] group disabled:opacity-50"
-            >
-              <div className="w-12 h-12 rounded-xl bg-primary-container text-on-primary-container flex items-center justify-center transition-colors group-hover:bg-primary group-hover:text-white">
-                <span className="material-symbols-outlined text-[28px]">{bt.icon}</span>
-              </div>
-              <div>
-                <h4 className="font-headline font-bold text-sm text-on-surface">{bt.label}</h4>
-                <p className="font-body text-[11px] text-on-surface-variant leading-tight mt-0.5">
-                  {bt.description}
-                </p>
-              </div>
-            </button>
-          ))}
+
+        {/* Search bar */}
+        <div className="px-6 pb-3 shrink-0">
+          <div className="flex items-center gap-2.5 bg-surface-container-high rounded-xl px-4 py-2.5 border border-white/5">
+            <span className="material-symbols-outlined text-on-surface-variant" style={{ fontSize: 18 }}>search</span>
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search blocks…"
+              className="flex-1 bg-transparent text-sm text-on-surface placeholder:text-on-surface-variant focus:outline-none"
+            />
+            {search && (
+              <button onClick={() => setSearch('')} className="text-on-surface-variant hover:text-on-surface transition-colors">
+                <span className="material-symbols-outlined" style={{ fontSize: 16 }}>close</span>
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Category tabs */}
+        <div className="shrink-0 overflow-x-auto pb-3 px-6 scrollbar-none">
+          <div className="flex gap-2 w-max">
+            {BLOCK_CATEGORIES.map((cat) => {
+              const count = cat.types
+                ? cat.types.filter((t) => !allowedTypes || allowedTypes.includes(t)).length
+                : personaBlockTypes.length
+              return (
+                <button
+                  key={cat.id}
+                  onClick={() => { setActiveCategory(cat.id); setSearch('') }}
+                  className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all border ${
+                    activeCategory === cat.id
+                      ? 'bg-primary text-on-primary border-primary'
+                      : 'bg-surface-container-high text-on-surface-variant border-white/5 hover:text-on-surface hover:border-white/15'
+                  }`}
+                >
+                  <span className="material-symbols-outlined" style={{ fontSize: 13 }}>{cat.icon}</span>
+                  {cat.label}
+                  <span className={`text-[10px] font-normal tabular-nums ${activeCategory === cat.id ? 'text-white/60' : 'text-on-surface-variant/50'}`}>
+                    {count}
+                  </span>
+                </button>
+              )
+            })}
+          </div>
+        </div>
+
+        <div className="border-t border-white/5 shrink-0" />
+
+        {/* Block grid — scrollable */}
+        <div className="flex-1 min-h-0 overflow-y-auto px-6 py-4">
+          {filtered.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-12 gap-2 text-center">
+              <span className="material-symbols-outlined text-on-surface-variant" style={{ fontSize: 36 }}>search_off</span>
+              <p className="text-sm text-on-surface-variant">No blocks match &ldquo;{search}&rdquo;</p>
+              <button onClick={() => setSearch('')} className="text-xs text-primary font-semibold mt-1 hover:underline">Clear search</button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-3 pb-10">
+              {filtered.map((bt) => (
+                <button
+                  key={bt.type}
+                  onClick={() => { onAdd(bt.type); onClose() }}
+                  disabled={isPending}
+                  className="bg-surface-container-lowest p-4 rounded-xl text-left border border-white/5 transition-all flex flex-col items-start gap-2.5 overflow-hidden hover:border-primary active:scale-[0.98] group disabled:opacity-50"
+                >
+                  <div className="w-10 h-10 rounded-xl bg-primary-container text-on-primary-container flex items-center justify-center transition-colors group-hover:bg-primary group-hover:text-white shrink-0">
+                    <span className="material-symbols-outlined" style={{ fontSize: 22 }}>{bt.icon}</span>
+                  </div>
+                  <div>
+                    <h4 className="font-headline font-bold text-sm text-on-surface leading-tight">{bt.label}</h4>
+                    <p className="font-body text-[11px] text-on-surface-variant leading-tight mt-0.5">{bt.description}</p>
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }
 
@@ -1986,9 +2088,11 @@ interface BlockEditorProps {
   isSaving: boolean
   onSave: () => void
   userTier?: UserTier | null
+  persona?: PersonaKey
 }
 
-export default function BlockEditor({ blocks, events, onBlocksChange, onEditBlock, isDirty, isSaving, onSave, userTier }: BlockEditorProps) {
+const BlockEditor = React.memo(function BlockEditor({ blocks, events, onBlocksChange, onEditBlock, isDirty, isSaving, onSave, userTier, persona }: BlockEditorProps) {
+  const allowedTypes = persona ? PERSONA_BLOCK_SETS[persona] : null
   const [showAddModal,  setShowAddModal]  = useState(false)
   const [editingBlockId, setEditingBlockId] = useState<string | null>(null)
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null)
@@ -1997,6 +2101,7 @@ export default function BlockEditor({ blocks, events, onBlocksChange, onEditBloc
 
   function handleToggle(block: PageBlock, isVisible: boolean) {
     onBlocksChange(blocks.map((b) => b.id === block.id ? { ...b, is_visible: isVisible } : b))
+    toggleBlockVisibility(block.id, isVisible)
   }
 
   async function handleAdd(blockType: BlockType) {
@@ -2054,7 +2159,7 @@ export default function BlockEditor({ blocks, events, onBlocksChange, onEditBloc
   }
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-3 px-4 py-4">
       {/* Block list */}
       {blocks.map((block, index) => {
         const isEditing = editingBlockId === block.id
@@ -2162,8 +2267,11 @@ export default function BlockEditor({ blocks, events, onBlocksChange, onEditBloc
           onClose={() => setShowAddModal(false)}
           onAdd={handleAdd}
           isPending={isSaving}
+          allowedTypes={allowedTypes}
         />
       )}
     </div>
   )
-}
+})
+
+export default BlockEditor

@@ -508,7 +508,7 @@ export default function CounterOfferModal({
               value={message}
               onChange={e => setMessage(e.target.value)}
               rows={4}
-              placeholder={`Explain the changes you're proposing and why they work for your venue. Be specific — creators respond better to context. (min. ${MIN_MESSAGE_LENGTH} chars)`}
+              placeholder={`Explain the changes you're proposing and why they work for your Adda. Be specific — creators respond better to context. (min. ${MIN_MESSAGE_LENGTH} chars)`}
               style={{
                 ...inputStyle,
                 fontFamily: 'var(--font-inter), system-ui, sans-serif',

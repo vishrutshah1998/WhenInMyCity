@@ -57,7 +57,7 @@ export default function AddasClient({ addas: initial }: Props) {
           Addas
         </h1>
         <p style={{ fontSize: 13, color: 'var(--wimc-text-secondary)' }}>
-          {addas.length} venue{addas.length !== 1 ? 's' : ''} · {activeCount} active
+          {addas.length} Adda{addas.length !== 1 ? 's' : ''} · {activeCount} active
         </p>
       </div>
 

@@ -7,6 +7,20 @@ const supabaseHost = process.env.NEXT_PUBLIC_SUPABASE_URL
   : '*.supabase.co'
 
 const nextConfig: NextConfig = {
+  async redirects() {
+    // Onboarding v1 → v2: old screen-N routes redirect to the new entry point.
+    // Handles stale bookmarks, browser history, and any cached ?next= params.
+    const oldScreens = [
+      'screen-1', 'screen-2', 'screen-3', 'screen-4',
+      'screen-5', 'screen-6', 'screen-7',
+      'reveal', 'polish', 'complete',
+    ]
+    return oldScreens.map(slug => ({
+      source:      `/onboarding/${slug}`,
+      destination: '/onboarding',
+      permanent:   false,
+    }))
+  },
   experimental: {
     serverActions: {
       // Only allow Server Actions from the canonical origin. Prevents cross-origin

@@ -2,11 +2,14 @@
 
 import { useState, useTransition, useRef, useCallback } from 'react'
 import Image from 'next/image'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { initiateRSVP, checkRSVPStatus, getConfirmedRSVPToken, confirmRSVPPayment } from '@/app/actions/rsvp'
+import { initiateRSVP, checkRSVPStatus, getConfirmedRSVPToken, confirmRSVPPayment, casualRSVP } from '@/app/actions/rsvp'
 import type { MyRSVP } from '@/app/actions/rsvp'
 import { validateReferralCode } from '@/app/actions/referral'
 import type { Event } from '@/types/database'
+import { TornEdge } from '@/components/ui/TornEdge'
+import { profileUrl } from '@/lib/profile-url'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -14,6 +17,7 @@ interface CreatorProfile {
   display_name: string
   avatar_url: string | null
   username: string
+  city: string
   creator_type: string
   is_verified: boolean
   user_tier: string | null
@@ -61,12 +65,13 @@ export interface EventReview {
 }
 
 interface EventPageProps {
-  event:     Event
-  rsvpCount: number
-  spotsLeft: number | null
-  creator:   CreatorProfile | null
-  reviews?:  EventReview[]
-  myRSVP?:   MyRSVP | null
+  event:           Event
+  rsvpCount:       number
+  spotsLeft:       number | null
+  creator:         CreatorProfile | null
+  reviews?:        EventReview[]
+  myRSVP?:         MyRSVP | null
+  isAuthenticated: boolean
 }
 
 type Sheet = 'none' | 'step1' | 'step2' | 'confirmed'
@@ -118,14 +123,6 @@ function ticketNumber(token: string): string {
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
-function IconBox({ icon }: { icon: string }) {
-  return (
-    <div className="w-10 h-10 rounded-lg bg-surface-container-low flex items-center justify-center shrink-0">
-      <span className="material-symbols-outlined text-primary">{icon}</span>
-    </div>
-  )
-}
-
 function SheetBackdrop({ onClick }: { onClick: () => void }) {
   return (
     <div
@@ -152,10 +149,13 @@ declare global {
   }
 }
 
-export default function EventPage({ event, rsvpCount, spotsLeft, creator, reviews = [], myRSVP = null }: EventPageProps) {
+export default function EventPage({ event, rsvpCount, spotsLeft, creator, reviews = [], myRSVP = null, isAuthenticated }: EventPageProps) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
-  const [sheet, setSheet] = useState<Sheet>(() => myRSVP ? 'confirmed' : 'none')
+  const isCasual = (event as any).rsvp_style === 'casual' || event.ticket_price === 0
+  const [sheet, setSheet] = useState<Sheet>(() => (myRSVP && !isCasual) ? 'confirmed' : 'none')
+  const [casualIntent, setCasualIntent] = useState<'going' | 'maybe' | 'not_going' | null>(() => myRSVP ? 'going' : null)
+  const [casualPending, startCasualTransition] = useTransition()
   const [descExpanded, setDescExpanded] = useState(false)
 
   // Fan tiers
@@ -180,7 +180,7 @@ export default function EventPage({ event, rsvpCount, spotsLeft, creator, review
 
   // Step 2 / confirmed data — pre-populate from server-fetched existing booking
   const [confirmed, setConfirmed] = useState<ConfirmedData | null>(
-    myRSVP
+    (myRSVP && !isCasual)
       ? { qrToken: myRSVP.qrToken, isFree: !myRSVP.orderId, razorpayOrderId: myRSVP.orderId, amount: 0, rsvpId: myRSVP.rsvpId, tierName: myRSVP.tierName ?? null }
       : null,
   )
@@ -225,6 +225,15 @@ export default function EventPage({ event, rsvpCount, spotsLeft, creator, review
       setCopied(true); setTimeout(() => setCopied(false), 2000)
     }
   }, [event.slug, event.title])
+
+  // ── Casual RSVP ────────────────────────────────────────────────────────────
+
+  function handleCasualRSVP(intent: 'going' | 'maybe' | 'not_going') {
+    setCasualIntent(intent)  // optimistic update
+    startCasualTransition(async () => {
+      await casualRSVP({ eventId: event.id, intent })
+    })
+  }
 
   // ── Referral code apply ────────────────────────────────────────────────────
 
@@ -468,18 +477,18 @@ export default function EventPage({ event, rsvpCount, spotsLeft, creator, review
   // ── Render ─────────────────────────────────────────────────────────────────
 
   return (
-    <div className="bg-background text-on-surface font-body min-h-screen">
+    <div className="bg-background text-on-surface font-sans min-h-screen" data-noise="true">
 
-      {/* ── Header ── */}
-      <header className="fixed top-0 w-full z-50 bg-surface/90 backdrop-blur-md">
-        <div className="flex items-center px-4 h-16 max-w-7xl mx-auto">
-          <button
-            onClick={() => router.back()}
+      {/* ── Sticky header ── */}
+      <header className="fixed top-0 w-full z-50 bg-surface/90 backdrop-blur-md border-b-2 border-dashed border-outline-variant">
+        <div className="flex items-center px-6 h-14 max-w-7xl mx-auto">
+          <Link
+            href="/explore?tab=events"
             className="p-2 -ml-2 rounded-full hover:bg-surface-container-high transition-colors active:scale-95"
           >
             <span className="material-symbols-outlined text-primary">arrow_back</span>
-          </button>
-          <h1 className="ml-4 font-headline font-semibold text-lg text-primary">When In My City</h1>
+          </Link>
+          <span className="ml-4 font-display font-black text-lg text-on-surface uppercase tracking-tighter">WIMC</span>
           <button
             onClick={handleShare}
             title="Share event"
@@ -493,161 +502,189 @@ export default function EventPage({ event, rsvpCount, spotsLeft, creator, review
         </div>
       </header>
 
-      <main className="pt-16 pb-32">
+      <main className="pt-14 pb-28 lg:pb-10">
 
-        {/* ── Hero ── */}
-        <section className="relative w-full h-[380px] sm:h-[442px] overflow-hidden">
-          {event.cover_image_url ? (
-            <Image
-              src={event.cover_image_url}
-              alt={event.title}
-              fill
-              className="object-cover"
-              priority
-            />
-          ) : (
-            <div className="w-full h-full bg-surface-container-high" />
+        {/* ── Hero: primary-color block with poster title ── */}
+        <section className="relative w-full bg-primary overflow-hidden min-h-[280px] md:min-h-[380px] border-b-2 border-dashed border-outline-variant flex items-end">
+          {event.cover_image_url && (
+            <div className="absolute inset-0 pointer-events-none">
+              <Image
+                src={event.cover_image_url}
+                alt={event.title}
+                fill
+                className="object-cover opacity-15 mix-blend-multiply"
+                priority
+              />
+            </div>
           )}
-          <div className="absolute bottom-0 left-0 w-full h-40 bg-gradient-to-t from-background to-transparent" />
+          {/* Grain overlay on hero */}
+          <div
+            className="absolute inset-0 pointer-events-none opacity-[0.028]"
+            style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")` }}
+          />
+          {/* Creator handle chip */}
+          {creator && (
+            <div className="absolute top-5 left-6 font-mono text-[11px] text-on-primary border border-on-primary/50 px-3 py-1 uppercase tracking-[0.15em]">
+              @{creator.username}
+            </div>
+          )}
+          {/* Status badge (non-published only) */}
+          {event.status !== 'published' && (
+            <div className="absolute top-5 right-6 bg-error text-on-error font-mono text-[10px] px-3 py-1 uppercase tracking-[0.15em]">
+              {event.status}
+            </div>
+          )}
+          {/* Poster title */}
+          <div className="relative z-10 w-full max-w-7xl mx-auto px-6 md:px-10 pb-10 pt-16">
+            <h1
+              className="font-display font-black text-on-primary uppercase leading-none"
+              style={{ fontSize: 'clamp(36px, 7vw, 96px)', letterSpacing: '-0.04em' }}
+            >
+              {event.title}
+            </h1>
+          </div>
         </section>
 
-        {/* ── Content canvas ── */}
-        <article className="max-w-2xl mx-auto px-4 sm:px-6 -mt-12 relative z-10 space-y-10">
-
-          {/* ── Event header card ── */}
-          <div className="bg-surface-container-lowest rounded-xl p-6 shadow-[0_12px_32px_rgba(171,46,0,0.06)]">
-            <div className="flex items-center gap-3 mb-3 flex-wrap">
-              {event.status !== 'published' ? (
-                <span className="px-3 py-1 rounded-full bg-error/20 text-error text-[10px] font-bold uppercase tracking-widest capitalize">
-                  {event.status}
-                </span>
-              ) : (
-                <span className="px-3 py-1 rounded-full bg-secondary-fixed text-on-secondary-fixed-variant text-[10px] font-bold uppercase tracking-widest">
-                  Live
-                </span>
-              )}
-              {spotsLeft !== null && spotsLeft <= 10 && spotsLeft > 0 && (
-                <span className="text-primary font-bold text-sm flex items-center gap-1">
-                  <span className="material-symbols-outlined text-sm" style={{ fontVariationSettings: "'FILL' 1" }}>local_fire_department</span>
-                  🔥 {spotsLeft} spot{spotsLeft === 1 ? '' : 's'} left!
-                </span>
-              )}
-              {soldOut && (
-                <span className="text-error font-bold text-sm">Sold out</span>
-              )}
+        {/* ── Boarding pass info bar ── */}
+        <div className="w-full bg-surface-container border-b-2 border-dashed border-outline-variant">
+          <div className="relative max-w-7xl mx-auto px-6 md:px-10 py-4 flex flex-wrap gap-6 items-center">
+            <div className="absolute left-0 top-0 bottom-0 w-[3px] bg-primary" />
+            <div className="flex flex-col gap-0.5">
+              <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-on-surface-variant">From</span>
+              <span className="font-mono text-[12px] text-on-surface">@{creator?.username ?? 'creator'}</span>
             </div>
-
-            <h2 className="font-headline font-bold text-2xl text-on-surface mb-6 leading-tight">
-              {event.title}
-            </h2>
-
-            <div className="space-y-4">
-              <div className="flex items-start gap-4">
-                <IconBox icon="calendar_today" />
-                <div>
-                  <p className="font-semibold text-on-surface" suppressHydrationWarning>{formatDate(event.starts_at)} · {formatTime(event.starts_at)}</p>
-                  {event.ends_at && (
-                    <p className="text-sm text-on-surface-variant" suppressHydrationWarning>Until {formatTime(event.ends_at)}</p>
-                  )}
-                  {rsvpCount > 0 && (
-                    <p className="text-sm text-on-surface-variant">{rsvpCount} {rsvpCount === 1 ? 'person' : 'people'} going</p>
-                  )}
-                </div>
-              </div>
-
-              <div className="flex items-start gap-4">
-                <IconBox icon="location_on" />
-                <div>
-                  <p className="font-semibold text-on-surface">{event.venue_name}</p>
-                  <p className="text-sm text-on-surface-variant">{event.venue_address}</p>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-4">
-                <IconBox icon="confirmation_number" />
-                <div>
-                  <p className="font-semibold text-on-surface">{formatPrice(event.ticket_price)}{event.ticket_price > 0 ? ' per person' : ''}</p>
-                  {event.ticket_price >= 50000 && (
-                    <p className="text-sm text-on-surface-variant">18% GST applies</p>
-                  )}
-                </div>
-              </div>
+            <div className="flex flex-col gap-0.5">
+              <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-on-surface-variant">To</span>
+              <span className="font-mono text-[12px] text-on-surface">{event.venue_name.split(',')[0]}</span>
             </div>
+            <div className="flex flex-col gap-0.5">
+              <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-on-surface-variant">Class</span>
+              <span className="font-mono text-[12px] text-on-surface uppercase">
+                {formatCreatorType(creator?.creator_type ?? '').split(' ')[0]}
+              </span>
+            </div>
+            <div className="flex flex-col gap-0.5">
+              <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-on-surface-variant">Date</span>
+              <span className="font-mono text-[12px] text-on-surface" suppressHydrationWarning>
+                {new Date(event.starts_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }).toUpperCase()}
+              </span>
+            </div>
+            <div className="flex flex-col gap-0.5">
+              <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-on-surface-variant">Time</span>
+              <span className="font-mono text-[12px] text-on-surface" suppressHydrationWarning>
+                {formatTime(event.starts_at)}
+              </span>
+            </div>
+            {rsvpCount > 0 && (
+              <div className="flex flex-col gap-0.5">
+                <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-on-surface-variant">Going</span>
+                <span className="font-mono text-[12px] text-on-surface">{rsvpCount}</span>
+              </div>
+            )}
+            <div className="hidden md:block ml-auto h-10 w-24 barcode-strip text-on-surface opacity-30" />
           </div>
+        </div>
 
-          {/* ── Host section ── */}
-          {creator && (
-            <section>
-              <h3 className="font-headline font-bold text-lg text-on-surface mb-4 px-1">Your Host</h3>
-              <div className="bg-surface-container-low rounded-xl p-4 flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div className="relative">
-                    {creator.avatar_url ? (
-                      <Image
-                        src={creator.avatar_url}
-                        alt={creator.display_name}
-                        width={56}
-                        height={56}
-                        className="w-14 h-14 rounded-full object-cover"
-                        />  
-                    ) : (
-                      <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center">
-                        <span className="text-primary text-xl font-bold">
-                          {creator.display_name.charAt(0).toUpperCase()}
-                        </span>
-                      </div>
-                    )}
-                    {creator.is_verified && (
-                      <div className="absolute -bottom-1 -right-1 bg-tertiary rounded-full p-1 border-2 border-surface-container-low">
-                        <span
-                          className="material-symbols-outlined text-[10px] text-white"
-                          style={{ fontVariationSettings: "'FILL' 1" }}
-                        >verified</span>
-                      </div>
-                    )}
-                  </div>
-                  <div>
-                    <p className="font-bold text-on-surface leading-tight">Hosted by {creator.display_name}</p>
-                    <p className="text-sm text-on-surface-variant">{formatCreatorType(creator.creator_type)}</p>
-                    {(() => {
-                      const meta = creatorTierBadge(creator)
-                      if (!meta) return null
-                      return (
-                        <span
-                          className="inline-flex items-center gap-1 mt-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold"
-                          style={{ background: meta.bg, color: meta.color, border: `1px solid ${meta.border}` }}
-                        >
-                          <span className="material-symbols-outlined" style={{ fontSize: 11, fontVariationSettings: "'FILL' 1" }}>
-                            {meta.icon}
-                          </span>
-                          {meta.label}
-                        </span>
-                      )
-                    })()}
-                  </div>
-                </div>
-                <button
-                  onClick={() => router.push(`/${creator.username}`)}
-                  className="bg-surface-container-highest px-4 py-2 rounded-lg text-sm font-bold text-on-surface-variant hover:brightness-95 transition-all"
+        {/* ── Info tile strip ── */}
+        <div className="w-full border-b-2 border-dashed border-outline-variant">
+          <div
+            className="flex gap-3 px-6 md:px-10 py-4 overflow-x-auto snap-x [&::-webkit-scrollbar]:hidden"
+            style={{ scrollbarWidth: 'none' }}
+          >
+            {/* Date & Time — always shown */}
+            <div className="bg-surface-container-low rounded-xl p-4 min-w-[140px] flex flex-col gap-2 snap-start shrink-0">
+              <span className="material-symbols-outlined text-primary" style={{ fontSize: 20, fontVariationSettings: "'FILL' 1" }}>calendar_today</span>
+              <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-on-surface-variant">Date &amp; Time</span>
+              <span className="font-sans font-semibold text-sm text-on-surface leading-snug" suppressHydrationWarning>
+                {formatDate(event.starts_at)}<br />{formatTime(event.starts_at)}
+              </span>
+            </div>
+
+            {/* Venue — conditional */}
+            {event.venue_name && (
+              <a
+                href={event.google_maps_url ?? `https://maps.google.com/?q=${encodeURIComponent([event.venue_name, event.venue_address].filter(Boolean).join(', '))}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="bg-surface-container-low rounded-xl p-4 min-w-[140px] flex flex-col gap-2 snap-start shrink-0 hover:bg-surface-container transition-colors"
+              >
+                <span className="material-symbols-outlined text-primary" style={{ fontSize: 20, fontVariationSettings: "'FILL' 1" }}>location_on</span>
+                <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-on-surface-variant">Adda</span>
+                <span className="font-sans font-semibold text-sm text-on-surface leading-snug">{event.venue_name}</span>
+                {event.venue_address && (
+                  <span className="font-mono text-[10px] text-on-surface-variant leading-snug">
+                    {event.venue_address.length > 40 ? event.venue_address.slice(0, 40) + '…' : event.venue_address}
+                  </span>
+                )}
+              </a>
+            )}
+
+            {/* Spots Left — conditional */}
+            {spotsLeft !== null && (
+              <div className="bg-surface-container-low rounded-xl p-4 min-w-[140px] flex flex-col gap-2 snap-start shrink-0">
+                <span
+                  className="material-symbols-outlined"
+                  style={{ fontSize: 20, fontVariationSettings: "'FILL' 1", color: spotsLeft < 5 ? '#E8572A' : '#009985' }}
+                >group</span>
+                <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-on-surface-variant">Spots</span>
+                <span
+                  className="font-sans font-semibold text-sm leading-snug"
+                  style={{ color: spotsLeft < 5 ? '#E8572A' : '#009985' }}
                 >
-                  View
-                </button>
+                  {spotsLeft === 0 ? 'Sold out' : `${spotsLeft} left`}
+                </span>
               </div>
-            </section>
-          )}
+            )}
 
-          {/* ── About section ── */}
-          {event.description && (
-            <section>
-              <h3 className="font-headline font-bold text-lg text-on-surface mb-4 px-1">About the Experience</h3>
-              <div className="text-on-surface-variant leading-relaxed">
-                <p className={descExpanded ? '' : 'line-clamp-4'}>
+            {/* Host — conditional */}
+            {creator && (
+              <Link
+                href={profileUrl(creator.city, creator.username)}
+                className="bg-surface-container-low rounded-xl p-4 min-w-[140px] flex flex-col gap-2 snap-start shrink-0 hover:bg-surface-container transition-colors"
+              >
+                <span className="material-symbols-outlined text-primary" style={{ fontSize: 20, fontVariationSettings: "'FILL' 1" }}>person</span>
+                <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-on-surface-variant">Host</span>
+                <span className="font-sans font-semibold text-sm text-on-surface leading-snug">{creator.display_name}</span>
+                <span className="font-mono text-[10px] text-primary">@{creator.username}</span>
+              </Link>
+            )}
+
+            {/* WhatsApp Group — conditional */}
+            {event.whatsapp_group_url && (
+              <a
+                href={event.whatsapp_group_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="bg-surface-container-low rounded-xl p-4 min-w-[140px] flex flex-col gap-2 snap-start shrink-0 hover:bg-surface-container transition-colors"
+              >
+                <span className="material-symbols-outlined" style={{ fontSize: 20, fontVariationSettings: "'FILL' 1", color: '#25D366' }}>chat</span>
+                <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-on-surface-variant">Community</span>
+                <span className="font-sans font-semibold text-sm text-on-surface leading-snug">Join group</span>
+              </a>
+            )}
+          </div>
+        </div>
+
+        {/* ── Two-column layout ── */}
+        <div className="max-w-7xl mx-auto px-6 md:px-10 py-10 flex flex-col lg:flex-row gap-10">
+
+          {/* ── Left column ── */}
+          <div className="flex-1 min-w-0 flex flex-col gap-10">
+
+            {/* About */}
+            {event.description && (
+              <section className="flex flex-col gap-4">
+                <h2
+                  className="font-display font-black text-on-surface uppercase"
+                  style={{ fontSize: 'clamp(24px, 4vw, 40px)', letterSpacing: '-0.03em' }}
+                >About</h2>
+                <p className={`font-sans text-on-surface-variant leading-relaxed text-base ${descExpanded ? '' : 'line-clamp-4'}`}>
                   {event.description}
                 </p>
                 {event.description.length > 200 && (
                   <button
                     onClick={() => setDescExpanded((v) => !v)}
-                    className="text-primary font-bold inline-flex items-center gap-1 mt-2 hover:underline"
+                    className="text-primary font-mono text-[10px] uppercase tracking-[0.2em] inline-flex items-center gap-1 hover:underline self-start"
                   >
                     {descExpanded ? 'Read less' : 'Read more'}
                     <span className="material-symbols-outlined text-sm">
@@ -655,116 +692,422 @@ export default function EventPage({ event, rsvpCount, spotsLeft, creator, review
                     </span>
                   </button>
                 )}
+              </section>
+            )}
+
+            <hr className="border-t-2 border-dashed border-outline-variant" />
+
+            {/* Host */}
+            {creator && (
+              <section className="flex flex-col gap-6">
+                <h3
+                  className="font-display font-black text-on-surface uppercase"
+                  style={{ fontSize: 'clamp(20px, 3vw, 32px)', letterSpacing: '-0.03em' }}
+                >The Host</h3>
+                <div className="flex flex-col sm:flex-row gap-6 items-start">
+                  {creator.avatar_url ? (
+                    <Image
+                      src={creator.avatar_url}
+                      alt={creator.display_name}
+                      width={96}
+                      height={96}
+                      className="w-24 h-24 object-cover grayscale hover:grayscale-0 transition-all duration-300 border-2 border-primary p-0.5 shrink-0"
+                    />
+                  ) : (
+                    <div className="w-24 h-24 bg-primary/10 flex items-center justify-center border-2 border-primary shrink-0">
+                      <span className="font-display font-black text-3xl text-primary">{creator.display_name.charAt(0)}</span>
+                    </div>
+                  )}
+                  <div className="flex-1 flex flex-col gap-3">
+                    <div className="flex justify-between items-start w-full">
+                      <div>
+                        <h4 className="font-sans font-semibold text-lg text-on-surface leading-tight">{creator.display_name}</h4>
+                        <span className="font-mono text-xs text-primary">@{creator.username}</span>
+                        {(() => {
+                          const meta = creatorTierBadge(creator)
+                          if (!meta) return null
+                          return (
+                            <span
+                              className="mt-1.5 inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-mono uppercase tracking-wider"
+                              style={{ background: meta.bg, color: meta.color, border: `1px solid ${meta.border}` }}
+                            >
+                              <span className="material-symbols-outlined" style={{ fontSize: 11, fontVariationSettings: "'FILL' 1" }}>{meta.icon}</span>
+                              {meta.label}
+                            </span>
+                          )
+                        })()}
+                      </div>
+                      <button
+                        onClick={() => router.push(`/${creator.username}`)}
+                        className="bg-surface-container text-on-surface font-sans text-sm px-4 py-2 border border-outline hover:bg-surface-container-highest transition-colors shrink-0"
+                      >
+                        View profile
+                      </button>
+                    </div>
+                    <p className="font-sans text-sm text-on-surface-variant leading-relaxed">
+                      {formatCreatorType(creator.creator_type)}{creator.is_verified ? ' · Verified Creator' : ''}
+                    </p>
+                  </div>
+                </div>
+              </section>
+            )}
+
+            {/* Venue */}
+            <hr className="border-t-2 border-dashed border-outline-variant" />
+            <section className="flex flex-col gap-4">
+              <h3
+                className="font-display font-black text-on-surface uppercase"
+                style={{ fontSize: 'clamp(20px, 3vw, 32px)', letterSpacing: '-0.03em' }}
+              >Adda</h3>
+              <div className="flex items-start gap-3">
+                <span className="material-symbols-outlined text-primary text-2xl shrink-0 mt-0.5" style={{ fontVariationSettings: "'FILL' 1" }}>location_on</span>
+                <div>
+                  <p className="font-sans font-semibold text-on-surface">{event.venue_name}</p>
+                  {event.venue_address && (
+                    <p className="font-mono text-xs text-on-surface-variant mt-0.5">{event.venue_address}</p>
+                  )}
+                  {event.google_maps_url && (
+                    <a
+                      href={event.google_maps_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="font-mono text-[10px] uppercase tracking-[0.15em] text-primary mt-2 inline-block hover:underline"
+                    >
+                      Open in Maps →
+                    </a>
+                  )}
+                </div>
               </div>
             </section>
-          )}
 
-          {/* ── Location snapshot ── */}
-          <section className="bg-surface-container-high rounded-xl p-2 h-48 overflow-hidden relative">
-            {event.google_maps_url ? (
-              <a
-                href={event.google_maps_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="block w-full h-full"
-              >
-                <div className="w-full h-full rounded-lg bg-surface-container-highest flex items-center justify-center">
-                  <span className="material-symbols-outlined text-4xl text-outline">map</span>
-                </div>
-              </a>
-            ) : (
-              <div className="w-full h-full rounded-lg bg-surface-container-highest flex items-center justify-center">
-                <span className="material-symbols-outlined text-4xl text-outline">map</span>
-              </div>
-            )}
-            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-              <div className="bg-primary text-on-primary p-3 rounded-full shadow-lg">
-                <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>location_on</span>
-              </div>
-            </div>
-            <div className="absolute bottom-4 left-4 right-4">
-              <div
-                className="bg-surface-container-lowest/80 backdrop-blur p-3 rounded-lg flex items-center justify-between"
-              >
-                <span className="text-xs font-bold uppercase tracking-wider text-on-surface-variant truncate mr-2">
-                  {event.venue_name}
-                </span>
-                {event.google_maps_url && (
-                  <a
-                    href={event.google_maps_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-xs text-primary font-bold shrink-0"
-                  >
-                    Open Directions
-                  </a>
-                )}
-              </div>
-            </div>
-          </section>
-
-          {/* ── Reviews section ── */}
-          {(event.rating_count > 0 || reviews.length > 0) && (
-            <section id="reviews">
-              <div className="flex items-center justify-between mb-4 px-1">
-                <h3 className="font-headline font-bold text-lg text-on-surface">Attendee Reviews</h3>
-                {event.rating_count > 0 && (
-                  <div className="flex items-center gap-1.5">
-                    <div className="flex">
-                      {[1,2,3,4,5].map((s) => (
-                        <span
-                          key={s}
-                          className="material-symbols-outlined text-base"
-                          style={{ fontVariationSettings: `'FILL' ${s <= Math.round(event.average_rating) ? 1 : 0}`, color: '#F59E0B' }}
-                        >star</span>
+            {/* Reviews */}
+            {(event.rating_count > 0 || reviews.length > 0) && (
+              <>
+                <hr className="border-t-2 border-dashed border-outline-variant" />
+                <section className="flex flex-col gap-6">
+                  <div className="flex items-center justify-between">
+                    <h3
+                      className="font-display font-black text-on-surface uppercase"
+                      style={{ fontSize: 'clamp(20px, 3vw, 32px)', letterSpacing: '-0.03em' }}
+                    >What Attendees Say</h3>
+                    {event.rating_count > 0 && (
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-display font-black text-lg text-on-surface">{event.average_rating.toFixed(1)}</span>
+                        <span className="material-symbols-outlined text-base" style={{ fontVariationSettings: "'FILL' 1", color: '#F59E0B' }}>star</span>
+                        <span className="font-mono text-xs text-on-surface-variant">({event.rating_count})</span>
+                      </div>
+                    )}
+                  </div>
+                  {reviews.length > 0 ? (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {reviews.map((r, i) => (
+                        <div
+                          key={i}
+                          className="bg-[#FAF7F0] text-[#07070A] relative flex flex-col pt-6 px-4 pb-4 border border-outline-variant border-t-0"
+                          style={{
+                            clipPath: 'polygon(0% 12px, 3% 0, 8% 10px, 14% 2px, 19% 12px, 25% 0, 31% 10px, 38% 2px, 44% 12px, 51% 0, 57% 10px, 63% 2px, 69% 12px, 76% 0, 82% 10px, 88% 2px, 93% 12px, 97% 0, 100% 10px, 100% 100%, 0% 100%)',
+                            boxShadow: '4px 4px 0px rgb(var(--color-background))',
+                          }}
+                        >
+                          <span className="material-symbols-outlined text-primary opacity-40 absolute top-3 left-3 text-xl" style={{ fontVariationSettings: "'FILL' 1" }}>format_quote</span>
+                          <p className="font-sans font-bold text-sm leading-relaxed flex-1 mt-1">
+                            &ldquo;{r.review}&rdquo;
+                          </p>
+                          <div className="mt-3 pt-3 border-t border-dashed border-[#a58b86] flex flex-col gap-0.5">
+                            <span className="font-mono text-[11px] text-[#C04A00]">{r.reviewer_name}</span>
+                          </div>
+                        </div>
                       ))}
                     </div>
-                    <span className="text-sm font-bold text-on-surface">{event.average_rating.toFixed(1)}</span>
-                    <span className="text-sm text-on-surface-variant">({event.rating_count})</span>
+                  ) : (
+                    <p className="font-sans text-sm text-on-surface-variant">Be among the first to review this experience after attending.</p>
+                  )}
+                </section>
+              </>
+            )}
+
+          </div>
+
+          {/* ── Right column: sticky ticket card (desktop only) ── */}
+          <div className="hidden lg:block w-72 xl:w-80 shrink-0">
+            <div className="sticky top-20">
+              <div className="bg-[#FAF7F0] text-[#07070A] border-2 border-[#07070A] relative overflow-visible flex flex-col" style={{ boxShadow: '8px 8px 0px rgb(var(--color-background))' }}>
+
+                {/* Ticket header bar */}
+                <div className="bg-[#07070A] text-[#FAF7F0] px-4 py-2 flex justify-between items-center">
+                  <span className="font-mono text-[11px] uppercase tracking-wider">{ticketNumber(event.id)}</span>
+                  <span className="material-symbols-outlined text-sm" style={{ fontVariationSettings: "'FILL' 0" }}>qr_code_scanner</span>
+                </div>
+
+                {/* Ticket body */}
+                <div className="p-5 flex flex-col gap-5">
+
+                  {/* Price + spots */}
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-[#57423e] block">Admission</span>
+                      <span
+                        className="font-display font-black text-[#07070A] tracking-tight leading-none mt-1 block"
+                        style={{ fontSize: 'clamp(28px, 4vw, 40px)' }}
+                      >
+                        {formatPrice(event.ticket_price)}
+                      </span>
+                    </div>
+                    {spotsLeft !== null && spotsLeft > 0 && spotsLeft <= 20 && !soldOut && (
+                      <div className="bg-[#C8412A] text-white font-mono text-[9px] px-2 py-1 uppercase tracking-wider border border-[#07070A] rotate-2 shrink-0">
+                        {spotsLeft} left
+                      </div>
+                    )}
+                    {soldOut && (
+                      <div className="bg-[#07070A] text-[#FAF7F0] font-mono text-[9px] px-2 py-1 uppercase tracking-wider shrink-0">
+                        SOLD OUT
+                      </div>
+                    )}
                   </div>
-                )}
+
+                  {/* Date & time */}
+                  <div className="flex flex-col gap-1">
+                    <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-[#57423e]">Date & Time</span>
+                    <div className="flex items-center gap-2">
+                      <span className="material-symbols-outlined text-[#07070A] text-base" style={{ fontVariationSettings: "'FILL' 1" }}>event</span>
+                      <span className="font-sans font-semibold text-sm text-[#07070A] leading-tight" suppressHydrationWarning>
+                        {formatDate(event.starts_at)}, {formatTime(event.starts_at)}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Venue */}
+                  <div className="flex flex-col gap-1">
+                    <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-[#57423e]">Adda</span>
+                    <div className="flex items-start gap-2">
+                      <span className="material-symbols-outlined text-[#07070A] text-base shrink-0 mt-0.5" style={{ fontVariationSettings: "'FILL' 1" }}>location_on</span>
+                      <span className="font-sans font-semibold text-sm text-[#07070A] leading-tight">{event.venue_name}</span>
+                    </div>
+                  </div>
+
+                  {/* Quantity + CTA */}
+                  {isCasual ? (
+                    canBook ? (
+                      <div className="flex flex-col gap-3">
+                        {!isAuthenticated ? (
+                          <Link
+                            href={`/signin?next=/events/${event.slug}`}
+                            className="w-full text-center font-mono text-xs uppercase tracking-wider text-[#07070A] bg-[#F0E8DC] border-2 border-[#07070A] py-3 hover:bg-[#E5DDD0] transition-colors"
+                          >
+                            Sign in to RSVP
+                          </Link>
+                        ) : (
+                          <div className="flex gap-2">
+                            <button
+                              type="button"
+                              disabled={casualPending}
+                              onClick={() => handleCasualRSVP('going')}
+                              className={`flex-1 flex flex-col items-center gap-0.5 py-2.5 border-2 text-xs font-mono uppercase tracking-wider transition-colors ${
+                                casualIntent === 'going'
+                                  ? 'bg-[#006a43] text-white border-[#006a43]'
+                                  : 'bg-transparent text-[#07070A] border-[#07070A] hover:bg-[#F0E8DC]'
+                              }`}
+                            >
+                              <span className="text-base">✓</span>
+                              Going
+                            </button>
+                            <button
+                              type="button"
+                              disabled={casualPending}
+                              onClick={() => handleCasualRSVP('maybe')}
+                              className={`flex-1 flex flex-col items-center gap-0.5 py-2.5 border-2 text-xs font-mono uppercase tracking-wider transition-colors ${
+                                casualIntent === 'maybe'
+                                  ? 'bg-amber-500 text-white border-amber-500'
+                                  : 'bg-transparent text-[#07070A] border-[#07070A] hover:bg-[#F0E8DC]'
+                              }`}
+                            >
+                              <span className="text-base">~</span>
+                              Maybe
+                            </button>
+                            <button
+                              type="button"
+                              disabled={casualPending}
+                              onClick={() => handleCasualRSVP('not_going')}
+                              className={`flex-1 flex flex-col items-center gap-0.5 py-2.5 border-2 text-xs font-mono uppercase tracking-wider transition-colors ${
+                                casualIntent === 'not_going'
+                                  ? 'bg-[#57423e] text-white border-[#57423e]'
+                                  : 'bg-transparent text-[#07070A] border-[#07070A] hover:bg-[#F0E8DC]'
+                              }`}
+                            >
+                              <span className="text-base">✗</span>
+                              Can&apos;t go
+                            </button>
+                          </div>
+                        )}
+                        {rsvpCount > 0 && (
+                          <p className="text-center font-mono text-[10px] text-[#57423e]">
+                            {rsvpCount} going
+                          </p>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="w-full py-3 text-center font-mono text-xs uppercase tracking-wider text-[#07070A] bg-[#F0E8DC] border-2 border-[#07070A]">
+                        {soldOut ? 'Sold Out' : isPast ? 'Event Ended' : event.status === 'cancelled' ? 'Cancelled' : ''}
+                      </div>
+                    )
+                  ) : (
+                    <>
+                      {canBook && !myRSVP && (
+                        <>
+                          <div className="flex justify-between items-center border-2 border-[#07070A] px-4 py-2.5">
+                            <span className="font-mono text-xs text-[#07070A] uppercase tracking-wider">QTY</span>
+                            <div className="flex items-center gap-3">
+                              <button
+                                type="button"
+                                onClick={() => setQuantity((q) => Math.max(1, q - 1))}
+                                className="w-7 h-7 flex items-center justify-center border border-[#07070A] hover:bg-[#07070A] hover:text-[#FAF7F0] transition-colors font-mono font-bold text-[#07070A]"
+                              >-</button>
+                              <span className="font-sans font-semibold text-base text-[#07070A] w-4 text-center">{quantity}</span>
+                              <button
+                                type="button"
+                                onClick={() => setQuantity((q) => Math.min(maxQty, q + 1))}
+                                className="w-7 h-7 flex items-center justify-center border border-[#07070A] hover:bg-[#07070A] hover:text-[#FAF7F0] transition-colors font-mono font-bold text-[#07070A]"
+                              >+</button>
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => {
+                              if (!isAuthenticated) {
+                                router.push(`/signin?next=/events/${event.slug}`)
+                                return
+                              }
+                              setSheet('step1')
+                            }}
+                            className="w-full bg-[#07070A] text-[#FAF7F0] font-sans font-semibold py-3.5 uppercase flex justify-center items-center gap-2 hover:bg-primary transition-colors border-2 border-[#07070A] group text-sm tracking-wider"
+                          >
+                            {isAuthenticated ? 'Get Tickets' : 'Sign in to Book'}
+                            <span className="material-symbols-outlined text-sm group-hover:translate-x-1 transition-transform" style={{ fontVariationSettings: "'FILL' 0" }}>arrow_forward</span>
+                          </button>
+                        </>
+                      )}
+
+                      {myRSVP && (
+                        <button
+                          onClick={() => setSheet('confirmed')}
+                          className="w-full bg-[#006a43] text-white font-sans font-semibold py-3.5 flex justify-center items-center gap-2 border-2 border-[#07070A] text-sm tracking-wider uppercase hover:bg-[#00875a] transition-colors"
+                        >
+                          <span className="material-symbols-outlined text-sm" style={{ fontVariationSettings: "'FILL' 1" }}>confirmation_number</span>
+                          View My Ticket
+                        </button>
+                      )}
+
+                      {(!canBook && !myRSVP) && (
+                        <div className="w-full py-3 text-center font-mono text-xs uppercase tracking-wider text-[#07070A] bg-[#F0E8DC] border-2 border-[#07070A]">
+                          {soldOut ? 'Sold Out' : isPast ? 'Event Ended' : event.status === 'cancelled' ? 'Cancelled' : ''}
+                        </div>
+                      )}
+                    </>
+                  )}
+
+                </div>
+
+                {/* Perforation divider */}
+                <div className="relative border-t-2 border-dashed border-[#57423e]">
+                  <div
+                    className="absolute -left-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full"
+                    style={{ background: 'rgb(var(--color-background))', border: '2px dashed #57423e' }}
+                  />
+                  <div
+                    className="absolute -right-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full"
+                    style={{ background: 'rgb(var(--color-background))', border: '2px dashed #57423e' }}
+                  />
+                </div>
+
+                {/* Ticket stub */}
+                <div className="px-4 py-3 flex justify-between items-center">
+                  <span className="font-display font-black text-xs text-[#07070A] uppercase tracking-[0.18em]">ADMIT ONE</span>
+                  <div className="h-6 w-20 barcode-strip text-[#07070A] opacity-50" />
+                </div>
+
               </div>
 
-              {reviews.length > 0 ? (
-                <div className="space-y-3">
-                  {reviews.map((r, i) => (
-                    <div key={i} className="bg-surface-container-low rounded-xl p-4">
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center gap-2">
-                          <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm">
-                            {r.reviewer_name.charAt(0).toUpperCase()}
-                          </div>
-                          <span className="font-semibold text-sm text-on-surface">{r.reviewer_name}</span>
-                        </div>
-                        <div className="flex">
-                          {[1,2,3,4,5].map((s) => (
-                            <span
-                              key={s}
-                              className="material-symbols-outlined text-sm"
-                              style={{ fontVariationSettings: `'FILL' ${s <= r.rating ? 1 : 0}`, color: '#F59E0B' }}
-                            >star</span>
-                          ))}
-                        </div>
-                      </div>
-                      {r.review && (
-                        <p className="text-sm text-on-surface-variant leading-relaxed">&ldquo;{r.review}&rdquo;</p>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-sm text-on-surface-variant px-1">Be among the first to review this experience after attending.</p>
-              )}
-            </section>
-          )}
+              {/* Share link below the card */}
+              <button
+                onClick={handleShare}
+                className="w-full mt-3 text-on-surface-variant font-mono text-[10px] py-2 flex justify-center items-center gap-2 hover:text-primary transition-colors uppercase tracking-[0.15em]"
+              >
+                <span className="material-symbols-outlined text-sm" style={{ fontVariationSettings: "'FILL' 0" }}>share</span>
+                {copied ? 'Link copied!' : 'Share this event'}
+              </button>
 
-        </article>
+            </div>
+          </div>
+
+        </div>
+
       </main>
 
-      {/* ── Sticky CTA ── */}
-      <nav className="fixed bottom-0 left-0 w-full p-4 flex justify-center z-50">
+      {/* ── Mobile sticky CTA (hidden on desktop where the card handles it) ── */}
+      <nav className="lg:hidden fixed bottom-0 left-0 w-full p-4 flex justify-center z-50">
         <div className="w-full max-w-2xl bg-surface/70 backdrop-blur-md">
-          {myRSVP ? (
+          {isCasual ? (
+            canBook ? (
+              <div className="flex flex-col gap-2">
+                {!isAuthenticated ? (
+                  <Link
+                    href={`/signin?next=/events/${event.slug}`}
+                    className="bg-surface-container-high text-on-surface rounded-lg px-8 py-4 w-full flex items-center justify-center gap-2 font-headline font-bold text-sm uppercase tracking-wider hover:bg-surface-container-highest transition-all active:scale-95"
+                  >
+                    Sign in to RSVP
+                  </Link>
+                ) : (
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      disabled={casualPending}
+                      onClick={() => handleCasualRSVP('going')}
+                      className={`flex-1 flex flex-col items-center gap-0.5 py-3.5 rounded-lg text-sm font-headline font-bold uppercase tracking-wider transition-all active:scale-95 ${
+                        casualIntent === 'going'
+                          ? 'bg-[#006a43] text-white shadow-[0_-8px_24px_rgba(0,106,67,0.2)]'
+                          : 'bg-surface-container-high text-on-surface hover:bg-surface-container-highest'
+                      }`}
+                    >
+                      <span>✓</span>
+                      Going
+                    </button>
+                    <button
+                      type="button"
+                      disabled={casualPending}
+                      onClick={() => handleCasualRSVP('maybe')}
+                      className={`flex-1 flex flex-col items-center gap-0.5 py-3.5 rounded-lg text-sm font-headline font-bold uppercase tracking-wider transition-all active:scale-95 ${
+                        casualIntent === 'maybe'
+                          ? 'bg-amber-500 text-white'
+                          : 'bg-surface-container-high text-on-surface hover:bg-surface-container-highest'
+                      }`}
+                    >
+                      <span>~</span>
+                      Maybe
+                    </button>
+                    <button
+                      type="button"
+                      disabled={casualPending}
+                      onClick={() => handleCasualRSVP('not_going')}
+                      className={`flex-1 flex flex-col items-center gap-0.5 py-3.5 rounded-lg text-sm font-headline font-bold uppercase tracking-wider transition-all active:scale-95 ${
+                        casualIntent === 'not_going'
+                          ? 'bg-on-surface-variant text-surface'
+                          : 'bg-surface-container-high text-on-surface hover:bg-surface-container-highest'
+                      }`}
+                    >
+                      <span>✗</span>
+                      Can&apos;t go
+                    </button>
+                  </div>
+                )}
+                {rsvpCount > 0 && (
+                  <p className="text-center text-on-surface-variant text-xs font-mono">{rsvpCount} going</p>
+                )}
+              </div>
+            ) : (
+              <div className="w-full py-4 text-center text-on-surface-variant text-sm font-semibold bg-surface-container-low rounded-lg">
+                {soldOut ? 'Sold Out' : isPast ? 'Event Ended' : event.status === 'cancelled' ? 'Event Cancelled' : ''}
+              </div>
+            )
+          ) : myRSVP ? (
             <button
               onClick={() => setSheet('confirmed')}
               className="bg-gradient-to-r from-[#006a43] to-[#00875a] text-white rounded-lg px-8 py-4 w-full flex items-center justify-center gap-2 font-headline font-bold text-sm uppercase tracking-wider shadow-[0_-8px_24px_rgba(0,106,67,0.2)] hover:brightness-110 transition-all active:scale-95"
@@ -774,11 +1117,17 @@ export default function EventPage({ event, rsvpCount, spotsLeft, creator, review
             </button>
           ) : canBook ? (
             <button
-              onClick={() => setSheet('step1')}
+              onClick={() => {
+                if (!isAuthenticated) {
+                  router.push(`/signin?next=/events/${event.slug}`)
+                  return
+                }
+                setSheet('step1')
+              }}
               className="bg-gradient-to-r from-[#AB2E00] to-[#CF4519] text-white rounded-lg px-8 py-4 w-full flex items-center justify-center gap-2 font-headline font-bold text-sm uppercase tracking-wider shadow-[0_-8px_24px_rgba(171,46,0,0.12)] hover:brightness-110 transition-all active:scale-95"
             >
               <span className="material-symbols-outlined">confirmation_number</span>
-              {ctaLabel}
+              {isAuthenticated ? ctaLabel : 'SIGN IN TO GET TICKETS'}
             </button>
           ) : (
             <div className="w-full py-4 text-center text-on-surface-variant text-sm font-semibold bg-surface-container-low rounded-lg">
@@ -1275,6 +1624,11 @@ export default function EventPage({ event, rsvpCount, spotsLeft, creator, review
                 </div>
               </div>
             </section>
+
+            {/* Torn edge separator between event card and ticket stub */}
+            <div className="relative h-[14px] w-full -mt-2 mb-2 overflow-hidden">
+              <TornEdge position="top" color="#0C0A08" height={14} />
+            </div>
 
             {/* QR ticket */}
             <section className="bg-surface-container-lowest rounded-xl p-8 mb-10 text-center relative">

@@ -3,6 +3,7 @@
 import { useState, useTransition, useRef, useEffect } from 'react'
 import Link from 'next/link'
 import type { HubCreator, HubConnection, HubMessage } from '@/app/actions/hub'
+import { profileUrl } from '@/lib/profile-url'
 import {
   sendConnectionRequest,
   respondToConnection,
@@ -219,7 +220,7 @@ function CreatorCard({ creator, currentUserId }: { creator: HubCreator; currentU
             Declined
           </span>
         )}
-        <Link href={`/${creator.username}`} style={{
+        <Link href={profileUrl(creator.city, creator.username)} style={{
           padding: '7px 14px', borderRadius: 9999, fontSize: 12, fontWeight: 500,
           color: 'var(--wimc-text-secondary)', border: '1px solid var(--wimc-border-subtle)',
           textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4,

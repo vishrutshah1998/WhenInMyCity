@@ -1,9 +1,9 @@
 'use client'
 
-import { Fragment } from 'react'
+import { Fragment, useMemo } from 'react'
 import Link from 'next/link'
 import type { HourDayCell } from '@/lib/adda/mock/analyticsData'
-import { demandIntensity, DEMAND_GRID_MAX, DEMAND_PEAK_DESCRIPTION } from '@/lib/adda/mock/analyticsData'
+import { demandIntensity } from '@/lib/adda/mock/analyticsData'
 import InsightCard, { Amber } from './InsightCard'
 
 // ---------------------------------------------------------------------------
@@ -46,6 +46,16 @@ interface Props {
 }
 
 export default function DemandHeatmap({ grid, venueSlug }: Props) {
+  // Compute max from actual grid data (not mock constant)
+  const gridMax = useMemo(() => Math.max(...grid.map(c => c.count), 1), [grid])
+
+  // Compute peak description from real data
+  const peakDescription = useMemo(() => {
+    if (grid.every(c => c.count === 0)) return null
+    const peak = grid.reduce((best, c) => (c.count > best.count ? c : best), grid[0])
+    return `${DAYS[peak.day]} ${HOURS[peak.hour]}`
+  }, [grid])
+
   // Build lookup: day → hour → count
   const lookup: Record<number, Record<number, number>> = {}
   for (const cell of grid) {
@@ -73,20 +83,23 @@ export default function DemandHeatmap({ grid, venueSlug }: Props) {
         </div>
       </div>
 
-      <InsightCard>
-        Highest demand: <Amber>{DEMAND_PEAK_DESCRIPTION}</Amber>. Consider a peak pricing rule for these slots.{' '}
-        {venueSlug && (
-          <>
-            {' '}
+      {peakDescription ? (
+        <InsightCard>
+          Highest demand: <Amber>{peakDescription}</Amber>. Consider a peak pricing rule for this slot.{' '}
+          {venueSlug && (
             <Link
-              href={`/adda/venue?tab=pricing&prefill=fri-sat-17-21`}
+              href="/business/venue/venue?tab=pricing"
               style={{ color: 'var(--adda-amber)', textDecoration: 'underline', fontWeight: 600 }}
             >
               Create peak pricing rule →
             </Link>
-          </>
-        )}
-      </InsightCard>
+          )}
+        </InsightCard>
+      ) : (
+        <InsightCard>
+          No booking data yet. Your hour × day demand pattern will appear here as creators book your space.
+        </InsightCard>
+      )}
 
       {/* Grid container */}
       <div style={{ overflowX: 'auto' }}>
@@ -140,7 +153,7 @@ export default function DemandHeatmap({ grid, venueSlug }: Props) {
               {/* 7 cells for each day */}
               {DAYS.map((_, dayIdx) => {
                 const count     = lookup[dayIdx]?.[hour] ?? 0
-                const intensity = demandIntensity(count, DEMAND_GRID_MAX)
+                const intensity = demandIntensity(count, gridMax)
                 const bg        = cellBackground(intensity)
                 const textColor = cellColor(intensity)
 

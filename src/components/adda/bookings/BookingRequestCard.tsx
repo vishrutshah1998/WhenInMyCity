@@ -603,22 +603,22 @@ export default function BookingRequestCard({ proposal, addaId: _addaId, onRespon
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  gap: 7,
-                  padding: '14px 0',
+                  gap: 6,
+                  padding: '13px 0',
                   background: confirmState === 'done' ? 'var(--adda-success)' : 'var(--adda-amber)',
                   color: '#000',
                   border: 'none',
-                  borderRadius: 9,
-                  fontSize: 14.5,
+                  borderRadius: 8,
+                  fontSize: 14,
                   fontWeight: 700,
                   cursor: confirmState !== 'idle' ? 'default' : 'pointer',
                   fontFamily: 'var(--font-inter), system-ui, sans-serif',
-                  transition: 'background 300ms ease',
+                  transition: 'background 220ms ease',
                 }}
               >
                 <span
                   className="material-symbols-outlined"
-                  style={{ fontSize: 18, fontVariationSettings: "'FILL' 1" }}
+                  style={{ fontSize: 16, fontVariationSettings: "'FILL' 1" }}
                 >
                   {confirmState === 'done' ? 'check_circle' : 'check'}
                 </span>
@@ -635,11 +635,11 @@ export default function BookingRequestCard({ proposal, addaId: _addaId, onRespon
                   alignItems: 'center',
                   justifyContent: 'center',
                   gap: 6,
-                  padding: '14px 0',
+                  padding: '13px 0',
                   background: 'transparent',
                   color: 'var(--adda-amber)',
                   border: '1px solid var(--adda-amber-border)',
-                  borderRadius: 9,
+                  borderRadius: 8,
                   fontSize: 14,
                   fontWeight: 600,
                   cursor: 'pointer',
@@ -661,11 +661,11 @@ export default function BookingRequestCard({ proposal, addaId: _addaId, onRespon
                   alignItems: 'center',
                   justifyContent: 'center',
                   gap: 6,
-                  padding: '14px 0',
+                  padding: '13px 0',
                   background: 'transparent',
                   color: 'var(--adda-text-muted)',
                   border: '1px solid var(--adda-border-default)',
-                  borderRadius: 9,
+                  borderRadius: 8,
                   fontSize: 14,
                   fontWeight: 600,
                   cursor: 'pointer',

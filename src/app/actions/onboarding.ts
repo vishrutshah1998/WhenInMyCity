@@ -11,7 +11,7 @@ import {
   type Screen1Data,
   type Screen2Data,
 } from '@/types/onboarding'
-import type { SocialPlatform, Json } from '@/types/database'
+import type { SocialPlatform, Json, UserTier } from '@/types/database'
 
 // ---------------------------------------------------------------------------
 // Internal helpers
@@ -135,8 +135,23 @@ export async function saveOnboardingScreen(
 // completeOnboarding
 // ---------------------------------------------------------------------------
 
+// Default block list per creator type — used when no explicit selection provided (pre-C9 flow)
+const DEFAULT_BLOCKS_BY_TYPE: Record<string, string[]> = {
+  music:                  ['text_bio', 'social_links_row', 'creator_type_badge', 'event_listing'],
+  comedy_theatre:         ['text_bio', 'social_links_row', 'creator_type_badge', 'event_listing'],
+  art_design:             ['text_bio', 'social_links_row', 'creator_type_badge', 'event_listing'],
+  video_content:          ['text_bio', 'social_links_row', 'creator_type_badge', 'event_listing'],
+  teaching_coaching:      ['text_bio', 'social_links_row', 'creator_type_badge', 'event_listing', 'community_stats'],
+  lifestyle_wellness:     ['text_bio', 'social_links_row', 'creator_type_badge', 'event_listing'],
+  business_brand:         ['text_bio', 'social_links_row', 'creator_type_badge', 'event_listing', 'booking_request'],
+  professional_portfolio: ['text_bio', 'social_links_row', 'creator_type_badge', 'event_listing'],
+  community_impact:       ['text_bio', 'social_links_row', 'creator_type_badge', 'event_listing', 'community_stats'],
+  exploring:              ['text_bio', 'social_links_row', 'event_listing'],
+}
+
 export async function completeOnboarding(
   data: z.infer<typeof CompleteOnboardingSchema>,
+  selectedBlocks?: string[],
 ): Promise<{ username: string; error: string | null }> {
   const EMPTY = { username: '', error: null as string | null }
 
@@ -144,6 +159,27 @@ export async function completeOnboarding(
     const parsed = CompleteOnboardingSchema.safeParse({
       ...data,
       username: data.username.toLowerCase(),
+      // Normalize partial URLs and filter out entries that can't pass schema validation
+      socialLinks: data.socialLinks
+        .map(link => {
+          if (link.platform === 'whatsapp') {
+            // Normalize 10-digit Indian numbers to E.164
+            const raw = link.url.trim().replace(/\s+/g, '')
+            if (/^\d{10}$/.test(raw)) return { ...link, url: `+91${raw}` }
+            if (/^91\d{10}$/.test(raw)) return { ...link, url: `+${raw}` }
+            return link
+          }
+          const url = !link.url.startsWith('http')
+            ? `https://${link.url.replace(/^@/, '')}`
+            : link.url
+          return { ...link, url }
+        })
+        .filter(link => {
+          if (link.platform === 'whatsapp') {
+            return z.string().url().safeParse(link.url).success || link.url.startsWith('+91')
+          }
+          return z.string().url().safeParse(link.url).success
+        }),
     })
 
     if (!parsed.success) {
@@ -157,10 +193,17 @@ export async function completeOnboarding(
       city,
       creatorType,
       subTypes,
+      offlineActivities,
       interestTags,
       socialLinks,
       colorScheme,
+      pageThemeJson,
     } = parsed.data
+
+    // City is required for /{city}/{username} URL routing
+    if (!city || city.trim() === '') {
+      return { ...EMPTY, error: 'City is required to complete onboarding.' }
+    }
 
     // Authenticate
     const supabase = await createClient()
@@ -171,8 +214,10 @@ export async function completeOnboarding(
 
     const admin = createAdminClient()
 
-    // Build page_theme from selected colorScheme or fall back to creator-type default
-    const pageTheme = buildThemeFromScheme(colorScheme, creatorType)
+    // Use full preset theme when provided, otherwise derive from colorScheme + creator type
+    const pageTheme = pageThemeJson
+      ? (pageThemeJson as Json)
+      : buildThemeFromScheme(colorScheme, creatorType)
 
     // Build social_links record for user_profiles
     const socialLinksRecord: Record<string, string> = {}
@@ -186,12 +231,26 @@ export async function completeOnboarding(
     // Check if profile already exists (e.g. re-running onboarding)
     const { data: existingProfile } = await admin
       .from('user_profiles')
-      .select('username, avatar_url')
+      .select('username, avatar_url, personas')
       .eq('id', user.id)
       .maybeSingle()
 
     if (existingProfile) {
       // Update all mutable fields; preserve username and avatar_url
+      // Also upgrade from wanderer→local when a creator re-completes onboarding
+      const { data: currentTierRow } = await admin
+        .from('user_profiles')
+        .select('user_tier')
+        .eq('id', user.id)
+        .single()
+      const tierUpgrade: { user_tier?: UserTier } = currentTierRow?.user_tier === 'wanderer' ? { user_tier: 'local' } : {}
+
+      // Ensure 'creator' is in personas array — merge without duplicates
+      const existingPersonas = (existingProfile.personas ?? []) as string[]
+      const mergedPersonas = existingPersonas.includes('creator')
+        ? existingPersonas
+        : ['creator', ...existingPersonas]
+
       const { error: updateError } = await admin.from('user_profiles').update({
         display_name: displayName,
         bio: bio ?? null,
@@ -199,14 +258,83 @@ export async function completeOnboarding(
         creator_type: creatorType,
         interest_tags: interestTags,
         sub_types: subTypes,
-        offline_activities: [],
+        offline_activities: offlineActivities,
         social_links: socialLinksRecord,
         page_theme: pageTheme,
+        personas: mergedPersonas,
+        ...tierUpgrade,
       }).eq('id', user.id)
 
       if (updateError) {
         console.error('[completeOnboarding] profile update', updateError.message)
         return { ...EMPTY, error: 'Failed to update your profile. Please try again.' }
+      }
+
+      // Sync city + interests to explorer_profiles if one exists
+      await admin.from('explorer_profiles').update({
+        display_name: displayName,
+        city,
+        interest_tags: interestTags,
+      }).eq('auth_user_id', user.id)
+
+      // Seed blocks when explicitly requested and the profile has none yet
+      // (handles the case where doReveal() created the profile with selectedBlocks=[]
+      //  and now the sections screen is confirming with the real selection)
+      if (selectedBlocks !== undefined && selectedBlocks.length > 0) {
+        const { count: existingBlockCount } = await admin
+          .from('page_blocks')
+          .select('id', { count: 'exact', head: true })
+          .eq('profile_id', user.id)
+
+        if ((existingBlockCount ?? 0) === 0) {
+          const blocks: {
+            profile_id: string; block_type: string; position: number
+            is_visible: boolean; config: Record<string, unknown>
+          }[] = []
+          let pos = 0
+
+          if (selectedBlocks.includes('text_bio'))
+            blocks.push({ profile_id: user.id, block_type: 'text_bio', position: pos++, is_visible: true, config: { body: bio ?? '' } })
+
+          if (selectedBlocks.includes('social_links_row') && socialLinks.length > 0) {
+            const links = socialLinks
+              .filter(l => l.url.trim())
+              .map(l => ({ platform: l.platform, url: normalizeUrl(l.url.trim(), l.platform as SocialPlatform) }))
+            if (links.length > 0)
+              blocks.push({ profile_id: user.id, block_type: 'social_links_row', position: pos++, is_visible: true, config: { links } })
+          }
+
+          if (selectedBlocks.includes('creator_type_badge'))
+            blocks.push({ profile_id: user.id, block_type: 'creator_type_badge', position: pos++, is_visible: true, config: { creator_type: creatorType, show_link_to_city_feed: true } })
+
+          if (selectedBlocks.includes('city_community'))
+            blocks.push({ profile_id: user.id, block_type: 'city_community', position: pos++, is_visible: true, config: { city, show_city_feed_link: true } })
+
+          if (selectedBlocks.includes('event_listing'))
+            blocks.push({ profile_id: user.id, block_type: 'event_listing', position: pos++, is_visible: true, config: { title: 'Upcoming Events', show_past: false, auto_populate: true } })
+
+          if (selectedBlocks.includes('community_stats'))
+            blocks.push({ profile_id: user.id, block_type: 'community_stats', position: pos++, is_visible: true, config: { show_events_hosted: true, show_total_attendees: true, show_average_rating: true } })
+
+          if (selectedBlocks.includes('booking_request'))
+            blocks.push({ profile_id: user.id, block_type: 'booking_request', position: pos++, is_visible: true, config: { label: 'Book me for an event', description: '', categories: [creatorType] } })
+
+          if (selectedBlocks.includes('newsletter_signup'))
+            blocks.push({ profile_id: user.id, block_type: 'newsletter_signup', position: pos++, is_visible: true, config: { label: 'Stay in the loop', placeholder: 'your@email.com', button_label: 'Subscribe' } })
+
+          if (selectedBlocks.includes('collab_invite'))
+            blocks.push({ profile_id: user.id, block_type: 'collab_invite', position: pos++, is_visible: true, config: { collab_types: ['performance', 'workshop'], availability_note: '', message: 'Open to collaborations' } })
+
+          if (selectedBlocks.includes('whatsapp_community')) {
+            const waLink = socialLinks.find(l => l.platform === 'whatsapp')
+            if (waLink?.url)
+              blocks.push({ profile_id: user.id, block_type: 'whatsapp_community', position: pos++, is_visible: true, config: { label: 'Join my WhatsApp community', invite_url: waLink.url } })
+          }
+
+          if (blocks.length > 0) {
+            await admin.from('page_blocks').insert(blocks as never)
+          }
+        }
       }
 
       return { username: existingProfile.username, error: null }
@@ -232,12 +360,14 @@ export async function completeOnboarding(
       avatar_url: null,
       city,
       creator_type: creatorType,
+      user_tier: 'local',                    // creators start at local tier
       interest_tags: interestTags,
       sub_types: subTypes,
-      offline_activities: [],
+      offline_activities: offlineActivities,
       social_links: socialLinksRecord,
       phone: user.phone ?? null,
       page_theme: pageTheme,
+      personas: ['creator'],
     })
 
     if (profileError) {
@@ -246,6 +376,76 @@ export async function completeOnboarding(
         return { ...EMPTY, error: 'That username was just taken. Please choose another.' }
       }
       return { ...EMPTY, error: 'Failed to create your profile. Please try again.' }
+    }
+
+    // Seed page blocks from profile data — guard against duplicate calls
+    const { count: existingBlockCount } = await admin
+      .from('page_blocks')
+      .select('id', { count: 'exact', head: true })
+      .eq('profile_id', user.id)
+
+    if ((existingBlockCount ?? 0) === 0) {
+      const blocksToSeed = selectedBlocks ?? DEFAULT_BLOCKS_BY_TYPE[creatorType] ?? ['text_bio', 'social_links_row', 'event_listing']
+      const blocks: {
+        profile_id: string
+        block_type: string
+        position: number
+        is_visible: boolean
+        config: Record<string, unknown>
+      }[] = []
+      let pos = 0
+
+      if (blocksToSeed.includes('text_bio')) {
+        blocks.push({ profile_id: user.id, block_type: 'text_bio', position: pos++, is_visible: true, config: { body: bio ?? '' } })
+      }
+
+      if (blocksToSeed.includes('social_links_row') && socialLinks.length > 0) {
+        const links = socialLinks
+          .filter(l => l.url.trim())
+          .map(l => ({ platform: l.platform, url: normalizeUrl(l.url.trim(), l.platform as SocialPlatform) }))
+        if (links.length > 0) {
+          blocks.push({ profile_id: user.id, block_type: 'social_links_row', position: pos++, is_visible: true, config: { links } })
+        }
+      }
+
+      if (blocksToSeed.includes('creator_type_badge')) {
+        blocks.push({ profile_id: user.id, block_type: 'creator_type_badge', position: pos++, is_visible: true, config: { creator_type: creatorType, show_link_to_city_feed: true } })
+      }
+
+      if (blocksToSeed.includes('city_community')) {
+        blocks.push({ profile_id: user.id, block_type: 'city_community', position: pos++, is_visible: true, config: { city, show_city_feed_link: true } })
+      }
+
+      if (blocksToSeed.includes('event_listing')) {
+        blocks.push({ profile_id: user.id, block_type: 'event_listing', position: pos++, is_visible: true, config: { title: 'Upcoming Events', show_past: false, auto_populate: true } })
+      }
+
+      if (blocksToSeed.includes('community_stats')) {
+        blocks.push({ profile_id: user.id, block_type: 'community_stats', position: pos++, is_visible: true, config: { show_events_hosted: true, show_total_attendees: true, show_average_rating: true } })
+      }
+
+      if (blocksToSeed.includes('booking_request')) {
+        blocks.push({ profile_id: user.id, block_type: 'booking_request', position: pos++, is_visible: true, config: { label: 'Book me for an event', description: '', categories: [creatorType] } })
+      }
+
+      if (blocksToSeed.includes('newsletter_signup')) {
+        blocks.push({ profile_id: user.id, block_type: 'newsletter_signup', position: pos++, is_visible: true, config: { label: 'Stay in the loop', placeholder: 'your@email.com', button_label: 'Subscribe' } })
+      }
+
+      if (blocksToSeed.includes('collab_invite')) {
+        blocks.push({ profile_id: user.id, block_type: 'collab_invite', position: pos++, is_visible: true, config: { collab_types: ['performance', 'workshop'], availability_note: '', message: 'Open to collaborations' } })
+      }
+
+      if (blocksToSeed.includes('whatsapp_community')) {
+        const waLink = socialLinks.find(l => l.platform === 'whatsapp')
+        if (waLink?.url) {
+          blocks.push({ profile_id: user.id, block_type: 'whatsapp_community', position: pos++, is_visible: true, config: { label: 'Join my WhatsApp community', invite_url: waLink.url } })
+        }
+      }
+
+      if (blocks.length > 0) {
+        await admin.from('page_blocks').insert(blocks as never)
+      }
     }
 
     // Also create an explorer profile so the user can discover events
@@ -413,4 +613,10 @@ const PLATFORM_LABELS: Record<string, string> = {
 
 function platformLabel(platform: SocialPlatform): string {
   return PLATFORM_LABELS[platform] ?? 'Link'
+}
+
+export async function getAuthUserPhone(): Promise<{ phone: string | null }> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  return { phone: user?.phone ?? null }
 }

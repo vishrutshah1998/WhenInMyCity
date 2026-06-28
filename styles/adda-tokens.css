@@ -9,8 +9,12 @@
  */
 
 .adda-theme {
+  /* Sidebar width — overridden by AddaSidebarClient useEffect on mount.
+     The CSS default here prevents a margin-left flash on SSR before JS runs. */
+  --adda-sidebar-w: 64px;
+
   /* ── Surface stack ───────────────────────────────────────────────────────── */
-  --adda-bg-base:     #0a0a0a;
+  --adda-bg-base:     #0F172A;
   --adda-bg-surface:  #111114;
   --adda-bg-elevated: #18181b;
   --adda-bg-overlay:  #27272a;
@@ -53,4 +57,70 @@
   /* warning uses orange-400, NOT amber, to avoid brand color collision */
   --adda-warning: #fb923c;
   --adda-info:    #38bdf8;
+
+  /* ── UI accent (overridden per workspace variant below) ──────────────────── */
+  --adda-accent:        #f59e0b;
+  --adda-accent-tint:   rgba(245, 158, 11, 0.10);
+  --adda-accent-border: rgba(245, 158, 11, 0.22);
+}
+
+/*
+ * Venue workspace — Night Venue palette
+ * Deep teal-ocean dark. Teal = venue identity. Amber = money/revenue only.
+ */
+.adda-theme.venue-variant {
+  --adda-bg-base:     #060D11;
+  --adda-bg-surface:  #0C1922;
+  --adda-bg-elevated: #122636;
+  --adda-bg-overlay:  #1A3040;
+  --adda-bg-hover:    #243D4C;
+
+  --adda-border-subtle:  rgba(93, 217, 208, 0.07);
+  --adda-border-default: rgba(93, 217, 208, 0.13);
+  --adda-border-strong:  rgba(93, 217, 208, 0.24);
+
+  --adda-text-primary:   #E6F4F3;
+  --adda-text-secondary: #7AADB0;
+  --adda-text-muted:     #3D6A68;
+
+  --adda-accent:        #5DD9D0;
+  --adda-accent-tint:   rgba(93, 217, 208, 0.10);
+  --adda-accent-border: rgba(93, 217, 208, 0.22);
+
+  /* Amber reserved strictly for revenue / financial metrics */
+  --adda-amber:         #F5A800;
+  --adda-amber-hover:   #FFB833;
+  --adda-amber-pressed: #D97706;
+  --adda-amber-tint:    rgba(245, 168, 0, 0.10);
+  --adda-amber-border:  rgba(245, 168, 0, 0.22);
+}
+
+/*
+ * Brand workspace — Executive Office palette
+ * Warm espresso-black. Gold accent in a warm (not cold) dark context.
+ */
+.adda-theme.brand-variant {
+  --adda-bg-base:     #0C0A06;
+  --adda-bg-surface:  #171310;
+  --adda-bg-elevated: #1E1A12;
+  --adda-bg-overlay:  #26221A;
+  --adda-bg-hover:    #322C22;
+
+  --adda-border-subtle:  rgba(245, 168, 0, 0.08);
+  --adda-border-default: rgba(245, 168, 0, 0.15);
+  --adda-border-strong:  rgba(245, 168, 0, 0.28);
+
+  --adda-text-primary:   #F7F3EB;
+  --adda-text-secondary: #B09E7A;
+  --adda-text-muted:     #6B5C3E;
+
+  --adda-accent:        #F5A800;
+  --adda-accent-tint:   rgba(245, 168, 0, 0.10);
+  --adda-accent-border: rgba(245, 168, 0, 0.22);
+
+  --adda-amber:         #F5A800;
+  --adda-amber-hover:   #FFB833;
+  --adda-amber-pressed: #D97706;
+  --adda-amber-tint:    rgba(245, 168, 0, 0.10);
+  --adda-amber-border:  rgba(245, 168, 0, 0.22);
 }

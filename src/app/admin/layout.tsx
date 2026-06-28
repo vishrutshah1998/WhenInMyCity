@@ -1,6 +1,7 @@
 import { requireAdmin } from '@/lib/auth/requireAuth'
 import AdminNav from './AdminNav'
 import Link from 'next/link'
+import { WimcWordmark } from '@/components/WimcWordmark'
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const { profile } = await requireAdmin()
@@ -12,24 +13,19 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         position: 'sticky', top: 0, zIndex: 50,
         background: 'var(--wimc-bg-raised)',
         borderBottom: '1px solid var(--wimc-border-subtle)',
-        padding: '0 24px',
+        padding: '16px 24px',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        height: 56,
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
           {/* Brand */}
           <Link href="/admin/payouts" style={{
-            display: 'flex', alignItems: 'center', gap: 8, textDecoration: 'none',
+            display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none',
           }}>
-            <div style={{
-              width: 28, height: 28, background: 'var(--wimc-coral)',
-              borderRadius: 6, display: 'grid', placeItems: 'center',
-            }}>
-              <span style={{ fontSize: 14, fontWeight: 900, color: '#fff', fontFamily: 'var(--font-syne)' }}>W</span>
-            </div>
+            <WimcWordmark color="#E8705A" height={26} />
             <span style={{
-              fontFamily: 'var(--font-syne)', fontWeight: 800, fontSize: 15,
-              color: 'var(--wimc-text-primary)',
+              fontFamily: 'var(--font-jetbrains-mono)', fontWeight: 700, fontSize: 11,
+              letterSpacing: '0.15em', textTransform: 'uppercase',
+              color: 'var(--wimc-text-secondary)',
             }}>
               Admin
             </span>

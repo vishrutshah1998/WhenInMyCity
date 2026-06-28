@@ -3,6 +3,7 @@ import type { Metadata } from 'next'
 import { getEventBySlug } from '@/app/actions/events'
 import { getMyRSVPForEvent } from '@/app/actions/rsvp'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { createClient } from '@/lib/supabase/server'
 import EventPage, { type EventReview } from './event-page'
 
 export async function generateMetadata({
@@ -37,11 +38,14 @@ export default async function EventSlugPage({
   if (!event) notFound()
 
   const admin = createAdminClient()
+  const supabase = await createClient()
+  const { data: { session } } = await supabase.auth.getSession()
+  const isAuthenticated = !!session
 
   const [{ data: creator }, { data: reviewHistory }, { rsvp: myRSVP }] = await Promise.all([
     admin
       .from('user_profiles')
-      .select('display_name, avatar_url, username, creator_type, is_verified, user_tier, lantern_since, beacon_since, tier_recovery_until')
+      .select('display_name, avatar_url, username, city, creator_type, is_verified, user_tier, lantern_since, beacon_since, tier_recovery_until')
       .eq('id', event.creator_id)
       .maybeSingle(),
     admin
@@ -82,6 +86,7 @@ export default async function EventSlugPage({
       creator={creator ?? null}
       reviews={reviews}
       myRSVP={myRSVP}
+      isAuthenticated={isAuthenticated}
     />
   )
 }

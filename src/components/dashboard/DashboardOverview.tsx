@@ -1,11 +1,12 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import type { UserProfile, Event, BookingRow } from '@/types/database'
 import type { LinkClickStats } from '@/app/actions/analytics'
 import SetupChecklist from '@/components/dashboard/SetupChecklist'
+import { profileUrl, cityToSlug } from '@/lib/profile-url'
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -41,6 +42,9 @@ function capacityFill(booked: number, capacity: number | null): number {
   if (!capacity || capacity === 0) return 0
   return Math.min(100, Math.round((booked / capacity) * 100))
 }
+
+const TIER_EMOJI: Record<string, string> = { mohalla: '🏘️', nukkad: '🏙️', chowk: '🏛️', maidan: '🌆' }
+const TIER_NEXT: Record<string, string>  = { mohalla: 'Nukkad', nukkad: 'Chowk', chowk: 'Maidan', maidan: '—' }
 
 // ── Sub-components ────────────────────────────────────────────────────────────
 
@@ -136,29 +140,34 @@ interface DashboardOverviewProps {
 export default function DashboardOverview({ profile, events, bookings, linkClickStats }: DashboardOverviewProps) {
   const router = useRouter()
 
-  const upcoming = events.filter(isUpcoming)
+  const upcoming = useMemo(() => events.filter(isUpcoming), [events])
   const totalAttendees = bookings.length
   const revenueMTD = formatRevenueMTD(bookings)
   const totalPageVisits = linkClickStats?.totalClicks ?? 0
   const displayName = profile.display_name ?? profile.username ?? 'Creator'
 
   // Tier display
-  const TIER_EMOJI: Record<string, string> = { mohalla: '🏘️', nukkad: '🏙️', chowk: '🏛️', maidan: '🌆' }
-  const TIER_NEXT: Record<string, string> = { mohalla: 'Nukkad', nukkad: 'Chowk', chowk: 'Maidan', maidan: '—' }
   const tierKey = profile.user_tier ?? 'wanderer'
   const tierLabel = tierKey.charAt(0).toUpperCase() + tierKey.slice(1)
   const nextTier = TIER_NEXT[tierKey]
 
   // Booking counts per event
-  const bookingsByEvent: Record<string, number> = {}
-  for (const b of bookings) {
-    bookingsByEvent[b.event_id] = (bookingsByEvent[b.event_id] ?? 0) + 1
-  }
+  const bookingsByEvent = useMemo(() => {
+    const map: Record<string, number> = {}
+    for (const b of bookings) {
+      map[b.event_id] = (map[b.event_id] ?? 0) + 1
+    }
+    return map
+  }, [bookings])
 
   // Recent activity: last 3 bookings
-  const recentActivity = [...bookings]
-    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-    .slice(0, 3)
+  const recentActivity = useMemo(
+    () =>
+      [...bookings]
+        .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+        .slice(0, 3),
+    [bookings],
+  )
 
   function activityTime(iso: string): string {
     const diff = Date.now() - new Date(iso).getTime()
@@ -189,7 +198,7 @@ export default function DashboardOverview({ profile, events, bookings, linkClick
         <div style={{ fontFamily: 'var(--font-syne)', fontSize: 20, fontWeight: 700 }}>Overview</div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <Link
-            href={`/${profile.username}`}
+            href={profileUrl(profile.city, profile.username)}
             target="_blank"
             style={{
               fontFamily: 'var(--font-jetbrains-mono)', fontSize: 12,
@@ -198,7 +207,7 @@ export default function DashboardOverview({ profile, events, bookings, linkClick
               border: '1px solid rgba(93,217,208,0.2)', textDecoration: 'none',
             }}
           >
-            wheninmycity.com/{profile.username} ↗
+            wheninmycity.com/{cityToSlug(profile.city)}/{profile.username} ↗
           </Link>
           <button
             style={{ ...btn, background: 'transparent', color: 'var(--wimc-text-secondary)' }}

@@ -60,9 +60,43 @@ interface Props {
   event: Event
   rsvpCount: number
   creatorTier: string
+  referralUrl?: string | null
+  referralStats?: { total: number; redeemed: number }
 }
 
-export default function EventManageClient({ event: initial, rsvpCount, creatorTier }: Props) {
+function CopyButton({ text, label = 'Copy', style }: {
+  text: string; label?: string; style?: React.CSSProperties
+}) {
+  const [copied, setCopied] = useState(false)
+  return (
+    <button
+      onClick={async () => {
+        await navigator.clipboard.writeText(text).catch(() => {})
+        setCopied(true)
+        setTimeout(() => setCopied(false), 2000)
+      }}
+      style={{
+        background: copied ? '#4ADE80' : 'transparent',
+        border: '1px solid var(--wimc-border-default)',
+        color: copied ? '#07070A' : 'var(--wimc-text-secondary)',
+        fontFamily: 'var(--font-jetbrains-mono)',
+        fontSize: 10,
+        fontWeight: 700,
+        textTransform: 'uppercase' as const,
+        letterSpacing: '0.1em',
+        padding: '8px 16px',
+        cursor: 'pointer',
+        transition: 'all 0.2s',
+        borderRadius: 0,
+        ...style,
+      }}
+    >
+      {copied ? '✓ Copied' : label}
+    </button>
+  )
+}
+
+export default function EventManageClient({ event: initial, rsvpCount, creatorTier, referralUrl, referralStats }: Props) {
   const router = useRouter()
   const [event, setEvent] = useState(initial)
 
@@ -241,7 +275,7 @@ export default function EventManageClient({ event: initial, rsvpCount, creatorTi
     height: 64, borderBottom: '1px solid var(--wimc-border-subtle)',
     display: 'flex', alignItems: 'center', justifyContent: 'space-between',
     padding: '0 32px', position: 'sticky', top: 0,
-    background: 'rgba(10,10,11,0.9)', backdropFilter: 'blur(12px)', zIndex: 40,
+    background: 'rgba(242,237,227,0.96)', backdropFilter: 'blur(12px)', zIndex: 40,
   }
 
   const badge = STATUS_BADGE[event.status]
@@ -292,7 +326,7 @@ export default function EventManageClient({ event: initial, rsvpCount, creatorTi
           <Section title={isPublished ? 'Edit Event Details' : 'Edit Draft'} icon="edit">
             {isPublished && (
               <div style={{ fontSize: 13, color: 'var(--wimc-text-secondary)', background: 'rgba(245,158,11,0.07)', border: '1px solid rgba(245,158,11,0.2)', borderRadius: 10, padding: '10px 14px', marginBottom: 18 }}>
-                You can edit title, description, cover image, and timing. Price and venue cannot change after publishing — attendees have already booked based on those details.
+                You can edit title, description, cover image, and timing. Price and Adda cannot change after publishing — attendees have already booked based on those details.
               </div>
             )}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
@@ -327,11 +361,11 @@ export default function EventManageClient({ event: initial, rsvpCount, creatorTi
                 <>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                     <div>
-                      <label style={{ fontSize: 13, color: 'var(--wimc-text-secondary)', display: 'block', marginBottom: 6 }}>Venue name</label>
+                      <label style={{ fontSize: 13, color: 'var(--wimc-text-secondary)', display: 'block', marginBottom: 6 }}>Adda name</label>
                       <input type="text" value={venueName} onChange={(e) => setVenueName(e.target.value)} style={inputStyle} />
                     </div>
                     <div>
-                      <label style={{ fontSize: 13, color: 'var(--wimc-text-secondary)', display: 'block', marginBottom: 6 }}>Venue address</label>
+                      <label style={{ fontSize: 13, color: 'var(--wimc-text-secondary)', display: 'block', marginBottom: 6 }}>Adda address</label>
                       <input type="text" value={venueAddress} onChange={(e) => setVenueAddress(e.target.value)} style={inputStyle} />
                     </div>
                   </div>
@@ -671,6 +705,97 @@ export default function EventManageClient({ event: initial, rsvpCount, creatorTi
               actionLabel="Download Poster"
             />
           </Section>
+        )}
+
+        {/* ── Referral Link ─────────────────────────────────────────────────── */}
+        {isPublished && referralUrl && (
+          <div
+            style={{
+              background: '#131317',
+              border: '1px solid #57423e',
+              borderLeft: '3px solid #E8705A',
+              borderRadius: 18,
+              padding: 24,
+            }}
+          >
+            {/* Header */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+              <div>
+                <span style={{
+                  fontFamily: 'var(--font-jetbrains-mono)',
+                  fontSize: 9, color: '#E8705A',
+                  letterSpacing: '0.2em', textTransform: 'uppercase',
+                  display: 'block', marginBottom: 4,
+                }}>
+                  — REFERRAL LINK
+                </span>
+                <h3 style={{
+                  fontFamily: 'var(--font-dm-sans), sans-serif',
+                  fontSize: 15, fontWeight: 600, color: '#F0EFF8', margin: 0,
+                }}>
+                  Share and track conversions
+                </h3>
+              </div>
+              {/* Stats */}
+              <div style={{ display: 'flex', gap: 24 }}>
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{ fontFamily: 'var(--font-syne)', fontSize: 24, fontWeight: 900, color: '#F0EFF8' }}>
+                    {referralStats?.redeemed ?? 0}
+                  </div>
+                  <div style={{ fontFamily: 'var(--font-jetbrains-mono)', fontSize: 9, color: '#9896B0', textTransform: 'uppercase', letterSpacing: '0.15em' }}>
+                    Redeemed
+                  </div>
+                </div>
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{ fontFamily: 'var(--font-syne)', fontSize: 24, fontWeight: 900, color: '#F0EFF8' }}>
+                    {referralStats?.total ?? 0}
+                  </div>
+                  <div style={{ fontFamily: 'var(--font-jetbrains-mono)', fontSize: 9, color: '#9896B0', textTransform: 'uppercase', letterSpacing: '0.15em' }}>
+                    Generated
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* URL display */}
+            <div
+              style={{
+                display: 'flex', alignItems: 'center', gap: 8,
+                padding: '10px 14px', marginBottom: 12,
+                background: '#07070A', border: '1px solid #57423e',
+              }}
+            >
+              <span style={{
+                fontFamily: 'var(--font-jetbrains-mono)', fontSize: 12,
+                color: '#9896B0', flex: 1,
+                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+              }}>
+                {referralUrl}
+              </span>
+              <CopyButton text={referralUrl} />
+            </div>
+
+            {/* Share buttons */}
+            <div style={{ display: 'flex', gap: 8 }}>
+              <a
+                href={`https://wa.me/?text=${encodeURIComponent(`Check out my event! ${referralUrl}`)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 8,
+                  padding: '8px 16px',
+                  background: '#25D366', color: '#07070A',
+                  fontFamily: 'var(--font-jetbrains-mono)', fontSize: 10,
+                  fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em',
+                  textDecoration: 'none',
+                }}
+              >
+                <span className="material-symbols-outlined" style={{ fontSize: 16 }}>chat</span>
+                WhatsApp
+              </a>
+              <CopyButton text={referralUrl} label="Copy link" style={{ flex: 1 }} />
+            </div>
+          </div>
         )}
 
         {/* ── Bring a Wanderer ──────────────────────────────────────────────── */}

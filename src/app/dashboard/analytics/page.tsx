@@ -53,6 +53,11 @@ export default async function AnalyticsPage() {
     revenuePaise: rsvpByEvent[e.id]?.revenue ?? 0,
   }))
 
+  const citySlug   = profile.city.toLowerCase().replace(/\s+/g, '-')
+  const profilePath = profile.creator_type === 'business_brand'
+    ? `/${citySlug}/${profile.username}`
+    : `/${profile.username}`
+
   return (
     <Suspense>
       <AnalyticsClient
@@ -61,6 +66,7 @@ export default async function AnalyticsPage() {
         stats365={stats365}
         blocks={blocks}
         username={profile.username ?? ''}
+        profilePath={profilePath}
         eventStats={eventStats}
         audience={audience}
       />

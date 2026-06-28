@@ -82,10 +82,10 @@ function TicketSalesTab({ events, rsvps }: { events: SlimEvent[]; rsvps: SlimRsv
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
       {/* Period filter */}
-      <div style={{ display: 'flex', gap: 4, padding: 4, background: 'var(--wimc-bg-elevated)', borderRadius: 8, border: '1px solid var(--wimc-border-default)', alignSelf: 'flex-start' }}>
+      <div style={{ display: 'flex', gap: 4, padding: 4, background: 'var(--wimc-bg-elevated)', borderRadius: 0, border: '1px solid var(--wimc-border-default)', alignSelf: 'flex-start' }}>
         {(['7d', '30d', '90d', 'all'] as const).map((p) => (
           <button key={p} onClick={() => setPeriod(p)} style={{
-            padding: '4px 12px', borderRadius: 5, fontSize: 12, fontWeight: 600,
+            padding: '4px 12px', borderRadius: 0, fontSize: 12, fontWeight: 600,
             fontFamily: 'var(--font-jetbrains-mono)', cursor: 'pointer', border: 'none',
             background: period === p ? 'var(--wimc-coral)' : 'transparent',
             color: period === p ? '#fff' : 'var(--wimc-text-secondary)',
@@ -96,18 +96,18 @@ function TicketSalesTab({ events, rsvps }: { events: SlimEvent[]; rsvps: SlimRsv
       </div>
 
       {/* KPI row */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16 }}>
         {[
           { label: 'Total Revenue', value: formatRevenue(totalRevenue), color: 'var(--wimc-amber)', icon: 'payments' },
           { label: 'Total Tickets', value: filtered.length, color: 'var(--wimc-coral)', icon: 'receipt_long' },
           { label: 'Avg. Ticket Value', value: filtered.length ? formatRevenue(Math.round(totalRevenue / filtered.length)) : '₹0', color: 'var(--wimc-teal)', icon: 'trending_up' },
         ].map(({ label, value, color, icon }) => (
-          <div key={label} style={{ background: 'var(--wimc-bg-elevated)', border: '1px solid var(--wimc-border-default)', borderRadius: 16, padding: '20px 24px', display: 'flex', gap: 16, alignItems: 'center' }}>
-            <div style={{ width: 44, height: 44, borderRadius: 12, background: `${color}22`, display: 'grid', placeItems: 'center', color, flexShrink: 0 }}>
+          <div key={label} style={{ background: 'var(--wimc-bg-elevated)', border: '1px solid rgba(26,39,68,0.14)', borderLeft: `3px solid ${color}`, borderRadius: 0, padding: '20px 24px', display: 'flex', gap: 16, alignItems: 'center' }}>
+            <div style={{ width: 44, height: 44, borderRadius: 0, background: `${color}22`, display: 'grid', placeItems: 'center', color, flexShrink: 0 }}>
               <span className="material-symbols-outlined" style={{ fontSize: 22 }}>{icon}</span>
             </div>
             <div>
-              <div style={{ fontFamily: 'var(--font-syne)', fontSize: 26, fontWeight: 800, color }}>{value}</div>
+              <div style={{ fontFamily: 'var(--font-syne)', fontSize: 48, fontWeight: 900, lineHeight: 1, color }}>{value}</div>
               <div style={{ fontSize: 11, color: 'var(--wimc-text-secondary)', fontFamily: 'var(--font-jetbrains-mono)', textTransform: 'uppercase', letterSpacing: '0.8px', marginTop: 2 }}>{label}</div>
             </div>
           </div>
@@ -116,14 +116,14 @@ function TicketSalesTab({ events, rsvps }: { events: SlimEvent[]; rsvps: SlimRsv
 
       {/* Revenue chart */}
       {filtered.length > 0 && (
-        <div style={{ background: 'var(--wimc-bg-elevated)', border: '1px solid var(--wimc-border-default)', borderRadius: 18, padding: 24 }}>
-          <div style={{ fontFamily: 'var(--font-syne)', fontWeight: 700, fontSize: 15, marginBottom: 20 }}>Revenue over time</div>
+        <div style={{ background: 'var(--wimc-bg-elevated)', border: '1px solid rgba(26,39,68,0.14)', borderRadius: 0, padding: 24 }}>
+          <div style={{ fontFamily: 'var(--font-abril)', fontSize: 22, marginBottom: 20 }}>Revenue over time</div>
           <div style={{ display: 'flex', alignItems: 'flex-end', gap: 3, height: 80 }}>
             {dayValues.map((v, i) => (
               <div key={i} title={`${dayLabels[i]}: ${formatRevenue(v)}`} style={{
                 flex: 1, minWidth: 0,
                 height: `${Math.max(4, Math.round((v / maxVal) * 80))}px`,
-                background: v > 0 ? 'var(--wimc-amber)' : 'var(--wimc-bg-overlay)',
+                background: v > 0 ? 'var(--wimc-amber)' : 'rgba(26,39,68,0.08)',
                 borderRadius: '3px 3px 0 0',
                 transition: 'height 300ms ease',
               }} />
@@ -138,8 +138,8 @@ function TicketSalesTab({ events, rsvps }: { events: SlimEvent[]; rsvps: SlimRsv
 
       {/* Per-event breakdown */}
       {eventSummary.length > 0 && (
-        <div style={{ background: 'var(--wimc-bg-elevated)', border: '1px solid var(--wimc-border-default)', borderRadius: 18, overflow: 'hidden' }}>
-          <div style={{ padding: '16px 24px', borderBottom: '1px solid var(--wimc-border-subtle)', fontFamily: 'var(--font-syne)', fontWeight: 700, fontSize: 15 }}>By event</div>
+        <div style={{ background: 'var(--wimc-bg-elevated)', border: '1px solid rgba(26,39,68,0.14)', borderRadius: 0, overflow: 'hidden' }}>
+          <div style={{ padding: '16px 24px', borderBottom: '1px solid var(--wimc-border-subtle)', fontFamily: 'var(--font-abril)', fontSize: 22 }}>By event</div>
           {eventSummary.map((ev, i) => (
             <div key={ev.title + i} style={{
               display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -157,7 +157,7 @@ function TicketSalesTab({ events, rsvps }: { events: SlimEvent[]; rsvps: SlimRsv
       )}
 
       {filtered.length === 0 && (
-        <div style={{ border: '2px dashed var(--wimc-border-default)', borderRadius: 18, padding: 48, textAlign: 'center' }}>
+        <div style={{ border: '2px dashed var(--wimc-border-default)', borderRadius: 0, padding: 48, textAlign: 'center' }}>
           <span className="material-symbols-outlined" style={{ fontSize: 40, color: 'var(--wimc-text-secondary)', display: 'block', marginBottom: 12 }}>receipt_long</span>
           <div style={{ fontFamily: 'var(--font-syne)', fontSize: 16, fontWeight: 700, marginBottom: 6 }}>No ticket sales in this period</div>
           <div style={{ fontSize: 13, color: 'var(--wimc-text-secondary)' }}>Paid ticket purchases will appear here.</div>
@@ -203,7 +203,7 @@ function InquiryCard({ inquiry: initial }: { inquiry: SlimInquiry }) {
     <div style={{
       background: 'var(--wimc-bg-elevated)',
       border: `1px solid ${inq.status === 'new' ? 'rgba(232,112,90,0.3)' : 'var(--wimc-border-default)'}`,
-      borderRadius: 14, padding: 20,
+      borderRadius: 0, padding: 20,
       opacity: isPending ? 0.7 : 1,
       transition: 'opacity 150ms',
     }}>
@@ -242,7 +242,7 @@ function InquiryCard({ inquiry: initial }: { inquiry: SlimInquiry }) {
       {inq.message && (
         <p style={{
           fontSize: 13, lineHeight: 1.6, color: 'var(--wimc-text-secondary)',
-          background: 'var(--wimc-bg-overlay)', borderRadius: 8, padding: '10px 12px', margin: 0,
+          background: 'var(--wimc-bg-overlay)', borderRadius: 0, padding: '10px 12px', margin: 0,
         }}>
           {inq.message}
         </p>
@@ -255,7 +255,7 @@ function InquiryCard({ inquiry: initial }: { inquiry: SlimInquiry }) {
           onClick={() => inq.status === 'new' && handleStatus('read')}
           style={{
             display: 'inline-flex', alignItems: 'center', gap: 6,
-            padding: '7px 14px', borderRadius: 8, fontSize: 12, fontWeight: 600,
+            padding: '7px 14px', borderRadius: 0, fontSize: 12, fontWeight: 600,
             background: 'var(--wimc-teal-dim)', color: 'var(--wimc-teal)',
             textDecoration: 'none', border: '1px solid rgba(93,217,208,0.2)',
           }}
@@ -271,7 +271,7 @@ function InquiryCard({ inquiry: initial }: { inquiry: SlimInquiry }) {
             disabled={isPending}
             style={{
               display: 'inline-flex', alignItems: 'center', gap: 5,
-              padding: '7px 12px', borderRadius: 8, fontSize: 12, fontWeight: 600,
+              padding: '7px 12px', borderRadius: 0, fontSize: 12, fontWeight: 600,
               fontFamily: 'var(--font-dm-sans)', cursor: isPending ? 'default' : 'pointer',
               background: 'transparent', color: 'var(--wimc-text-secondary)',
               border: '1px solid var(--wimc-border-default)',
@@ -308,7 +308,7 @@ function InquiriesTab({ inquiries }: { inquiries: SlimInquiry[] }) {
             }}>
               {s === 'all' ? 'All' : s.charAt(0).toUpperCase() + s.slice(1)}
               <span style={{
-                background: active ? 'rgba(255,255,255,0.25)' : 'var(--wimc-bg-overlay)',
+                background: active ? 'rgba(26,39,68,0.12)' : 'var(--wimc-bg-overlay)',
                 borderRadius: 9999, padding: '0 5px', fontSize: 10,
               }}>{count}</span>
             </button>
@@ -320,7 +320,7 @@ function InquiriesTab({ inquiries }: { inquiries: SlimInquiry[] }) {
         <div style={{
           display: 'flex', alignItems: 'center', gap: 10,
           background: 'var(--wimc-coral-dim)', border: '1px solid rgba(232,112,90,0.3)',
-          borderRadius: 10, padding: '10px 16px', fontSize: 13, color: 'var(--wimc-coral-light)',
+          borderRadius: 0, padding: '10px 16px', fontSize: 13, color: 'var(--wimc-coral-light)',
         }}>
           <span className="material-symbols-outlined" style={{ fontSize: 16, fontVariationSettings: "'FILL' 1" }}>notifications_active</span>
           {newCount} new {newCount === 1 ? 'inquiry' : 'inquiries'} awaiting your response
@@ -328,7 +328,7 @@ function InquiriesTab({ inquiries }: { inquiries: SlimInquiry[] }) {
       )}
 
       {filtered.length === 0 && (
-        <div style={{ border: '2px dashed var(--wimc-border-default)', borderRadius: 18, padding: 48, textAlign: 'center' }}>
+        <div style={{ border: '2px dashed var(--wimc-border-default)', borderRadius: 0, padding: 48, textAlign: 'center' }}>
           <span className="material-symbols-outlined" style={{ fontSize: 40, color: 'var(--wimc-text-secondary)', display: 'block', marginBottom: 12 }}>calendar_month</span>
           <div style={{ fontFamily: 'var(--font-syne)', fontSize: 16, fontWeight: 700, marginBottom: 6 }}>
             {filter === 'all' ? 'No booking inquiries yet' : `No ${filter} inquiries`}
@@ -361,24 +361,29 @@ export default function BookingsClient({ events, rsvps, inquiries }: BookingsCli
 
   const topbar: React.CSSProperties = {
     height: 64, borderBottom: '1px solid var(--wimc-border-subtle)',
-    display: 'flex', alignItems: 'center', gap: 12,
+    display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap',
     padding: '0 32px', position: 'sticky', top: 0,
-    background: 'rgba(10,10,11,0.9)', backdropFilter: 'blur(12px)', zIndex: 40,
+    background: 'rgba(242,237,227,0.96)', backdropFilter: 'blur(12px)', zIndex: 40,
   }
 
   return (
     <>
       <header style={topbar}>
-        <div style={{ fontFamily: 'var(--font-syne)', fontSize: 20, fontWeight: 700 }}>Bookings</div>
+        <div>
+          <div style={{ fontSize: 10, fontFamily: 'var(--font-jetbrains-mono)', color: 'var(--wimc-text-muted)', letterSpacing: '1.8px', textTransform: 'uppercase', marginBottom: 2 }}>
+            Creator Studio
+          </div>
+          <div style={{ fontFamily: 'var(--font-syne)', fontSize: 18, fontWeight: 800, lineHeight: 1 }}>Bookings</div>
+        </div>
 
-        <div style={{ display: 'flex', gap: 2, padding: 4, background: 'var(--wimc-bg-overlay)', borderRadius: 10, border: '1px solid var(--wimc-border-default)', marginLeft: 8 }}>
+        <div style={{ display: 'flex', gap: 2, padding: 4, background: 'var(--wimc-bg-overlay)', borderRadius: 0, border: '1px solid var(--wimc-border-default)', marginLeft: 8 }}>
           {([
             { key: 'sales', label: 'Ticket Sales' },
             { key: 'inquiries', label: 'Inquiries' },
           ] as const).map(({ key, label }) => (
             <button key={key} onClick={() => setTab(key)} style={{
               display: 'inline-flex', alignItems: 'center', gap: 6,
-              padding: '5px 14px', borderRadius: 7, fontSize: 12.5, fontWeight: 600,
+              padding: '5px 14px', borderRadius: 0, fontSize: 12.5, fontWeight: 600,
               fontFamily: 'var(--font-dm-sans)', cursor: 'pointer', border: 'none',
               background: tab === key ? 'var(--wimc-coral)' : 'transparent',
               color: tab === key ? '#fff' : 'var(--wimc-text-secondary)',
@@ -400,7 +405,7 @@ export default function BookingsClient({ events, rsvps, inquiries }: BookingsCli
         </div>
       </header>
 
-      <div style={{ padding: 32, maxWidth: 900 }}>
+      <div style={{ padding: 'clamp(16px, 4vw, 40px) clamp(16px, 4vw, 40px) 80px' }}>
         {tab === 'sales'
           ? <TicketSalesTab events={events} rsvps={rsvps} />
           : <InquiriesTab inquiries={inquiries} />

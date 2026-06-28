@@ -11,6 +11,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { sendWhatsAppMessage } from '@/lib/whatsapp'
 import { z } from 'zod'
 import type { PayoutStatus, EventStatus } from '@/types/database'
+import { createNotification } from '@/app/actions/notifications'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -162,14 +163,13 @@ export async function updatePayoutStatus(raw: unknown): Promise<{ success: boole
     const msg = messages[status]
 
     await Promise.all([
-      admin.from('notifications').insert({
-        recipient_id: creatorId,
-        type:         `payout_${status}`,
-        title:        msg.title,
-        body:         msg.body,
-        action_url:   '/dashboard/payouts',
-        metadata:     { payout_id: id, amount_paise: payout.maker_paise },
-      }).then(() => {}),
+      createNotification({
+        recipientId: creatorId,
+        type:        status === 'rejected' ? 'payout_rejected' : 'payout_approved',
+        title:       msg.title,
+        body:        msg.body,
+        actionUrl:   '/dashboard/payouts',
+      }),
 
       (async () => {
         const { data: profile } = await admin
@@ -184,6 +184,94 @@ export async function updatePayoutStatus(raw: unknown): Promise<{ success: boole
     ])
   }
 
+  return { success: true }
+}
+
+// ---------------------------------------------------------------------------
+// Adda Payouts
+// ---------------------------------------------------------------------------
+
+export interface AdminAddaPayoutRow {
+  id:                  string
+  adda_id:             string
+  adda_name:           string
+  booking_ids:         string[]
+  gross_paise:         number
+  platform_fee_paise:  number
+  adda_share_paise:    number
+  payment_method:      'bank' | 'upi'
+  bank_account_name:   string | null
+  bank_account_number: string | null
+  bank_ifsc:           string | null
+  upi_id:              string | null
+  status:              string
+  rejection_reason:    string | null
+  requested_at:        string
+  processed_at:        string | null
+}
+
+export async function getAdminAddaPayouts(status?: string): Promise<{ data: AdminAddaPayoutRow[] | null; error?: string }> {
+  await requireAdmin()
+  const admin = createAdminClient()
+
+  let query = admin
+    .from('adda_payout_requests')
+    .select('*, adda:adda_profiles(name)')
+    .order('requested_at', { ascending: false })
+
+  if (status && status !== 'all') {
+    query = query.eq('status', status as 'pending' | 'approved' | 'paid' | 'rejected')
+  }
+
+  const { data, error } = await query
+  if (error) return { data: null, error: error.message }
+
+  const rows: AdminAddaPayoutRow[] = (data ?? []).map((r) => ({
+    id:                  r.id,
+    adda_id:             r.adda_id,
+    adda_name:           (r.adda as { name: string } | null)?.name ?? 'Unknown',
+    booking_ids:         r.booking_ids,
+    gross_paise:         r.gross_paise,
+    platform_fee_paise:  r.platform_fee_paise,
+    adda_share_paise:    r.adda_share_paise,
+    payment_method:      r.payment_method,
+    bank_account_name:   r.bank_account_name,
+    bank_account_number: r.bank_account_number,
+    bank_ifsc:           r.bank_ifsc,
+    upi_id:              r.upi_id,
+    status:              r.status,
+    rejection_reason:    r.rejection_reason,
+    requested_at:        r.requested_at,
+    processed_at:        r.processed_at,
+  }))
+
+  return { data: rows }
+}
+
+const UpdateAddaPayoutSchema = z.object({
+  id:     z.string().uuid(),
+  status: z.enum(['approved', 'paid', 'rejected']),
+  notes:  z.string().max(500).optional(),
+})
+
+export async function updateAddaPayoutStatus(raw: unknown): Promise<{ success: boolean; error?: string }> {
+  await requireAdmin()
+  const admin = createAdminClient()
+
+  const parsed = UpdateAddaPayoutSchema.safeParse(raw)
+  if (!parsed.success) return { success: false, error: parsed.error.errors[0]?.message }
+  const { id, status, notes } = parsed.data
+
+  const { error } = await admin
+    .from('adda_payout_requests')
+    .update({
+      status,
+      rejection_reason: status === 'rejected' ? (notes ?? null) : null,
+      processed_at:     new Date().toISOString(),
+    })
+    .eq('id', id)
+
+  if (error) return { success: false, error: error.message }
   return { success: true }
 }
 

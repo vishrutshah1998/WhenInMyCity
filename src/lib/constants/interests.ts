@@ -114,21 +114,6 @@ export const INTEREST_TAGS: InterestTag[] = [
 // Explorer Formats (preferred event formats for audience members)
 // ---------------------------------------------------------------------------
 
-export interface ExplorerFormat {
-  id: string
-  label: string
-  emoji: string
-}
-
-export const EXPLORER_FORMATS: ExplorerFormat[] = [
-  { id: 'small_group',  label: 'Small group (< 20 people)',  emoji: '👥' },
-  { id: 'workshop',     label: 'Workshop / hands-on',        emoji: '🛠' },
-  { id: 'performance',  label: 'Performance / show',         emoji: '🎭' },
-  { id: 'networking',   label: 'Networking / meetup',        emoji: '🤝' },
-  { id: 'outdoor',      label: 'Outdoor / walking',          emoji: '🌿' },
-  { id: 'dining',       label: 'Dining / food experience',   emoji: '🍽' },
-]
-
 // ---------------------------------------------------------------------------
 // User Tier Thresholds (Wanderer → Local → Lantern → Beacon)
 // ---------------------------------------------------------------------------

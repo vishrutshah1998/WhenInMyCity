@@ -53,12 +53,12 @@ function EventCard({ event, booked, revenue, username, onEdit }: EventCardProps)
 
   return (
     <div style={{
-      background: 'var(--wimc-bg-elevated)', border: '1px solid var(--wimc-border-default)',
-      borderRadius: 18, overflow: 'hidden',
+      background: 'var(--wimc-bg-elevated)', border: '1px solid rgba(26,39,68,0.14)',
+      borderRadius: 0, overflow: 'hidden',
       transition: 'border-color 220ms ease, transform 220ms ease',
     }}
       onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.borderColor = 'var(--wimc-border-strong)'; el.style.transform = 'translateY(-1px)' }}
-      onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.borderColor = 'var(--wimc-border-default)'; el.style.transform = '' }}
+      onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.borderColor = 'rgba(26,39,68,0.14)'; el.style.transform = '' }}
     >
       <div style={{ display: 'flex', alignItems: 'stretch' }}>
         <div style={{ width: 4, flexShrink: 0, background: s.accent }} />
@@ -73,7 +73,7 @@ function EventCard({ event, booked, revenue, username, onEdit }: EventCardProps)
                   wheninmycity.com/{username}/{event.slug}
                 </span>
               </div>
-              <div style={{ fontFamily: 'var(--font-syne)', fontSize: 17, fontWeight: 700 }}>{event.title}</div>
+              <div style={{ fontFamily: 'var(--font-abril)', fontSize: 20 }}>{event.title}</div>
             </div>
             <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
               <button
@@ -190,9 +190,9 @@ export default function EventsClient({ events, bookings, username }: EventsClien
 
   const topbar: React.CSSProperties = {
     height: 64, borderBottom: '1px solid var(--wimc-border-subtle)',
-    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+    display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap',
     padding: '0 32px', position: 'sticky', top: 0,
-    background: 'rgba(10,10,11,0.9)', backdropFilter: 'blur(12px)', zIndex: 40,
+    background: 'rgba(242,237,227,0.96)', backdropFilter: 'blur(12px)', zIndex: 40,
   }
   const btn: React.CSSProperties = {
     display: 'inline-flex', alignItems: 'center', gap: 6,
@@ -203,7 +203,12 @@ export default function EventsClient({ events, bookings, username }: EventsClien
   return (
     <>
       <header style={topbar}>
-        <div style={{ fontFamily: 'var(--font-syne)', fontSize: 20, fontWeight: 700 }}>My Events</div>
+        <div>
+          <div style={{ fontSize: 10, fontFamily: 'var(--font-jetbrains-mono)', color: 'var(--wimc-text-muted)', letterSpacing: '1.8px', textTransform: 'uppercase', marginBottom: 2 }}>
+            Creator Studio
+          </div>
+          <div style={{ fontFamily: 'var(--font-abril)', fontSize: 22, lineHeight: 1 }}>My Events</div>
+        </div>
         <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
           <button style={{ ...btn, background: 'transparent', color: 'var(--wimc-text-secondary)' }}>
             <span className="material-symbols-outlined" style={{ fontSize: 16 }}>search</span> Search
@@ -217,7 +222,7 @@ export default function EventsClient({ events, bookings, username }: EventsClien
         </div>
       </header>
 
-      <div style={{ padding: 32, display: 'flex', flexDirection: 'column', gap: 24 }}>
+      <div style={{ padding: 'clamp(16px, 4vw, 32px)', display: 'flex', flexDirection: 'column', gap: 24 }}>
         {/* Tab row */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 0, borderBottom: '1px solid var(--wimc-border-subtle)' }}>
           {TAB_LABELS.map(({ key, label, count }) => (
@@ -252,7 +257,7 @@ export default function EventsClient({ events, bookings, username }: EventsClien
         {displayed.length === 0 ? (
           <div
             style={{
-              border: '2px dashed var(--wimc-border-default)', borderRadius: 18,
+              border: '2px dashed var(--wimc-border-default)', borderRadius: 0,
               padding: 40, textAlign: 'center', cursor: 'pointer',
               transition: 'all 220ms ease',
             }}
@@ -261,13 +266,13 @@ export default function EventsClient({ events, bookings, username }: EventsClien
             onClick={() => router.push('/dashboard/events/create')}
           >
             <div style={{
-              width: 52, height: 52, borderRadius: 18, background: 'var(--wimc-bg-elevated)',
+              width: 52, height: 52, borderRadius: 0, background: 'var(--wimc-bg-elevated)',
               display: 'grid', placeItems: 'center', margin: '0 auto 14px',
               border: '1px solid var(--wimc-border-default)',
             }}>
               <span className="material-symbols-outlined" style={{ color: 'var(--wimc-coral)' }}>add_circle</span>
             </div>
-            <div style={{ fontFamily: 'var(--font-syne)', fontSize: 16, fontWeight: 700, marginBottom: 6 }}>
+            <div style={{ fontFamily: 'var(--font-abril)', fontSize: 20, marginBottom: 6 }}>
               Create your next experience
             </div>
             <div style={{ fontSize: 13, color: 'var(--wimc-text-secondary)' }}>
@@ -295,7 +300,7 @@ export default function EventsClient({ events, bookings, username }: EventsClien
         {displayed.length > 0 && (
           <div
             style={{
-              border: '2px dashed var(--wimc-border-default)', borderRadius: 18,
+              border: '2px dashed var(--wimc-border-default)', borderRadius: 0,
               padding: 24, textAlign: 'center', cursor: 'pointer',
               transition: 'all 220ms ease', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
               color: 'var(--wimc-text-secondary)', fontSize: 14, fontWeight: 600,

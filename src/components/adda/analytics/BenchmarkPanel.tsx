@@ -215,8 +215,8 @@ export default function BenchmarkPanel({ benchmarks, venueTierSufficient, city }
           background: 'var(--adda-bg-elevated)',
           border: '1px dashed var(--adda-border-default)',
         }}>
-          Upgrade your venue to <strong style={{ color: 'var(--adda-text-secondary)' }}>Nukkad tier</strong> to unlock
-          competitive benchmarking against similar venues in {city}.
+          Upgrade your Adda to <strong style={{ color: 'var(--adda-text-secondary)' }}>Nukkad tier</strong> to unlock
+          competitive benchmarking against similar Addas in {city}.
         </div>
       )}
 

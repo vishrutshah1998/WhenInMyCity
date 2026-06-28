@@ -367,7 +367,7 @@ export const BLOCK_META: Record<BlockType, BlockMetaEntry> = {
     isPremium:    false,
   },
   venue_partnership: {
-    displayName:  'Venue Partnerships',
+    displayName:  'Adda Partnerships',
     description:  'Showcase your Adda venue partners',
     icon:         'Building2',
     family:       'community',
@@ -471,6 +471,43 @@ export const BLOCK_META: Record<BlockType, BlockMetaEntry> = {
 }
 
 // ---------------------------------------------------------------------------
+// Persona-specific block sets
+// Controls which block types appear in the picker for each persona.
+// ---------------------------------------------------------------------------
+
+export type PersonaKey = 'creator' | 'brand' | 'adda' | 'explorer'
+
+export const PERSONA_BLOCK_SETS: Record<PersonaKey, BlockType[]> = {
+  creator: [
+    'text_bio', 'social_link', 'social_links_row', 'creator_type_badge', 'city_community',
+    'announcement', 'event_listing', 'rsvp_link', 'youtube_embed', 'image_gallery',
+    'custom_link', 'support_tip', 'quote_block', 'marquee_text', 'stats_grid',
+    'newsletter_signup', 'event_calendar', 'community_stats', 'venue_partnership',
+    'instagram_post', 'instagram_embed', 'spotify_now_playing', 'past_events_gallery',
+    'testimonial', 'podcast_episode', 'substack_preview', 'event_series', 'collab_invite',
+    'white_label_event', 'whatsapp_community', 'music_player', 'booking_request',
+    'press_feature', 'twitter_embed', 'awards_badges', 'digital_product', 'waitlist',
+    'fan_membership',
+  ],
+  brand: [
+    'announcement', 'marquee_text', 'stats_grid', 'image_gallery', 'text_bio',
+    'custom_link', 'social_links_row', 'event_listing', 'press_feature', 'collab_invite',
+    'white_label_event', 'community_stats', 'testimonial', 'quote_block', 'youtube_embed',
+    'instagram_embed', 'newsletter_signup', 'whatsapp_community', 'awards_badges',
+  ],
+  adda: [
+    'image_gallery', 'text_bio', 'announcement', 'booking_request', 'testimonial',
+    'stats_grid', 'community_stats', 'event_listing', 'custom_link', 'whatsapp_community',
+    'social_links_row', 'quote_block', 'marquee_text', 'rsvp_link', 'youtube_embed',
+    'press_feature', 'instagram_embed', 'newsletter_signup',
+  ],
+  explorer: [
+    'text_bio', 'image_gallery', 'social_links_row', 'custom_link',
+    'quote_block', 'stats_grid', 'instagram_embed',
+  ],
+}
+
+// ---------------------------------------------------------------------------
 // Tier ordering helper
 // ---------------------------------------------------------------------------
 
@@ -492,26 +529,3 @@ export function meetsMinimumTier(currentTier: UserTier, requiredTier: UserTier):
   return TIER_ORDER[currentTier] >= TIER_ORDER[requiredTier]
 }
 
-// ---------------------------------------------------------------------------
-// Block picker grouping helpers
-// ---------------------------------------------------------------------------
-
-/** Returns all blocks belonging to a given family, sorted by tier then name. */
-export function getBlocksByFamily(family: BlockFamily): BlockMetaEntry[] {
-  return (Object.entries(BLOCK_META) as [BlockType, BlockMetaEntry][])
-    .filter(([, meta]) => meta.family === family)
-    .sort((a, b) => {
-      const tierDiff = TIER_ORDER[a[1].minimumTier] - TIER_ORDER[b[1].minimumTier]
-      return tierDiff !== 0 ? tierDiff : a[1].displayName.localeCompare(b[1].displayName)
-    })
-    .map(([, meta]) => meta)
-}
-
-/** All families in display order. */
-export const BLOCK_FAMILY_ORDER: BlockFamily[] = [
-  'identity',
-  'social',
-  'events',
-  'content',
-  'community',
-]

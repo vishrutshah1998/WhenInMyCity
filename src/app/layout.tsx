@@ -1,7 +1,8 @@
 import type { Metadata } from 'next'
 import {
   Inter, Plus_Jakarta_Sans, Dancing_Script, Playfair_Display,
-  Space_Grotesk, Archivo_Black, Outfit, DM_Sans, JetBrains_Mono
+  Space_Grotesk, Archivo_Black, Outfit, DM_Sans, JetBrains_Mono,
+  Abril_Fatface, Barlow_Condensed,
 } from 'next/font/google'
 import './globals.css'
 import '../../styles/adda-tokens.css'
@@ -27,7 +28,7 @@ const archivoBlack = Archivo_Black({ subsets: ['latin'], weight: '400', variable
 // Outfit replaces Syne as display font — clean geometric sans that renders
 // crisply at heavy weights without horizontal stretch.
 const outfit = Outfit({
-  subsets: ['latin'], weight: ['400', '500', '600', '700', '800'],
+  subsets: ['latin'], weight: ['400', '500', '600', '700', '800', '900'],
   variable: '--font-syne',   // keep var name; all components reference this
 })
 const dmSans = DM_Sans({
@@ -37,6 +38,14 @@ const dmSans = DM_Sans({
 const jetbrainsMono = JetBrains_Mono({
   subsets: ['latin'], weight: ['400', '500'],
   variable: '--font-jetbrains-mono',
+})
+const abrilFatface = Abril_Fatface({
+  subsets: ['latin'], weight: '400',
+  variable: '--font-abril',
+})
+const barlowCondensed = Barlow_Condensed({
+  subsets: ['latin'], weight: ['400', '600', '700', '800', '900'],
+  variable: '--font-barlow',
 })
 
 export const metadata: Metadata = {
@@ -49,6 +58,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     inter.variable, jakarta.variable, dancing.variable,
     playfair.variable, spaceGrotesk.variable, archivoBlack.variable,
     outfit.variable, dmSans.variable, jetbrainsMono.variable,
+    abrilFatface.variable, barlowCondensed.variable,
   ].join(' ')
 
   return (

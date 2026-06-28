@@ -2,6 +2,7 @@
 
 import { requireAuth } from '@/lib/auth/requireAuth'
 import { createClient } from '@/lib/supabase/server'
+import { createNotification } from '@/app/actions/notifications'
 import type { ConnectionStatus, UserTier } from '@/types/database'
 
 // ---------------------------------------------------------------------------
@@ -39,6 +40,7 @@ export interface HubConnection {
   }
   lastMessage:   { body: string; sentAt: string } | null
   unreadCount:   number
+  isRequester:   boolean
 }
 
 export interface HubMessage {
@@ -47,6 +49,18 @@ export interface HubMessage {
   body:     string
   sentAt:   string
   readAt:   string | null
+}
+
+export interface DiscoverCreator {
+  id:           string
+  username:     string
+  displayName:  string
+  avatarUrl:    string | null
+  city:         string
+  creatorType:  string
+  interestTags: string[]
+  userTier:     UserTier
+  matchScore:   number
 }
 
 // ---------------------------------------------------------------------------
@@ -101,6 +115,80 @@ export async function getHubDirectory(): Promise<HubCreator[]> {
 }
 
 // ---------------------------------------------------------------------------
+// getDiscoverCreators — city-first, then same category, scored by tag overlap
+// ---------------------------------------------------------------------------
+
+export async function getDiscoverCreators(limit = 20): Promise<DiscoverCreator[]> {
+  const { user } = await requireAuth()
+  const supabase = await createClient()
+
+  const { data: me } = await supabase
+    .from('user_profiles')
+    .select('city, creator_type, interest_tags')
+    .eq('id', user.id)
+    .single()
+
+  if (!me) return []
+
+  // Build exclusion set: self + anyone already in a connection
+  const { data: connections } = await supabase
+    .from('creator_connections')
+    .select('requester_id, recipient_id')
+    .or(`requester_id.eq.${user.id},recipient_id.eq.${user.id}`)
+
+  const excludeIds = new Set<string>([user.id])
+  connections?.forEach((c) => {
+    excludeIds.add(c.requester_id)
+    excludeIds.add(c.recipient_id)
+  })
+
+  const excludeList = [...excludeIds]
+  const excludeFilter = `(${excludeList.join(',')})`
+
+  const cols = 'id, username, display_name, avatar_url, city, creator_type, interest_tags, user_tier'
+
+  // 1. Same city first
+  const { data: sameCityCreators } = await supabase
+    .from('user_profiles')
+    .select(cols)
+    .eq('city', me.city)
+    .not('id', 'in', excludeFilter)
+    .limit(limit)
+
+  let results = sameCityCreators ?? []
+
+  // 2. Fill remainder with same creator_type from other cities
+  if (results.length < limit && me.creator_type) {
+    const fetched = new Set(results.map((r) => r.id))
+    const allExclude = [...excludeIds, ...fetched]
+    const { data: sameCatCreators } = await supabase
+      .from('user_profiles')
+      .select(cols)
+      .eq('creator_type', me.creator_type)
+      .neq('city', me.city)
+      .not('id', 'in', `(${allExclude.join(',')})`)
+      .limit(limit - results.length)
+    results = [...results, ...(sameCatCreators ?? [])]
+  }
+
+  const myTags = new Set(me.interest_tags ?? [])
+
+  return results
+    .map((c) => ({
+      id:           c.id,
+      username:     c.username ?? '',
+      displayName:  c.display_name ?? '',
+      avatarUrl:    c.avatar_url,
+      city:         c.city ?? '',
+      creatorType:  c.creator_type ?? '',
+      interestTags: c.interest_tags ?? [],
+      userTier:     (c.user_tier ?? 'wanderer') as UserTier,
+      matchScore:   (c.interest_tags ?? []).filter((t: string) => myTags.has(t)).length,
+    }))
+    .sort((a, b) => b.matchScore - a.matchScore)
+}
+
+// ---------------------------------------------------------------------------
 // sendConnectionRequest
 // ---------------------------------------------------------------------------
 
@@ -115,6 +203,25 @@ export async function sendConnectionRequest(recipientId: string): Promise<{ succ
   })
 
   if (error) return { success: false, error: error.message }
+
+  // Fire-and-forget notification
+  void (async () => {
+    try {
+      const { data: requester } = await supabase
+        .from('user_profiles')
+        .select('display_name, username')
+        .eq('id', user.id)
+        .single()
+      await createNotification({
+        recipientId,
+        type: 'connection_request',
+        title: 'New connection request',
+        body: `${requester?.display_name ?? requester?.username ?? 'Someone'} wants to connect with you.`,
+        actionUrl: '/dashboard/hub?tab=requests',
+      })
+    } catch {}
+  })()
+
   return { success: true }
 }
 
@@ -129,6 +236,13 @@ export async function respondToConnection(
   const { user } = await requireAuth()
   const supabase = await createClient()
 
+  const { data: conn } = await supabase
+    .from('creator_connections')
+    .select('requester_id')
+    .eq('id', connectionId)
+    .eq('recipient_id', user.id)
+    .single()
+
   const { error } = await supabase
     .from('creator_connections')
     .update({ status: response, updated_at: new Date().toISOString() })
@@ -136,6 +250,26 @@ export async function respondToConnection(
     .eq('recipient_id', user.id)
 
   if (error) return { success: false, error: error.message }
+
+  if (response === 'accepted' && conn) {
+    void (async () => {
+      try {
+        const { data: accepter } = await supabase
+          .from('user_profiles')
+          .select('display_name, username')
+          .eq('id', user.id)
+          .single()
+        await createNotification({
+          recipientId: conn.requester_id,
+          type: 'connection_accepted',
+          title: 'Connection accepted!',
+          body: `${accepter?.display_name ?? accepter?.username ?? 'Someone'} accepted your connection request.`,
+          actionUrl: '/dashboard/hub?tab=messages',
+        })
+      } catch {}
+    })()
+  }
+
   return { success: true }
 }
 
@@ -210,6 +344,7 @@ export async function getConnections(): Promise<HubConnection[]> {
       },
       lastMessage:  lastMsgMap.get(c.id) ?? null,
       unreadCount:  unreadMap.get(c.id) ?? 0,
+      isRequester:  c.requester_id === user.id,
     }
   })
 }
@@ -228,6 +363,13 @@ export async function sendMessage(
   const trimmed = body.trim()
   if (!trimmed) return { success: false, error: 'Message cannot be empty' }
 
+  const { data: conn } = await supabase
+    .from('creator_connections')
+    .select('requester_id, recipient_id')
+    .eq('id', connectionId)
+    .eq('status', 'accepted')
+    .single()
+
   const { error } = await supabase.from('creator_messages').insert({
     connection_id: connectionId,
     sender_id: user.id,
@@ -235,6 +377,27 @@ export async function sendMessage(
   })
 
   if (error) return { success: false, error: error.message }
+
+  if (conn) {
+    const recipientId = conn.requester_id === user.id ? conn.recipient_id : conn.requester_id
+    void (async () => {
+      try {
+        const { data: sender } = await supabase
+          .from('user_profiles')
+          .select('display_name, username')
+          .eq('id', user.id)
+          .single()
+        await createNotification({
+          recipientId,
+          type: 'new_message',
+          title: 'New message',
+          body: `${sender?.display_name ?? sender?.username ?? 'Someone'}: ${trimmed.slice(0, 60)}${trimmed.length > 60 ? '…' : ''}`,
+          actionUrl: `/dashboard/hub?tab=messages&connection=${connectionId}`,
+        })
+      } catch {}
+    })()
+  }
+
   return { success: true }
 }
 
@@ -242,30 +405,44 @@ export async function sendMessage(
 // getMessages — fetch all messages and mark unread ones as read
 // ---------------------------------------------------------------------------
 
-export async function getMessages(connectionId: string): Promise<HubMessage[]> {
+export async function getMessages(connectionId: string, before?: string): Promise<HubMessage[]> {
   const { user } = await requireAuth()
   const supabase = await createClient()
 
-  const { data: messages } = await supabase
+  // Verify user is part of this connection and it's accepted
+  const { data: connection } = await supabase
+    .from('creator_connections')
+    .select('requester_id, recipient_id, status')
+    .eq('id', connectionId)
+    .single()
+
+  if (!connection || connection.status !== 'accepted') return []
+  if (connection.requester_id !== user.id && connection.recipient_id !== user.id) return []
+
+  // Mark messages from the other person as read
+  await supabase
+    .from('creator_messages')
+    .update({ read_at: new Date().toISOString() })
+    .eq('connection_id', connectionId)
+    .neq('sender_id', user.id)
+    .is('read_at', null)
+
+  // Fetch last 50, newest first, cursor on sent_at for pagination
+  let query = supabase
     .from('creator_messages')
     .select('id, sender_id, body, sent_at, read_at')
     .eq('connection_id', connectionId)
-    .order('sent_at', { ascending: true })
+    .order('sent_at', { ascending: false })
+    .limit(50)
 
-  if (!messages || messages.length === 0) return []
-
-  const unreadIds = messages
-    .filter((m) => m.sender_id !== user.id && !m.read_at)
-    .map((m) => m.id)
-
-  if (unreadIds.length > 0) {
-    await supabase
-      .from('creator_messages')
-      .update({ read_at: new Date().toISOString() })
-      .in('id', unreadIds)
+  if (before) {
+    query = query.lt('sent_at', before)
   }
 
-  return messages.map((m) => ({
+  const { data } = await query
+
+  // Reverse so oldest appears at top (chronological order for display)
+  return (data ?? []).reverse().map((m) => ({
     id:       m.id,
     senderId: m.sender_id,
     body:     m.body,

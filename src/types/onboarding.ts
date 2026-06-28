@@ -103,12 +103,14 @@ export const CompleteOnboardingSchema = z.object({
   creatorType: CreatorTypeV2Schema,
   // Screen 2
   subTypes: z.array(z.string().min(1)).default([]),
+  offlineActivities: z.array(z.string()).default([]),
   city: z.string().min(1),
   interestTags: z.array(z.string()).min(3),
   // Screen 3
   bio: z.string().max(160).optional(),
   socialLinks: z.array(SocialLinkEntrySchema).default([]),
   colorScheme: z.enum(COLOR_SCHEME_IDS).optional(),
+  pageThemeJson: z.record(z.string(), z.unknown()).optional(),
 })
 
 export type CompleteOnboardingData = z.infer<typeof CompleteOnboardingSchema> & {

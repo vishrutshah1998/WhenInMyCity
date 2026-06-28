@@ -4,9 +4,10 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 
 const NAV = [
-  { href: '/admin/payouts', label: 'Payouts', icon: 'payments' },
-  { href: '/admin/events',  label: 'Events',  icon: 'event' },
-  { href: '/admin/addas',   label: 'Addas',   icon: 'apartment' },
+  { href: '/admin/payouts',       label: 'Payouts',       icon: 'payments' },
+  { href: '/admin/adda-payouts',  label: 'Venue Payouts', icon: 'storefront' },
+  { href: '/admin/events',        label: 'Events',        icon: 'event' },
+  { href: '/admin/addas',         label: 'Addas',         icon: 'apartment' },
 ]
 
 export default function AdminNav() {

@@ -2,6 +2,7 @@
 
 import { createAdminClient } from '@/lib/supabase/admin'
 import { TIER_THRESHOLDS } from '@/lib/constants/interests'
+import { createNotification } from '@/app/actions/notifications'
 import type {
   UserTier,
   TierMetrics,
@@ -223,7 +224,8 @@ export async function evaluateUserTier(userId: string): Promise<TierEvaluationRe
       monthly_page_visitors, last_event_hosted_at,
       cumulative_events_hosted, cumulative_unique_attendees, cumulative_gmv_paise,
       events_attended_count, rsvps_total_count, no_shows_count, reviews_posted_count,
-      whatsapp_subscriber_count, lantern_since, beacon_since
+      whatsapp_subscriber_count, lantern_since, beacon_since,
+      user_role
     `)
     .eq('id', userId)
     .single()
@@ -311,7 +313,7 @@ export async function evaluateUserTier(userId: string): Promise<TierEvaluationRe
     whatsapp_subscriber_count:   user.whatsapp_subscriber_count,
   }
 
-  const qualifyingTier = determineTier(
+  const rawQualifyingTier = determineTier(
     recentEventsAttended,
     user.reviews_posted_count,
     user.rsvps_total_count,
@@ -324,7 +326,21 @@ export async function evaluateUserTier(userId: string): Promise<TierEvaluationRe
     eventsTotal,
   )
 
+  // Apply persona constraints:
+  // - Explorers are capped at wanderer (no tier progression)
+  // - Creators (makers) get at least local as their floor
   const tierOrder: Record<UserTier, number> = { wanderer: 0, local: 1, lantern: 2, beacon: 3 }
+  const userRole = (user as { user_role?: string | null }).user_role
+  let qualifyingTier: UserTier
+  if (userRole === 'explorer') {
+    qualifyingTier = 'wanderer'
+  } else {
+    // Creators and unset roles floor at local
+    qualifyingTier = tierOrder[rawQualifyingTier] >= tierOrder['local']
+      ? rawQualifyingTier
+      : 'local'
+  }
+
   const currentRank  = tierOrder[currentTier]
   const qualifyRank  = tierOrder[qualifyingTier]
 
@@ -405,6 +421,22 @@ export async function evaluateUserTier(userId: string): Promise<TierEvaluationRe
       .from('user_profiles')
       .update({ tier_evaluated_at: now.toISOString() })
       .eq('id', userId)
+  }
+
+  if (tierChanged) {
+    const isUpgrade = tierOrder[newTier] > currentRank
+    const tierLabel = newTier.charAt(0).toUpperCase() + newTier.slice(1)
+    createNotification({
+      recipientId: userId,
+      type: isUpgrade ? 'tier_upgrade' : 'tier_downgrade',
+      title: isUpgrade
+        ? `You're now ${tierLabel}!`
+        : 'Your tier has been updated',
+      body: isUpgrade
+        ? 'Your tier has been upgraded. Check your new perks.'
+        : `You've moved to ${tierLabel}. Keep showing up to climb back.`,
+      actionUrl: '/dashboard/analytics',
+    }).catch(() => {})
   }
 
   const nextTierProgress = calculateNextTierProgress(

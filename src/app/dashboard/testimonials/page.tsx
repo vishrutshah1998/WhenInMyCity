@@ -93,22 +93,27 @@ export default async function TestimonialsPage() {
 
   const topbar: React.CSSProperties = {
     height: 64, borderBottom: '1px solid var(--wimc-border-subtle)',
-    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+    display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap',
     padding: '0 32px', position: 'sticky', top: 0,
-    background: 'rgba(10,10,11,0.9)', backdropFilter: 'blur(12px)', zIndex: 40,
+    background: 'rgba(242,237,227,0.96)', backdropFilter: 'blur(12px)', zIndex: 40,
   }
 
   const card: React.CSSProperties = {
     background:   'var(--wimc-bg-elevated)',
-    border:       '1px solid var(--wimc-border-default)',
-    borderRadius: 18,
+    border:       '1px solid rgba(26,39,68,0.14)',
+    borderRadius: 0,
     padding:      24,
   }
 
   return (
     <>
       <header style={topbar}>
-        <div style={{ fontFamily: 'var(--font-syne)', fontSize: 20, fontWeight: 700 }}>Testimonials</div>
+        <div>
+          <div style={{ fontSize: 10, fontFamily: 'var(--font-jetbrains-mono)', color: 'var(--wimc-text-muted)', letterSpacing: '1.8px', textTransform: 'uppercase', marginBottom: 2 }}>
+            Creator Studio
+          </div>
+          <div style={{ fontFamily: 'var(--font-syne)', fontSize: 18, fontWeight: 800, lineHeight: 1 }}>Testimonials</div>
+        </div>
         {totalReviews > 0 && (
           <div style={{ fontSize: 13, color: 'var(--wimc-text-secondary)' }}>
             {totalReviews} review{totalReviews !== 1 ? 's' : ''}
@@ -116,7 +121,7 @@ export default async function TestimonialsPage() {
         )}
       </header>
 
-      <div style={{ padding: 32, display: 'flex', flexDirection: 'column', gap: 24 }}>
+      <div style={{ padding: 'clamp(16px, 4vw, 40px) clamp(16px, 4vw, 40px) 80px', display: 'flex', flexDirection: 'column', gap: 24 }}>
 
         {totalReviews === 0 ? (
           <div style={{ ...card, textAlign: 'center', padding: 48 }}>
@@ -137,17 +142,17 @@ export default async function TestimonialsPage() {
         ) : (
           <>
             {/* Summary cards */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16 }}>
               {[
-                { label: 'Total Reviews',  value: String(totalReviews) },
-                { label: 'Average Rating', value: avgRating.toFixed(1) + ' / 5' },
-                { label: '5-Star Reviews', value: `${fiveStarCount} (${totalReviews > 0 ? Math.round(fiveStarCount / totalReviews * 100) : 0}%)` },
-              ].map(({ label, value }) => (
-                <div key={label} style={card}>
+                { label: 'Total Reviews',  value: String(totalReviews),                                                                                               color: 'var(--wimc-coral)' },
+                { label: 'Average Rating', value: avgRating.toFixed(1) + ' / 5',                                                                                     color: 'var(--wimc-amber)' },
+                { label: '5-Star Reviews', value: `${fiveStarCount} (${totalReviews > 0 ? Math.round(fiveStarCount / totalReviews * 100) : 0}%)`,                    color: 'var(--wimc-teal)' },
+              ].map(({ label, value, color }) => (
+                <div key={label} style={{ ...card, borderLeft: `3px solid ${color}` }}>
                   <div style={{ fontSize: 12, color: 'var(--wimc-text-secondary)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
                     {label}
                   </div>
-                  <div style={{ fontSize: 26, fontWeight: 800, fontFamily: 'var(--font-syne)' }}>
+                  <div style={{ fontFamily: 'var(--font-syne)', fontSize: 48, fontWeight: 900, lineHeight: 1 }}>
                     {value}
                   </div>
                 </div>

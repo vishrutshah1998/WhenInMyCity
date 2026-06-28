@@ -42,17 +42,22 @@ export default function LeadsClient({ subscribers, total, tier }: LeadsClientPro
 
   const topbar: React.CSSProperties = {
     height: 64, borderBottom: '1px solid var(--wimc-border-subtle)',
-    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+    display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap',
     padding: '0 32px', position: 'sticky', top: 0,
-    background: 'rgba(10,10,11,0.9)', backdropFilter: 'blur(12px)', zIndex: 40,
+    background: 'rgba(242,237,227,0.96)', backdropFilter: 'blur(12px)', zIndex: 40,
   }
 
   return (
     <>
       <header style={topbar}>
-        <div style={{ fontFamily: 'var(--font-syne)', fontSize: 20, fontWeight: 700 }}>Leads</div>
+        <div>
+          <div style={{ fontSize: 10, fontFamily: 'var(--font-jetbrains-mono)', color: 'var(--wimc-text-muted)', letterSpacing: '1.8px', textTransform: 'uppercase', marginBottom: 2 }}>
+            Creator Studio
+          </div>
+          <div style={{ fontFamily: 'var(--font-syne)', fontSize: 18, fontWeight: 800, lineHeight: 1 }}>Leads</div>
+        </div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 12px', background: 'var(--wimc-bg-elevated)', border: '1px solid var(--wimc-border-default)', borderRadius: 8 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 12px', background: 'var(--wimc-bg-elevated)', border: '1px solid var(--wimc-border-default)', borderRadius: 0 }}>
             <span className="material-symbols-outlined" style={{ fontSize: 16, color: 'var(--wimc-text-secondary)' }}>search</span>
             <input
               value={search}
@@ -66,7 +71,7 @@ export default function LeadsClient({ subscribers, total, tier }: LeadsClientPro
               onClick={handleExport}
               style={{
                 display: 'inline-flex', alignItems: 'center', gap: 6,
-                padding: '6px 14px', borderRadius: 8, fontSize: 13, fontWeight: 600,
+                padding: '6px 14px', borderRadius: 0, fontSize: 13, fontWeight: 600,
                 fontFamily: 'var(--font-dm-sans)', border: 'none',
                 background: 'var(--wimc-coral)', color: '#fff', cursor: 'pointer',
               }}
@@ -75,30 +80,30 @@ export default function LeadsClient({ subscribers, total, tier }: LeadsClientPro
               Export CSV
             </button>
           ) : (
-            <div style={{ fontSize: 12, color: 'var(--wimc-amber)', fontFamily: 'var(--font-jetbrains-mono)', padding: '6px 12px', background: 'var(--wimc-amber-dim)', borderRadius: 8 }}>
+            <div style={{ fontSize: 12, color: 'var(--wimc-amber)', fontFamily: 'var(--font-jetbrains-mono)', padding: '6px 12px', background: 'var(--wimc-amber-dim)', borderRadius: 0 }}>
               CSV export unlocks at Lantern tier
             </div>
           )}
         </div>
       </header>
 
-      <div style={{ padding: 32, display: 'flex', flexDirection: 'column', gap: 24 }}>
+      <div style={{ padding: 'clamp(16px, 4vw, 40px) clamp(16px, 4vw, 40px) 80px', display: 'flex', flexDirection: 'column', gap: 24 }}>
         {/* Stats */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16 }}>
           {[
             { label: 'Total Leads', value: total, color: 'var(--wimc-coral)' },
             { label: 'From Events', value: subscribers.filter((s) => s.source === 'rsvp_confirmation').length, color: 'var(--wimc-teal)' },
             { label: 'From Page', value: subscribers.filter((s) => s.source === 'newsletter_block').length, color: 'var(--wimc-amber)' },
           ].map(({ label, value, color }) => (
-            <div key={label} style={{ background: 'var(--wimc-bg-elevated)', border: '1px solid var(--wimc-border-default)', borderRadius: 16, padding: '20px 24px' }}>
-              <div style={{ fontFamily: 'var(--font-syne)', fontSize: 28, fontWeight: 800, color }}>{value}</div>
+            <div key={label} style={{ background: 'var(--wimc-bg-elevated)', border: '1px solid rgba(26,39,68,0.14)', borderLeft: `3px solid ${color}`, borderRadius: 0, padding: '20px 24px' }}>
+              <div style={{ fontFamily: 'var(--font-syne)', fontSize: 48, fontWeight: 900, lineHeight: 1, color }}>{value}</div>
               <div style={{ fontSize: 11, color: 'var(--wimc-text-secondary)', fontFamily: 'var(--font-jetbrains-mono)', textTransform: 'uppercase', letterSpacing: '0.8px', marginTop: 4 }}>{label}</div>
             </div>
           ))}
         </div>
 
         {filtered.length === 0 ? (
-          <div style={{ border: '2px dashed var(--wimc-border-default)', borderRadius: 18, padding: 48, textAlign: 'center' }}>
+          <div style={{ border: '2px dashed var(--wimc-border-default)', borderRadius: 0, padding: 48, textAlign: 'center' }}>
             <span className="material-symbols-outlined" style={{ fontSize: 40, color: 'var(--wimc-text-secondary)', display: 'block', marginBottom: 12 }}>group</span>
             <div style={{ fontFamily: 'var(--font-syne)', fontSize: 16, fontWeight: 700, marginBottom: 6 }}>{search ? 'No matches' : 'No leads yet'}</div>
             <div style={{ fontSize: 13, color: 'var(--wimc-text-secondary)' }}>
@@ -106,9 +111,10 @@ export default function LeadsClient({ subscribers, total, tier }: LeadsClientPro
             </div>
           </div>
         ) : (
-          <div style={{ background: 'var(--wimc-bg-elevated)', border: '1px solid var(--wimc-border-default)', borderRadius: 18, overflow: 'hidden' }}>
+          <div style={{ background: 'var(--wimc-bg-elevated)', border: '1px solid rgba(26,39,68,0.14)', borderRadius: 0 }}>
+            <div style={{ overflowX: 'auto' }}>
             <div style={{
-              display: 'grid', gridTemplateColumns: '2fr 1fr 1fr',
+              display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', minWidth: 400,
               padding: '12px 24px', borderBottom: '1px solid var(--wimc-border-subtle)',
               fontSize: 11, fontFamily: 'var(--font-jetbrains-mono)', textTransform: 'uppercase',
               letterSpacing: '0.8px', color: 'var(--wimc-text-secondary)',
@@ -117,7 +123,7 @@ export default function LeadsClient({ subscribers, total, tier }: LeadsClientPro
             </div>
             {filtered.map((sub, i) => (
               <div key={sub.id} style={{
-                display: 'grid', gridTemplateColumns: '2fr 1fr 1fr',
+                display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', minWidth: 400,
                 padding: '13px 24px', alignItems: 'center', fontSize: 13,
                 borderBottom: i < filtered.length - 1 ? '1px solid var(--wimc-border-subtle)' : 'none',
                 transition: 'background 200ms',
@@ -141,6 +147,7 @@ export default function LeadsClient({ subscribers, total, tier }: LeadsClientPro
                 </div>
               </div>
             ))}
+            </div>{/* /overflowX */}
           </div>
         )}
       </div>

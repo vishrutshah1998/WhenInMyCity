@@ -85,7 +85,6 @@ export async function sendPhoneOTP(
   })
 
   if (error) {
-    // Surface a friendly message; log the raw error for observability.
     console.error('[sendPhoneOTP]', error.message)
 
     if (error.message.toLowerCase().includes('rate limit')) {

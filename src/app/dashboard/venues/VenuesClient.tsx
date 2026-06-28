@@ -37,9 +37,9 @@ const SLOTS = [
 const PROPOSAL_STATUS_COLORS: Record<string, { bg: string; color: string }> = {
   pending:        { bg: 'rgba(255,180,60,0.12)',  color: 'var(--wimc-amber)' },
   accepted:       { bg: 'rgba(77,210,177,0.12)',  color: 'var(--wimc-teal)' },
-  declined:       { bg: 'rgba(255,255,255,0.06)', color: 'var(--wimc-text-secondary)' },
+  declined:       { bg: 'rgba(26,39,68,0.06)', color: 'var(--wimc-text-secondary)' },
   counter_offered:{ bg: 'rgba(232,112,90,0.12)',  color: 'var(--wimc-coral)' },
-  withdrawn:      { bg: 'rgba(255,255,255,0.06)', color: 'var(--wimc-text-secondary)' },
+  withdrawn:      { bg: 'rgba(26,39,68,0.06)', color: 'var(--wimc-text-secondary)' },
 }
 
 function Pill({ status }: { status: string }) {
@@ -100,12 +100,12 @@ function VenueCard({ adda, onSelect }: { adda: AddaProfile; onSelect: (a: AddaPr
     <button
       onClick={() => onSelect(adda)}
       style={{
-        background: 'var(--wimc-bg-elevated)', border: '1px solid var(--wimc-border-default)',
-        borderRadius: 16, overflow: 'hidden', textAlign: 'left', cursor: 'pointer',
+        background: 'var(--wimc-bg-elevated)', border: '1px solid rgba(26,39,68,0.14)',
+        borderRadius: 0, overflow: 'hidden', textAlign: 'left', cursor: 'pointer',
         transition: 'border-color 200ms, transform 200ms', width: '100%',
       }}
       onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--wimc-coral)'; e.currentTarget.style.transform = 'translateY(-2px)' }}
-      onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--wimc-border-default)'; e.currentTarget.style.transform = 'none' }}
+      onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'rgba(26,39,68,0.14)'; e.currentTarget.style.transform = 'none' }}
     >
       {/* Cover */}
       <div style={{ height: 120, background: adda.cover_image_url ? `url(${adda.cover_image_url}) center/cover` : 'linear-gradient(135deg, rgba(232,112,90,0.2) 0%, rgba(77,210,177,0.1) 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -232,7 +232,7 @@ function DetailDrawer({
           </div>
 
           {/* Pricing */}
-          <div style={{ background: 'var(--wimc-bg-overlay)', borderRadius: 10, padding: '12px 16px' }}>
+          <div style={{ background: 'var(--wimc-bg-overlay)', borderRadius: 0, padding: '12px 16px' }}>
             <div style={{ fontSize: 11, color: 'var(--wimc-text-secondary)', fontFamily: 'var(--font-jetbrains-mono)', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: 4 }}>Pricing</div>
             <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--wimc-coral)' }}>{pricingLabel[adda.pricing_model]}</div>
           </div>
@@ -254,12 +254,12 @@ function DetailDrawer({
           {/* Stats from page data */}
           {!loading && pageData && !('error' in pageData) && (
             <div style={{ display: 'flex', gap: 16 }}>
-              <div style={{ flex: 1, background: 'var(--wimc-bg-overlay)', borderRadius: 10, padding: '12px 16px', textAlign: 'center' }}>
+              <div style={{ flex: 1, background: 'var(--wimc-bg-overlay)', borderRadius: 0, padding: '12px 16px', textAlign: 'center' }}>
                 <div style={{ fontFamily: 'var(--font-syne)', fontWeight: 800, fontSize: 22, color: 'var(--wimc-coral)' }}>{pageData.stats.total_events}</div>
                 <div style={{ fontSize: 10, color: 'var(--wimc-text-secondary)', fontFamily: 'var(--font-jetbrains-mono)', textTransform: 'uppercase', letterSpacing: '0.6px' }}>Events Hosted</div>
               </div>
               {pageData.stats.average_rating > 0 && (
-                <div style={{ flex: 1, background: 'var(--wimc-bg-overlay)', borderRadius: 10, padding: '12px 16px', textAlign: 'center' }}>
+                <div style={{ flex: 1, background: 'var(--wimc-bg-overlay)', borderRadius: 0, padding: '12px 16px', textAlign: 'center' }}>
                   <div style={{ fontFamily: 'var(--font-syne)', fontWeight: 800, fontSize: 22 }}>{pageData.stats.average_rating.toFixed(1)} ★</div>
                   <div style={{ fontSize: 10, color: 'var(--wimc-text-secondary)', fontFamily: 'var(--font-jetbrains-mono)', textTransform: 'uppercase', letterSpacing: '0.6px' }}>Avg Rating</div>
                 </div>
@@ -342,7 +342,7 @@ function ProposalModal({
         position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
         width: 480, maxHeight: '90vh', overflow: 'auto',
         background: 'var(--wimc-bg-elevated)', border: '1px solid var(--wimc-border-default)',
-        borderRadius: 20, zIndex: 201, padding: 28,
+        borderRadius: 0, zIndex: 201, padding: 28,
       }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
           <div>
@@ -426,12 +426,21 @@ export default function VenuesClient({ profileId, defaultCity, makerTier, propos
   const [proposals, setProposals] = useState(initialProposals)
   const [proposalSuccess, setProposalSuccess] = useState(false)
   const [tierFilter, setTierFilter] = useState<string>('')
+  const [minCapacity, setMinCapacity] = useState(0)
+  const [timeSlotFilter, setTimeSlotFilter] = useState<string>('')
+  const [eventTypeFilter, setEventTypeFilter] = useState<string>('')
 
   const now = Date.now()
   const trendingAddas = results.filter((a) => a.trending_until && new Date(a.trending_until).getTime() > now)
-  const filteredResults = tierFilter
-    ? results.filter((a) => a.adda_tier === tierFilter)
-    : results
+  const filteredResults = results.filter((a) => {
+    if (tierFilter && a.adda_tier !== tierFilter) return false
+    if (minCapacity > 0 && (a.capacity_max == null || a.capacity_max < minCapacity)) return false
+    const pt = (a as AddaProfile & { preferred_times?: string[] }).preferred_times
+    if (timeSlotFilter && pt && pt.length > 0 && !pt.includes(timeSlotFilter)) return false
+    const ep = (a as AddaProfile & { event_preferences?: string[] }).event_preferences
+    if (eventTypeFilter && ep && ep.length > 0 && !ep.some(e => e.toLowerCase().includes(eventTypeFilter.toLowerCase()))) return false
+    return true
+  })
 
   const isGated = makerTier === 'wanderer'
 
@@ -454,15 +463,15 @@ export default function VenuesClient({ profileId, defaultCity, makerTier, propos
 
   const topbar: React.CSSProperties = {
     height: 64, borderBottom: '1px solid var(--wimc-border-subtle)',
-    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+    display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap',
     padding: '0 32px', position: 'sticky', top: 0,
-    background: 'rgba(10,10,11,0.9)', backdropFilter: 'blur(12px)', zIndex: 40,
+    background: 'rgba(242,237,227,0.96)', backdropFilter: 'blur(12px)', zIndex: 40,
   }
 
   return (
     <>
       <header style={topbar}>
-        <div style={{ fontFamily: 'var(--font-syne)', fontSize: 20, fontWeight: 700 }}>Find a Venue</div>
+        <div style={{ fontFamily: 'var(--font-syne)', fontSize: 20, fontWeight: 700 }}>Find an Adda</div>
         {isGated && (
           <span style={{ fontSize: 11, padding: '4px 12px', borderRadius: 9999, fontFamily: 'var(--font-jetbrains-mono)', fontWeight: 700, background: 'var(--wimc-amber-dim)', color: 'var(--wimc-amber)', border: '1px solid rgba(245,168,0,0.3)' }}>
             Local+ required
@@ -470,27 +479,27 @@ export default function VenuesClient({ profileId, defaultCity, makerTier, propos
         )}
       </header>
 
-      <div style={{ padding: 32, display: 'flex', flexDirection: 'column', gap: 24, maxWidth: 1100, margin: '0 auto' }}>
+      <div style={{ padding: 'clamp(16px, 4vw, 40px) clamp(16px, 4vw, 40px) 80px', display: 'flex', flexDirection: 'column', gap: 24 }}>
 
         {/* Tier gate banner */}
         {isGated && (
-          <div style={{ background: 'rgba(245,168,0,0.08)', border: '1px solid rgba(245,168,0,0.3)', borderRadius: 14, padding: '16px 20px', display: 'flex', gap: 12, alignItems: 'center' }}>
+          <div style={{ background: 'rgba(245,168,0,0.08)', border: '1px solid rgba(245,168,0,0.3)', borderRadius: 0, padding: '16px 20px', display: 'flex', gap: 12, alignItems: 'center' }}>
             <span className="material-symbols-outlined" style={{ color: 'var(--wimc-amber)', fontSize: 22 }}>lock</span>
             <div>
-              <div style={{ fontWeight: 600, fontSize: 13, color: 'var(--wimc-amber)', marginBottom: 2 }}>Venue search is a Local+ feature</div>
+              <div style={{ fontWeight: 600, fontSize: 13, color: 'var(--wimc-amber)', marginBottom: 2 }}>Adda search is a Local+ feature</div>
               <div style={{ fontSize: 12, color: 'var(--wimc-text-secondary)' }}>Host more events to reach Local tier and unlock the Adda marketplace.</div>
             </div>
           </div>
         )}
 
         {/* Search panel */}
-        <div style={{ background: 'var(--wimc-bg-elevated)', border: '1px solid var(--wimc-border-default)', borderRadius: 18, padding: 24 }}>
-          <div style={{ fontFamily: 'var(--font-syne)', fontWeight: 700, fontSize: 15, marginBottom: 16 }}>Search Venues</div>
+        <div style={{ background: 'var(--wimc-bg-elevated)', border: '1px solid rgba(26,39,68,0.14)', borderRadius: 0, padding: 24 }}>
+          <div style={{ fontFamily: 'var(--font-abril)', fontSize: 22, marginBottom: 16 }}>Search Venues</div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr auto', gap: 12, alignItems: 'end' }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
               <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--wimc-text-secondary)', fontFamily: 'var(--font-jetbrains-mono)', textTransform: 'uppercase', letterSpacing: '0.6px' }}>City *</label>
               <select value={city} onChange={(e) => setCity(e.target.value)} disabled={isGated}
-                style={{ padding: '10px 12px', borderRadius: 8, background: 'var(--wimc-bg-overlay)', border: '1px solid var(--wimc-border-default)', color: 'var(--wimc-text-primary)', fontSize: 13, outline: 'none' }}>
+                style={{ padding: '10px 12px', borderRadius: 0, background: 'var(--wimc-bg-overlay)', border: '1px solid var(--wimc-border-default)', color: 'var(--wimc-text-primary)', fontSize: 13, outline: 'none' }}>
                 <option value="">Select city</option>
                 {CITIES.map((c) => <option key={c.id} value={c.id}>{c.emoji} {c.name}</option>)}
               </select>
@@ -498,7 +507,7 @@ export default function VenuesClient({ profileId, defaultCity, makerTier, propos
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
               <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--wimc-text-secondary)', fontFamily: 'var(--font-jetbrains-mono)', textTransform: 'uppercase', letterSpacing: '0.6px' }}>Type</label>
               <select value={addaType} onChange={(e) => setAddaType(e.target.value)} disabled={isGated}
-                style={{ padding: '10px 12px', borderRadius: 8, background: 'var(--wimc-bg-overlay)', border: '1px solid var(--wimc-border-default)', color: 'var(--wimc-text-primary)', fontSize: 13, outline: 'none' }}>
+                style={{ padding: '10px 12px', borderRadius: 0, background: 'var(--wimc-bg-overlay)', border: '1px solid var(--wimc-border-default)', color: 'var(--wimc-text-primary)', fontSize: 13, outline: 'none' }}>
                 <option value="">Any type</option>
                 {ADDA_TYPES.map((t) => <option key={t.id} value={t.id}>{t.label}</option>)}
               </select>
@@ -506,10 +515,10 @@ export default function VenuesClient({ profileId, defaultCity, makerTier, propos
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
               <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--wimc-text-secondary)', fontFamily: 'var(--font-jetbrains-mono)', textTransform: 'uppercase', letterSpacing: '0.6px' }}>Date</label>
               <input type="date" value={date} onChange={(e) => setDate(e.target.value)} disabled={isGated} min={new Date().toISOString().slice(0, 10)}
-                style={{ padding: '10px 12px', borderRadius: 8, background: 'var(--wimc-bg-overlay)', border: '1px solid var(--wimc-border-default)', color: 'var(--wimc-text-primary)', fontSize: 13, outline: 'none' }} />
+                style={{ padding: '10px 12px', borderRadius: 0, background: 'var(--wimc-bg-overlay)', border: '1px solid var(--wimc-border-default)', color: 'var(--wimc-text-primary)', fontSize: 13, outline: 'none' }} />
             </div>
             <button onClick={handleSearch} disabled={isGated || isSearching}
-              style={{ padding: '10px 24px', borderRadius: 8, background: 'var(--wimc-coral)', color: '#fff', border: 'none', fontFamily: 'var(--font-syne)', fontWeight: 700, fontSize: 13, cursor: 'pointer', opacity: isGated || isSearching ? 0.4 : 1, whiteSpace: 'nowrap' }}>
+              style={{ padding: '10px 24px', borderRadius: 0, background: 'var(--wimc-coral)', color: '#fff', border: 'none', fontFamily: 'var(--font-syne)', fontWeight: 700, fontSize: 13, cursor: 'pointer', opacity: isGated || isSearching ? 0.4 : 1, whiteSpace: 'nowrap' }}>
               {isSearching ? 'Searching…' : 'Search'}
             </button>
           </div>
@@ -540,7 +549,7 @@ export default function VenuesClient({ profileId, defaultCity, makerTier, propos
                         onClick={() => setSelectedAdda(a)}
                         style={{
                           flexShrink: 0, width: 220, background: 'var(--wimc-bg-elevated)',
-                          border: '1px solid rgba(232,87,42,0.45)', borderRadius: 14,
+                          border: '1px solid rgba(232,87,42,0.45)', borderRadius: 0,
                           overflow: 'hidden', textAlign: 'left', cursor: 'pointer',
                         }}
                       >
@@ -561,31 +570,60 @@ export default function VenuesClient({ profileId, defaultCity, makerTier, propos
                 </div>
               )}
 
-              {/* Tier filter chips */}
-              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-                <span style={{ fontSize: 11, color: 'var(--wimc-text-muted)', fontFamily: 'var(--font-jetbrains-mono)', textTransform: 'uppercase', letterSpacing: '0.6px' }}>
-                  Filter by tier:
-                </span>
-                {([
-                  { id: '', label: 'All' },
-                  { id: 'verified', label: 'Verified' },
-                  { id: 'beloved', label: 'Beloved' },
-                  { id: 'legendary', label: 'Legendary' },
-                ] as const).map(({ id, label }) => (
-                  <button
-                    key={id || 'all'}
-                    onClick={() => setTierFilter(id)}
-                    style={{
-                      padding: '4px 14px', borderRadius: 9999, fontSize: 12, fontWeight: 600,
-                      fontFamily: 'var(--font-jetbrains-mono)', cursor: 'pointer', border: 'none',
-                      background: tierFilter === id ? 'var(--wimc-coral)' : 'var(--wimc-bg-overlay)',
-                      color: tierFilter === id ? '#fff' : 'var(--wimc-text-secondary)',
-                      transition: 'background 150ms',
-                    }}
-                  >
-                    {label}
-                  </button>
-                ))}
+              {/* Filter bar */}
+              <div style={{ background: 'var(--wimc-bg-elevated)', border: '1px solid rgba(26,39,68,0.14)', borderRadius: 0, padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+                <div style={{ fontSize: 11, fontFamily: 'var(--font-jetbrains-mono)', color: 'var(--wimc-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.6px' }}>
+                  Refine · {filteredResults.length} of {results.length} venues
+                </div>
+
+                {/* Capacity */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: 11, color: 'var(--wimc-text-muted)', fontFamily: 'var(--font-jetbrains-mono)', whiteSpace: 'nowrap' }}>Min pax:</span>
+                  {[
+                    { value: 0,   label: 'Any size' },
+                    { value: 30,  label: '30+' },
+                    { value: 60,  label: '60+' },
+                    { value: 100, label: '100+' },
+                  ].map(opt => (
+                    <button key={opt.value} onClick={() => setMinCapacity(opt.value)}
+                      style={{ padding: '3px 12px', borderRadius: 9999, fontSize: 12, fontWeight: 600, fontFamily: 'var(--font-jetbrains-mono)', cursor: 'pointer', border: '1px solid', transition: 'all 150ms', borderColor: minCapacity === opt.value ? 'var(--wimc-coral)' : 'var(--wimc-border-subtle)', background: minCapacity === opt.value ? 'rgba(232,112,90,0.10)' : 'transparent', color: minCapacity === opt.value ? 'var(--wimc-coral)' : 'var(--wimc-text-secondary)' }}>
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Time slot */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: 11, color: 'var(--wimc-text-muted)', fontFamily: 'var(--font-jetbrains-mono)', whiteSpace: 'nowrap' }}>Time:</span>
+                  {[
+                    { value: '',           label: 'Any' },
+                    { value: 'morning',    label: '🌤 Morning' },
+                    { value: 'afternoon',  label: '☀️ Afternoon' },
+                    { value: 'evening',    label: '🌆 Evening' },
+                    { value: 'late_night', label: '🌙 Late Night' },
+                  ].map(opt => (
+                    <button key={opt.value || 'any'} onClick={() => setTimeSlotFilter(opt.value)}
+                      style={{ padding: '3px 12px', borderRadius: 9999, fontSize: 12, fontWeight: 600, fontFamily: 'var(--font-jetbrains-mono)', cursor: 'pointer', border: '1px solid', transition: 'all 150ms', borderColor: timeSlotFilter === opt.value ? 'var(--wimc-teal)' : 'var(--wimc-border-subtle)', background: timeSlotFilter === opt.value ? 'rgba(77,210,177,0.10)' : 'transparent', color: timeSlotFilter === opt.value ? 'var(--wimc-teal)' : 'var(--wimc-text-secondary)' }}>
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Tier */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: 11, color: 'var(--wimc-text-muted)', fontFamily: 'var(--font-jetbrains-mono)', whiteSpace: 'nowrap' }}>Tier:</span>
+                  {([
+                    { id: '',          label: 'All' },
+                    { id: 'verified',  label: 'Verified' },
+                    { id: 'beloved',   label: 'Beloved' },
+                    { id: 'legendary', label: 'Legendary' },
+                  ] as const).map(({ id, label }) => (
+                    <button key={id || 'all'} onClick={() => setTierFilter(id)}
+                      style={{ padding: '3px 12px', borderRadius: 9999, fontSize: 12, fontWeight: 600, fontFamily: 'var(--font-jetbrains-mono)', cursor: 'pointer', border: '1px solid', transition: 'all 150ms', borderColor: tierFilter === id ? 'var(--wimc-amber)' : 'var(--wimc-border-subtle)', background: tierFilter === id ? 'rgba(245,168,0,0.10)' : 'transparent', color: tierFilter === id ? 'var(--wimc-amber)' : 'var(--wimc-text-secondary)' }}>
+                      {label}
+                    </button>
+                  ))}
+                </div>
               </div>
 
               {/* Results grid */}
@@ -594,7 +632,7 @@ export default function VenuesClient({ profileId, defaultCity, makerTier, propos
                   No {tierFilter} venues found. Try a different tier filter.
                 </div>
               ) : (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16 }}>
                   {filteredResults.map((a) => (
                     <VenueCard key={a.id} adda={a} onSelect={setSelectedAdda} />
                   ))}
@@ -606,8 +644,8 @@ export default function VenuesClient({ profileId, defaultCity, makerTier, propos
 
         {/* My proposals */}
         {proposals.length > 0 && (
-          <div style={{ background: 'var(--wimc-bg-elevated)', border: '1px solid var(--wimc-border-default)', borderRadius: 18, overflow: 'hidden' }}>
-            <div style={{ padding: '16px 24px', borderBottom: '1px solid var(--wimc-border-subtle)', fontFamily: 'var(--font-syne)', fontWeight: 700, fontSize: 15 }}>
+          <div style={{ background: 'var(--wimc-bg-elevated)', border: '1px solid rgba(26,39,68,0.14)', borderRadius: 0, overflow: 'hidden' }}>
+            <div style={{ padding: '16px 24px', borderBottom: '1px solid var(--wimc-border-subtle)', fontFamily: 'var(--font-abril)', fontSize: 22 }}>
               My Booking Proposals
             </div>
             <div style={{ overflowX: 'auto' }}>

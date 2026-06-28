@@ -14,6 +14,44 @@ import { requireAuth } from '@/lib/auth/requireAuth'
 import type { Notification } from '@/types/database'
 
 // ---------------------------------------------------------------------------
+// createNotification
+// ---------------------------------------------------------------------------
+
+/**
+ * Inserts a notification row for any user. Uses the admin client so it can
+ * write on behalf of users other than the caller (e.g. notifying a creator
+ * when an attendee buys a ticket). Fire-and-forget safe.
+ */
+export async function createNotification({
+  recipientId,
+  type,
+  title,
+  body,
+  actionUrl,
+}: {
+  recipientId: string
+  type: string
+  title: string
+  body: string
+  actionUrl?: string
+}): Promise<void> {
+  const admin = createAdminClient()
+
+  const { error } = await admin.from('notifications').insert({
+    recipient_id: recipientId,
+    type,
+    title,
+    body,
+    action_url: actionUrl ?? null,
+    is_read: false,
+  })
+
+  if (error) {
+    console.error('[createNotification]', { recipientId, type }, error.message)
+  }
+}
+
+// ---------------------------------------------------------------------------
 // getNotificationsForUser
 // ---------------------------------------------------------------------------
 

@@ -43,7 +43,7 @@ function filterForTab(proposals: ProposalWithMaker[], tab: TabKey): ProposalWith
 const EMPTY_COPY: Record<TabKey, { icon: string; title: string; body: string }> = {
   pending:   { icon: 'inbox',         title: 'No pending requests',   body: 'New booking requests from creators will appear here. Respond within 48h to keep your acceptance rate high.' },
   confirmed: { icon: 'event_available',title: 'No confirmed bookings', body: 'Accepted bookings with upcoming dates will appear here.' },
-  completed: { icon: 'task_alt',       title: 'No completed events',   body: 'Past events that took place at your venue will appear here.' },
+  completed: { icon: 'task_alt',       title: 'No completed events',   body: 'Past events that took place at your Adda will appear here.' },
   declined:  { icon: 'cancel',         title: 'No declined requests',  body: 'Requests you declined or that expired will appear here.' },
 }
 

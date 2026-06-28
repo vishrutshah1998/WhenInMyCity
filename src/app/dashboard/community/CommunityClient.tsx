@@ -38,12 +38,12 @@ export default function CommunityClient({ supported }: Props) {
   const card: React.CSSProperties = {
     background: 'var(--wimc-bg-elevated)',
     border: '1px solid var(--wimc-border-default)',
-    borderRadius: 18,
+    borderRadius: 0,
     overflow: 'hidden',
   }
 
   return (
-    <div style={{ maxWidth: 720, margin: '0 auto', padding: '32px 20px', display: 'flex', flexDirection: 'column', gap: 28 }}>
+    <div style={{ padding: 'clamp(16px, 4vw, 40px) clamp(16px, 4vw, 40px) 80px', display: 'flex', flexDirection: 'column', gap: 28 }}>
 
       {/* Header */}
       <div>

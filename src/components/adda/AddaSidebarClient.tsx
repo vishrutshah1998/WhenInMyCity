@@ -15,6 +15,7 @@ interface NavItem {
   badgeKey?: 'pending' | 'unread'
   primary?: boolean
   exact?: boolean
+  soon?: boolean
 }
 
 interface NavSection {
@@ -22,35 +23,66 @@ interface NavSection {
   items: NavItem[]
 }
 
-const NAV_SECTIONS: NavSection[] = [
+const NAV_SECTIONS_VENUE: NavSection[] = [
   {
     group: 'Operations',
     items: [
-      { href: '/adda/dashboard',    icon: 'calendar_today',   label: 'Calendar',          primary: true, exact: true },
-      { href: '/adda/bookings',     icon: 'event_available',  label: 'Bookings',          badgeKey: 'pending' },
-      { href: '/adda/inbox',        icon: 'inbox',            label: 'Inbox',             badgeKey: 'unread' },
+      { href: '/business/venue/dashboard',     icon: 'dashboard',       label: 'Dashboard',  primary: true, exact: true },
+      { href: '/business/venue/creators',      icon: 'person_search',   label: 'Proposals',  badgeKey: 'pending' },
+      { href: '/business/venue/bookings',      icon: 'event_available', label: 'Bookings' },
+      { href: '/business/venue/calendar',      icon: 'calendar_today',  label: 'Calendar' },
+      { href: '/business/venue/notifications', icon: 'inbox',           label: 'Inbox',      badgeKey: 'unread' },
     ],
   },
   {
     group: 'Performance',
     items: [
-      { href: '/adda/analytics',    icon: 'bar_chart_4_bars', label: 'Analytics' },
-      { href: '/adda/payouts',      icon: 'payments',         label: 'Payouts' },
+      { href: '/business/venue/analytics', icon: 'bar_chart_4_bars', label: 'Analytics' },
+      { href: '/business/venue/payouts',   icon: 'payments',         label: 'Payouts' },
     ],
   },
   {
-    group: 'Listing',
+    group: 'My Space',
     items: [
-      { href: '/adda/venue',        icon: 'apartment',        label: 'My Venue' },
-      { href: '/adda/pricing',      icon: 'price_change',     label: 'Pricing' },
-      { href: '/adda/availability', icon: 'tune',             label: 'Availability Rules' },
+      { href: '/business/venue/venue',        icon: 'apartment',       label: 'My Venue' },
+      { href: '/business/venue/studio',       icon: 'web',             label: 'My Page' },
+      { href: '/business/venue/pricing',      icon: 'price_change',    label: 'Pricing' },
+      { href: '/business/venue/availability', icon: 'tune',            label: 'Availability Rules' },
     ],
   },
   {
-    group: 'Account',
+    group: 'Discover',
     items: [
-      { href: '/adda/settings',     icon: 'settings',         label: 'Settings' },
-      { href: '/adda/help',         icon: 'help_outline',     label: 'Help' },
+      { href: '/map-of-legends', icon: 'location_city', label: 'Map of Legends' },
+    ],
+  },
+]
+
+const NAV_SECTIONS_BRAND: NavSection[] = [
+  {
+    group: 'Operations',
+    items: [
+      { href: '/business/brand/dashboard',  icon: 'dashboard',       label: 'Dashboard', primary: true, exact: true },
+      { href: '/business/brand/campaigns', icon: 'campaign',        label: 'Campaigns', soon: true },
+      { href: '/business/brand/enquiries', icon: 'inbox',           label: 'Enquiries', badgeKey: 'unread' },
+    ],
+  },
+  {
+    group: 'Discover',
+    items: [
+      { href: '/business/brand/creators', icon: 'person_search', label: 'Browse Creators' },
+    ],
+  },
+  {
+    group: 'Performance',
+    items: [
+      { href: '/business/brand/analytics', icon: 'bar_chart_4_bars', label: 'Analytics', soon: true },
+    ],
+  },
+  {
+    group: 'My Brand',
+    items: [
+      { href: '/business/brand/studio', icon: 'web', label: 'My Page' },
     ],
   },
 ]
@@ -60,12 +92,51 @@ const NAV_SECTIONS: NavSection[] = [
 // ---------------------------------------------------------------------------
 
 export interface AddaSidebarClientProps {
-  venueName: string
+  businessName: string
   ownerName: string
   initials: string
   avatarUrl?: string
   pendingCount: number
   unreadCount: number
+  hasCreatorProfile?: boolean
+  businessType?: 'venue' | 'brand'
+  personas?: string[]
+}
+
+// ---------------------------------------------------------------------------
+// Design tokens
+// ---------------------------------------------------------------------------
+
+const ADDA_AMBER   = 'var(--adda-amber, #F5A800)'
+const ADDA_MUTED   = 'var(--adda-text-muted)'
+const ADDA_BORDER  = 'var(--adda-border-subtle)'
+const ADDA_HOVER   = 'var(--adda-bg-hover)'
+
+// ── Workspace / persona helpers (mirrors dashboard Sidebar.tsx) ──────────────
+
+const ALL_PERSONAS = ['creator', 'explorer', 'venue', 'brand'] as const
+type PersonaKey = typeof ALL_PERSONAS[number]
+
+const WORKSPACE_META: Record<string, { icon: string; label: string; color: string; href: string }> = {
+  creator:  { icon: 'palette',    label: 'Creator',  color: '#E8705A', href: '/dashboard' },
+  venue:    { icon: 'storefront', label: 'Adda',     color: '#5DD9D0', href: '/business/venue/dashboard' },
+  explorer: { icon: 'explore',    label: 'Explorer', color: '#9B8FFF', href: '/dashboard' },
+  brand:    { icon: 'campaign',   label: 'Brand',    color: '#F5A800', href: '/business/brand/dashboard' },
+}
+
+function personaEntryUrl(persona: PersonaKey): string {
+  switch (persona) {
+    case 'creator':  return '/onboarding/creator/C2?mode=add'
+    case 'explorer': return '/onboarding/explorer/E2?mode=add'
+    case 'venue':    return '/onboarding/business/B2?mode=add&type=venue'
+    case 'brand':    return '/onboarding/business/B2?mode=add&type=brand'
+  }
+}
+
+function personaLabel(persona: PersonaKey): string {
+  if (persona === 'venue')    return 'List an Adda'
+  if (persona === 'explorer') return 'Become an Explorer'
+  return `Become a ${persona.charAt(0).toUpperCase() + persona.slice(1)}`
 }
 
 // ---------------------------------------------------------------------------
@@ -75,34 +146,17 @@ export interface AddaSidebarClientProps {
 function SectionLabel({ label }: { label: string }) {
   return (
     <div style={{
-      fontSize: 10,
-      fontWeight: 500,
-      letterSpacing: '1.2px',
-      textTransform: 'uppercase',
-      color: 'var(--adda-text-muted)',
-      padding: '14px 10px 5px',
-      fontFamily: 'var(--font-jetbrains-mono), monospace',
-      whiteSpace: 'nowrap',
+      fontSize: 10, fontWeight: 500, letterSpacing: '1.2px', textTransform: 'uppercase',
+      color: ADDA_MUTED, padding: '14px 10px 5px',
+      fontFamily: 'var(--font-jetbrains-mono), monospace', whiteSpace: 'nowrap',
     }}>
       {label}
     </div>
   )
 }
 
-function NavLink({
-  item,
-  active,
-  badge,
-  collapsed,
-}: {
-  item: NavItem
-  active: boolean
-  badge: number | null
-  collapsed: boolean
-}) {
+function NavLink({ item, active, badge, collapsed }: { item: NavItem; active: boolean; badge: number | null; collapsed: boolean }) {
   const [hovered, setHovered] = useState(false)
-
-  const showHoverBg = hovered && !active
 
   return (
     <Link
@@ -111,108 +165,53 @@ function NavLink({
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       style={{
-        position: 'relative',
-        display: 'flex',
-        alignItems: 'center',
-        gap: 10,
+        position: 'relative', display: 'flex', alignItems: 'center', gap: 10,
         padding: collapsed ? '10px 0' : '9px 10px 9px 14px',
-        borderRadius: 6,
-        justifyContent: collapsed ? 'center' : undefined,
-        cursor: 'pointer',
-        textDecoration: 'none',
+        borderRadius: 6, justifyContent: collapsed ? 'center' : undefined,
+        cursor: 'pointer', textDecoration: 'none',
         transition: 'background 160ms ease',
-        background: active
-          ? 'var(--adda-amber-tint)'
-          : showHoverBg
-            ? 'var(--adda-bg-hover)'
-            : 'transparent',
+        background: active ? 'var(--adda-amber-tint)' : hovered && !active ? ADDA_HOVER : 'transparent',
         marginBottom: 1,
       }}
     >
-      {/* Left accent bar — full item height, amber, rounded-r-sm */}
       {active && !collapsed && (
-        <span style={{
-          position: 'absolute',
-          left: 0,
-          top: 0,
-          bottom: 0,
-          width: 3,
-          background: 'var(--adda-amber)',
-          borderRadius: '0 3px 3px 0',
-        }} />
+        <span style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 3, background: ADDA_AMBER, borderRadius: '0 3px 3px 0' }} />
       )}
-
-      {/* Icon */}
       <span
         className="material-symbols-outlined"
         style={{
-          fontSize: 20,
-          flexShrink: 0,
-          color: active
-            ? 'var(--adda-amber)'
-            : item.primary
-              ? 'var(--adda-text-secondary)'
-              : 'var(--adda-text-muted)',
-          fontVariationSettings: active
-            ? "'FILL' 1,'wght' 400,'GRAD' 0,'opsz' 24"
-            : "'FILL' 0,'wght' 300,'GRAD' 0,'opsz' 24",
+          fontSize: 20, flexShrink: 0,
+          color: active ? ADDA_AMBER : ADDA_MUTED,
+          fontVariationSettings: active ? "'FILL' 1,'wght' 400,'GRAD' 0,'opsz' 24" : "'FILL' 0,'wght' 300,'GRAD' 0,'opsz' 24",
           transition: 'color 160ms ease',
         }}
       >
         {item.icon}
       </span>
 
-      {/* Badge dot (icon-only mode) */}
       {collapsed && badge !== null && (
-        <span style={{
-          position: 'absolute',
-          top: 7,
-          right: 8,
-          width: 7,
-          height: 7,
-          borderRadius: '50%',
-          background: 'var(--adda-amber)',
-          border: '1.5px solid var(--adda-bg-surface)',
-        }} />
+        <span style={{ position: 'absolute', top: 7, right: 8, width: 7, height: 7, borderRadius: '50%', background: ADDA_AMBER, border: '1.5px solid var(--adda-bg-surface)' }} />
       )}
 
-      {/* Label + count badge (expanded mode) */}
       {!collapsed && (
         <>
           <span style={{
-            fontSize: 13.5,
-            fontWeight: item.primary ? 600 : 500,
+            fontSize: 13.5, fontWeight: item.primary ? 600 : 500,
             fontFamily: 'var(--font-inter), system-ui, sans-serif',
-            color: active
-              ? 'var(--adda-text-primary)'
-              : item.primary
-                ? 'var(--adda-text-secondary)'
-                : 'var(--adda-text-secondary)',
-            whiteSpace: 'nowrap',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            flex: 1,
+            color: active ? 'var(--adda-text-primary)' : 'var(--adda-text-secondary)',
+            flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
             transition: 'color 160ms ease',
           }}>
             {item.label}
           </span>
-
           {badge !== null && (
-            <span
-              className="font-adda-nums"
-              style={{
-                background: 'var(--adda-amber)',
-                color: '#000',
-                fontSize: 10,
-                fontWeight: 700,
-                padding: '1px 6px',
-                borderRadius: 9999,
-                flexShrink: 0,
-                fontFamily: 'var(--font-inter), system-ui, sans-serif',
-                lineHeight: '16px',
-              }}
-            >
+            <span style={{ background: ADDA_AMBER, color: '#000', fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 9999, flexShrink: 0, fontFamily: 'var(--font-inter), system-ui, sans-serif', lineHeight: '16px' }}>
               {badge}
+            </span>
+          )}
+          {item.soon && (
+            <span style={{ fontSize: 9, border: '1px solid currentColor', padding: '1px 5px', color: ADDA_MUTED, fontFamily: 'var(--font-jetbrains-mono), monospace' }}>
+              SOON
             </span>
           )}
         </>
@@ -226,28 +225,43 @@ function NavLink({
 // ---------------------------------------------------------------------------
 
 export default function AddaSidebarClient({
-  venueName,
-  ownerName,
-  initials,
-  avatarUrl,
-  pendingCount,
-  unreadCount,
+  businessName, ownerName, initials, avatarUrl,
+  pendingCount, unreadCount,
+  hasCreatorProfile = false,
+  businessType = 'venue',
+  personas = [],
 }: AddaSidebarClientProps) {
   const pathname = usePathname()
   const [collapsed, setCollapsed] = useState(false)
-  const [avatarHovered, setAvatarHovered] = useState(false)
+  const [workspaceOpen, setWorkspaceOpen] = useState(false)
 
-  // Hydration-safe: read localStorage after mount
+  const NAV_SECTIONS = businessType === 'brand' ? NAV_SECTIONS_BRAND : NAV_SECTIONS_VENUE
+
+  const currentPersona: PersonaKey = businessType === 'brand' ? 'brand' : 'venue'
+  const hasVenueActive    = personas.includes('venue') || personas.includes('business')
+  const hasExplorerActive = personas.includes('explorer')
+  // "Add workspace" = personas the user doesn't have yet (excluding current workspace)
+  const missingPersonas = ALL_PERSONAS.filter(p => {
+    if (p === currentPersona) return false
+    if (p === 'creator')  return !hasCreatorProfile
+    if (p === 'venue')    return !hasVenueActive
+    if (p === 'explorer') return !hasExplorerActive
+    if (p === 'brand')    return !personas.includes('brand')
+    return false
+  })
+
   useEffect(() => {
-    if (localStorage.getItem('adda-sidebar-collapsed') === 'true') {
-      setCollapsed(true)
-    }
+    const saved = localStorage.getItem('wimc-sidebar-collapsed')
+    if (saved === 'true') setCollapsed(true)
+    else if (saved === null && window.innerWidth < 768) setCollapsed(true)
   }, [])
+
+  useEffect(() => { setWorkspaceOpen(false) }, [pathname])
 
   function toggleCollapse() {
     setCollapsed(prev => {
       const next = !prev
-      localStorage.setItem('adda-sidebar-collapsed', String(next))
+      localStorage.setItem('wimc-sidebar-collapsed', String(next))
       return next
     })
   }
@@ -265,308 +279,261 @@ export default function AddaSidebarClient({
 
   const sidebarWidth = collapsed ? 64 : 240
 
+  useEffect(() => {
+    document.documentElement.style.setProperty('--adda-sidebar-w', `${sidebarWidth}px`)
+  }, [sidebarWidth])
+
   return (
-    <aside style={{
-      width: sidebarWidth,
-      minHeight: '100vh',
-      background: 'var(--adda-bg-surface)',
-      borderRight: '1px solid var(--adda-border-subtle)',
-      display: 'flex',
-      flexDirection: 'column',
-      padding: '20px 0 0',
-      position: 'fixed',
-      top: 0,
-      left: 0,
-      zIndex: 50,
-      transition: 'width 220ms cubic-bezier(0.4, 0, 0.2, 1)',
-      overflow: 'hidden',
+    <aside className="dash-sidebar" style={{
+      width: sidebarWidth, minHeight: '100vh',
+      background: 'var(--adda-bg-surface)', borderRight: `1px solid ${ADDA_BORDER}`,
+      display: 'flex', flexDirection: 'column', padding: '20px 0 0',
+      position: 'fixed', top: 0, left: 0, zIndex: 50,
+      transition: 'width 220ms cubic-bezier(0.4, 0, 0.2, 1)', overflow: 'hidden',
     }}>
 
-      {/* ── Brand ─────────────────────────────────────────────────────────────── */}
+      {/* ── Header: hamburger + workspace switcher ────────────────────────── */}
       <div style={{
-        padding: collapsed ? '0 16px 20px' : '0 20px 20px',
-        borderBottom: '1px solid var(--adda-border-subtle)',
-        display: 'flex',
-        alignItems: 'center',
-        gap: 10,
-        overflow: 'hidden',
-        minWidth: 0,
+        display: 'flex', alignItems: 'center',
+        gap: collapsed ? 4 : 8,
+        padding: collapsed ? '0 0 16px' : '0 12px 16px',
+        borderBottom: `1px solid ${ADDA_BORDER}`,
+        justifyContent: 'center',
+        flexDirection: collapsed ? 'column' : 'row',
+        flexShrink: 0,
       }}>
-        {/* Hexagon — CSS clip-path, amber fill, "A" centered */}
-        <div style={{
-          width: 32,
-          height: 32,
-          background: 'var(--adda-amber)',
-          clipPath: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)',
-          display: 'grid',
-          placeItems: 'center',
-          flexShrink: 0,
-        }}>
-          <span style={{
-            fontSize: 14,
-            fontWeight: 700,
-            color: '#000',
-            fontFamily: 'var(--font-inter), system-ui, sans-serif',
-            lineHeight: 1,
-          }}>
-            A
+        {/* Hamburger — always visible at top */}
+        <button
+          onClick={toggleCollapse}
+          title={collapsed ? 'Expand menu' : 'Collapse menu'}
+          style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            width: 34, height: 34, borderRadius: 8, border: 'none',
+            background: 'transparent', cursor: 'pointer',
+            color: 'rgba(255,255,255,0.55)', flexShrink: 0,
+          }}
+        >
+          <span className="material-symbols-outlined" style={{ fontSize: 22 }}>
+            {collapsed ? 'menu' : 'menu_open'}
           </span>
-        </div>
+        </button>
 
-        {/* Brand text — hidden when collapsed */}
+        {/* Workspace button — expanded only */}
         {!collapsed && (
-          <div style={{ overflow: 'hidden', minWidth: 0 }}>
-            <div style={{
-              fontFamily: 'var(--font-inter), system-ui, sans-serif',
-              fontWeight: 600,
-              fontSize: 16,
-              color: 'var(--adda-text-primary)',
-              letterSpacing: '-0.01em',
-              whiteSpace: 'nowrap',
-              lineHeight: 1.2,
-            }}>
-              Adda
-            </div>
-            {/* Active listing indicator + venue name */}
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 5,
-              marginTop: 3,
-            }}>
+          <button
+            onClick={() => setWorkspaceOpen(v => !v)}
+            style={{
+              flex: 1, minWidth: 0,
+              display: 'flex', alignItems: 'center', gap: 7,
+              background: workspaceOpen ? 'rgba(245,168,0,0.10)' : 'transparent',
+              border: `1px solid ${workspaceOpen ? 'rgba(245,168,0,0.30)' : 'transparent'}`,
+              borderRadius: 8, padding: '6px 8px',
+              cursor: 'pointer',
+              transition: 'background 160ms ease, border-color 160ms ease',
+            }}
+          >
+            <span className="material-symbols-outlined" style={{ fontSize: 16, color: ADDA_AMBER, flexShrink: 0 }}>
+              {businessType === 'brand' ? 'campaign' : 'storefront'}
+            </span>
+            <div style={{ flex: 1, minWidth: 0, textAlign: 'left' }}>
               <div style={{
-                width: 6,
-                height: 6,
-                borderRadius: '50%',
-                background: 'var(--adda-success)',
-                flexShrink: 0,
-              }} />
-              <span style={{
-                fontSize: 11,
-                color: 'var(--adda-text-muted)',
-                fontFamily: 'var(--font-inter), system-ui, sans-serif',
-                whiteSpace: 'nowrap',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
+                fontSize: 11, fontWeight: 700, color: ADDA_AMBER,
+                letterSpacing: '1.5px', textTransform: 'uppercase',
+                fontFamily: 'var(--font-jetbrains-mono), monospace',
+                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
               }}>
-                {venueName}
-              </span>
+                {businessType === 'brand' ? 'Brand' : 'Adda'}
+              </div>
+              <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.30)', fontFamily: 'var(--font-jetbrains-mono), monospace' }}>
+                {businessName}
+              </div>
             </div>
-          </div>
+            <span className="material-symbols-outlined" style={{
+              fontSize: 14, color: 'rgba(255,255,255,0.30)', flexShrink: 0,
+              transition: 'transform 200ms ease',
+              transform: workspaceOpen ? 'rotate(180deg)' : 'none',
+            }}>
+              expand_more
+            </span>
+          </button>
+        )}
+
+        {/* Collapsed: workspace switch shortcut */}
+        {collapsed && personas.length > 0 && (
+          <button
+            onClick={() => { setCollapsed(false); localStorage.setItem('wimc-sidebar-collapsed', 'false'); setWorkspaceOpen(true) }}
+            title="Switch workspace"
+            style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              width: 34, height: 34, borderRadius: 8, border: 'none',
+              background: 'transparent', cursor: 'pointer',
+              color: 'rgba(255,255,255,0.30)', position: 'relative',
+            }}
+          >
+            <span className="material-symbols-outlined" style={{ fontSize: 18 }}>swap_horiz</span>
+          </button>
         )}
       </div>
 
+      {/* ── Workspace dropdown ─────────────────────────────────────────────── */}
+      {workspaceOpen && !collapsed && (
+        <div style={{
+          margin: '0 8px',
+          background: 'rgba(0,0,0,0.2)',
+          border: `1px solid ${ADDA_BORDER}`,
+          borderRadius: 10, overflow: 'hidden', flexShrink: 0,
+        }}>
+          {/* Current workspace — active with checkmark */}
+          {(() => {
+            const meta = WORKSPACE_META[currentPersona]
+            return (
+              <div style={{
+                display: 'flex', alignItems: 'center', gap: 10,
+                padding: '9px 12px',
+                background: `rgba(${currentPersona === 'brand' ? '245,168,0' : '93,217,208'},0.08)`,
+                borderBottom: `1px solid ${ADDA_BORDER}`,
+              }}>
+                <span className="material-symbols-outlined" style={{ fontSize: 16, color: meta.color, flexShrink: 0 }}>{meta.icon}</span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: meta.color }}>{meta.label}</div>
+                  <div style={{ fontSize: 10, color: ADDA_MUTED, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{businessName}</div>
+                </div>
+                <span className="material-symbols-outlined" style={{ fontSize: 14, color: meta.color }}>check</span>
+              </div>
+            )
+          })()}
+
+          {/* Other active workspaces */}
+          {ALL_PERSONAS.filter(p => p !== currentPersona).map(p => {
+            const isActive =
+              p === 'creator'  ? hasCreatorProfile :
+              p === 'venue'    ? hasVenueActive :
+              p === 'explorer' ? hasExplorerActive :
+              p === 'brand'    ? personas.includes('brand') : false
+            if (!isActive) return null
+            const meta = WORKSPACE_META[p]
+            return (
+              <Link
+                key={p}
+                href={meta.href}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 10,
+                  padding: '9px 12px', textDecoration: 'none',
+                  borderBottom: `1px solid ${ADDA_BORDER}`,
+                  transition: 'background 150ms ease',
+                }}
+                onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = `rgba(255,255,255,0.04)`}
+                onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}
+              >
+                <span className="material-symbols-outlined" style={{ fontSize: 16, color: meta.color, flexShrink: 0 }}>{meta.icon}</span>
+                <span style={{ flex: 1, fontSize: 13, fontWeight: 500, color: meta.color }}>{meta.label}</span>
+                <span className="material-symbols-outlined" style={{ fontSize: 14, color: ADDA_MUTED }}>arrow_forward</span>
+              </Link>
+            )
+          })}
+
+          {/* Add workspace — missing personas */}
+          {missingPersonas.length > 0 && (
+            <div>
+              <div style={{ padding: '6px 12px 4px', fontSize: 9, color: ADDA_MUTED, fontFamily: 'var(--font-jetbrains-mono), monospace', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+                Add workspace
+              </div>
+              {missingPersonas.map(p => (
+                <Link
+                  key={p}
+                  href={personaEntryUrl(p as PersonaKey)}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 10,
+                    padding: '7px 12px', textDecoration: 'none',
+                    transition: 'background 150ms ease',
+                  }}
+                  onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.04)'}
+                  onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}
+                >
+                  <span className="material-symbols-outlined" style={{ fontSize: 15, color: ADDA_MUTED, flexShrink: 0 }}>add_circle</span>
+                  <span style={{ fontSize: 12, color: ADDA_MUTED }}>{personaLabel(p as PersonaKey)}</span>
+                </Link>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* ── Nav ───────────────────────────────────────────────────────────────── */}
-      <nav style={{
-        flex: 1,
-        padding: collapsed ? '8px 8px' : '8px 10px',
-        display: 'flex',
-        flexDirection: 'column',
-        overflowY: 'auto',
-        overflowX: 'hidden',
-      }}>
+      <nav style={{ flex: 1, padding: collapsed ? '8px 8px' : '8px 10px', display: 'flex', flexDirection: 'column', overflowY: 'auto', overflowX: 'hidden' }}>
         {NAV_SECTIONS.map((section, si) => (
           <div key={section.group}>
-            {/* Section divider in collapsed mode */}
-            {collapsed && si > 0 && (
-              <div style={{
-                height: 1,
-                background: 'var(--adda-border-subtle)',
-                margin: '6px 8px',
-              }} />
-            )}
-
-            {/* Section label — expanded only */}
+            {collapsed && si > 0 && <div style={{ height: 1, background: ADDA_BORDER, margin: '6px 8px' }} />}
             {!collapsed && <SectionLabel label={section.group} />}
 
             {section.items.map(item => (
-              <NavLink
-                key={item.href}
-                item={item}
-                active={isActive(item)}
-                badge={getBadge(item.badgeKey)}
-                collapsed={collapsed}
-              />
+              item.soon ? (
+                <div
+                  key={item.href}
+                  title={collapsed ? item.label : undefined}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 10,
+                    padding: collapsed ? '10px 0' : '9px 10px 9px 14px',
+                    borderRadius: 6, justifyContent: collapsed ? 'center' : undefined,
+                    opacity: 0.35, cursor: 'not-allowed', marginBottom: 1,
+                  }}
+                >
+                  <span className="material-symbols-outlined" style={{ fontSize: 20, flexShrink: 0, color: ADDA_MUTED }}>{item.icon}</span>
+                  {!collapsed && (
+                    <>
+                      <span style={{ fontSize: 13.5, fontWeight: 500, fontFamily: 'var(--font-inter), system-ui, sans-serif', color: 'var(--adda-text-secondary)', flex: 1, whiteSpace: 'nowrap' }}>{item.label}</span>
+                      <span style={{ fontSize: 9, border: '1px solid currentColor', padding: '1px 5px', color: ADDA_MUTED, fontFamily: 'var(--font-jetbrains-mono), monospace' }}>SOON</span>
+                    </>
+                  )}
+                </div>
+              ) : (
+                <NavLink key={item.href} item={item} active={isActive(item)} badge={getBadge(item.badgeKey)} collapsed={collapsed} />
+              )
             ))}
           </div>
         ))}
       </nav>
 
-      {/* ── Footer ────────────────────────────────────────────────────────────── */}
-      <div style={{
-        borderTop: '1px solid var(--adda-border-subtle)',
-        padding: collapsed ? '12px 8px 0' : '10px 10px 0',
-      }}>
-
-        {/* Notification bell — inline in footer row when expanded, standalone when collapsed */}
-        {collapsed ? (
-          <button
-            title="Notifications"
-            style={{
-              width: '100%',
-              display: 'flex',
-              justifyContent: 'center',
-              padding: '8px 0',
-              background: 'transparent',
-              border: 'none',
-              cursor: 'pointer',
-              color: 'var(--adda-text-muted)',
-              borderRadius: 6,
-              marginBottom: 4,
-            }}
-          >
-            <span className="material-symbols-outlined" style={{ fontSize: 20 }}>
-              notifications
-            </span>
-          </button>
-        ) : null}
-
-        {/* User row: avatar + name/venue + bell (expanded) */}
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 10,
-          padding: collapsed ? '8px 0' : '8px 10px',
-          justifyContent: collapsed ? 'center' : undefined,
-          borderRadius: 6,
-        }}>
-          {/* Avatar */}
-          <div
-            onMouseEnter={() => setAvatarHovered(true)}
-            onMouseLeave={() => setAvatarHovered(false)}
-            style={{
-              width: 32,
-              height: 32,
-              borderRadius: '50%',
-              background: 'var(--adda-bg-overlay)',
-              border: avatarHovered ? '2px solid var(--adda-amber)' : '2px solid transparent',
-              transition: 'border-color 160ms ease',
-              display: 'grid',
-              placeItems: 'center',
-              fontWeight: 700,
-              fontSize: 12,
-              color: 'var(--adda-text-primary)',
-              fontFamily: 'var(--font-inter), system-ui, sans-serif',
-              flexShrink: 0,
-              overflow: 'hidden',
-              cursor: 'pointer',
-            }}
-          >
+      {/* ── Footer: owner info + collapse toggle ──────────────────────────────── */}
+      <div style={{ borderTop: `1px solid ${ADDA_BORDER}`, padding: collapsed ? '12px 8px 0' : '10px 10px 0' }}>
+        <Link
+          href={businessType === 'brand' ? '/business/brand/profile' : '/business/venue/profile'}
+          title={collapsed ? `${ownerName} · Profile` : undefined}
+          style={{
+            display: 'flex', alignItems: 'center', gap: 10,
+            padding: collapsed ? '8px 0' : '8px 10px',
+            justifyContent: collapsed ? 'center' : undefined,
+            borderRadius: 6, textDecoration: 'none',
+            transition: 'background 160ms ease',
+          }}
+          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = ADDA_HOVER }}
+          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent' }}
+        >
+          <div style={{
+            width: 32, height: 32, borderRadius: '50%',
+            background: 'var(--adda-bg-overlay)', border: '2px solid transparent',
+            display: 'grid', placeItems: 'center',
+            fontWeight: 700, fontSize: 12, color: 'var(--adda-text-primary)',
+            fontFamily: 'var(--font-inter), system-ui, sans-serif',
+            flexShrink: 0, overflow: 'hidden',
+          }}>
             {avatarUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={avatarUrl}
-                alt={ownerName}
-                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-              />
-            ) : (
-              initials
-            )}
+              <img src={avatarUrl} alt={ownerName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            ) : initials}
           </div>
 
-          {/* Name + venue — hidden when collapsed */}
           {!collapsed && (
             <>
               <div style={{ overflow: 'hidden', flex: 1, minWidth: 0 }}>
-                <div style={{
-                  fontSize: 13,
-                  fontWeight: 600,
-                  fontFamily: 'var(--font-inter), system-ui, sans-serif',
-                  color: 'var(--adda-text-primary)',
-                  whiteSpace: 'nowrap',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  lineHeight: 1.3,
-                }}>
-                  {ownerName}
-                </div>
-                <div style={{
-                  fontSize: 11,
-                  color: 'var(--adda-text-muted)',
-                  fontFamily: 'var(--font-inter), system-ui, sans-serif',
-                  whiteSpace: 'nowrap',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                }}>
-                  {venueName}
-                </div>
+                <div style={{ fontSize: 13, fontWeight: 600, fontFamily: 'var(--font-inter), system-ui, sans-serif', color: 'var(--adda-text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', lineHeight: 1.3 }}>{ownerName}</div>
+                <div style={{ fontSize: 11, color: ADDA_MUTED, fontFamily: 'var(--font-inter), system-ui, sans-serif', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{businessName}</div>
               </div>
-
-              {/* Notification bell */}
-              <button
-                title="Notifications"
-                style={{
-                  display: 'grid',
-                  placeItems: 'center',
-                  width: 28,
-                  height: 28,
-                  borderRadius: 6,
-                  background: 'transparent',
-                  border: 'none',
-                  cursor: 'pointer',
-                  color: 'var(--adda-text-muted)',
-                  flexShrink: 0,
-                  transition: 'color 160ms ease, background 160ms ease',
-                }}
-                onMouseEnter={e => {
-                  (e.currentTarget as HTMLButtonElement).style.color = 'var(--adda-text-secondary)'
-                  ;(e.currentTarget as HTMLButtonElement).style.background = 'var(--adda-bg-hover)'
-                }}
-                onMouseLeave={e => {
-                  (e.currentTarget as HTMLButtonElement).style.color = 'var(--adda-text-muted)'
-                  ;(e.currentTarget as HTMLButtonElement).style.background = 'transparent'
-                }}
-              >
-                <span className="material-symbols-outlined" style={{ fontSize: 18 }}>
-                  notifications
-                </span>
-              </button>
+              <span className="material-symbols-outlined" style={{ fontSize: 16, color: ADDA_MUTED, flexShrink: 0 }}>settings</span>
             </>
           )}
-        </div>
+        </Link>
 
-        {/* Collapse toggle */}
-        <button
-          onClick={toggleCollapse}
-          title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-          style={{
-            width: '100%',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: 6,
-            padding: '10px 0',
-            marginTop: 6,
-            background: 'transparent',
-            border: 'none',
-            borderTop: '1px solid var(--adda-border-subtle)',
-            cursor: 'pointer',
-            color: 'var(--adda-text-muted)',
-            transition: 'color 160ms ease',
-          }}
-          onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = 'var(--adda-text-secondary)' }}
-          onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = 'var(--adda-text-muted)' }}
-        >
-          <span style={{
-            fontSize: 14,
-            display: 'inline-block',
-            // ⌃ rotated: -90deg points left (collapse); 90deg points right (expand)
-            transform: collapsed ? 'rotate(90deg)' : 'rotate(-90deg)',
-            transition: 'transform 220ms cubic-bezier(0.4, 0, 0.2, 1)',
-            lineHeight: 1,
-          }}>
-            ⌃
-          </span>
-          {!collapsed && (
-            <span style={{
-              fontSize: 11,
-              fontFamily: 'var(--font-inter), system-ui, sans-serif',
-              letterSpacing: '0.3px',
-            }}>
-              Collapse
-            </span>
-          )}
-        </button>
       </div>
     </aside>
   )

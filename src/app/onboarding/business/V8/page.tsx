@@ -3,19 +3,79 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { SK, clearNewOnboardingKeys } from '@/lib/onboarding/session-keys'
+import { updatePersonas } from '@/lib/onboarding/update-personas'
 import { completeAddaOnboarding, type CompleteAddaInput } from '@/app/actions/adda-onboarding'
-import RubberStamp from '@/components/ui/RubberStamp'
+import { createClient } from '@/lib/supabase/client'
 
-const ACCENT = '#5DD9D0'
+const ACCENT  = '#5DD9D0'
+const CORAL   = '#E8705A'
+const NAVY    = '#1A2744'
+const MONO    = "var(--font-jetbrains-mono), 'JetBrains Mono', monospace"
+const BARLOW  = "var(--font-barlow), 'Barlow Condensed', sans-serif"
+const ABRIL   = "var(--font-abril), 'Abril Fatface', serif"
+const DM      = "'DM Sans', sans-serif"
+const OUTFIT  = "'Outfit', sans-serif"
+
+// Maps V4 UI tile IDs → server-valid adda_type enum values (mirrors V4/page.tsx)
+const TYPE_TO_VALID: Record<string, CompleteAddaInput['adda_type'][number]> = {
+  cafe:       'cafe',       coworking:  'coworking', studio:     'studio',
+  rooftop:    'rooftop',   gallery:    'gallery',   theatre:    'community_hall',
+  event_hall: 'community_hall', retail: 'restaurant', bar:      'restaurant',
+  outdoor:    'garden',    library:    'library',   sports:     'coworking',
+  film_set:   'studio',    hotel_hall: 'community_hall', garden: 'garden',
+  workshop:   'coworking', restaurant: 'restaurant',
+}
+
+function toValidAddaTypes(raw: string[]): CompleteAddaInput['adda_type'] {
+  const seen = new Set<CompleteAddaInput['adda_type'][number]>()
+  raw.forEach(t => { const v = TYPE_TO_VALID[t]; if (v) seen.add(v) })
+  return Array.from(seen) as CompleteAddaInput['adda_type']
+}
 
 const PRICING_MAP: Record<string, CompleteAddaInput['pricing_model']> = {
-  hourly:       'fixed_rental',
-  split:        'door_split',
-  hybrid:       'hybrid',
-  fnb:          'f_and_b_minimum',
-  fixed_rental: 'fixed_rental',
-  door_split:   'door_split',
+  hourly:          'fixed_rental',
+  split:           'door_split',
+  hybrid:          'hybrid',
+  fnb:             'f_and_b_minimum',
+  fixed_rental:    'fixed_rental',
+  door_split:      'door_split',
   f_and_b_minimum: 'f_and_b_minimum',
+}
+
+const LEAD_TO_WEEKS: Record<string, number> = {
+  '1 week':   1,
+  '2 weeks':  2,
+  '1 month+': 4,
+}
+
+const DAY_TO_FULL: Record<string, string> = {
+  MON: 'monday', TUE: 'tuesday', WED: 'wednesday', THU: 'thursday',
+  FRI: 'friday', SAT: 'saturday', SUN: 'sunday',
+  monday: 'monday', tuesday: 'tuesday', wednesday: 'wednesday', thursday: 'thursday',
+  friday: 'friday', saturday: 'saturday', sunday: 'sunday',
+}
+
+const VALID_AMENITIES = new Set([
+  'wifi', 'projector', 'sound_system', 'pa_system', 'microphone', 'power_backup',
+  'serves_food', 'bar_alcohol', 'coffee_tea', 'outside_catering', 'kitchen',
+  'parking', 'ac', 'wheelchair', 'accessible', 'outdoor', 'outdoor_space', 'near_transit',
+  'board_games', 'photo_friendly', 'natural_light', 'dj_ok', 'smoking_area', 'late_night',
+  'whiteboard',
+])
+
+function buildPricingConfig(model: string, rawAmount: string) {
+  const n = Number(rawAmount)
+  if (!rawAmount || isNaN(n) || n <= 0) return {}
+  switch (model) {
+    case 'hourly':           return { fixed_rental_paise:    Math.round(n * 100) }
+    case 'split':            return { door_split_percent:    n }
+    case 'hybrid':           return { hybrid_rental_paise:   Math.round(n * 100) }
+    case 'fnb':              return { f_and_b_minimum_paise: Math.round(n * 100) }
+    case 'fixed_rental':     return { fixed_rental_paise:    Math.round(n * 100) }
+    case 'door_split':       return { door_split_percent:    n }
+    case 'f_and_b_minimum':  return { f_and_b_minimum_paise: Math.round(n * 100) }
+    default:                 return {}
+  }
 }
 
 export default function V8Page() {
@@ -25,28 +85,86 @@ export default function V8Page() {
   const [email,          setEmail]          = useState('')
   const [instagram,      setInstagram]      = useState('')
   const [bio,            setBio]            = useState('')
+
+  function syncContact(wa: string, mail: string, ig: string, b: string) {
+    try {
+      sessionStorage.setItem('wimc_ob_v_contact', JSON.stringify({ whatsapp: wa, email: mail, instagram: ig, bio: b }))
+      window.dispatchEvent(new Event('ob-snap-update'))
+    } catch {}
+  }
   const [suggestLoading, setSuggestLoading] = useState(false)
   const [isSubmitting,   setIsSubmitting]   = useState(false)
+  const [submitError,    setSubmitError]    = useState<string | null>(null)
   const [bName,          setBName]          = useState('')
   const [bCity,          setBCity]          = useState('')
+  const [bSlug,          setBSlug]          = useState('')
+  const [isAddMode,      setIsAddMode]      = useState(false)
+  const [whatsappError,  setWhatsappError]  = useState<string | null>(null)
+  const [focusWa,        setFocusWa]        = useState(false)
+  const [focusEmail,     setFocusEmail]     = useState(false)
+  const [focusIg,        setFocusIg]        = useState(false)
+  const [focusBio,       setFocusBio]       = useState(false)
+  const [pendingRedirect, setPendingRedirect] = useState<string | null>(null)
+
+  // Reveal state (post-submit) — overlays the left panel only
+  const [revealState, setRevealState] = useState<'editing' | 'revealed'>('editing')
+  const [isLeaving,   setIsLeaving]   = useState(false)
 
   useEffect(() => {
     if (typeof window === 'undefined') return
+    setIsAddMode(sessionStorage.getItem('wimc_ob_mode') === 'add')
     const name    = sessionStorage.getItem(SK.b_name) ?? ''
     const subpath = sessionStorage.getItem(SK.b_subpath)
     if (!name || subpath !== 'venue') { router.replace('/onboarding/business/B3'); return }
     setBName(name)
     setBCity(sessionStorage.getItem(SK.b_city) ?? '')
+    setBSlug(sessionStorage.getItem(SK.v_slug) ?? '')
+    setPendingRedirect(sessionStorage.getItem('wimc_post_onboarding_redirect'))
+
+    let wa = '', mail = '', ig = '', bioText = ''
     try {
       const saved = sessionStorage.getItem(SK.v_contact)
       if (saved) {
-        const parsed = JSON.parse(saved) as { whatsapp?: string; email?: string; instagram?: string; bio?: string }
-        if (parsed.whatsapp)  setWhatsapp(parsed.whatsapp)
-        if (parsed.email)     setEmail(parsed.email)
-        if (parsed.instagram) setInstagram(parsed.instagram)
-        if (parsed.bio)       setBio(parsed.bio)
+        const c = JSON.parse(saved) as { whatsapp?: string; email?: string; instagram?: string; bio?: string }
+        wa = c.whatsapp || ''; mail = c.email || ''; ig = c.instagram || ''; bioText = c.bio || ''
       }
     } catch {}
+    if (!bioText) {
+      const editorial = sessionStorage.getItem(SK.v_editorial)
+      if (editorial) bioText = editorial.slice(0, 500)
+    }
+    if (!wa || !mail || !ig) {
+      try {
+        const brandSaved = sessionStorage.getItem(SK.r_contact)
+        if (brandSaved) {
+          const c = JSON.parse(brandSaved) as { whatsapp?: string; email?: string; instagram?: string }
+          if (!wa   && c.whatsapp)  wa   = c.whatsapp
+          if (!mail && c.email)     mail = c.email
+          if (!ig   && c.instagram) ig   = c.instagram
+        }
+      } catch {}
+    }
+    if (!ig) {
+      try {
+        const handles = JSON.parse(sessionStorage.getItem(SK.c_social_handles) || '{}') as Record<string, string>
+        if (handles.instagram) ig = handles.instagram.replace(/^@/, '')
+      } catch {}
+    }
+    if (wa)      setWhatsapp(wa)
+    if (mail)    setEmail(mail)
+    if (ig)      setInstagram(ig)
+    if (bioText) setBio(bioText)
+
+    if (!wa || !mail) {
+      createClient().auth.getUser().then(({ data: { user } }) => {
+        if (!user) return
+        if (!wa && user.phone) {
+          const digits = user.phone.replace(/\D/g, '').slice(-10)
+          if (digits.length === 10) setWhatsapp(digits)
+        }
+        if (!mail && user.email) setEmail(user.email)
+      }).catch(() => {})
+    }
   }, [router])
 
   async function handleSuggestBio() {
@@ -57,160 +175,553 @@ export default function V8Page() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          venueName: bName,
-          city:      bCity,
-          types:     JSON.parse(sessionStorage.getItem(SK.v_types) || '[]'),
-          events:    JSON.parse(sessionStorage.getItem(SK.v_events) || '[]'),
+          venueName: bName, city: bCity,
+          types:  JSON.parse(sessionStorage.getItem(SK.v_types)  || '[]'),
+          events: JSON.parse(sessionStorage.getItem(SK.v_events) || '[]'),
           currentBio: bio,
         }),
       })
       const { suggestion } = await response.json() as { suggestion: string }
       setBio(suggestion.slice(0, 500))
-    } catch {}
+    } catch { /* silent */ }
     finally { setSuggestLoading(false) }
   }
 
   async function handleDone() {
     if (!email.trim() || isSubmitting) return
     setIsSubmitting(true)
+    setSubmitError(null)
+    if (whatsapp && whatsapp.length !== 10) {
+      setWhatsappError('Enter a valid 10-digit WhatsApp number')
+      setIsSubmitting(false)
+      return
+    }
+    try { sessionStorage.setItem(SK.v_contact, JSON.stringify({ whatsapp, email, instagram, bio })) } catch {}
     try {
-      sessionStorage.setItem(SK.v_contact, JSON.stringify({ whatsapp, email, instagram, bio }))
-    } catch {}
-    try {
-      const name        = sessionStorage.getItem(SK.b_name) || ''
-      const city        = sessionStorage.getItem(SK.b_city) || ''
-      const address     = sessionStorage.getItem(SK.v_address) || ''
-      const rawTypes    = sessionStorage.getItem(SK.v_types) || '[]'
-      const adda_type   = JSON.parse(rawTypes) as CompleteAddaInput['adda_type']
-      const capRaw      = sessionStorage.getItem(SK.v_capacity)
-      const cap         = capRaw ? (JSON.parse(capRaw) as { min?: number; max?: number }) : {}
-      const amenitiesRaw = sessionStorage.getItem(SK.v_amenities)
-      const amenities   = (amenitiesRaw ? JSON.parse(amenitiesRaw) : []) as CompleteAddaInput['amenities']
-      const rawPricing  = sessionStorage.getItem(SK.v_pricing) || ''
-      const pricing_model = PRICING_MAP[rawPricing] ?? 'fixed_rental'
+      const name      = sessionStorage.getItem(SK.b_name)    || ''
+      const city      = sessionStorage.getItem(SK.b_city)    || ''
+      const address   = sessionStorage.getItem(SK.v_address) || ''
+      const rawTypes  = JSON.parse(sessionStorage.getItem(SK.v_types) || '[]') as string[]
+      const adda_type = toValidAddaTypes(rawTypes)
+
+      const capRaw = sessionStorage.getItem(SK.v_capacity)
+      const cap    = capRaw
+        ? (JSON.parse(capRaw) as { standing?: number; seated?: number; classroom?: number; min_pax?: number; min?: number; max?: number })
+        : {}
+      const capMax = Math.max(cap.standing ?? 0, cap.seated ?? 0, cap.classroom ?? 0, cap.max ?? 0) || undefined
+      const capMin = cap.min_pax ?? cap.min ?? undefined
+      const capacityConfigurations = [
+        cap.standing  ? { type: 'standing',  capacity: cap.standing  } : null,
+        cap.seated    ? { type: 'seated',    capacity: cap.seated    } : null,
+        cap.classroom ? { type: 'classroom', capacity: cap.classroom } : null,
+      ].filter(Boolean) as { type: string; capacity: number }[]
+
+      const amenitiesRaw  = sessionStorage.getItem(SK.v_amenities)
+      const amenities     = ((amenitiesRaw ? JSON.parse(amenitiesRaw) : []) as string[])
+        .filter(a => VALID_AMENITIES.has(a)) as CompleteAddaInput['amenities']
+      const rawPricing       = sessionStorage.getItem(SK.v_pricing) || ''
+      const rawPricingAmount = sessionStorage.getItem(SK.v_pricing_amount) || ''
+      const pricing_model    = PRICING_MAP[rawPricing] ?? 'fixed_rental'
+      const available_days   = (JSON.parse(sessionStorage.getItem(SK.v_days) || '[]') as string[])
+        .map(d => DAY_TO_FULL[d]).filter(Boolean) as CompleteAddaInput['available_days']
+
+      let preferred_times: ('morning' | 'afternoon' | 'evening' | 'late_night')[] = []
+      try { preferred_times = JSON.parse(sessionStorage.getItem(SK.v_times) || '[]') } catch {}
+      let event_preferences: string[] = []
+      try { event_preferences = JSON.parse(sessionStorage.getItem(SK.v_events) || '[]') } catch {}
+
+      const rawLead          = sessionStorage.getItem(SK.v_lead) || '1 week'
+      const lead_time_weeks  = LEAD_TO_WEEKS[rawLead] ?? 1
+      const alcohol_license  = sessionStorage.getItem(SK.v_alcohol_license) === 'true'
+      const sound_curfew_time = (() => {
+        const v = sessionStorage.getItem(SK.v_sound_curfew)
+        return (!v || v === 'none') ? undefined : v
+      })()
+
+      let google_place_types: string[] = []
+      try { google_place_types = JSON.parse(sessionStorage.getItem(SK.v_google_types) || '[]') } catch {}
+
+      const neighbourhood = sessionStorage.getItem(SK.v_neighbourhood) || undefined
+      const latRaw        = sessionStorage.getItem(SK.v_lat)
+      const lngRaw        = sessionStorage.getItem(SK.v_lng)
+      const lat           = latRaw ? parseFloat(latRaw)  : undefined
+      const lng           = lngRaw ? parseFloat(lngRaw)  : undefined
+      const googlePlaceId = sessionStorage.getItem(SK.v_google_place_id) || undefined
+      const googleName    = sessionStorage.getItem(SK.v_google_name)     || undefined
+      const phone         = sessionStorage.getItem(SK.v_phone)           || undefined
+      const website       = sessionStorage.getItem(SK.v_website)         || undefined
+      const ratingRaw     = sessionStorage.getItem(SK.v_google_rating)
+      const googleRating  = ratingRaw ? parseFloat(ratingRaw) : undefined
+      let googleReviews: NonNullable<CompleteAddaInput['google_reviews']> = []
+      let googlePhotoUrls: string[] = []
+      try { googleReviews   = JSON.parse(sessionStorage.getItem(SK.v_google_reviews) || '[]') } catch {}
+      try { googlePhotoUrls = JSON.parse(sessionStorage.getItem(SK.v_google_photos)  || '[]') } catch {}
 
       const result = await completeAddaOnboarding({
         name,
         description:             bio || undefined,
         city,
+        neighbourhood,
         address,
+        lat:                     isNaN(lat as number) ? undefined : lat,
+        lng:                     isNaN(lng as number) ? undefined : lng,
         adda_type,
-        capacity_min:            cap.min,
-        capacity_max:            cap.max,
-        capacity_configurations: [],
+        capacity_min:            capMin,
+        capacity_max:            capMax,
+        capacity_configurations: capacityConfigurations,
         amenities,
         pricing_model,
-        pricing_config:          {},
-        contact_whatsapp:        whatsapp || '',
-        contact_email:           email    || '',
+        pricing_config:          buildPricingConfig(rawPricing, rawPricingAmount),
+        available_days,
+        preferred_times,
+        event_preferences,
+        lead_time_weeks,
+        alcohol_license,
+        sound_curfew_time,
+        google_place_types,
+        contact_whatsapp:        whatsapp  || '',
+        contact_email:           email     || '',
         instagram_handle:        instagram || '',
+        google_place_id:         googlePlaceId,
+        google_name:             googleName,
+        phone,
+        website,
+        google_rating:           isNaN(googleRating as number) ? undefined : googleRating,
+        google_reviews:          googleReviews,
+        google_photo_urls:       googlePhotoUrls.length ? googlePhotoUrls : undefined,
       })
 
-      if (result.error) { setIsSubmitting(false); return }
+      if (result.error) {
+        setIsSubmitting(false)
+        setSubmitError(result.error || 'Something went wrong. Please try again.')
+        return
+      }
 
-      clearNewOnboardingKeys()
-      const pending = sessionStorage.getItem('wimc_post_onboarding_redirect')
-      if (pending) { sessionStorage.removeItem('wimc_post_onboarding_redirect'); router.push(pending) }
-      else router.push('/dashboard')
+      try { sessionStorage.setItem(SK.v_slug, result.slug) } catch {}
+      setBSlug(result.slug)
+      // Signal right panel to transition to V9 confirmation view
+      try { sessionStorage.setItem('wimc_v8_revealed', 'true'); window.dispatchEvent(new Event('ob-snap-update')) } catch {}
+      setRevealState('revealed')
     } catch { setIsSubmitting(false) }
+  }
+
+  async function handleContinueToStudio() {
+    if (isLeaving) return
+    setIsLeaving(true)
+    if (isAddMode) {
+      try { await updatePersonas('venue') } catch {}
+    }
+    const dest = pendingRedirect || '/business/venue/studio'
+    try { sessionStorage.removeItem('wimc_post_onboarding_redirect') } catch {}
+    clearNewOnboardingKeys()
+    router.replace(dest)
   }
 
   const isEnabled = email.trim().length > 0
 
-  return (
-    <>
-      <style>{`@keyframes v8-pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }`}</style>
+  // ── Reveal overlay — position:fixed is contained to the left panel ────────────
+  if (revealState === 'revealed') {
+    return (
+      <div style={{
+        position: 'fixed', inset: 0,
+        background: '#07070A',
+        display: 'flex', flexDirection: 'column',
+        alignItems: 'center', justifyContent: 'center',
+        padding: '32px 28px',
+        zIndex: 100,
+        animation: 'v8-reveal 0.5s ease both',
+      }}>
+        <style>{`
+          @keyframes v8-reveal   { 0%{opacity:0} 100%{opacity:1} }
+          @keyframes v8-fade-up  { 0%{opacity:0;transform:translateY(16px)} 100%{opacity:1;transform:translateY(0)} }
+          @keyframes v8-pulse    { 0%,100%{opacity:1} 50%{opacity:0.4} }
+          @keyframes v8-stamp-in { 0%{transform:scale(3) rotate(-12deg);opacity:0} 70%{transform:scale(0.95) rotate(-12deg);opacity:1} 100%{transform:scale(1) rotate(-12deg);opacity:1} }
+          @keyframes v8-line-in  { 0%{width:0} 100%{width:100%} }
+          @keyframes v8-spin-slow{ from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
+        `}</style>
 
-
-      <div style={{ minHeight: '100%', background: '#07070A', overflowY: 'auto', paddingTop: 48, paddingBottom: 96, paddingLeft: 24, paddingRight: 24 }}>
-
-        {/* Venue pass card */}
-        <div style={{ position: 'relative', maxWidth: 360, marginBottom: 40 }}>
-          <div style={{ position: 'absolute', top: 12, right: 12, zIndex: 20 }}>
-            <RubberStamp text={"SPACE\nVERIFIED"} color={ACCENT} size={52} rotate={12} opacity={0.85} animate />
-          </div>
-          <div style={{ background: '#111116', border: `1px solid ${ACCENT}30`, padding: 24 }}>
-            <div style={{ display: 'inline-block', background: ACCENT, padding: '3px 12px', marginBottom: 16 }}>
-              <span style={{ fontFamily: "'DM Sans', sans-serif", fontWeight: 600, fontSize: 10, color: '#1A2744', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Adda verified</span>
-            </div>
-            <div style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 900, fontSize: 28, color: '#ffffff', textTransform: 'uppercase', lineHeight: 1, marginBottom: 6 }}>
-              {bName || 'Your Space'}
-            </div>
-            <div style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 13, color: 'rgba(255,255,255,0.40)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
-              {bCity} · Venue
-            </div>
-            <div style={{ margin: '16px 0', height: 2, background: `repeating-linear-gradient(90deg, ${ACCENT}, ${ACCENT} 3px, transparent 3px, transparent 6px)` }} />
-            <div style={{ display: 'flex', gap: 8 }}>
-              {['0 events hosted', '0 creators'].map((s, i) => (
-                <div key={i} style={{ background: '#07070A', padding: '4px 8px', flex: 1 }}>
-                  <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 10, color: 'rgba(255,255,255,0.30)' }}>{s}</span>
-                </div>
-              ))}
-            </div>
-          </div>
+        {/* Live dot */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 28, animation: 'v8-fade-up 0.4s ease 0.1s both' }}>
+          <div style={{ width: 7, height: 7, borderRadius: '50%', background: '#22C55E', animation: 'v8-pulse 2s ease-in-out infinite' }} />
+          <span style={{ fontFamily: MONO, fontSize: 9, color: '#22C55E', letterSpacing: '0.2em', textTransform: 'uppercase' }}>ADDA LIVE</span>
         </div>
 
-        <h1 style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 900, fontSize: 'clamp(28px,7vw,40px)', color: '#ffffff', lineHeight: 1.05, margin: '0 0 8px', maxWidth: 480 }}>
-          Almost there — how can creators reach you?
-        </h1>
-        <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 15, color: 'rgba(255,255,255,0.45)', margin: '0 0 40px', maxWidth: 400 }}>
-          Add your contact so creators can book your space
+        {/* Overline */}
+        <p style={{ fontFamily: MONO, fontSize: 9, color: `${CORAL}99`, letterSpacing: '0.35em', textTransform: 'uppercase', margin: '0 0 10px', animation: 'v8-fade-up 0.4s ease 0.2s both' }}>
+          — YOUR ADDA IS LIVE —
         </p>
 
-        {/* Contact fields */}
-        <div style={{ maxWidth: 480, display: 'flex', flexDirection: 'column', gap: 24, marginBottom: 40 }}>
-          {[
-            { label: 'Email *', value: email, onChange: setEmail, placeholder: 'your@email.com', required: true },
-            { label: 'WhatsApp', value: whatsapp, onChange: setWhatsapp, placeholder: '+91 XXXXX XXXXX', required: false },
-            { label: 'Instagram', value: instagram, onChange: setInstagram, placeholder: '@yourspace', required: false },
-          ].map(field => (
-            <div key={field.label}>
-              <label style={{ display: 'block', fontFamily: "'DM Sans', sans-serif", fontSize: 13, color: 'rgba(255,255,255,0.40)', marginBottom: 8 }}>
-                {field.label}
-              </label>
-              <input
-                type="text"
-                value={field.value}
-                onChange={e => field.onChange(e.target.value)}
-                placeholder={field.placeholder}
-                style={{ width: '100%', background: 'transparent', border: 'none', borderBottom: `1px solid ${field.value ? ACCENT : 'rgba(255,255,255,0.15)'}`, fontFamily: "'DM Sans', sans-serif", fontWeight: 400, fontSize: 18, color: '#ffffff', outline: 'none', paddingBottom: 8, caretColor: ACCENT, transition: 'border-color 200ms' }}
-              />
+        {/* Name */}
+        <h1 style={{
+          fontFamily: ABRIL, fontSize: 'clamp(30px, 8vw, 48px)',
+          color: '#F0EFF8', lineHeight: 1.0, margin: '0 0 32px',
+          textAlign: 'center', textTransform: 'uppercase',
+          animation: 'v8-fade-up 0.5s ease 0.3s both',
+        }}>
+          {bName}
+        </h1>
+
+        {/* Notice-board card */}
+        <div style={{
+          position: 'relative', width: '100%', maxWidth: 320, marginBottom: 36,
+          animation: 'v8-fade-up 0.6s cubic-bezier(0.175,0.885,0.32,1.275) 0.4s both',
+        }}>
+          {/* Thumbtack */}
+          <div style={{
+            position: 'absolute', top: -8, left: '50%', transform: 'translateX(-50%)',
+            width: 13, height: 13, borderRadius: '50%',
+            background: '#3A3A3A', boxShadow: '0 2px 6px rgba(0,0,0,0.6)',
+            zIndex: 20, border: '1px solid #222',
+          }} />
+
+          <div style={{
+            background: '#FAF7F0',
+            boxShadow: `8px 8px 0px 0px ${ACCENT}`,
+            overflow: 'hidden', position: 'relative',
+          }}>
+            {/* Card header bar */}
+            <div style={{
+              background: ACCENT, padding: '9px 18px',
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            }}>
+              <span style={{ fontFamily: MONO, fontSize: 9, color: NAVY, letterSpacing: '0.18em', textTransform: 'uppercase', fontWeight: 700 }}>
+                SPACE FOR HIRE
+              </span>
+              <span style={{ fontSize: 14 }}>🏛️</span>
             </div>
-          ))}
+
+            {/* Body */}
+            <div style={{ padding: '16px 20px', position: 'relative' }}>
+              {/* LISTED stamp */}
+              <div style={{
+                position: 'absolute', inset: 0,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                pointerEvents: 'none', zIndex: 10,
+              }}>
+                <div style={{
+                  border: `4px solid ${ACCENT}`, padding: '5px 18px',
+                  background: 'rgba(250,247,240,0.92)',
+                  boxShadow: '0 8px 20px rgba(0,0,0,0.18)',
+                  animation: 'v8-stamp-in 0.5s cubic-bezier(0.175,0.885,0.32,1.275) 0.75s both',
+                }}>
+                  <span style={{ fontFamily: OUTFIT, fontWeight: 900, fontSize: 30, color: ACCENT, lineHeight: 1, display: 'block' }}>LISTED</span>
+                  <span style={{ fontFamily: MONO, fontSize: 8, color: ACCENT, letterSpacing: '0.3em', display: 'block', marginTop: 2 }}>ADDA PROFILE</span>
+                </div>
+              </div>
+
+              <p style={{ fontFamily: OUTFIT, fontWeight: 900, fontSize: 20, color: NAVY, textTransform: 'uppercase', lineHeight: 1, margin: '0 0 12px' }}>
+                {bName}
+              </p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                {[
+                  { emoji: '📍', value: bCity },
+                ].filter(r => r.value).map((row, i) => (
+                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span style={{ fontSize: 11 }}>{row.emoji}</span>
+                    <span style={{ fontFamily: MONO, fontSize: 10, color: NAVY, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                      {row.value}
+                    </span>
+                  </div>
+                ))}
+              </div>
+              <div style={{ height: 1, background: 'rgba(26,39,68,0.12)', margin: '10px 0' }} />
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontFamily: MONO, fontSize: 7.5, color: 'rgba(26,39,68,0.45)', textTransform: 'uppercase', letterSpacing: '0.12em' }}>BOOK VIA WIMC</span>
+                <div style={{ background: ACCENT, padding: '2px 7px', fontFamily: MONO, fontSize: 7.5, color: NAVY, fontWeight: 700, letterSpacing: '0.10em', textTransform: 'uppercase' }}>
+                  CULTURE PARTNER
+                </div>
+              </div>
+            </div>
+          </div>
+          <div style={{ height: 3, background: ACCENT, animation: 'v8-line-in 0.5s ease 1.1s both' }} />
         </div>
 
-        {/* Bio */}
-        <div style={{ maxWidth: 480 }}>
-          <label style={{ display: 'block', fontFamily: "'DM Sans', sans-serif", fontSize: 13, color: 'rgba(255,255,255,0.40)', marginBottom: 8 }}>
-            About your space <span style={{ color: 'rgba(255,255,255,0.20)' }}>(optional)</span>
-          </label>
-          <textarea
-            value={bio}
-            onChange={e => setBio(e.target.value)}
-            placeholder="Tell creators what makes your space special..."
-            maxLength={500}
-            rows={4}
-            style={{ width: '100%', background: 'transparent', border: 'none', borderBottom: `1px solid ${bio ? ACCENT : 'rgba(255,255,255,0.15)'}`, fontFamily: "'DM Sans', sans-serif", fontSize: 16, color: '#ffffff', outline: 'none', resize: 'none', paddingBottom: 8, caretColor: ACCENT, lineHeight: 1.5, boxSizing: 'border-box', transition: 'border-color 200ms' }}
-          />
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 8 }}>
-            <button type="button" onClick={handleSuggestBio} disabled={suggestLoading}
-              style={{ background: 'none', border: 'none', fontFamily: "'DM Sans', sans-serif", fontSize: 13, color: `${ACCENT}80`, cursor: 'pointer', padding: 0 }}
-            >
-              ✦ {suggestLoading ? 'Generating...' : 'Try a suggestion'}
-            </button>
-            <span style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 12, color: 'rgba(255,255,255,0.20)' }}>{bio.length}/500</span>
+        {/* CTA */}
+        <div style={{ width: '100%', maxWidth: 320, animation: 'v8-fade-up 0.4s ease 1.2s both' }}>
+          <button
+            type="button"
+            onClick={handleContinueToStudio}
+            disabled={isLeaving}
+            style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              width: '100%', background: ACCENT, color: NAVY,
+              fontFamily: MONO, fontWeight: 700, fontSize: 12,
+              letterSpacing: '0.10em', textTransform: 'uppercase',
+              padding: '15px 20px', border: `1px solid ${NAVY}`,
+              boxShadow: '5px 5px 0px 0px rgba(0,0,0,0.9)',
+              cursor: isLeaving ? 'default' : 'pointer',
+              opacity: isLeaving ? 0.6 : 1,
+            }}
+          >
+            <span>Continue to your Adda page</span>
+            <span className="material-symbols-outlined" style={{ fontSize: 17 }}>arrow_forward</span>
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  // ── Form ──────────────────────────────────────────────────────────────────────
+  return (
+    <>
+      <div style={{ flex: 1, overflowY: 'auto', paddingBottom: 96 }}>
+        <div style={{ padding: '28px 28px 0' }}>
+
+          {/* ── Headline ────────────────────────────────────────────────── */}
+          <p style={{ fontFamily: BARLOW, fontWeight: 600, fontSize: 10, letterSpacing: '0.3em', textTransform: 'uppercase', color: `${ACCENT}99`, margin: '0 0 8px' }}>
+            — CLOSING THE LOOP
+          </p>
+          <h1 style={{ fontFamily: ABRIL, fontSize: 'clamp(26px, 5vw, 38px)', color: '#F0EFF8', lineHeight: 1.05, margin: '0 0 6px' }}>
+            Last few details.
+          </h1>
+          <p style={{ fontFamily: DM, fontSize: 14, color: '#9896B0', margin: '0 0 36px', lineHeight: 1.6 }}>
+            How should creators reach you? What should they know?
+          </p>
+
+          {/* ── Contact fields ──────────────────────────────────────────── */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 32, marginBottom: 40 }}>
+
+            {/* WhatsApp */}
+            <div>
+              <label style={{ fontFamily: MONO, fontSize: 10, color: '#F0EFF8', textTransform: 'uppercase', letterSpacing: '0.20em', display: 'block', marginBottom: 8 }}>
+                WHATSAPP NUMBER
+              </label>
+              <div style={{ display: 'flex', alignItems: 'center', borderBottom: `2px solid ${focusWa ? CORAL : '#b9c6eb50'}`, transition: 'border-color 150ms' }}>
+                <span style={{ fontFamily: MONO, fontSize: 15, color: ACCENT, flexShrink: 0, paddingRight: 8, userSelect: 'none' }}>+91</span>
+                <div style={{ width: 1, height: 16, background: '#b9c6eb30', flexShrink: 0, marginRight: 8, alignSelf: 'center' }} />
+                <input
+                  type="tel"
+                  inputMode="numeric"
+                  maxLength={10}
+                  value={whatsapp}
+                  onChange={e => {
+                    const digits = e.target.value.replace(/\D/g, '').slice(0, 10)
+                    setWhatsapp(digits)
+                    if (whatsappError) setWhatsappError(null)
+                    syncContact(digits, email, instagram, bio)
+                  }}
+                  onFocus={() => setFocusWa(true)}
+                  onBlur={() => setFocusWa(false)}
+                  placeholder="98765 43210"
+                  style={{
+                    flex: 1, background: 'transparent', border: 'none', outline: 'none',
+                    padding: '8px 28px 8px 0',
+                    fontFamily: DM, fontSize: 16, color: '#F0EFF8', caretColor: CORAL,
+                    boxSizing: 'border-box',
+                  }}
+                />
+                <span className="material-symbols-outlined" style={{ fontSize: 18, lineHeight: 1, color: focusWa ? CORAL : 'rgba(185,198,235,0.50)', transition: 'color 150ms' }}>
+                  call
+                </span>
+              </div>
+              {whatsappError && (
+                <span style={{ fontFamily: MONO, fontSize: 10, color: '#ffb4a6', letterSpacing: '0.05em', display: 'block', marginTop: 4 }}>
+                  ⚠ {whatsappError}
+                </span>
+              )}
+            </div>
+
+            {/* Email */}
+            <div>
+              <label style={{ fontFamily: MONO, fontSize: 10, color: '#F0EFF8', textTransform: 'uppercase', letterSpacing: '0.20em', display: 'block', marginBottom: 8 }}>
+                VENUE EMAIL <span style={{ color: CORAL }}>*</span>
+              </label>
+              <div style={{ position: 'relative' }}>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={e => { setEmail(e.target.value); syncContact(whatsapp, e.target.value, instagram, bio) }}
+                  onFocus={() => setFocusEmail(true)}
+                  onBlur={() => setFocusEmail(false)}
+                  placeholder="official@yourvenue.in"
+                  style={{
+                    width: '100%', background: 'transparent', border: 'none',
+                    borderBottom: `2px solid ${focusEmail ? CORAL : '#b9c6eb50'}`,
+                    outline: 'none', padding: '8px 28px 8px 0',
+                    fontFamily: DM, fontSize: 16, color: '#F0EFF8', caretColor: CORAL,
+                    transition: 'border-color 150ms', boxSizing: 'border-box',
+                  }}
+                />
+                <span className="material-symbols-outlined" style={{
+                  position: 'absolute', right: 0, top: '50%', transform: 'translateY(-50%)',
+                  fontSize: 18, lineHeight: 1,
+                  color: focusEmail ? CORAL : 'rgba(185,198,235,0.50)', transition: 'color 150ms',
+                }}>
+                  mail
+                </span>
+              </div>
+            </div>
+
+            {/* Instagram */}
+            <div>
+              <label style={{ fontFamily: MONO, fontSize: 10, color: '#F0EFF8', textTransform: 'uppercase', letterSpacing: '0.20em', display: 'block', marginBottom: 8 }}>
+                INSTAGRAM HANDLE
+              </label>
+              <div style={{
+                display: 'flex', alignItems: 'center', gap: 8,
+                borderBottom: `2px solid ${focusIg ? CORAL : '#b9c6eb50'}`,
+                paddingBottom: 8, transition: 'border-color 150ms',
+              }}>
+                <span style={{ fontFamily: DM, fontSize: 16, color: ACCENT, flexShrink: 0, lineHeight: 1 }}>@</span>
+                <input
+                  type="text"
+                  value={instagram}
+                  onChange={e => { const v = e.target.value.replace(/^@/, ''); setInstagram(v); syncContact(whatsapp, email, v, bio) }}
+                  onFocus={() => setFocusIg(true)}
+                  onBlur={() => setFocusIg(false)}
+                  placeholder="your_venue_handle"
+                  style={{
+                    flex: 1, background: 'transparent', border: 'none', outline: 'none',
+                    padding: 0, fontFamily: DM, fontSize: 16, color: '#F0EFF8', caretColor: CORAL,
+                  }}
+                />
+              </div>
+            </div>
           </div>
+
+          {/* ── Bio textarea ────────────────────────────────────────────── */}
+          <div style={{ marginBottom: 32 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+              <label style={{ fontFamily: MONO, fontSize: 10, color: '#F0EFF8', textTransform: 'uppercase', letterSpacing: '0.20em' }}>
+                PUBLIC BIO / DESCRIPTION
+              </label>
+              <span style={{ fontFamily: MONO, fontSize: 10, color: '#9896B0' }}>
+                {bio.length} / 500
+              </span>
+            </div>
+            <div style={{ position: 'relative' }}>
+              <textarea
+                value={bio}
+                onChange={e => { setBio(e.target.value); syncContact(whatsapp, email, instagram, e.target.value) }}
+                onFocus={() => setFocusBio(true)}
+                onBlur={() => setFocusBio(false)}
+                placeholder="Describe the vibe, the history, and the soul of your space..."
+                maxLength={500}
+                rows={5}
+                style={{
+                  width: '100%', background: '#09090E',
+                  border: `2px solid ${focusBio ? ACCENT : 'rgba(255,255,255,0.12)'}`,
+                  outline: 'none', padding: '14px 14px 48px',
+                  fontFamily: DM, fontSize: 14, color: '#F0EFF8', caretColor: ACCENT,
+                  resize: 'none', lineHeight: 1.6,
+                  boxSizing: 'border-box', transition: 'border-color 150ms',
+                }}
+              />
+              <button
+                type="button"
+                onClick={handleSuggestBio}
+                disabled={suggestLoading}
+                style={{
+                  position: 'absolute', bottom: 10, right: 10,
+                  display: 'flex', alignItems: 'center', gap: 5,
+                  background: '#07070A',
+                  color: suggestLoading ? 'rgba(255,255,255,0.30)' : '#F0EFF8',
+                  fontFamily: MONO, fontWeight: 700, fontSize: 10,
+                  letterSpacing: '0.08em', textTransform: 'uppercase',
+                  padding: '6px 10px', border: `1px solid rgba(255,255,255,0.12)`,
+                  cursor: suggestLoading ? 'wait' : 'pointer',
+                  opacity: suggestLoading ? 0.6 : 1, transition: 'all 150ms',
+                }}
+              >
+                <span className="material-symbols-outlined" style={{ fontSize: 13, lineHeight: 1, fontVariationSettings: "'FILL' 1" }}>
+                  {suggestLoading ? 'pending' : 'auto_awesome'}
+                </span>
+                {suggestLoading ? '...' : 'SUGGEST'}
+              </button>
+            </div>
+          </div>
+
+          {/* ── Identity check strip ────────────────────────────────────── */}
+          <div style={{
+            padding: '14px 18px',
+            border: `2px dashed ${ACCENT}`,
+            background: `${ACCENT}08`,
+            display: 'flex', alignItems: 'center', gap: 14,
+          }}>
+            <span className="material-symbols-outlined" style={{ fontSize: 22, color: ACCENT, fontVariationSettings: "'FILL' 1", lineHeight: 1, flexShrink: 0 }}>
+              verified
+            </span>
+            <div>
+              <div style={{ fontFamily: BARLOW, fontWeight: 700, fontSize: 16, color: '#F0EFF8', lineHeight: 1.1 }}>
+                Identity Check
+              </div>
+              <div style={{ fontFamily: DM, fontSize: 11, color: '#9896B0', marginTop: 2 }}>
+                Contact details stamped to your Adda profile.
+              </div>
+            </div>
+          </div>
+
         </div>
       </div>
 
-      <footer style={{ position: 'fixed', bottom: 0, left: 0, right: 0, height: 72, zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 24px', background: 'linear-gradient(to top, #07070A 60%, transparent 100%)' }}>
-        <button type="button" onClick={() => router.push('/onboarding/business/V7')} style={{ background: 'none', border: 'none', fontFamily: "'DM Sans', sans-serif", fontSize: 15, color: 'rgba(255,255,255,0.30)', cursor: 'pointer', padding: 0 }}>← Back</button>
-        <button type="button" onClick={handleDone} disabled={!isEnabled || isSubmitting}
-          style={{ background: isEnabled ? ACCENT : 'rgba(255,255,255,0.10)', color: isEnabled ? '#07070A' : 'rgba(255,255,255,0.20)', fontFamily: "'DM Sans', sans-serif", fontWeight: 600, fontSize: 15, padding: '12px 32px', border: 'none', cursor: isEnabled ? 'pointer' : 'not-allowed', opacity: isSubmitting ? 0.7 : 1, transition: 'background 200ms' }}
-        >
-          {isSubmitting ? 'Saving...' : 'Claim my space →'}
-        </button>
+      {/* ── Footer ── contained in left panel via layout's transform ──────────── */}
+      <footer style={{
+        position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 50,
+        height: 80, display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        padding: '0 24px',
+        background: '#1A274490',
+        borderTop: '1px dashed rgba(93,217,208,0.18)',
+        backdropFilter: 'blur(8px)',
+      }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+          <span style={{ fontFamily: MONO, fontSize: 9, color: 'rgba(255,255,255,0.30)', letterSpacing: '0.10em', textTransform: 'uppercase' }}>
+            STEP 06 / 06
+          </span>
+          <span style={{ fontFamily: MONO, fontSize: 9, color: ACCENT, letterSpacing: '0.10em', textTransform: 'uppercase' }}>
+            {isEnabled ? 'READY TO STAMP' : 'AWAITING EMAIL'}
+          </span>
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8 }}>
+          {submitError && (
+            <div style={{
+              background: 'rgba(255,180,166,0.1)', border: '1px solid rgba(255,180,166,0.3)',
+              padding: '5px 10px', fontFamily: MONO, fontSize: 10, color: '#ffb4a6',
+              letterSpacing: '0.05em', maxWidth: 220, textAlign: 'right',
+            }}>
+              ⚠ {submitError}
+            </div>
+          )}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+            <button
+              type="button"
+              onClick={() => router.push('/onboarding/business/V7')}
+              style={{
+                background: 'none', border: 'none',
+                fontFamily: DM, fontSize: 14, color: 'rgba(255,255,255,0.25)',
+                cursor: 'pointer', padding: 0,
+              }}
+            >
+              ← Back
+            </button>
+            <button
+              type="button"
+              onClick={handleDone}
+              disabled={!isEnabled || isSubmitting}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 8,
+                background: isEnabled ? ACCENT : `${ACCENT}30`,
+                color: isEnabled ? NAVY : `${NAVY}66`,
+                fontFamily: BARLOW, fontWeight: 700, fontSize: 16,
+                letterSpacing: '0.08em', textTransform: 'uppercase',
+                padding: '12px 22px', border: 'none',
+                boxShadow: isEnabled ? '6px 6px 0px 0px rgba(0,0,0,0.9)' : 'none',
+                cursor: isEnabled ? 'pointer' : 'not-allowed',
+                opacity: isSubmitting ? 0.7 : 1, transition: 'all 150ms',
+              }}
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: 17, lineHeight: 1 }}>
+                arrow_forward
+              </span>
+              {isSubmitting ? 'Saving…' : 'DONE. LET ME IN.'}
+            </button>
+          </div>
+        </div>
       </footer>
+
+      <style>{`
+        @keyframes v8-spin-slow { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+      `}</style>
     </>
   )
 }

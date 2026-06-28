@@ -104,6 +104,7 @@ export async function createEvent(
     google_maps_url,
     early_access_at,
     ticket_tiers,
+    rsvp_style,
   } = parsed.data
 
   // When fan tiers are set, derive a representative flat price for Razorpay
@@ -149,6 +150,7 @@ export async function createEvent(
       // google_maps_url: google_maps_url || null,  // re-enable after migration 004 is applied
       early_access_at: early_access_at ?? null,
       ticket_tiers: ticket_tiers?.length ? (ticket_tiers as unknown as import('@/types/database').Json) : null,
+      rsvp_style: rsvp_style ?? 'ticketed',
       slug,
     })
     .select()

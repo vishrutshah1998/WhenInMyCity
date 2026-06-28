@@ -2,8 +2,10 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import { WimcWordmark } from '@/components/WimcWordmark'
 import type { ShowcasedCreator } from '@/app/actions/hallOfLights'
 import type { UserTier } from '@/types/marketplace'
+import { cityToSlug } from '@/lib/profile-url'
 
 // ---------------------------------------------------------------------------
 // Tier meta
@@ -78,7 +80,7 @@ function CreatorAvatar({ creator }: { creator: ShowcasedCreator }) {
 function CreatorCard({ creator, cohort = false }: { creator: ShowcasedCreator; cohort?: boolean }) {
   const meta = TIER_META[creator.userTier]
   return (
-    <Link href={`/${creator.username}`} style={{ textDecoration: 'none' }}>
+    <Link href={`/${cityToSlug(creator.cityId)}/${creator.username}`} style={{ textDecoration: 'none' }}>
       <div
         style={{
           background: cohort ? meta.gradient : 'var(--wimc-bg-elevated)',
@@ -224,11 +226,8 @@ export default function HallClient({ creators, viewerCity, viewerTier }: Props) 
         padding: '0 32px', height: 60,
         display: 'flex', alignItems: 'center', gap: 16,
       }}>
-        <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: 8, textDecoration: 'none', color: 'var(--wimc-text-primary)' }}>
-          <div style={{ width: 26, height: 26, background: 'var(--wimc-coral)', borderRadius: 7, display: 'grid', placeItems: 'center' }}>
-            <span style={{ fontSize: 13, fontWeight: 900, color: '#fff', fontFamily: 'var(--font-syne)' }}>W</span>
-          </div>
-          <span style={{ fontFamily: 'var(--font-syne)', fontWeight: 700, fontSize: 15 }}>WIMC</span>
+        <Link href="/" style={{ display: 'flex', alignItems: 'center', textDecoration: 'none' }}>
+          <WimcWordmark color="#E8705A" height={20} />
         </Link>
         <span style={{ color: 'var(--wimc-border-default)' }}>·</span>
         <span style={{ fontFamily: 'var(--font-syne)', fontWeight: 600, fontSize: 14, color: '#a855f7' }}>

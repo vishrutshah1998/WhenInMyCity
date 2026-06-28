@@ -1,13 +1,16 @@
 // =============================================================================
 // WIMC — Adda Tier Evaluation Cron
 //
-// Recommended schedule: 0 21 1 * *  (1st of each month at 21:00 UTC / 2:30 IST)
+// Schedule: 0 21 * * 1  (every Monday at 21:00 UTC / 2:30 AM IST Tuesday)
 // Vercel automatically injects `Authorization: Bearer <CRON_SECRET>`.
 //
 // Trust axis:  evaluates every active Adda against Open/Verified/Beloved/Legendary
-// Velocity overlay: recomputes Trending status per city
+// Velocity overlay: recomputes Trending status per city (final page only)
 //
-// Returns: { evaluated, upgraded, downgraded, trendingGranted, trendingCleared }
+// Cursor pagination: pass ?cursor=<last_processed_id> to resume from a prior page.
+// Each invocation fetches PAGE_SIZE addas. When nextCursor is non-null, more pages remain.
+//
+// Returns: { evaluated, upgraded, downgraded, trendingGranted, trendingCleared, cities, nextCursor, done }
 // =============================================================================
 
 import { NextRequest, NextResponse } from 'next/server'
@@ -28,6 +31,13 @@ function isAuthorized(request: NextRequest): boolean {
   }
   return request.headers.get('authorization') === `Bearer ${cronSecret}`
 }
+
+// ---------------------------------------------------------------------------
+// Pagination constants
+// ---------------------------------------------------------------------------
+
+const PAGE_SIZE  = 500  // addas fetched per invocation
+const BATCH_SIZE = 10   // concurrent evaluations within a page
 
 // ---------------------------------------------------------------------------
 // Tier ordering (trust axis only — Trending is an overlay)
@@ -51,26 +61,46 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
   const admin = createAdminClient()
 
-  // ── 1. Trust-axis evaluation for all active addas ─────────────────────────
-  const { data: allAddas, error: fetchError } = await admin
+  const { searchParams } = new URL(request.url)
+  const cursor = searchParams.get('cursor') ?? ''
+
+  // ── 1. Trust-axis evaluation (paginated) ──────────────────────────────────
+  let query = admin
     .from('adda_profiles')
     .select('id, adda_tier, name, auth_user_id')
     .eq('is_active', true)
+    .order('id', { ascending: true })
+    .limit(PAGE_SIZE)
+
+  if (cursor) {
+    query = query.gt('id', cursor)
+  }
+
+  const { data: addas, error: fetchError } = await query
 
   if (fetchError) {
     console.error('[evaluate-adda-tiers] failed to fetch addas', fetchError.message)
     return NextResponse.json({ error: 'Failed to fetch addas' }, { status: 500 })
   }
 
+  if (!addas || addas.length === 0) {
+    console.info('[evaluate-adda-tiers] no addas to evaluate for cursor', cursor || 'start')
+    return NextResponse.json({
+      evaluated: 0, upgraded: 0, downgraded: 0,
+      trendingGranted: 0, trendingCleared: 0, cities: 0,
+      nextCursor: null, done: true,
+    })
+  }
+
+  console.info(`[evaluate-adda-tiers] page: ${addas.length} addas, cursor: ${cursor || 'start'}`)
+
   let evaluated  = 0
   let upgraded   = 0
   let downgraded = 0
   const errors: string[] = []
 
-  const BATCH_SIZE = 5
-
-  for (let i = 0; i < (allAddas ?? []).length; i += BATCH_SIZE) {
-    const batch = (allAddas ?? []).slice(i, i + BATCH_SIZE)
+  for (let i = 0; i < addas.length; i += BATCH_SIZE) {
+    const batch = addas.slice(i, i + BATCH_SIZE)
 
     await Promise.all(
       batch.map(async (adda) => {
@@ -79,8 +109,8 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
           evaluated++
 
           if (result.tierChanged) {
-            const prevRank = TIER_ORDER[result.previousTier]
-            const newRank  = TIER_ORDER[result.newTier]
+            const prevRank  = TIER_ORDER[result.previousTier]
+            const newRank   = TIER_ORDER[result.newTier]
             const isUpgrade = newRank > prevRank
 
             if (isUpgrade) {
@@ -116,28 +146,37 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     )
   }
 
-  // ── 2. Trending overlay — recompute per city ──────────────────────────────
-  const { data: cities } = await admin
-    .from('adda_profiles')
-    .select('city')
-    .eq('is_active', true)
+  const lastAdda   = addas[addas.length - 1]
+  const nextCursor = addas.length === PAGE_SIZE ? lastAdda.id : null
+  const isLastPage = nextCursor === null
 
-  const distinctCities = [...new Set((cities ?? []).map((c) => c.city))]
-
+  // ── 2. Trending overlay — runs on the final page only ────────────────────
+  // Running on every page would produce duplicate/incorrect trending results.
   let trendingGranted = 0
   let trendingCleared = 0
+  let citiesCount     = 0
 
-  for (const city of distinctCities) {
-    try {
-      const trendingResults = await computeTrendingAddas(city)
-      for (const r of trendingResults) {
-        if (r.isTrending) trendingGranted++
-        else trendingCleared++
+  if (isLastPage) {
+    const { data: cityRows } = await admin
+      .from('adda_profiles')
+      .select('city')
+      .eq('is_active', true)
+
+    const distinctCities = [...new Set((cityRows ?? []).map((c) => c.city))]
+    citiesCount = distinctCities.length
+
+    for (const city of distinctCities) {
+      try {
+        const trendingResults = await computeTrendingAddas(city)
+        for (const r of trendingResults) {
+          if (r.isTrending) trendingGranted++
+          else trendingCleared++
+        }
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err)
+        console.error('[evaluate-adda-tiers] trending error', { city, error: msg })
+        errors.push(`city:${city} — ${msg}`)
       }
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err)
-      console.error('[evaluate-adda-tiers] trending error', { city, error: msg })
-      errors.push(`city:${city} — ${msg}`)
     }
   }
 
@@ -147,11 +186,13 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     downgraded,
     trendingGranted,
     trendingCleared,
-    cities: distinctCities.length,
+    cities: citiesCount,
+    nextCursor,
+    done: isLastPage,
     ...(errors.length ? { errors } : {}),
   }
 
-  console.info('[evaluate-adda-tiers] run complete', result)
+  console.info('[evaluate-adda-tiers] page complete', result)
   return NextResponse.json(result)
 }
 
@@ -169,7 +210,7 @@ const ADDA_TIER_LABELS: Record<AddaTier, string> = {
 function buildAddaUpgradeMessage(addaName: string, newTier: AddaTier): string {
   return (
     `🎉 *${addaName}* has been upgraded to *${ADDA_TIER_LABELS[newTier]} Adda* status on WIMC! ` +
-    `Your venue's reputation is growing — keep hosting great events.`
+    `Your Adda's reputation is growing — keep hosting great events.`
   )
 }
 

@@ -4,9 +4,14 @@ import { createClient } from '@/lib/supabase/server'
 import StudioClient from './StudioClient'
 import { resolveTheme } from '@/types/theme'
 
-export default async function StudioPage() {
+export default async function StudioPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ reveal?: string }>
+}) {
   const { profile } = await requireProfile()
   const supabase = await createClient()
+  const sp = await searchParams
 
   const [{ data: blocks }, { data: events }] = await Promise.all([
     supabase
@@ -32,6 +37,7 @@ export default async function StudioPage() {
         initialBlocks={blocks ?? []}
         upcomingEvents={events ?? []}
         theme={theme}
+        showRevealBanner={sp.reveal === 'true'}
       />
     </Suspense>
   )

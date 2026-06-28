@@ -5,10 +5,11 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { motion, useMotionValue, useSpring, useTransform, animate } from 'framer-motion'
 import type { MotionValue } from 'framer-motion'
-import { WimcLogo } from '@/components/WimcLogo'
+import Image from 'next/image'
+import { WimcWordmark } from '@/components/WimcWordmark'
 
 const E = [0.22, 1, 0.36, 1] as const
-const NAV_H = 120
+const NAV_H = 100
 const STUB_H = 34  // bottom info strip height (fixed px)
 
 // ── Horizontal tear-edge geometry ────────────────────────────────────────
@@ -79,7 +80,7 @@ const EVENT_TAGS = [
   { label: 'Music Gigs',    color: '#F5A800' },
 ]
 const MAKER_FEATURES = ['Ticketed events with UPI checkout','Link-in-bio page at /{username}','Keep 75–90% of every rupee earned']
-const ADDA_FEATURES  = ['Verified listing in creator search','Booking calendar & venue proposals','Revenue from idle evening slots']
+const ADDA_FEATURES  = ['Verified listing in creator search','Booking calendar & Adda proposals','Revenue from idle evening slots']
 
 const TICKET_META = [
   { serial: 'WIMC·001', type: 'ENTRY PASS',   accent: '#E8705A', stub: 'GENERAL ADMISSION · INDIA · 2025',          bg: '#0B0807' },
@@ -144,7 +145,7 @@ function ShrutiPhoneMockup({ fast, revealDelay }: { fast: boolean; revealDelay: 
           </div>
           <div className="mx-6 mb-3 px-4 py-2 rounded-xl flex items-center gap-2" style={{ background: 'rgba(255,255,255,0.04)' }}>
             <span className="material-symbols-outlined" style={{ fontSize: '13px', color: 'rgba(255,255,255,0.2)' }}>lock</span>
-            <span className="font-mono text-[12px]" style={{ color: 'rgba(255,255,255,0.3)' }}>wimcity.in/shruti</span>
+            <span className="font-mono text-[12px]" style={{ color: 'rgba(255,255,255,0.3)' }}>wheninmycity.com/shruti</span>
           </div>
           <div className="relative px-6 pt-4 pb-5" style={{ background: 'linear-gradient(170deg, rgba(232,112,90,0.14) 0%, rgba(245,168,0,0.04) 50%, transparent 100%)' }}>
             <div className="flex justify-center mb-3">
@@ -227,7 +228,7 @@ function UsernameClaimInput() {
   function handleClaim() {
     const cleaned = username.trim().toLowerCase().replace(/[^a-z0-9_]/g, '')
     try { if (cleaned) sessionStorage.setItem('wimc_claimed_username', cleaned) } catch { /* ignore */ }
-    router.push('/signin?next=/onboarding/screen-1')
+    router.push('/signin?next=/onboarding')
   }
   return (
     <div className="w-full max-w-md">
@@ -507,14 +508,22 @@ function HeroFace({ revealDelay, fast, badgeX, badgeY, pmX, pmY, onMouseMove }: 
             initial={{ opacity: 0, y: fast ? 14 : 24 }} animate={{ opacity: 1, y: 0 }}
             transition={{ duration: fast ? 0.35 : 0.78, ease: E, delay: d0 + (fast ? 0.28 : 0.65) }}>
             <p className="text-base md:text-[17px] leading-relaxed text-[#9896B0] max-w-md">
-              WIMC is where India&apos;s Tier-2 cities build their offline culture — connecting creators who perform, venues that host, and communities who show up.
+              WIMC is where India&apos;s Tier-2 cities build their offline culture — connecting creators who perform, Addas (local spaces) that host, and communities who show up.
             </p>
             <div className="flex flex-col gap-3 shrink-0">
-              <Link href="/signin?next=/onboarding/screen-1" className="inline-flex items-center gap-2 px-6 py-3 text-sm font-bold tracking-wide text-[#07070A] bg-white hover:bg-[#E8E7F0] transition-colors" style={{ borderRadius: 0 }}>
+              <Link href="/signin?next=/onboarding" className="inline-flex items-center gap-2 px-6 py-3 text-sm font-bold tracking-wide text-[#07070A] bg-white hover:bg-[#E8E7F0] transition-colors" style={{ borderRadius: 0 }}>
                 Start for free <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>arrow_forward</span>
               </Link>
               <Link href="/explore" className="inline-flex items-center gap-2 px-6 py-3 font-mono text-[11px] tracking-[0.12em] uppercase text-[#9896B0] hover:text-white transition-colors" style={{ border: '1px solid rgba(255,255,255,0.09)', borderRadius: 0 }}>
                 Browse events <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>arrow_forward</span>
+              </Link>
+              <Link
+                href="/vishrut_797"
+                className="inline-flex items-center gap-2 font-mono text-[11px] uppercase tracking-widest text-white/40 hover:text-white/70 transition-colors border-b border-white/20 hover:border-white/40 pb-[2px] self-start"
+                style={{ borderRadius: 0 }}
+              >
+                <span className="material-symbols-outlined" style={{ fontSize: '14px' }}>open_in_new</span>
+                SEE AN EXAMPLE PAGE
               </Link>
             </div>
           </motion.div>
@@ -652,7 +661,7 @@ function RolesFace({ revealDelay, fast }: { revealDelay: number; fast: boolean }
 
           <div className="grid md:grid-cols-2 gap-4">
             <motion.div initial={{ opacity: 0, x: fast ? -22 : -48 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: dur, ease: E, delay: revealDelay + 0.07 }}>
-              <Link href="/signin?next=/onboarding/screen-1" className="group block overflow-hidden transition-all duration-300 hover:-translate-y-1" style={{ outline: '1px solid rgba(232,112,90,0.22)', borderRadius: 0 }}>
+              <Link href="/signin?next=/onboarding" className="group block overflow-hidden transition-all duration-300 hover:-translate-y-1" style={{ outline: '1px solid rgba(232,112,90,0.22)', borderRadius: 0 }}>
                 <div className="relative overflow-hidden px-7 pt-7 pb-8 md:px-9" style={{ background: '#E8705A', minHeight: '140px' }}>
                   <div aria-hidden className="absolute bottom-[-16px] right-[-8px] font-display font-black leading-none select-none pointer-events-none" style={{ fontSize: 'clamp(100px, 14vw, 180px)', color: 'rgba(255,255,255,0.09)', letterSpacing: '-0.06em' }}>01</div>
                   <div className="absolute top-4 right-5 text-right" style={{ opacity: 0.45 }}>
@@ -684,7 +693,7 @@ function RolesFace({ revealDelay, fast }: { revealDelay: number; fast: boolean }
             </motion.div>
 
             <motion.div initial={{ opacity: 0, x: fast ? 22 : 48 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: dur, ease: E, delay: revealDelay + 0.14 }}>
-              <Link href="/signin?next=/adda/onboard" className="group block overflow-hidden transition-all duration-300 hover:-translate-y-1" style={{ outline: '1px solid rgba(93,217,208,0.18)', borderRadius: 0 }}>
+              <Link href="/signin?next=%2Fonboarding%3Fpersona%3Dvenue" className="group block overflow-hidden transition-all duration-300 hover:-translate-y-1" style={{ outline: '1px solid rgba(93,217,208,0.18)', borderRadius: 0 }}>
                 <div className="relative overflow-hidden px-7 pt-7 pb-8 md:px-9" style={{ background: '#5DD9D0', minHeight: '140px' }}>
                   <div aria-hidden className="absolute bottom-[-16px] right-[-8px] font-display font-black leading-none select-none pointer-events-none" style={{ fontSize: 'clamp(100px, 14vw, 180px)', color: 'rgba(0,0,0,0.07)', letterSpacing: '-0.06em' }}>02</div>
                   <div className="absolute top-4 right-5 text-right" style={{ opacity: 0.4 }}>
@@ -722,13 +731,13 @@ function RolesFace({ revealDelay, fast }: { revealDelay: number; fast: boolean }
       <div className="relative px-6 md:px-14 shrink-0" style={{ borderTop: '1px solid rgba(255,255,255,0.06)', background: '#05050A', padding: '7px 56px' }}>
         <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <WimcLogo color="white" size="xs" />
+            <WimcWordmark color="white" height={18} />
             <span className="font-mono text-[8px] tracking-[0.25em] uppercase hidden sm:block" style={{ color: '#3C3A52' }}>wheninmycity.com</span>
           </div>
           <div className="flex items-center gap-x-4" style={{ color: '#5C5A72' }}>
             <Link href="/explore" className="font-mono text-[9px] tracking-[0.14em] uppercase hover:text-[#9896B0] transition-colors">Explore</Link>
-            <Link href="/signin?next=/onboarding/screen-1" className="font-mono text-[9px] tracking-[0.14em] uppercase hover:text-[#9896B0] transition-colors hidden sm:block">Creators</Link>
-            <Link href="/signin?next=/adda/onboard" className="font-mono text-[9px] tracking-[0.14em] uppercase hover:text-[#9896B0] transition-colors hidden sm:block">Venues</Link>
+            <Link href="/signin?next=/onboarding" className="font-mono text-[9px] tracking-[0.14em] uppercase hover:text-[#9896B0] transition-colors hidden sm:block">Creators</Link>
+            <Link href="/signin?next=%2Fonboarding%3Fpersona%3Dvenue" className="font-mono text-[9px] tracking-[0.14em] uppercase hover:text-[#9896B0] transition-colors hidden sm:block">Addas</Link>
             <Link href="/signin" className="font-mono text-[9px] tracking-[0.14em] uppercase hover:text-[#9896B0] transition-colors">Sign in</Link>
             <span className="font-mono text-[9px] tracking-[0.14em] uppercase">© 2025</span>
           </div>
@@ -961,14 +970,33 @@ export default function LandingPage() {
         style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E\")", backgroundSize: '200px 200px' }} />
 
       {/* Nav */}
-      <motion.nav className="relative z-50 flex items-center justify-between px-6 py-3 md:px-14"
+      <motion.nav className="relative z-50 flex items-center justify-between px-6 md:px-14"
         style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', background: 'rgba(7,7,10,0.92)', backdropFilter: 'blur(14px)', WebkitBackdropFilter: 'blur(14px)', height: NAV_H }}
         initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, ease: E }}>
-        <Link href="/"><WimcLogo color="white" size="xl" /></Link>
+        <Link href="/" aria-label="When in My City" style={{ display: 'flex', alignItems: 'center', textDecoration: 'none' }}>
+            <Image src="/logo-stamp.png" alt="When in My City" width={88} height={88} style={{ width: 88, height: 88, flexShrink: 0, filter: 'invert(1)' }} priority />
+          </Link>
         <div className="flex items-center gap-1">
           <Link href="/mission" className="hidden md:flex items-center justify-center w-24 font-mono text-[10px] tracking-[0.15em] uppercase text-[#5C5A72] hover:text-[#9896B0] transition-colors">Mission</Link>
           <Link href="/growth"  className="hidden md:flex items-center justify-center w-24 font-mono text-[10px] tracking-[0.15em] uppercase text-[#5C5A72] hover:text-[#9896B0] transition-colors">Growth</Link>
           <Link href="/explore" className="hidden md:flex items-center justify-center w-24 font-mono text-[10px] tracking-[0.15em] uppercase text-[#5C5A72] hover:text-[#9896B0] transition-colors">Explore</Link>
+          <div className="relative group hidden md:flex items-center justify-center w-28">
+            <button className="flex items-center gap-1 font-mono text-[10px] tracking-[0.15em] uppercase text-[#5C5A72] group-hover:text-[#9896B0] transition-colors cursor-default select-none">
+              Discover <span style={{ fontSize: 7, marginTop: 1 }}>▾</span>
+            </button>
+            <div className="absolute top-full left-1/2 -translate-x-1/2 pt-2 hidden group-hover:block z-[100]">
+              <div style={{ background: '#0D0C1A', border: '1px solid rgba(255,255,255,0.1)', minWidth: 180 }}>
+                <Link href="/hall-of-lights" className="flex items-center gap-2.5 px-4 py-2.5 font-mono text-[10px] tracking-[0.12em] uppercase text-[#5C5A72] hover:text-[#F5A800] hover:bg-[#F5A800]/05 transition-colors" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                  <span className="material-symbols-outlined" style={{ fontSize: 13, color: '#F5A800' }}>auto_awesome</span>
+                  Hall of Lights
+                </Link>
+                <Link href="/map-of-legends" className="flex items-center gap-2.5 px-4 py-2.5 font-mono text-[10px] tracking-[0.12em] uppercase text-[#5C5A72] hover:text-[#5DD9D0] hover:bg-[#5DD9D0]/05 transition-colors">
+                  <span className="material-symbols-outlined" style={{ fontSize: 13, color: '#5DD9D0' }}>location_city</span>
+                  Map of Legends
+                </Link>
+              </div>
+            </div>
+          </div>
           <div className="w-4" />
           <Link href="/signin" className="px-5 py-2 font-mono text-[11px] font-bold tracking-[0.15em] uppercase bg-white text-[#07070A] hover:bg-[#E8E7F0] transition-colors" style={{ borderRadius: 0 }}>Login</Link>
         </div>

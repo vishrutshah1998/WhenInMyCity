@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useRef, useEffect, useState } from 'react'
 import { motion, useScroll, useTransform, useInView } from 'framer-motion'
-import { WimcLogo } from '@/components/WimcLogo'
+import { WimcWordmark } from '@/components/WimcWordmark'
 
 const E = [0.22, 1, 0.36, 1] as const
 const VP = { once: true, margin: '0px 0px -8% 0px' } as const
@@ -205,7 +205,7 @@ export default function GrowthPage() {
 
       {/* Nav */}
       <nav className="relative z-20 flex items-center justify-between px-6 py-3 md:px-14" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', background: 'rgba(7,7,10,0.88)', backdropFilter: 'blur(14px)', WebkitBackdropFilter: 'blur(14px)', position: 'sticky', top: 0 }}>
-        <Link href="/"><WimcLogo color="white" size="lg" /></Link>
+        <Link href="/" style={{ display: 'flex', alignItems: 'center', textDecoration: 'none' }}><WimcWordmark color="white" height={30} /></Link>
         <div className="flex items-center gap-1">
           <Link href="/mission" className="hidden md:flex items-center justify-center w-24 font-mono text-[10px] tracking-[0.15em] uppercase text-[#5C5A72] hover:text-[#9896B0] transition-colors">Mission</Link>
           <Link href="/explore" className="hidden md:flex items-center justify-center w-24 font-mono text-[10px] tracking-[0.15em] uppercase text-[#5C5A72] hover:text-[#9896B0] transition-colors">Explore</Link>
@@ -369,7 +369,7 @@ export default function GrowthPage() {
             </h2>
           </motion.div>
           <motion.div className="flex flex-col gap-3" {...fu(0.1)}>
-            <Link href="/signin?next=/onboarding/screen-1" className="inline-flex items-center gap-2 px-7 py-3.5 text-sm font-bold tracking-wide text-[#07070A] bg-white hover:bg-[#E8E7F0] transition-colors" style={{ borderRadius: 0 }}>
+            <Link href="/signin?next=/onboarding" className="inline-flex items-center gap-2 px-7 py-3.5 text-sm font-bold tracking-wide text-[#07070A] bg-white hover:bg-[#E8E7F0] transition-colors" style={{ borderRadius: 0 }}>
               Join for free <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>arrow_forward</span>
             </Link>
             <Link href="/" className="font-mono text-[10px] tracking-[0.15em] uppercase text-[#5C5A72] hover:text-[#9896B0] transition-colors">
@@ -382,7 +382,7 @@ export default function GrowthPage() {
       {/* Footer */}
       <footer className="relative z-10 px-6 py-8 md:px-14" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <WimcLogo color="white" size="sm" />
+          <WimcWordmark color="white" height={22} />
           <div className="flex flex-wrap items-center gap-x-6 gap-y-2" style={{ color: '#5C5A72' }}>
             <Link href="/explore" className="font-mono text-[10px] tracking-[0.15em] uppercase hover:text-[#9896B0] transition-colors">Explore</Link>
             <Link href="/mission" className="font-mono text-[10px] tracking-[0.15em] uppercase hover:text-[#9896B0] transition-colors">Mission</Link>

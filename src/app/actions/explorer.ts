@@ -1,5 +1,6 @@
 'use server'
 
+import { revalidatePath } from 'next/cache'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { requireAuth } from '@/lib/auth/requireAuth'
 import { INTEREST_TAGS } from '@/lib/constants/interests'
@@ -823,10 +824,10 @@ export async function submitEventRating(
     console.error('[submitEventRating] rating aggregate RPC failed', rpcError.message)
   }
 
-  // Fetch creator_id so we can re-evaluate their tier.
+  // Fetch creator_id and venue_adda_id to re-evaluate tier and notify adda owner.
   const { data: event } = await admin
     .from('events')
-    .select('creator_id')
+    .select('creator_id, venue_adda_id')
     .eq('id', eventId)
     .maybeSingle()
 
@@ -835,6 +836,30 @@ export async function submitEventRating(
     evaluateMakerTier(event.creator_id).catch((err) => {
       console.error('[submitEventRating] evaluateMakerTier failed', String(err))
     })
+  }
+
+  // Notify adda owner of the new rating (fire-and-forget)
+  const venueAddaId = event?.venue_adda_id ?? null
+  if (venueAddaId) {
+    void (async () => {
+      try {
+        const { data: addaOwner } = await admin
+          .from('adda_profiles')
+          .select('auth_user_id, name')
+          .eq('id', venueAddaId)
+          .maybeSingle()
+        if (addaOwner?.auth_user_id) {
+          const { createNotification } = await import('@/app/actions/notifications')
+          await createNotification({
+            recipientId: addaOwner.auth_user_id,
+            type: 'adda_new_rating',
+            title: 'New event rating',
+            body: `An attendee gave ${rating}★ for an event at ${addaOwner.name}.`,
+            actionUrl: '/business/venue/analytics',
+          })
+        }
+      } catch {}
+    })()
   }
 
   // Clear the pending_rating flag from user_metadata.
@@ -1014,5 +1039,70 @@ export async function updateExplorerProfile(
     return { error: 'Failed to save your settings. Please try again.' }
   }
 
+  return { error: null }
+}
+
+// ---------------------------------------------------------------------------
+// updateExplorerStudioProfile — lightweight studio content save
+// Updates only the public-facing identity fields on explorer_profiles
+// ---------------------------------------------------------------------------
+
+export async function updateExplorerStudioProfile(input: {
+  display_name: string
+  city:         string
+  interest_tags: string[]
+}): Promise<{ error: string | null }> {
+  const { user } = await requireAuth()
+
+  if (!input.display_name.trim()) return { error: 'Name is required.' }
+  if (!input.city) return { error: 'City is required.' }
+  if (input.interest_tags.length < 1 || input.interest_tags.length > 5) {
+    return { error: 'Select between 1 and 5 interests.' }
+  }
+
+  const admin = createAdminClient()
+
+  const { error } = await admin
+    .from('explorer_profiles')
+    .update({
+      display_name:  input.display_name.trim(),
+      city:          input.city,
+      interest_tags: input.interest_tags,
+    })
+    .eq('auth_user_id', user.id)
+
+  if (error) {
+    console.error('[updateExplorerStudioProfile]', error.message)
+    return { error: 'Failed to save. Please try again.' }
+  }
+
+  revalidatePath('/explore/dashboard/studio')
+  return { error: null }
+}
+
+// ---------------------------------------------------------------------------
+// updateExplorerPublicProfile — updates user_profiles fields (bio, instagram)
+// that appear on the explorer's public page
+// ---------------------------------------------------------------------------
+
+export async function updateExplorerPublicProfile(input: {
+  bio?:              string
+  instagram_handle?: string
+}): Promise<{ error: string | null }> {
+  const { user } = await requireAuth()
+  const admin = createAdminClient()
+
+  const updates: Record<string, unknown> = { updated_at: new Date().toISOString() }
+  if (input.bio              !== undefined) updates.bio              = input.bio || null
+  if (input.instagram_handle !== undefined) updates.instagram_handle = input.instagram_handle || null
+
+  const { error } = await admin.from('user_profiles').update(updates).eq('id', user.id)
+
+  if (error) {
+    console.error('[updateExplorerPublicProfile]', error.message)
+    return { error: 'Failed to save changes.' }
+  }
+
+  revalidatePath('/explore/dashboard/studio')
   return { error: null }
 }

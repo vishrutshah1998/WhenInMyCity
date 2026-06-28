@@ -1,5 +1,7 @@
 'use client'
 
+import React from 'react'
+import Link from 'next/link'
 import type { UserTier } from '@/types/database'
 import { TIER_THRESHOLDS } from '@/lib/constants/interests'
 
@@ -16,7 +18,7 @@ const TIER_META: Record<UserTier, { emoji: string; label: string; story: string;
 
 const BENEFITS: {
   label: string
-  desc: string
+  desc: React.ReactNode
   tier: UserTier
   dotColor: string
   tierColor: string
@@ -79,7 +81,7 @@ const BENEFITS: {
   },
   {
     label: 'Beacon Mentorship & Hall of Lights',
-    desc: 'Beacons are matched with Lanterns to coach. After 3 years: Lantern Mentor distinction. After 5 years: permanent Hall-of-Lights city listing.',
+    desc: <>Beacons are matched with Lanterns to coach. After 3 years: Lantern Mentor distinction. After 5 years: permanent <Link href="/hall-of-lights" className="underline hover:text-[#F5A800]">Hall of Lights</Link> city listing.</>,
     tier: 'beacon', dotColor: '#E8342A', tierColor: '#E8342A', tierBg: 'rgba(232,52,42,0.1)',
   },
 ]
@@ -104,31 +106,31 @@ function MetricCard({
   const fill = pct(current, target)
   return (
     <div style={{
-      background: 'var(--wimc-bg-elevated)', border: '1px solid var(--wimc-border-default)',
-      borderRadius: 18, padding: 24, display: 'flex', flexDirection: 'column', gap: 16,
+      background: 'var(--wimc-bg-elevated)', border: '1px solid rgba(26,39,68,0.14)',
+      borderRadius: 0, padding: 24, display: 'flex', flexDirection: 'column', gap: 16,
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
         <div style={{
-          width: 40, height: 40, borderRadius: 6, display: 'grid', placeItems: 'center', flexShrink: 0,
+          width: 40, height: 40, borderRadius: 0, display: 'grid', placeItems: 'center', flexShrink: 0,
           background: `${barColor}20`, color: barColor,
         }}>
           <span className="material-symbols-outlined" style={{ fontSize: 20 }}>{icon}</span>
         </div>
         <div>
-          <div style={{ fontFamily: 'var(--font-syne)', fontSize: 15, fontWeight: 700 }}>{title}</div>
+          <div style={{ fontFamily: 'var(--font-abril)', fontSize: 22 }}>{title}</div>
           <div style={{ fontSize: 12, color: 'var(--wimc-text-secondary)', marginTop: 2 }}>{sub}</div>
         </div>
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
-          <div style={{ fontFamily: 'var(--font-syne)', fontSize: 40, fontWeight: 800, lineHeight: 1, color: barColor }}>
+          <div style={{ fontFamily: 'var(--font-syne)', fontSize: 48, fontWeight: 900, lineHeight: 1, color: barColor }}>
             {displayCurrent}
           </div>
           <div style={{ fontSize: 14, color: 'var(--wimc-text-secondary)', fontFamily: 'var(--font-jetbrains-mono)' }}>
             / {displayTarget} required
           </div>
         </div>
-        <div style={{ height: 8, background: 'rgba(255,255,255,0.06)', borderRadius: 4, overflow: 'hidden' }}>
+        <div style={{ height: 8, background: 'rgba(26,39,68,0.06)', borderRadius: 4, overflow: 'hidden' }}>
           <div style={{
             height: '100%', borderRadius: 4,
             background: `linear-gradient(90deg, ${barColor}, ${barColorLight})`,
@@ -215,17 +217,23 @@ export default function TierClient({ tier, metrics, eventsAttendedIn90d, eventsH
   const topbar: React.CSSProperties = {
     height: 64, borderBottom: '1px solid var(--wimc-border-subtle)',
     display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+    flexWrap: 'wrap', gap: 8,
     padding: '0 32px', position: 'sticky', top: 0,
-    background: 'rgba(10,10,11,0.9)', backdropFilter: 'blur(12px)', zIndex: 40,
+    background: 'rgba(242,237,227,0.96)', backdropFilter: 'blur(12px)', zIndex: 40,
   }
 
   return (
     <>
       <header style={topbar}>
-        <div style={{ fontFamily: 'var(--font-syne)', fontSize: 20, fontWeight: 700 }}>Tier Progress</div>
+        <div>
+          <div style={{ fontSize: 10, fontFamily: 'var(--font-jetbrains-mono)', color: 'var(--wimc-text-muted)', letterSpacing: '1.8px', textTransform: 'uppercase', marginBottom: 2 }}>
+            Creator Studio
+          </div>
+          <div style={{ fontFamily: 'var(--font-syne)', fontSize: 18, fontWeight: 800, lineHeight: 1 }}>Tier Progress</div>
+        </div>
         <button style={{
           display: 'inline-flex', alignItems: 'center', gap: 6,
-          padding: '8px 16px', borderRadius: 6, fontSize: 13, fontWeight: 600,
+          padding: '8px 16px', borderRadius: 0, fontSize: 13, fontWeight: 600,
           cursor: 'pointer', border: 'none', background: 'transparent',
           color: 'var(--wimc-text-secondary)', fontFamily: 'var(--font-dm-sans)',
         }}>
@@ -234,13 +242,13 @@ export default function TierClient({ tier, metrics, eventsAttendedIn90d, eventsH
         </button>
       </header>
 
-      <div style={{ padding: 32, display: 'grid', gap: 28, maxWidth: 960 }}>
+      <div style={{ padding: 'clamp(16px, 4vw, 40px) clamp(16px, 4vw, 40px) 80px', display: 'grid', gap: 28 }}>
 
         {/* Beacon Recovery banner — visible only to the creator */}
         {inRecovery && (
           <div style={{
             background: 'rgba(245,168,0,0.08)', border: '1px solid rgba(245,168,0,0.25)',
-            borderRadius: 16, padding: '16px 24px',
+            borderRadius: 0, padding: '16px 24px',
             display: 'flex', alignItems: 'center', gap: 16,
           }}>
             <span className="material-symbols-outlined" style={{ color: 'var(--wimc-amber)', fontSize: 24 }}>
@@ -264,8 +272,8 @@ export default function TierClient({ tier, metrics, eventsAttendedIn90d, eventsH
 
         {/* Hero banner */}
         <div style={{
-          background: 'linear-gradient(135deg, #1A1208 0%, #0A0A0B 100%)',
-          border: '1px solid rgba(245,168,0,0.2)', borderRadius: 24,
+          background: 'linear-gradient(135deg, #1A2744 0%, #0F1A35 100%)',
+          border: '1px solid rgba(26,39,68,0.20)', borderRadius: 0,
           padding: 36, display: 'flex', alignItems: 'center', gap: 32,
           position: 'relative', overflow: 'hidden',
         }}>
@@ -276,7 +284,7 @@ export default function TierClient({ tier, metrics, eventsAttendedIn90d, eventsH
             pointerEvents: 'none',
           }} />
           <div style={{
-            width: 80, height: 80, borderRadius: 18, flexShrink: 0,
+            width: 80, height: 80, borderRadius: 0, flexShrink: 0,
             background: 'linear-gradient(135deg, var(--wimc-amber), var(--wimc-coral))',
             display: 'grid', placeItems: 'center', fontSize: 36,
             boxShadow: '0 0 40px rgba(245,168,0,0.3)',
@@ -301,7 +309,7 @@ export default function TierClient({ tier, metrics, eventsAttendedIn90d, eventsH
             )}
             {nextMeta && (
               <div style={{ marginTop: 16 }}>
-                <div style={{ height: 10, background: 'rgba(255,255,255,0.08)', borderRadius: 5, overflow: 'hidden', marginBottom: 6 }}>
+                <div style={{ height: 10, background: 'rgba(26,39,68,0.08)', borderRadius: 5, overflow: 'hidden', marginBottom: 6 }}>
                   <div style={{
                     height: '100%', background: 'linear-gradient(90deg, var(--wimc-amber), var(--wimc-coral))',
                     borderRadius: 5, width: `${overallPct}%`,
@@ -317,7 +325,7 @@ export default function TierClient({ tier, metrics, eventsAttendedIn90d, eventsH
           {nextMeta && (
             <div style={{
               background: 'rgba(245,168,0,0.1)', border: '1px solid rgba(245,168,0,0.2)',
-              borderRadius: 12, padding: '16px 20px', textAlign: 'center', flexShrink: 0, minWidth: 130,
+              borderRadius: 0, padding: '16px 20px', textAlign: 'center', flexShrink: 0, minWidth: 130,
             }}>
               <div style={{ fontSize: 28, marginBottom: 4 }}>→</div>
               <div style={{ fontSize: 10, letterSpacing: '1.5px', textTransform: 'uppercase', color: 'var(--wimc-amber)', fontFamily: 'var(--font-jetbrains-mono)', marginBottom: 6 }}>
@@ -336,7 +344,7 @@ export default function TierClient({ tier, metrics, eventsAttendedIn90d, eventsH
           <div style={{
             display: 'flex', alignItems: 'center', gap: 0,
             padding: '28px 32px', background: 'var(--wimc-bg-elevated)',
-            border: '1px solid var(--wimc-border-default)', borderRadius: 18,
+            border: '1px solid rgba(26,39,68,0.14)', borderRadius: 0,
             overflowX: 'auto',
           }}>
             {TIER_ORDER.map((t, i) => {
@@ -349,13 +357,13 @@ export default function TierClient({ tier, metrics, eventsAttendedIn90d, eventsH
                     <div style={{
                       width: 36, height: 36, borderRadius: '50%', display: 'grid', placeItems: 'center',
                       fontSize: done ? 16 : 15, position: 'relative', zIndex: 1,
-                      border: `2px solid ${done ? 'var(--wimc-amber)' : current ? 'var(--wimc-amber)' : 'var(--wimc-border-subtle)'}`,
-                      background: done ? 'var(--wimc-amber)' : current ? 'var(--wimc-bg-overlay)' : 'var(--wimc-bg-overlay)',
+                      border: `2px solid ${done ? 'var(--wimc-amber)' : current ? 'var(--wimc-amber)' : 'rgba(26,39,68,0.20)'}`,
+                      background: done ? 'var(--wimc-amber)' : current ? 'rgba(245,168,0,0.08)' : 'transparent',
                       boxShadow: current ? '0 0 16px rgba(245,168,0,0.3)' : 'none',
                     }}>
                       {done ? '✓' : meta.emoji}
                     </div>
-                    <div style={{ fontFamily: 'var(--font-syne)', fontSize: 13, fontWeight: 700, textAlign: 'center', color: done || current ? (current ? '#FFD166' : 'var(--wimc-text-primary)') : 'var(--wimc-text-muted)' }}>
+                    <div style={{ fontFamily: 'var(--font-syne)', fontSize: 13, fontWeight: 700, textAlign: 'center', color: done || current ? (current ? '#D97706' : 'var(--wimc-text-primary)') : 'var(--wimc-text-muted)' }}>
                       {meta.label}
                     </div>
                     <div style={{ fontSize: 10, color: current ? 'var(--wimc-amber)' : 'var(--wimc-text-muted)', fontFamily: 'var(--font-jetbrains-mono)', textAlign: 'center' }}>
@@ -382,7 +390,7 @@ export default function TierClient({ tier, metrics, eventsAttendedIn90d, eventsH
             <div style={{ fontSize: 11, letterSpacing: '1.5px', textTransform: 'uppercase', color: 'var(--wimc-text-muted)', fontFamily: 'var(--font-jetbrains-mono)', marginBottom: 16 }}>
               Progress to Local — rolling 90-day window
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 20 }}>
               <MetricCard
                 icon="local_activity" title="Events Attended" sub="In the last 90 days"
                 current={eventsAttendedIn90d} target={TIER_THRESHOLDS.local.eventsAttendedIn90d}
@@ -408,7 +416,7 @@ export default function TierClient({ tier, metrics, eventsAttendedIn90d, eventsH
             <div style={{ fontSize: 11, letterSpacing: '1.5px', textTransform: 'uppercase', color: 'var(--wimc-text-muted)', fontFamily: 'var(--font-jetbrains-mono)', marginBottom: 16 }}>
               Progress to Lantern — rolling 180-day window
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 20 }}>
               <MetricCard
                 icon="event" title="Events Hosted" sub="In the last 180 days"
                 current={eventsHostedIn180d} target={TIER_THRESHOLDS.lantern.eventsHostedIn180d}
@@ -433,7 +441,7 @@ export default function TierClient({ tier, metrics, eventsAttendedIn90d, eventsH
             <div style={{ fontSize: 11, letterSpacing: '1.5px', textTransform: 'uppercase', color: 'var(--wimc-text-muted)', fontFamily: 'var(--font-jetbrains-mono)', marginBottom: 16 }}>
               Progress to Beacon — rolling 365-day window
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 20 }}>
               <MetricCard
                 icon="event" title="Events Hosted" sub="In the last 12 months (or 1,200 tickets)"
                 current={eventsHostedIn365d} target={TIER_THRESHOLDS.beacon.eventsHostedIn365d}
@@ -469,9 +477,9 @@ export default function TierClient({ tier, metrics, eventsAttendedIn90d, eventsH
         )}
 
         {/* Benefits accordion */}
-        <div style={{ background: 'var(--wimc-bg-elevated)', border: '1px solid var(--wimc-border-default)', borderRadius: 18, overflow: 'hidden' }}>
+        <div style={{ background: 'var(--wimc-bg-elevated)', border: '1px solid rgba(26,39,68,0.14)', borderRadius: 0, overflow: 'hidden' }}>
           <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--wimc-border-subtle)' }}>
-            <div style={{ fontFamily: 'var(--font-syne)', fontSize: 15, fontWeight: 700 }}>Benefits by Tier</div>
+            <div style={{ fontFamily: 'var(--font-abril)', fontSize: 22 }}>Benefits by Tier</div>
             <div style={{ fontSize: 13, color: 'var(--wimc-text-secondary)', marginTop: 4 }}>What you unlock as you grow</div>
           </div>
           {BENEFITS.map((b, i) => {

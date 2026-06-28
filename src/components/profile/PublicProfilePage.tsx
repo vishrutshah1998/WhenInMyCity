@@ -1,3 +1,4 @@
+import React, { useMemo } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import type {
@@ -27,6 +28,8 @@ import type {
 } from '@/types/database'
 import { type ProfileTheme, schemeToStyle, DEFAULT_PROFILE_THEME } from '@/types/theme'
 import FollowButton from './FollowButton'
+import CreatorPostsSection from './CreatorPostsSection'
+import type { CreatorPostWithReactions } from '@/app/actions/posts'
 import CityMasteryMap from './CityMasteryMap'
 import NewsletterSignupBlock from './NewsletterSignupBlock'
 import SupportTipBlock from './SupportTipBlock'
@@ -41,6 +44,7 @@ import DigitalProductBlock from './DigitalProductBlock'
 import WaitlistBlock from './WaitlistBlock'
 import FanMembershipBlock from './FanMembershipBlock'
 import type { SubstackPost } from '@/lib/validators/blocks'
+import { WimcWordmark } from '@/components/WimcWordmark'
 
 // ---------------------------------------------------------------------------
 // Config shapes for new blocks (inlined to avoid extra imports)
@@ -682,41 +686,223 @@ function StatsGridBlock({ block }: { block: PageBlock }) {
   )
 }
 
-function EventCard({ event }: { event: Event }) {
+type LayoutPresetId = 'boarding-pass' | 'poster' | 'editorial' | 'minimal' | 'reel' | 'corporate' | 'stage' | 'zine'
+
+function EventCard({ event, layout = 'boarding-pass' }: { event: Event; layout?: LayoutPresetId }) {
   const isFree   = event.ticket_price === 0
-  const priceStr = isFree ? 'Free' : `₹${(event.ticket_price / 100).toLocaleString('en-IN')}`
-  return (
-    <div className="card-surface bg-surface-container-high rounded-2xl p-6 flex flex-col gap-5 border border-outline-variant/10">
-      <div className="flex flex-col gap-2">
-        <div className="inline-flex w-fit px-2 py-0.5 rounded bg-tertiary-container/20 text-tertiary text-[10px] font-bold uppercase tracking-widest">
-          Upcoming Event
+  const priceStr = isFree ? 'FREE' : `₹${(event.ticket_price / 100).toLocaleString('en-IN')}`
+
+  if (layout === 'poster') {
+    return (
+      <Link href={`/events/${event.slug}`}>
+        <div
+          className="relative border-l-4 border-primary bg-surface-container-high p-4 hover:bg-surface-container-highest transition-colors group"
+          style={{ boxShadow: 'var(--wimc-card-shadow, none)' }}
+        >
+          <div className="flex justify-between items-start gap-3">
+            <h3 className="font-display font-black text-xl text-on-surface uppercase leading-tight">
+              {event.title}
+            </h3>
+            <span className="font-mono text-xs font-bold text-primary shrink-0 mt-0.5">{priceStr}</span>
+          </div>
+          <p className="font-mono text-[11px] text-on-surface/50 mt-1.5">
+            {event.venue_name} · <span suppressHydrationWarning>{formatShortDate(event.starts_at)}</span>
+          </p>
+          <span className="absolute right-4 bottom-4 text-on-surface/20 group-hover:text-primary transition-colors text-sm">→</span>
         </div>
-        <h3 className="font-headline text-2xl font-bold text-on-surface leading-snug">{event.title}</h3>
-        {event.description && (
-          <p className="text-on-surface-variant text-sm leading-relaxed line-clamp-2">{event.description}</p>
-        )}
-      </div>
-      <div className="flex flex-col gap-3">
-        <div className="flex items-center gap-3 text-on-surface-variant">
-          <span className="material-symbols-outlined text-primary">calendar_today</span>
-          <span className="text-sm font-medium" suppressHydrationWarning>{formatEventDate(event.starts_at)}</span>
-        </div>
-        <div className="flex items-center gap-3 text-on-surface-variant">
-          <span className="material-symbols-outlined text-primary">map</span>
-          <span className="text-sm font-medium">{event.venue_name}, {event.venue_address}</span>
-        </div>
-        <div className="flex items-center gap-3 text-on-surface-variant">
-          <span className="material-symbols-outlined text-primary">confirmation_number</span>
-          <span className="text-sm font-medium">{priceStr}</span>
-        </div>
-      </div>
-      <a
+      </Link>
+    )
+  }
+
+  if (layout === 'editorial') {
+    return (
+      <Link
         href={`/events/${event.slug}`}
-        className="w-full block bg-primary text-on-primary py-3 rounded-xl font-bold text-center hover:opacity-90 active:scale-[0.98] transition-all"
+        className="group flex items-baseline gap-4 py-3 hover:opacity-70 transition-opacity"
       >
-        {isFree ? 'RSVP Now' : 'Register Now'}
-      </a>
-    </div>
+        <span className="font-mono text-[10px] text-on-surface/40 shrink-0 w-10 tabular-nums">
+          {new Date(event.starts_at).getDate()}/{new Date(event.starts_at).getMonth() + 1}
+        </span>
+        <span className="flex-1 font-display font-bold text-sm text-on-surface group-hover:text-primary transition-colors leading-snug">
+          {event.title}
+        </span>
+        <span className="font-mono text-[10px] font-bold text-primary shrink-0">{priceStr}</span>
+      </Link>
+    )
+  }
+
+  if (layout === 'minimal') {
+    return (
+      <Link href={`/events/${event.slug}`}>
+        <div className="card-surface rounded-2xl bg-surface-container-high hover:bg-surface-container-highest transition-colors p-4 group">
+          <h3 className="font-semibold text-on-surface text-sm leading-snug">{event.title}</h3>
+          <p className="text-xs text-on-surface/50 mt-1">
+            {event.venue_name} · <span suppressHydrationWarning>{formatShortDate(event.starts_at)}</span>
+          </p>
+          <div className="flex justify-between items-center mt-3">
+            <span className="text-sm font-bold text-primary">{priceStr}</span>
+            <span className="text-xs text-on-surface/30 group-hover:text-primary transition-colors">Get tickets →</span>
+          </div>
+        </div>
+      </Link>
+    )
+  }
+
+  if (layout === 'reel') {
+    return (
+      <Link href={`/events/${event.slug}`}>
+        <div className="card-surface rounded-2xl overflow-hidden group">
+          <div className="h-1 w-full" style={{ background: 'rgb(var(--color-primary))' }} />
+          <div className="p-4 bg-surface-container-high hover:bg-surface-container-highest transition-colors">
+            <div className="flex justify-between items-start gap-3">
+              <h3 className="font-bold text-base text-on-surface leading-snug">{event.title}</h3>
+              <span className="shrink-0 font-bold text-sm text-primary">{priceStr}</span>
+            </div>
+            <p className="text-xs text-on-surface/50 mt-1">{event.venue_name}</p>
+            <div className="flex items-center justify-between mt-3">
+              <span className="font-mono text-[11px] text-on-surface/35" suppressHydrationWarning>
+                {formatShortDate(event.starts_at)}
+              </span>
+              <span className="text-xs bg-primary text-on-primary px-3 py-1 rounded-full font-semibold group-hover:opacity-80 transition-opacity">
+                Get in →
+              </span>
+            </div>
+          </div>
+        </div>
+      </Link>
+    )
+  }
+
+  if (layout === 'corporate') {
+    const d = new Date(event.starts_at)
+    const day = d.getDate()
+    const month = d.toLocaleString('en-IN', { month: 'short' }).toUpperCase()
+    return (
+      <Link href={`/events/${event.slug}`}>
+        <div className="flex items-center gap-4 py-3.5 px-4 hover:bg-surface-container-high transition-colors group">
+          {/* Date column */}
+          <div className="shrink-0 text-center w-9">
+            <div className="text-xl font-black text-primary leading-none" suppressHydrationWarning>{day}</div>
+            <div className="text-[9px] font-mono text-on-surface/40 uppercase tracking-wider" suppressHydrationWarning>{month}</div>
+          </div>
+          <div className="w-px h-8 bg-on-surface/8 shrink-0" />
+          <div className="flex-1 min-w-0">
+            <h3 className="font-semibold text-sm text-on-surface leading-snug truncate">{event.title}</h3>
+            <p className="text-xs text-on-surface/45 mt-0.5 truncate">{event.venue_name}</p>
+          </div>
+          <div className="shrink-0 flex items-center gap-1.5">
+            <span className="text-sm font-bold text-primary">{priceStr}</span>
+            <span className="material-symbols-outlined text-lg text-on-surface/20 group-hover:text-primary transition-colors">chevron_right</span>
+          </div>
+        </div>
+      </Link>
+    )
+  }
+
+  if (layout === 'stage') {
+    return (
+      <Link href={`/events/${event.slug}`}>
+        <div className="flex flex-col items-center gap-0.5 py-4 px-5 hover:bg-surface-container-high transition-colors group">
+          <span className="font-mono text-[9px] text-on-surface/35 uppercase tracking-[0.15em]" suppressHydrationWarning>
+            {formatShortDate(event.starts_at)}
+          </span>
+          <h3 className="font-display font-bold text-lg text-on-surface text-center leading-tight group-hover:text-primary transition-colors">
+            {event.title}
+          </h3>
+          <p className="text-xs text-on-surface/45 text-center">{event.venue_name}</p>
+          <span className="mt-1.5 font-mono text-xs text-primary font-bold">{priceStr}</span>
+        </div>
+      </Link>
+    )
+  }
+
+  if (layout === 'zine') {
+    return (
+      <Link href={`/events/${event.slug}`}>
+        <div
+          className="py-3 px-4 bg-surface-container-high hover:bg-surface-container-highest transition-colors group"
+          style={{
+            borderLeft: '3px solid rgb(var(--color-primary))',
+            borderRadius: 0,
+            boxShadow: 'var(--wimc-card-shadow, none)',
+          }}
+        >
+          <div className="flex justify-between items-baseline gap-3">
+            <h3 className="font-display font-black text-base text-on-surface uppercase leading-tight">
+              {event.title}
+            </h3>
+            <span className="font-mono text-xs font-bold text-primary shrink-0">{priceStr}</span>
+          </div>
+          <p className="font-mono text-[10px] text-on-surface/35 mt-1 uppercase tracking-wider" suppressHydrationWarning>
+            {event.venue_name} · {formatShortDate(event.starts_at)}
+          </p>
+        </div>
+      </Link>
+    )
+  }
+
+  // Default: boarding-pass — original ticket stub
+  return (
+    <Link href={`/events/${event.slug}`}>
+      <div
+        className="card-surface relative bg-[#FAF7F0] border-2 border-dashed border-outline-variant flex overflow-hidden group"
+        style={{ ['--color-on-surface' as string]: '26 17 8', ['--color-on-surface-variant' as string]: '90 65 55' }}
+      >
+        {/* Left accent bar */}
+        <div className="w-1 bg-primary flex-shrink-0" />
+
+        {/* Ticket content */}
+        <div className="flex-1 p-4">
+          {/* Ticket meta header */}
+          <div className="flex justify-between items-center mb-2">
+            <span className="font-mono text-[9px] text-on-surface/50 uppercase tracking-[0.15em]">
+              TKT-{event.id.slice(-4).toUpperCase()} · WHEN IN MY CITY
+            </span>
+            <span className="font-mono text-[9px] text-on-surface/50">
+              CULTURE PASS
+            </span>
+          </div>
+
+          {/* Dashed separator */}
+          <div className="border-t border-dashed border-outline-variant/30 mb-2" />
+
+          {/* Title + meta + ADMIT ONE badge */}
+          <div className="flex justify-between items-start gap-4">
+            <div className="flex-1 min-w-0">
+              <h3 className="font-display font-black text-[20px] text-on-surface uppercase leading-tight">
+                {event.title}
+              </h3>
+              <p className="font-mono text-[11px] text-on-surface/50 mt-1 truncate">
+                {event.venue_name} · <span suppressHydrationWarning>{formatShortDate(event.starts_at)}</span>
+              </p>
+            </div>
+            <span className="font-mono text-[9px] bg-[#07070A] text-[#FAF7F0] px-2 py-1 flex-shrink-0 self-start whitespace-nowrap">
+              ADMIT ONE
+            </span>
+          </div>
+
+          {/* Perforation + barcode stub */}
+          <div className="border-t border-dashed border-outline-variant/30 mt-3 pt-2 flex justify-between items-center">
+            {/* Barcode dots */}
+            <div className="flex gap-[2px] items-end">
+              {Array.from({ length: 18 }, (_, i) => (
+                <div
+                  key={i}
+                  className="bg-on-surface/20"
+                  style={{
+                    width: 2,
+                    height: [6, 10, 8, 12, 6, 14, 8, 10, 6, 12, 8, 10, 6, 14, 8, 10, 6, 8][i],
+                  }}
+                />
+              ))}
+            </div>
+            <span className="font-mono text-[10px] text-primary uppercase group-hover:text-on-surface transition-colors">
+              {priceStr} →
+            </span>
+          </div>
+        </div>
+      </div>
+    </Link>
   )
 }
 
@@ -803,7 +989,7 @@ function SpotifyNowPlayingBlock({ block }: { block: PageBlock }) {
   return (
     <section>
       <a
-        href={`https://open.spotify.com/user/${cfg.spotify_user_id}`}
+        href={cfg.spotify_user_id?.startsWith('http') ? cfg.spotify_user_id : `https://open.spotify.com/user/${cfg.spotify_user_id}`}
         target="_blank" rel="noopener noreferrer"
         className="card-surface group flex items-center gap-4 w-full py-4 px-5 rounded-xl bg-surface-container-high hover:bg-surface-container-highest transition-all active:scale-[0.98]"
       >
@@ -1240,7 +1426,7 @@ function VenuePartnershipBlock({ block, venueData }: { block: PageBlock; venueDa
 
   return (
     <section className="flex flex-col gap-3">
-      <h3 className="font-headline font-bold text-lg text-on-surface px-1">Venue Partners</h3>
+      <h3 className="font-headline font-bold text-lg text-on-surface px-1">Adda Partners</h3>
       {cfg.display_style === 'row' ? (
         <div className="flex gap-3 overflow-x-auto pb-1">
           {venues.map((v) => (
@@ -1333,6 +1519,830 @@ function WhiteLabelEventBlock({ block }: { block: PageBlock }) {
 }
 
 // ---------------------------------------------------------------------------
+// Layout-specific profile header components
+// ---------------------------------------------------------------------------
+
+interface ProfileHeaderProps {
+  profile:         UserProfile
+  accent:          string
+  pillData:        PillData | undefined
+  resolvedTheme:   import('@/types/theme').ProfileTheme
+  viewerIsExplorer: boolean
+  isFollowing:     boolean
+}
+
+/** POSTER — full-bleed primary-colored hero, avatar centered top, name massive */
+function PosterHeader({ profile, accent, pillData, resolvedTheme, viewerIsExplorer, isFollowing }: ProfileHeaderProps) {
+  return (
+    <header className="flex flex-col gap-4">
+      <div
+        className="relative w-full overflow-hidden"
+        style={{ ['container-type' as string]: 'inline-size', background: accent, minHeight: 190 }}
+      >
+        {/* Avatar — centered top */}
+        <div className="relative flex justify-center pt-8">
+          <div className="relative w-20 h-20 rounded-full border-4 overflow-hidden bg-white/10 shadow-xl"
+               style={{ borderColor: 'rgba(255,255,255,0.25)' }}>
+            {profile.avatar_url ? (
+              <Image src={profile.avatar_url} alt={profile.display_name} fill className="object-cover" />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center font-display font-black text-2xl"
+                   style={{ color: 'rgba(255,255,255,0.4)' }}>
+                {profile.display_name.charAt(0).toUpperCase()}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Name — big and white */}
+        <div className="px-6 pt-4 pb-6 text-center">
+          <h1
+            className="font-display font-black text-white uppercase leading-[0.88] tracking-tight"
+            style={{ fontSize: 'clamp(36px,12cqw,68px)', letterSpacing: '-0.04em' }}
+          >
+            {profile.display_name}
+          </h1>
+          {/* Decorative ✦ line */}
+          <div className="flex items-center justify-center gap-3 mt-3">
+            <span style={{ color: 'rgba(255,255,255,0.35)', fontSize: 8 }}>✦</span>
+            <span className="font-mono text-[9px] uppercase tracking-[0.2em]"
+                  style={{ color: 'rgba(255,255,255,0.50)' }}>
+              {(profile.city ?? '').toUpperCase()} · {new Date().getFullYear()}
+            </span>
+            <span style={{ color: 'rgba(255,255,255,0.35)', fontSize: 8 }}>✦</span>
+          </div>
+        </div>
+
+        {/* Category pill — bottom-left */}
+        {pillData && (
+          <div className="absolute bottom-3 left-4">
+            <span
+              className="font-mono text-[9px] px-3 py-1 uppercase tracking-widest"
+              style={{ background: 'rgba(0,0,0,0.28)', color: 'rgba(255,255,255,0.82)', backdropFilter: 'blur(6px)' }}
+            >
+              {pillData.emoji} {pillData.label}
+            </span>
+          </div>
+        )}
+      </div>
+
+      {/* Below hero: bio, tier badges, follow */}
+      <div className="flex flex-col gap-3">
+        {profile.is_verified && (
+          <div className="flex items-center gap-1.5 text-[11px] font-mono text-primary uppercase tracking-wider">
+            <span className="material-symbols-outlined text-sm" style={{ fontVariationSettings: "'FILL' 1" }}>verified</span>
+            Verified Creator
+          </div>
+        )}
+        {profile.bio && (
+          <p className="text-on-surface/80 text-sm leading-relaxed">{profile.bio}</p>
+        )}
+        {viewerIsExplorer && (
+          <FollowButton makerId={profile.id} initialIsFollowing={isFollowing} />
+        )}
+      </div>
+    </header>
+  )
+}
+
+/** EDITORIAL — thin horizontal rules, name left / avatar right, masthead feel */
+function EditorialHeader({ profile, pillData, viewerIsExplorer, isFollowing }: ProfileHeaderProps) {
+  return (
+    <header className="flex flex-col gap-0" style={{ ['container-type' as string]: 'inline-size' }}>
+      {/* Top rule + masthead meta */}
+      <div className="flex justify-between items-baseline py-2 border-b-2 border-on-surface">
+        <span className="font-mono text-[8px] uppercase tracking-[0.2em] text-on-surface/40">
+          WHEN IN MY CITY · {(profile.city ?? '').toUpperCase()}
+        </span>
+        <span className="font-mono text-[8px] uppercase tracking-[0.2em] text-on-surface/40">
+          {new Date().getFullYear()}
+        </span>
+      </div>
+
+      {/* Main: name left, avatar right */}
+      <div className="pt-5 pb-4 flex items-start gap-4">
+        <div className="flex-1 min-w-0">
+          <h1
+            className="font-display font-black text-on-surface leading-[0.88] tracking-tight"
+            style={{ fontSize: 'clamp(30px,10cqw,54px)', letterSpacing: '-0.04em' }}
+          >
+            {profile.display_name}
+          </h1>
+          <div className="flex flex-wrap items-center gap-3 mt-2">
+            <span className="font-mono text-[11px] text-on-surface/40">@{profile.username}</span>
+            {pillData && (
+              <span
+                className="font-mono text-[9px] px-2 py-0.5 uppercase tracking-widest"
+                style={{ background: pillData.background, color: pillData.color }}
+              >
+                {pillData.emoji} {pillData.label}
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* Avatar — right */}
+        <div className="relative w-20 h-20 rounded-full overflow-hidden border-2 border-on-surface/10 bg-surface-container shrink-0">
+          {profile.avatar_url ? (
+            <Image src={profile.avatar_url} alt={profile.display_name} fill className="object-cover" />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center font-display font-black text-2xl text-on-surface/20">
+              {profile.display_name.charAt(0).toUpperCase()}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Bottom rule */}
+      <div className="border-b border-on-surface/20" />
+
+      {/* Bio */}
+      {profile.bio && (
+        <p className="mt-4 text-sm leading-relaxed text-on-surface/70 italic">{profile.bio}</p>
+      )}
+
+      {/* Stats */}
+      {(profile.cumulative_events_hosted > 0 || profile.cumulative_unique_attendees > 0) && (
+        <div className="flex gap-6 mt-4 pt-4 border-t border-on-surface/10">
+          {profile.cumulative_events_hosted > 0 && (
+            <div>
+              <span className="font-display font-black text-2xl text-primary">{profile.cumulative_events_hosted}</span>
+              <span className="font-mono text-[9px] text-on-surface/40 uppercase tracking-widest ml-2">Events</span>
+            </div>
+          )}
+          {profile.cumulative_unique_attendees > 0 && (
+            <div>
+              <span className="font-display font-black text-2xl text-primary">
+                {profile.cumulative_unique_attendees.toLocaleString('en-IN')}
+              </span>
+              <span className="font-mono text-[9px] text-on-surface/40 uppercase tracking-widest ml-2">Attendees</span>
+            </div>
+          )}
+        </div>
+      )}
+
+      {viewerIsExplorer && (
+        <div className="mt-4">
+          <FollowButton makerId={profile.id} initialIsFollowing={isFollowing} />
+        </div>
+      )}
+    </header>
+  )
+}
+
+/** MINIMAL — centered avatar, name, pill, bio — clean digital card */
+function MinimalHeader({ profile, pillData, viewerIsExplorer, isFollowing }: ProfileHeaderProps) {
+  return (
+    <header className="flex flex-col items-center gap-4 pt-2" style={{ ['container-type' as string]: 'inline-size' }}>
+      {/* Large circle avatar */}
+      <div className="relative w-24 h-24 rounded-full overflow-hidden border-4 border-surface-container-highest bg-surface-container">
+        {profile.avatar_url ? (
+          <Image src={profile.avatar_url} alt={profile.display_name} fill className="object-cover" />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center font-display font-black text-3xl text-on-surface/20">
+            {profile.display_name.charAt(0).toUpperCase()}
+          </div>
+        )}
+      </div>
+
+      {/* Name + username */}
+      <div className="text-center">
+        <h1
+          className="font-display font-bold text-on-surface leading-tight"
+          style={{ fontSize: 'clamp(22px,7cqw,30px)', letterSpacing: '-0.02em' }}
+        >
+          {profile.display_name}
+        </h1>
+        <p className="text-sm text-on-surface/50 mt-1">@{profile.username}</p>
+      </div>
+
+      {/* Category pill */}
+      {pillData && (
+        <span
+          className="font-mono text-[10px] px-4 py-1.5 uppercase tracking-widest rounded-full"
+          style={{ background: pillData.background, color: pillData.color }}
+        >
+          {pillData.emoji} {pillData.label}
+        </span>
+      )}
+
+      {/* Bio */}
+      {profile.bio && (
+        <p className="text-center text-sm text-on-surface/70 leading-relaxed max-w-xs px-4">
+          {profile.bio}
+        </p>
+      )}
+
+      {profile.is_verified && (
+        <div className="flex items-center gap-1.5 text-[11px] font-mono text-primary uppercase tracking-wider">
+          <span className="material-symbols-outlined text-sm" style={{ fontVariationSettings: "'FILL' 1" }}>verified</span>
+          Verified Creator
+        </div>
+      )}
+
+      {viewerIsExplorer && (
+        <FollowButton makerId={profile.id} initialIsFollowing={isFollowing} />
+      )}
+    </header>
+  )
+}
+
+/** REEL — glowing avatar ring, centered info — Gen Z / social creator */
+function ReelHeader({ profile, accent, pillData, viewerIsExplorer, isFollowing }: ProfileHeaderProps) {
+  return (
+    <header className="flex flex-col items-center" style={{ ['container-type' as string]: 'inline-size' }}>
+      {/* Avatar — sits directly on the page background (aurora/solid), no extra layer */}
+      <div className="pt-4 pb-0">
+        <div
+          className="relative w-28 h-28 rounded-full overflow-hidden border-4 border-background"
+          style={{ boxShadow: `0 0 0 3px ${accent}, 0 0 32px ${accent}80` }}
+        >
+          {profile.avatar_url ? (
+            <Image src={profile.avatar_url} alt={profile.display_name} fill className="object-cover" />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center font-display font-black text-3xl bg-primary text-on-primary">
+              {profile.display_name.charAt(0).toUpperCase()}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Info — centered */}
+      <div className="flex flex-col items-center gap-3 pt-5 pb-2 text-center px-4">
+        <h1
+          className="font-display font-black text-on-surface leading-tight"
+          style={{ fontSize: 'clamp(24px,8cqw,40px)', letterSpacing: '-0.02em' }}
+        >
+          {profile.display_name}
+        </h1>
+        {pillData && (
+          <span
+            className="font-mono text-[10px] px-3 py-1 uppercase tracking-widest rounded-full"
+            style={{ background: pillData.background, color: pillData.color }}
+          >
+            {pillData.emoji} {pillData.label}
+          </span>
+        )}
+        <p className="text-xs text-on-surface/40 font-mono">@{profile.username}</p>
+        {profile.bio && (
+          <p className="text-sm text-on-surface/70 leading-relaxed max-w-xs">{profile.bio}</p>
+        )}
+        {profile.is_verified && (
+          <div className="flex items-center gap-1.5 text-[11px] font-mono text-primary uppercase tracking-wider">
+            <span className="material-symbols-outlined text-sm" style={{ fontVariationSettings: "'FILL' 1" }}>verified</span>
+            Verified Creator
+          </div>
+        )}
+        {viewerIsExplorer && (
+          <FollowButton makerId={profile.id} initialIsFollowing={isFollowing} />
+        )}
+      </div>
+    </header>
+  )
+}
+
+/** CORPORATE — square headshot + info row, clean horizontal stats — professional / business */
+function CorporateHeader({ profile, accent, pillData, viewerIsExplorer, isFollowing }: ProfileHeaderProps) {
+  return (
+    <header
+      className="flex flex-col gap-0 pb-1"
+      style={{ ['container-type' as string]: 'inline-size', borderBottom: '1px solid rgb(var(--color-on-surface) / 0.10)' }}
+    >
+      <div className="flex gap-4 items-start pb-5">
+        {/* Square headshot */}
+        <div className="relative w-24 h-24 rounded-xl overflow-hidden border border-on-surface/10 bg-surface-container shrink-0">
+          {profile.avatar_url ? (
+            <Image src={profile.avatar_url} alt={profile.display_name} fill className="object-cover" />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center font-display font-black text-3xl text-on-surface/20">
+              {profile.display_name.charAt(0).toUpperCase()}
+            </div>
+          )}
+        </div>
+        {/* Info right */}
+        <div className="flex-1 min-w-0 pt-1">
+          <h1
+            className="font-display font-bold text-on-surface leading-tight"
+            style={{ fontSize: 'clamp(20px,6cqw,32px)', letterSpacing: '-0.02em' }}
+          >
+            {profile.display_name}
+          </h1>
+          <p className="text-xs text-on-surface/40 font-mono mt-1">@{profile.username}{profile.city ? ` · ${profile.city}` : ''}</p>
+          {pillData && (
+            <span
+              className="inline-block mt-2 font-mono text-[9px] px-2.5 py-1 uppercase tracking-widest"
+              style={{ background: `${accent}18`, color: accent, border: `1px solid ${accent}35` }}
+            >
+              {pillData.emoji} {pillData.label}
+            </span>
+          )}
+          {profile.bio && (
+            <p className="mt-2 text-sm text-on-surface/60 leading-relaxed line-clamp-2">{profile.bio}</p>
+          )}
+        </div>
+      </div>
+
+      {/* Stats row */}
+      {(profile.cumulative_events_hosted > 0 || profile.cumulative_unique_attendees > 0) && (
+        <div className="flex items-center gap-5 py-3.5 border-t border-on-surface/8">
+          {profile.cumulative_events_hosted > 0 && (
+            <div>
+              <span className="font-bold text-lg text-primary">{profile.cumulative_events_hosted}</span>
+              <span className="text-[10px] text-on-surface/40 ml-1.5 uppercase tracking-wider">Events</span>
+            </div>
+          )}
+          {profile.cumulative_unique_attendees > 0 && (
+            <div>
+              <span className="font-bold text-lg text-primary">
+                {profile.cumulative_unique_attendees.toLocaleString('en-IN')}
+              </span>
+              <span className="text-[10px] text-on-surface/40 ml-1.5 uppercase tracking-wider">Attendees</span>
+            </div>
+          )}
+          {profile.is_verified && (
+            <div className="flex items-center gap-1 text-[10px] font-mono text-primary ml-auto">
+              <span className="material-symbols-outlined text-sm" style={{ fontVariationSettings: "'FILL' 1" }}>verified</span>
+              Verified
+            </div>
+          )}
+        </div>
+      )}
+
+      {viewerIsExplorer && (
+        <div className="pb-4">
+          <FollowButton makerId={profile.id} initialIsFollowing={isFollowing} />
+        </div>
+      )}
+    </header>
+  )
+}
+
+/** STAGE — ornamental rules, large centered name, small avatar, program-bill feel */
+function StageHeader({ profile, pillData, viewerIsExplorer, isFollowing }: ProfileHeaderProps) {
+  return (
+    <header
+      className="flex flex-col items-center gap-3 py-6 text-center"
+      style={{ ['container-type' as string]: 'inline-size' }}
+    >
+      {/* Top ornamental rule */}
+      <div className="flex items-center gap-3 w-full">
+        <div className="flex-1 h-px bg-on-surface/20" />
+        <span className="text-on-surface/30 text-sm">✦</span>
+        <div className="flex-1 h-px bg-on-surface/20" />
+      </div>
+
+      {/* Name — large, centered */}
+      <h1
+        className="font-display font-bold text-on-surface uppercase leading-none"
+        style={{ fontSize: 'clamp(32px,10cqw,56px)', letterSpacing: '-0.02em' }}
+      >
+        {profile.display_name}
+      </h1>
+
+      {/* Avatar — small, elegant circle */}
+      <div className="relative w-16 h-16 rounded-full overflow-hidden border-2 border-on-surface/20 bg-surface-container">
+        {profile.avatar_url ? (
+          <Image src={profile.avatar_url} alt={profile.display_name} fill className="object-cover" />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center font-display font-black text-2xl text-on-surface/20">
+            {profile.display_name.charAt(0).toUpperCase()}
+          </div>
+        )}
+      </div>
+
+      {pillData && (
+        <span
+          className="font-mono text-[10px] px-4 py-1.5 uppercase tracking-widest rounded-full"
+          style={{ background: pillData.background, color: pillData.color }}
+        >
+          {pillData.emoji} {pillData.label}
+        </span>
+      )}
+
+      {profile.bio && (
+        <p className="text-sm text-on-surface/60 italic leading-relaxed max-w-xs px-2">{profile.bio}</p>
+      )}
+
+      {profile.is_verified && (
+        <div className="flex items-center gap-1.5 text-[11px] font-mono text-primary uppercase tracking-wider">
+          <span className="material-symbols-outlined text-sm" style={{ fontVariationSettings: "'FILL' 1" }}>verified</span>
+          Verified Creator
+        </div>
+      )}
+
+      {/* Bottom ornamental rule */}
+      <div className="flex items-center gap-3 w-full">
+        <div className="flex-1 h-px bg-on-surface/20" />
+        <span className="text-on-surface/30 text-sm">✦</span>
+        <div className="flex-1 h-px bg-on-surface/20" />
+      </div>
+
+      {viewerIsExplorer && (
+        <FollowButton makerId={profile.id} initialIsFollowing={isFollowing} />
+      )}
+    </header>
+  )
+}
+
+/** ZINE — massive display type, raw borders, grayscale avatar, printed-zine DIY energy */
+function ZineHeader({ profile, pillData, viewerIsExplorer, isFollowing }: ProfileHeaderProps) {
+  return (
+    <header
+      className="flex flex-col gap-0"
+      style={{ ['container-type' as string]: 'inline-size', borderBottom: '3px solid rgb(var(--color-on-surface))' }}
+    >
+      <p className="font-mono text-[9px] text-on-surface/30 uppercase tracking-[0.25em] pt-3 pb-2 border-b border-on-surface/10">
+        ISSUE NO.1 · WHENINMYCITY.COM · {(profile.city ?? '').toUpperCase()}
+      </p>
+
+      {/* Massive name */}
+      <h1
+        className="font-display font-black text-on-surface uppercase leading-[0.85] tracking-tight py-3"
+        style={{ fontSize: 'clamp(44px,14cqw,80px)', letterSpacing: '-0.04em' }}
+      >
+        {profile.display_name}
+      </h1>
+
+      {/* Bottom strip: avatar + meta */}
+      <div className="flex gap-3 items-start pb-4 pt-3 border-t border-on-surface/15">
+        {profile.avatar_url && (
+          <div
+            className="relative w-14 h-14 overflow-hidden shrink-0"
+            style={{ border: '2px solid rgb(var(--color-on-surface))' }}
+          >
+            <Image
+              src={profile.avatar_url}
+              alt={profile.display_name}
+              fill
+              className="object-cover grayscale contrast-125"
+            />
+          </div>
+        )}
+        <div className="flex-1 flex flex-col gap-1">
+          {pillData && (
+            <span
+              className="font-mono text-[9px] px-2 py-0.5 uppercase tracking-widest self-start"
+              style={{ background: pillData.background, color: pillData.color }}
+            >
+              {pillData.emoji} {pillData.label}
+            </span>
+          )}
+          {profile.bio && (
+            <p className="font-mono text-[10px] text-on-surface/50 leading-relaxed">{profile.bio}</p>
+          )}
+          <p className="font-mono text-[9px] text-on-surface/25 mt-0.5">@{profile.username}</p>
+        </div>
+      </div>
+
+      {viewerIsExplorer && (
+        <div className="pb-4">
+          <FollowButton makerId={profile.id} initialIsFollowing={isFollowing} />
+        </div>
+      )}
+    </header>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Static accent map — module-level so it's not recreated on every render
+// ---------------------------------------------------------------------------
+
+const ACCENT_MAP: Record<ProfileTheme['colorScheme'], string> = {
+  default:  '#E8572A', midnight: '#818CF8', ocean:    '#22D3EE',
+  forest:   '#6EE7B7', blush:    '#E11D48', sand:     '#B45309',
+  pista:    '#2D7A4F', gulaal:   '#E8342A', neel:     '#F5A800',
+  turmeric: '#F5A800', steel:    '#5B8DEF', sienna:   '#C04A00',
+  indigo:      '#818CF8', aurora:      '#D946EF', sage:        '#3D7F53',
+  mint:        '#0C8B6B', electric:    '#00E5FF', velvet:      '#8B2340',
+  nightforest: '#7EC8A0', parchment:   '#4A3728', gallery:     '#1A1A1A',
+  terracotta:  '#C4552A',
+}
+
+const CREATOR_GRID_BG_STYLE: React.CSSProperties = {
+  backgroundImage: `
+    linear-gradient(rgba(255,255,255,0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.05) 1px, transparent 1px)
+  `,
+  backgroundSize: '40px 40px',
+}
+
+const LIGHT_SCHEMES = new Set(['blush', 'sand', 'parchment', 'gallery'])
+
+// ---------------------------------------------------------------------------
+// Desktop sidebar — file-scoped, only rendered at lg+ breakpoint
+// ---------------------------------------------------------------------------
+
+interface DesktopSidebarProps {
+  profile: UserProfile
+  accent: string
+  pillData: PillData | undefined
+  layout: LayoutPresetId
+  resolvedTheme: ProfileTheme
+  upcomingEvents: Event[]
+}
+
+function DesktopSidebar({ profile, accent, pillData, layout, resolvedTheme, upcomingEvents }: DesktopSidebarProps) {
+  const profileSocial = (profile.social_links ?? {}) as Record<string, string>
+
+  const statsRows = (
+    <div className="flex flex-col gap-0 mt-6">
+      {[
+        { label: 'CITY', value: profile.city ?? '—' },
+        { label: 'EVENTS', value: String(profile.cumulative_events_hosted ?? 0) },
+        { label: 'ATTENDEES', value: (profile.cumulative_unique_attendees ?? 0).toLocaleString('en-IN') },
+      ].map(({ label, value }) => (
+        <div
+          key={label}
+          className="flex justify-between items-center py-3"
+          style={{ borderBottom: '1px dashed rgb(var(--color-on-background)/0.12)' }}
+        >
+          <span className="font-mono text-[10px] uppercase tracking-widest" style={{ color: 'rgb(var(--color-on-background)/0.45)' }}>{label}</span>
+          <span className="font-mono text-sm" style={{ color: 'rgb(var(--color-on-background)/0.85)' }}>{value}</span>
+        </div>
+      ))}
+      <div className="mt-5">
+        <ProfileSocialLinks socialLinks={profileSocial} />
+      </div>
+    </div>
+  )
+
+  if (layout === 'reel') {
+    return (
+      <div
+        className="w-full h-full flex flex-col items-center justify-center p-10"
+        style={{ background: 'rgb(var(--color-background)/0.1)' }}
+      >
+        <div
+          className="rounded-full overflow-hidden"
+          style={{ width: 160, height: 160, boxShadow: `0 0 0 3px ${accent}, 0 0 60px ${accent}60`, flexShrink: 0 }}
+        >
+          {profile.avatar_url ? (
+            <img src={profile.avatar_url} alt={profile.display_name} className="w-full h-full object-cover" />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center font-display font-black text-5xl" style={{ background: `${accent}30`, color: accent }}>
+              {profile.display_name.charAt(0).toUpperCase()}
+            </div>
+          )}
+        </div>
+        <h2
+          className="font-display font-black text-center uppercase leading-[0.9] tracking-tight mt-6"
+          style={{ fontSize: 'clamp(32px,3.5vw,52px)', color: 'rgb(var(--color-on-background))' }}
+        >
+          {profile.display_name}
+        </h2>
+        {pillData && (
+          <span
+            className="mt-3 font-mono text-[11px] px-3 py-1 uppercase tracking-widest rounded-full"
+            style={{ background: pillData.background, color: pillData.color }}
+          >
+            {pillData.emoji} {pillData.label}
+          </span>
+        )}
+        <span className="font-mono text-xs mt-2" style={{ color: 'rgb(var(--color-on-background)/0.45)' }}>
+          @{profile.username}
+        </span>
+        {statsRows}
+      </div>
+    )
+  }
+
+  if (layout === 'boarding-pass') {
+    return (
+      <div
+        className="w-full h-full flex flex-col p-10"
+        style={{ background: '#FAF7F0', ...CREATOR_GRID_BG_STYLE, ['--color-on-surface' as string]: '26 17 8', ['--color-on-surface-variant' as string]: '90 65 55' } as React.CSSProperties}
+      >
+        <div
+          className="relative bg-[#FAF7F0] border-2 border-dashed border-outline-variant"
+          style={{
+            clipPath: 'polygon(0% 0%, 100% 0%, 100% calc(100% - 10px), 97% 100%, 93% calc(100% - 12px), 88% 100%, 82% calc(100% - 8px), 76% 100%, 69% calc(100% - 10px), 63% 100%, 57% calc(100% - 12px), 51% 100%, 44% calc(100% - 10px), 38% 100%, 31% calc(100% - 8px), 25% 100%, 19% calc(100% - 10px), 14% 100%, 8% calc(100% - 12px), 3% 100%, 0% calc(100% - 10px))',
+          }}
+        >
+          <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary" />
+          <div className="flex justify-between items-center px-6 pt-5 gap-3">
+            <span className="font-mono text-[9px] uppercase tracking-[0.2em] leading-none" style={{ color: 'rgb(26 17 8 / 0.6)' }}>
+              BOARDING NOW · CULTURE PASS · {(profile.city ?? '').toUpperCase()} · {new Date().getFullYear()}
+            </span>
+          </div>
+          <div className="px-6 pt-4 pr-20">
+            <h2
+              className="font-display font-black uppercase leading-[0.9] tracking-tight"
+              style={{ fontSize: 'clamp(28px,3.5vw,52px)', color: 'rgb(26 17 8)', letterSpacing: '-0.04em' }}
+            >
+              {profile.display_name}
+            </h2>
+            <div className="flex flex-wrap items-center gap-3 mt-3">
+              <span className="font-mono text-[13px]" style={{ color: 'rgb(26 17 8 / 0.4)' }}>@{profile.username}</span>
+              {pillData && (
+                <span className="font-mono text-[10px] px-3 py-1 uppercase tracking-widest" style={{ background: pillData.background, color: pillData.color }}>
+                  {pillData.emoji} {pillData.label}
+                </span>
+              )}
+            </div>
+          </div>
+          <div className="mx-6 mt-4 border-t-2 border-dashed border-outline-variant/30" />
+          <div className="flex flex-wrap gap-6 px-6 py-4">
+            {profile.cumulative_events_hosted > 0 && (
+              <div>
+                <div className="font-display font-black text-2xl leading-none" style={{ color: 'rgb(26 17 8)' }}>{profile.cumulative_events_hosted}</div>
+                <div className="font-mono text-[9px] uppercase tracking-widest mt-1" style={{ color: 'rgb(26 17 8 / 0.4)' }}>EVENTS HOSTED</div>
+              </div>
+            )}
+            {profile.cumulative_unique_attendees > 0 && (
+              <div>
+                <div className="font-display font-black text-2xl leading-none" style={{ color: 'rgb(26 17 8)' }}>{profile.cumulative_unique_attendees.toLocaleString('en-IN')}</div>
+                <div className="font-mono text-[9px] uppercase tracking-widest mt-1" style={{ color: 'rgb(26 17 8 / 0.4)' }}>PEOPLE ATTENDED</div>
+              </div>
+            )}
+          </div>
+          {/* Avatar bottom-right */}
+          <div className="absolute bottom-0 right-5 translate-y-1/2 z-10">
+            <div className="relative w-16 h-16 rounded-full border-4 border-[#FAF7F0] overflow-hidden bg-surface-container shadow-md">
+              {profile.avatar_url ? (
+                <img src={profile.avatar_url} alt={profile.display_name} className="w-full h-full object-cover" />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center font-display font-black text-2xl" style={{ color: 'rgb(26 17 8 / 0.3)' }}>
+                  {profile.display_name.charAt(0).toUpperCase()}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+        <div className="mt-12 flex flex-col gap-0">
+          {[
+            { label: 'CITY', value: profile.city ?? '—' },
+            { label: 'EVENTS', value: String(profile.cumulative_events_hosted ?? 0) },
+            { label: 'ATTENDEES', value: (profile.cumulative_unique_attendees ?? 0).toLocaleString('en-IN') },
+          ].map(({ label, value }) => (
+            <div key={label} className="flex justify-between items-center py-3" style={{ borderBottom: '1px dashed rgba(26,17,8,0.12)' }}>
+              <span className="font-mono text-[10px] uppercase tracking-widest" style={{ color: 'rgba(26,17,8,0.45)' }}>{label}</span>
+              <span className="font-mono text-sm" style={{ color: 'rgba(26,17,8,0.85)' }}>{value}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    )
+  }
+
+  if (layout === 'poster') {
+    return (
+      <div className="w-full h-full flex flex-col items-center justify-center p-10" style={{ background: 'rgb(var(--color-primary))' }}>
+        <div className="relative w-24 h-24 rounded-full overflow-hidden border-4 border-white/30 mb-5" style={{ flexShrink: 0 }}>
+          {profile.avatar_url ? (
+            <img src={profile.avatar_url} alt={profile.display_name} className="w-full h-full object-cover" />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center font-display font-black text-3xl text-white/40">
+              {profile.display_name.charAt(0).toUpperCase()}
+            </div>
+          )}
+        </div>
+        <h2
+          className="font-display font-black text-white uppercase text-center leading-[0.9] tracking-tight"
+          style={{ fontSize: 'clamp(40px,4.5vw,72px)', letterSpacing: '-0.04em' }}
+        >
+          {profile.display_name}
+        </h2>
+        <p className="font-mono text-[11px] text-white/60 mt-3 uppercase tracking-widest">
+          {profile.city ?? ''}{pillData ? ` · ${pillData.label}` : ''}
+        </p>
+        {pillData && (
+          <span
+            className="mt-4 font-mono text-[10px] px-3 py-1 uppercase tracking-widest rounded-full"
+            style={{ background: 'rgba(0,0,0,0.3)', color: 'rgba(255,255,255,0.9)' }}
+          >
+            {pillData.emoji} {pillData.label}
+          </span>
+        )}
+        {statsRows}
+      </div>
+    )
+  }
+
+  if (layout === 'stage') {
+    return (
+      <div
+        className="w-full h-full flex flex-col items-center justify-center p-10 relative"
+        style={{ background: 'rgb(var(--color-surface-container-low))' }}
+      >
+        <div className="absolute top-0 left-0 right-0 h-20" style={{ background: `linear-gradient(to bottom, ${accent}18, transparent)` }} />
+        {/* Ornamental rule */}
+        <div className="flex items-center gap-3 w-full mb-6">
+          <div className="flex-1 h-px" style={{ background: `rgb(var(--color-on-background)/0.15)` }} />
+          <span style={{ color: accent, fontSize: 12 }}>✦</span>
+          <div className="flex-1 h-px" style={{ background: `rgb(var(--color-on-background)/0.15)` }} />
+        </div>
+        <h2
+          className="font-display font-bold uppercase text-center leading-[0.9] tracking-tight"
+          style={{ fontSize: 'clamp(36px,4vw,60px)', color: 'rgb(var(--color-on-background))', letterSpacing: '-0.03em' }}
+        >
+          {profile.display_name}
+        </h2>
+        <div className="relative w-16 h-16 rounded-full overflow-hidden mt-5" style={{ boxShadow: `0 0 0 2px ${accent}` }}>
+          {profile.avatar_url ? (
+            <img src={profile.avatar_url} alt={profile.display_name} className="w-full h-full object-cover" />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center font-display font-black text-2xl" style={{ background: `${accent}30`, color: accent }}>
+              {profile.display_name.charAt(0).toUpperCase()}
+            </div>
+          )}
+        </div>
+        {pillData && (
+          <span className="mt-4 font-mono text-[11px] px-3 py-1 uppercase tracking-widest" style={{ background: pillData.background, color: pillData.color }}>
+            {pillData.emoji} {pillData.label}
+          </span>
+        )}
+        <div className="flex items-center gap-3 w-full mt-6">
+          <div className="flex-1 h-px" style={{ background: `rgb(var(--color-on-background)/0.15)` }} />
+          <span style={{ color: accent, fontSize: 12 }}>✦</span>
+          <div className="flex-1 h-px" style={{ background: `rgb(var(--color-on-background)/0.15)` }} />
+        </div>
+        {statsRows}
+      </div>
+    )
+  }
+
+  if (layout === 'editorial') {
+    return (
+      <div
+        className="w-full h-full flex flex-col p-10"
+        style={{ background: 'rgb(var(--color-surface-container-low))' }}
+      >
+        <div className="w-full h-0.5" style={{ background: 'rgb(var(--color-on-background))' }} />
+        <div className="flex items-start gap-4 pt-6">
+          <div className="relative w-20 h-20 rounded-xl overflow-hidden shrink-0">
+            {profile.avatar_url ? (
+              <img src={profile.avatar_url} alt={profile.display_name} className="w-full h-full object-cover" />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center font-display font-black text-3xl" style={{ background: `${accent}30`, color: accent }}>
+                {profile.display_name.charAt(0).toUpperCase()}
+              </div>
+            )}
+          </div>
+          <div className="flex flex-col gap-2 min-w-0">
+            <h2
+              className="font-display font-black uppercase leading-[0.9] tracking-tight"
+              style={{ fontSize: 'clamp(28px,3.2vw,48px)', color: 'rgb(var(--color-on-background))', letterSpacing: '-0.04em' }}
+            >
+              {profile.display_name}
+            </h2>
+            {pillData && (
+              <span className="font-mono text-[10px] px-3 py-1 uppercase tracking-widest self-start" style={{ background: pillData.background, color: pillData.color }}>
+                {pillData.emoji} {pillData.label}
+              </span>
+            )}
+          </div>
+        </div>
+        <div className="w-full h-0.5 mt-6" style={{ background: 'rgb(var(--color-on-background)/0.15)' }} />
+        <div className="flex gap-8 mt-6">
+          {profile.cumulative_events_hosted > 0 && (
+            <div>
+              <div className="font-display font-black text-3xl leading-none" style={{ color: 'rgb(var(--color-primary))' }}>{profile.cumulative_events_hosted}</div>
+              <div className="font-mono text-[9px] uppercase tracking-widest mt-1" style={{ color: 'rgb(var(--color-on-background)/0.45)' }}>EVENTS</div>
+            </div>
+          )}
+          {profile.cumulative_unique_attendees > 0 && (
+            <div>
+              <div className="font-display font-black text-3xl leading-none" style={{ color: 'rgb(var(--color-primary))' }}>{profile.cumulative_unique_attendees.toLocaleString('en-IN')}</div>
+              <div className="font-mono text-[9px] uppercase tracking-widest mt-1" style={{ color: 'rgb(var(--color-on-background)/0.45)' }}>ATTENDEES</div>
+            </div>
+          )}
+        </div>
+        {statsRows}
+      </div>
+    )
+  }
+
+  // minimal + fallback (corporate, zine)
+  return (
+    <div
+      className="w-full h-full flex flex-col items-center p-10"
+      style={{ background: 'rgb(var(--color-surface-container-lowest))' }}
+    >
+      <div className="relative w-24 h-24 rounded-full overflow-hidden border border-on-background/20 mb-5" style={{ flexShrink: 0 }}>
+        {profile.avatar_url ? (
+          <img src={profile.avatar_url} alt={profile.display_name} className="w-full h-full object-cover" />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center font-display font-black text-3xl" style={{ background: `${accent}20`, color: accent }}>
+            {profile.display_name.charAt(0).toUpperCase()}
+          </div>
+        )}
+      </div>
+      <h2
+        className="font-display font-light text-center leading-[1.1]"
+        style={{ fontSize: 'clamp(28px,3vw,40px)', color: 'rgb(var(--color-on-background))' }}
+      >
+        {profile.display_name}
+      </h2>
+      <div className="mt-3 w-8 h-0.5" style={{ background: 'rgb(var(--color-primary))' }} />
+      <p className="font-mono text-[11px] mt-3 text-center" style={{ color: 'rgb(var(--color-on-background)/0.5)' }}>
+        {profile.city ?? ''}{pillData ? ` · ${pillData.label}` : ''}
+      </p>
+      {statsRows}
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
 // Main component
 // ---------------------------------------------------------------------------
 
@@ -1353,9 +2363,11 @@ interface PublicProfilePageProps {
   viewerIsExplorer?:    boolean
   isOwner?:             boolean
   cityMasteryMap?:      MasteryNeighbourhood[]
+  posts?:               CreatorPostWithReactions[]
+  viewerUserId?:        string | null
 }
 
-export default function PublicProfilePage({
+const PublicProfilePage = React.memo(function PublicProfilePage({
   profile,
   blocks,
   upcomingEvents,
@@ -1372,30 +2384,32 @@ export default function PublicProfilePage({
   viewerIsExplorer = false,
   isOwner = false,
   cityMasteryMap = [],
+  posts = [],
+  viewerUserId = null,
 }: PublicProfilePageProps) {
-  const contentBlocks = blocks.filter((b) => b.is_visible)
+  const resolvedTheme = useMemo<ProfileTheme>(() => theme ?? DEFAULT_PROFILE_THEME, [theme])
+  const contentBlocks = useMemo(() => blocks.filter((b) => b.is_visible), [blocks])
+  const hasBioBlock        = contentBlocks.some(b => b.block_type === 'text_bio')
+  const hasCategoryBadge   = contentBlocks.some(b => b.block_type === 'creator_type_badge')
+  const hasSocialLinkBlocks = contentBlocks.some(b => b.block_type === 'social_link')
   const profileSocial = (profile.social_links ?? {}) as Record<string, string>
   const pillData = CATEGORY_PILL_MAP[profile.creator_type]
-  const resolvedTheme: ProfileTheme = theme ?? DEFAULT_PROFILE_THEME
   const fontClass = FONT_FAMILY_CLASS[resolvedTheme.fontFamily]
-  const themeStyle = buildThemeStyle(resolvedTheme)
+  const themeStyle = useMemo(() => buildThemeStyle(resolvedTheme), [resolvedTheme])
+  const accent = useMemo(() => ACCENT_MAP[resolvedTheme.colorScheme], [resolvedTheme.colorScheme])
 
-  // Derive accent colour string for client components (countdown, UPI tip)
-  const ACCENT_MAP: Record<ProfileTheme['colorScheme'], string> = {
-    default:  '#E8572A', midnight: '#818CF8', ocean:    '#22D3EE',
-    forest:   '#6EE7B7', blush:    '#E11D48', sand:     '#B45309',
-    pista:    '#2D7A4F', gulaal:   '#E8342A', neel:     '#F5A800',
-    turmeric: '#F5A800', steel:    '#5B8DEF', sienna:   '#C04A00',
-    indigo:      '#818CF8', aurora:      '#D946EF', sage:        '#3D7F53',
-    mint:        '#0C8B6B', electric:    '#00E5FF', velvet:      '#8B2340',
-    nightforest: '#7EC8A0', parchment:   '#4A3728', gallery:     '#1A1A1A',
-    terracotta:  '#C4552A',
-  }
-  const accent = ACCENT_MAP[resolvedTheme.colorScheme]
+  const layout = (resolvedTheme.layoutPreset ?? 'boarding-pass') as LayoutPresetId
+  const headerProps: ProfileHeaderProps = { profile, accent, pillData, resolvedTheme, viewerIsExplorer, isFollowing }
+
+  const wordmarkColor = LIGHT_SCHEMES.has(resolvedTheme.colorScheme) ? 'black' : 'white'
+  const nextEvent = upcomingEvents[0]
+  const auroraRightPanelStyle: React.CSSProperties = resolvedTheme.backgroundStyle === 'aurora'
+    ? { background: 'rgb(var(--color-background)/0.88)', backdropFilter: 'blur(2px)' }
+    : {}
 
   return (
     <div
-      className={`relative flex min-h-full w-full flex-col items-center bg-background text-on-background selection:bg-primary-container selection:text-white ${fontClass}`}
+      className={`relative w-full bg-background text-on-background selection:bg-primary-container selection:text-white ${fontClass}`}
       style={themeStyle}
       data-glass={resolvedTheme.glassEffects ? 'true' : undefined}
       data-shadow={resolvedTheme.dropShadow || undefined}
@@ -1405,128 +2419,263 @@ export default function PublicProfilePage({
       {resolvedTheme.backgroundStyle === 'aurora' && (
         <AuroraBackground scheme={resolvedTheme.colorScheme} style={resolvedTheme.auroraStyle} />
       )}
-      <main className="w-full max-w-2xl px-4 py-8 flex flex-col gap-8 relative z-10">
+      {/* ── DESKTOP sticky top bar ──────────────────────────────────────────── */}
+      <div
+        className="hidden lg:flex sticky top-0 z-40 items-center justify-between px-8 w-full shrink-0"
+        style={{ height: 64, background: 'rgb(var(--color-background)/0.92)', backdropFilter: 'blur(8px)', borderBottom: '2px dashed rgb(var(--color-on-background)/0.10)' }}
+      >
+        <WimcWordmark color={wordmarkColor} height={28} />
+        <span className="font-mono text-xs" style={{ color: 'rgb(var(--color-on-background)/0.45)' }}>@{profile.username}</span>
+        <Link
+          href="/signin"
+          className="font-mono text-[11px] px-3 py-1.5 rounded transition-colors hover:opacity-80"
+          style={{ border: '1px solid rgb(var(--color-primary)/0.4)', color: 'rgb(var(--color-primary))' }}
+        >
+          Create your page →
+        </Link>
+      </div>
 
-        {/* ── Profile header ───────────────────────────────────────────── */}
-        <header className="flex flex-col items-center text-center gap-4">
-          <div className="relative">
-            <div className="h-28 w-28 rounded-full border-4 border-surface-container-high bg-surface-container-highest overflow-hidden relative">
-              {profile.avatar_url ? (
-                <Image src={profile.avatar_url} alt={profile.display_name} fill className="object-cover" />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center text-4xl font-bold text-primary bg-primary/10">
-                  {profile.display_name.charAt(0).toUpperCase()}
-                </div>
-              )}
-            </div>
+      {/* ── Body: sidebar + right panel (stacks vertically on mobile) ──────── */}
+      <div className="flex flex-col lg:flex-row relative z-10" style={{ minHeight: 'calc(100vh - 64px)' }}>
+
+        {/* DESKTOP left sidebar: 40% sticky, hidden on mobile */}
+        <aside
+          className="hidden lg:block lg:sticky lg:top-16 shrink-0 overflow-y-auto"
+          style={{ width: '40%', height: 'calc(100vh - 64px)', borderRight: '2px dashed rgb(var(--color-on-background)/0.10)' }}
+        >
+          <DesktopSidebar
+            profile={profile}
+            accent={accent}
+            pillData={pillData}
+            layout={layout}
+            resolvedTheme={resolvedTheme}
+            upcomingEvents={upcomingEvents}
+          />
+        </aside>
+
+        {/* Right panel (60% on desktop, full-width on mobile) */}
+        <div
+          className="flex-1 flex flex-col items-center lg:items-stretch lg:overflow-y-auto"
+          style={{ paddingBottom: 96, ...auroraRightPanelStyle }}
+        >
+
+          {/* DESKTOP intro section — hidden on mobile */}
+          <div
+            className="hidden lg:flex flex-col gap-3 px-12 pt-10 pb-8"
+            style={{ borderBottom: '2px dashed rgb(var(--color-on-background)/0.10)' }}
+          >
             {profile.is_verified && (
-              <div className="absolute -bottom-1 -right-1 bg-tertiary-container text-on-tertiary-container p-1.5 rounded-full flex items-center justify-center shadow-md">
-                <span className="material-symbols-outlined text-base" style={{ fontVariationSettings: "'FILL' 1" }}>verified</span>
+              <div className="flex items-center gap-1.5 text-[11px] font-mono text-primary uppercase tracking-wider">
+                <span className="material-symbols-outlined text-sm" style={{ fontVariationSettings: "'FILL' 1" }}>verified</span>
+                Verified Creator
               </div>
             )}
-          </div>
-
-          <h1 className="font-headline text-4xl sm:text-5xl font-bold text-on-surface tracking-tight text-center">
-            {profile.display_name}
-          </h1>
-
-          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-surface-container-high text-on-surface-variant text-xs font-semibold">
-            <span className="material-symbols-outlined text-sm">location_on</span>
-            {profile.city}
-          </span>
-
-          {pillData && (
-            <span
-              className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-bold"
-              style={{ background: pillData.background, color: pillData.color }}
-            >
-              {pillData.emoji} {pillData.label}
-            </span>
-          )}
-
-          {profile.user_tier === 'local' && (
-            <span
-              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold"
-              style={{ background: 'rgba(34,197,94,0.12)', color: '#16a34a', border: '1px solid rgba(34,197,94,0.25)' }}
-            >
-              <span className="material-symbols-outlined" style={{ fontSize: 13, fontVariationSettings: "'FILL' 1" }}>
-                where_to_vote
+            {profile.user_tier === 'local' && (
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold self-start"
+                    style={{ background: 'rgba(34,197,94,0.12)', color: '#16a34a', border: '1px solid rgba(34,197,94,0.25)' }}>
+                <span className="material-symbols-outlined" style={{ fontSize: 13, fontVariationSettings: "'FILL' 1" }}>where_to_vote</span>
+                Local Creator
               </span>
-              Local Creator
-            </span>
-          )}
-
-          {profile.user_tier === 'lantern' && (() => {
-            const yrs = profile.lantern_since
-              ? (Date.now() - new Date(profile.lantern_since).getTime()) / (365.25 * 24 * 60 * 60 * 1000)
-              : 0
-            const isMentor = yrs >= 3
-            return (
-              <span
-                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold"
-                style={{ background: isMentor ? 'rgba(245,168,0,0.18)' : 'rgba(245,168,0,0.12)', color: '#F5A800', border: '1px solid rgba(245,168,0,0.25)' }}
-              >
-                <span className="material-symbols-outlined" style={{ fontSize: 13, fontVariationSettings: "'FILL' 1" }}>
-                  {isMentor ? 'local_fire_department' : 'light_mode'}
-                </span>
-                {isMentor ? 'Lantern Mentor' : 'Lantern Creator'}
-              </span>
-            )
-          })()}
-          {profile.user_tier === 'beacon' && (() => {
-            const inRecovery = !!profile.tier_recovery_until && new Date(profile.tier_recovery_until) > new Date()
-            if (inRecovery) {
+            )}
+            {profile.user_tier === 'lantern' && (() => {
+              const yrs = profile.lantern_since ? (Date.now() - new Date(profile.lantern_since).getTime()) / (365.25*24*60*60*1000) : 0
+              const isMentor = yrs >= 3
               return (
-                <span
-                  className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold"
-                  style={{ background: 'rgba(168,85,247,0.06)', color: 'rgba(168,85,247,0.5)', border: '1px solid rgba(168,85,247,0.2)' }}
-                >
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold self-start"
+                      style={{ background: isMentor ? 'rgba(245,168,0,0.18)' : 'rgba(245,168,0,0.12)', color: '#F5A800', border: '1px solid rgba(245,168,0,0.25)' }}>
+                  <span className="material-symbols-outlined" style={{ fontSize: 13, fontVariationSettings: "'FILL' 1" }}>{isMentor ? 'local_fire_department' : 'light_mode'}</span>
+                  {isMentor ? 'Lantern Mentor' : 'Lantern Creator'}
+                </span>
+              )
+            })()}
+            {profile.user_tier === 'beacon' && (() => {
+              const inRecovery = !!profile.tier_recovery_until && new Date(profile.tier_recovery_until) > new Date()
+              if (inRecovery) return (
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold self-start"
+                      style={{ background: 'rgba(168,85,247,0.06)', color: 'rgba(168,85,247,0.5)', border: '1px solid rgba(168,85,247,0.2)' }}>
                   <span className="material-symbols-outlined" style={{ fontSize: 13 }}>schedule</span>
                   Beacon · Reviewing
                 </span>
               )
-            }
-            const yrs = profile.beacon_since
-              ? (Date.now() - new Date(profile.beacon_since).getTime()) / (365.25 * 24 * 60 * 60 * 1000)
-              : 0
-            const isLegacy = yrs >= 5
-            return (
-              <span
-                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold"
-                style={{ background: isLegacy ? 'rgba(168,85,247,0.18)' : 'rgba(168,85,247,0.12)', color: '#a855f7', border: '1px solid rgba(168,85,247,0.25)' }}
-              >
-                <span className="material-symbols-outlined" style={{ fontSize: 13, fontVariationSettings: "'FILL' 1" }}>
-                  {isLegacy ? 'auto_awesome' : 'workspace_premium'}
+              const yrs = profile.beacon_since ? (Date.now() - new Date(profile.beacon_since).getTime()) / (365.25*24*60*60*1000) : 0
+              const isLegacy = yrs >= 5
+              return (
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold self-start"
+                      style={{ background: isLegacy ? 'rgba(168,85,247,0.18)' : 'rgba(168,85,247,0.12)', color: '#a855f7', border: '1px solid rgba(168,85,247,0.25)' }}>
+                  <span className="material-symbols-outlined" style={{ fontSize: 13, fontVariationSettings: "'FILL' 1" }}>{isLegacy ? 'auto_awesome' : 'workspace_premium'}</span>
+                  {isLegacy ? 'Hall of Lights' : 'Beacon Creator'}
                 </span>
-                {isLegacy ? 'Hall of Lights' : 'Beacon Creator'}
-              </span>
-            )
-          })()}
+              )
+            })()}
+            {!hasBioBlock && profile.bio && <p className="text-on-background/90 text-base leading-relaxed max-w-lg">{profile.bio}</p>}
+            {viewerIsExplorer && <FollowButton makerId={profile.id} initialIsFollowing={isFollowing} />}
+            {(isOwner || profile.show_city_mastery) && (
+              <CityMasteryMap neighbourhoods={cityMasteryMap} isOwner={isOwner} sharingEnabled={profile.show_city_mastery} />
+            )}
+          </div>
 
-          {profile.bio && (
-            <p className="max-w-md text-on-surface/90 text-sm md:text-base leading-relaxed mt-1">
-              {profile.bio}
-            </p>
-          )}
+          {/* MOBILE: layout-specific header + social links + mastery (hidden lg) */}
+          <main className="w-full max-w-2xl px-4 py-8 flex flex-col gap-8 lg:hidden">
 
-          {viewerIsExplorer && (
-            <FollowButton makerId={profile.id} initialIsFollowing={isFollowing} />
-          )}
-        </header>
+            {/* ── Profile header — switched on layoutPreset ─────────────────── */}
+            {layout === 'poster'    && <PosterHeader    {...headerProps} />}
+            {layout === 'editorial' && <EditorialHeader {...headerProps} />}
+            {layout === 'minimal'   && <MinimalHeader   {...headerProps} />}
+            {layout === 'reel'      && <ReelHeader      {...headerProps} />}
+            {layout === 'corporate' && <CorporateHeader {...headerProps} />}
+            {layout === 'stage'     && <StageHeader     {...headerProps} />}
+            {layout === 'zine'      && <ZineHeader      {...headerProps} />}
 
-        {/* ── Profile-level social links ────────────────────────────────── */}
-        <ProfileSocialLinks socialLinks={profileSocial} />
+            {/* Boarding-pass (default) ─────────────────────────────────────── */}
+            {layout === 'boarding-pass' && (
+              <header className="flex flex-col gap-3">
+                <div className="relative" style={{ ['container-type' as string]: 'inline-size' }}>
+                  {/* Paper card — torn bottom edge */}
+                  <div
+                    className="relative bg-[#FAF7F0] border-2 border-dashed border-outline-variant pb-6"
+                    style={{
+                      clipPath: 'polygon(0% 0%, 100% 0%, 100% calc(100% - 10px), 97% 100%, 93% calc(100% - 12px), 88% 100%, 82% calc(100% - 8px), 76% 100%, 69% calc(100% - 10px), 63% 100%, 57% calc(100% - 12px), 51% 100%, 44% calc(100% - 10px), 38% 100%, 31% calc(100% - 8px), 25% 100%, 19% calc(100% - 10px), 14% 100%, 8% calc(100% - 12px), 3% 100%, 0% calc(100% - 10px))',
+                      ['--color-on-surface' as string]: '26 17 8',
+                      ['--color-on-surface-variant' as string]: '90 65 55',
+                    }}
+                  >
+                    <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary" />
+                    <div className="flex justify-between items-center px-8 pt-5 gap-3">
+                      <span className="font-mono text-[9px] text-on-surface/60 uppercase tracking-[0.2em] leading-none">
+                        BOARDING NOW · CULTURE PASS · {(profile.city ?? '').toUpperCase()} · {new Date().getFullYear()}
+                      </span>
+                      <span className="font-mono text-[9px] text-on-surface/60 leading-none shrink-0">
+                        № {profile.id.slice(-6).toUpperCase()}
+                      </span>
+                    </div>
+                    <div className="px-8 pt-4 pr-8">
+                      <h1
+                        className="font-display font-black text-on-surface uppercase leading-[0.9] tracking-tight"
+                        style={{ fontSize: 'clamp(28px,11cqw,60px)', letterSpacing: '-0.04em' }}
+                      >
+                        {profile.display_name}
+                      </h1>
+                      <div className="flex flex-wrap items-center gap-3 mt-3">
+                        <span className="font-mono text-[13px] text-on-surface/40">@{profile.username}</span>
+                        {pillData && (
+                          <span
+                            className="font-mono text-[10px] px-3 py-1 uppercase tracking-widest"
+                            style={{ background: pillData.background, color: pillData.color }}
+                          >
+                            {pillData.emoji} {pillData.label}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <div className="mx-8 mt-5 border-t-2 border-dashed border-outline-variant/30" />
+                    <div className="flex flex-wrap gap-6 px-8 py-4">
+                      {profile.cumulative_events_hosted > 0 && (
+                        <div>
+                          <div className="font-display font-black text-2xl text-on-surface leading-none">{profile.cumulative_events_hosted}</div>
+                          <div className="font-mono text-[9px] text-on-surface/40 uppercase tracking-widest mt-1">EVENTS HOSTED</div>
+                        </div>
+                      )}
+                      {profile.cumulative_unique_attendees > 0 && (
+                        <div>
+                          <div className="font-display font-black text-2xl text-on-surface leading-none">
+                            {profile.cumulative_unique_attendees.toLocaleString('en-IN')}
+                          </div>
+                          <div className="font-mono text-[9px] text-on-surface/40 uppercase tracking-widest mt-1">PEOPLE ATTENDED</div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
 
-        {/* ── City mastery map ──────────────────────────────────────────── */}
-        {(isOwner || profile.show_city_mastery) && (
-          <CityMasteryMap
-            neighbourhoods={cityMasteryMap}
-            isOwner={isOwner}
-            sharingEnabled={profile.show_city_mastery}
-          />
-        )}
+                  {/* Avatar overlapping card bottom-right */}
+                  <div className="absolute bottom-0 right-6 translate-y-1/2 z-10">
+                    <div className="relative w-24 h-24 rounded-full border-4 border-[#FAF7F0] overflow-hidden bg-surface-container shadow-md">
+                      {profile.avatar_url ? (
+                        <Image src={profile.avatar_url} alt={profile.display_name} fill className="object-cover" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center font-display font-black text-3xl text-on-surface/30">
+                          {profile.display_name.charAt(0).toUpperCase()}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
 
-        {/* ── Content blocks ────────────────────────────────────────────── */}
+                {/* Post-card: tier badges, bio, follow */}
+                <div className="mt-12 flex flex-col items-start gap-3">
+                  {profile.is_verified && (
+                    <div className="flex items-center gap-1.5 text-[11px] font-mono text-primary uppercase tracking-wider">
+                      <span className="material-symbols-outlined text-sm" style={{ fontVariationSettings: "'FILL' 1" }}>verified</span>
+                      Verified Creator
+                    </div>
+                  )}
+                  {profile.user_tier === 'local' && (
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold"
+                          style={{ background: 'rgba(34,197,94,0.12)', color: '#16a34a', border: '1px solid rgba(34,197,94,0.25)' }}>
+                      <span className="material-symbols-outlined" style={{ fontSize: 13, fontVariationSettings: "'FILL' 1" }}>where_to_vote</span>
+                      Local Creator
+                    </span>
+                  )}
+                  {profile.user_tier === 'lantern' && (() => {
+                    const yrs = profile.lantern_since ? (Date.now() - new Date(profile.lantern_since).getTime()) / (365.25*24*60*60*1000) : 0
+                    const isMentor = yrs >= 3
+                    return (
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold"
+                            style={{ background: isMentor ? 'rgba(245,168,0,0.18)' : 'rgba(245,168,0,0.12)', color: '#F5A800', border: '1px solid rgba(245,168,0,0.25)' }}>
+                        <span className="material-symbols-outlined" style={{ fontSize: 13, fontVariationSettings: "'FILL' 1" }}>{isMentor ? 'local_fire_department' : 'light_mode'}</span>
+                        {isMentor ? 'Lantern Mentor' : 'Lantern Creator'}
+                      </span>
+                    )
+                  })()}
+                  {profile.user_tier === 'beacon' && (() => {
+                    const inRecovery = !!profile.tier_recovery_until && new Date(profile.tier_recovery_until) > new Date()
+                    if (inRecovery) return (
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold"
+                            style={{ background: 'rgba(168,85,247,0.06)', color: 'rgba(168,85,247,0.5)', border: '1px solid rgba(168,85,247,0.2)' }}>
+                        <span className="material-symbols-outlined" style={{ fontSize: 13 }}>schedule</span>
+                        Beacon · Reviewing
+                      </span>
+                    )
+                    const yrs = profile.beacon_since ? (Date.now() - new Date(profile.beacon_since).getTime()) / (365.25*24*60*60*1000) : 0
+                    const isLegacy = yrs >= 5
+                    return (
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold"
+                            style={{ background: isLegacy ? 'rgba(168,85,247,0.18)' : 'rgba(168,85,247,0.12)', color: '#a855f7', border: '1px solid rgba(168,85,247,0.25)' }}>
+                        <span className="material-symbols-outlined" style={{ fontSize: 13, fontVariationSettings: "'FILL' 1" }}>{isLegacy ? 'auto_awesome' : 'workspace_premium'}</span>
+                        {isLegacy ? 'Hall of Lights' : 'Beacon Creator'}
+                      </span>
+                    )
+                  })()}
+                  {!hasBioBlock && profile.bio && <p className="text-on-surface/90 text-sm leading-relaxed">{profile.bio}</p>}
+                  {viewerIsExplorer && <FollowButton makerId={profile.id} initialIsFollowing={isFollowing} />}
+                </div>
+              </header>
+            )}
+
+            {/* ── Profile-level social links ────────────────────────────────── */}
+            {!hasSocialLinkBlocks && <ProfileSocialLinks socialLinks={profileSocial} />}
+
+            {/* ── City mastery map ──────────────────────────────────────────── */}
+            {(isOwner || profile.show_city_mastery) && (
+              <CityMasteryMap
+                neighbourhoods={cityMasteryMap}
+                isOwner={isOwner}
+                sharingEnabled={profile.show_city_mastery}
+              />
+            )}
+
+          </main>
+
+          {/* ── Shared: blocks + posts + footer (mobile & desktop) ─────────── */}
+          <div className="w-full max-w-2xl lg:max-w-none px-4 lg:px-12 flex flex-col gap-8 py-8 mx-auto lg:mx-0">
+
+            {/* Social links — desktop only, suppressed when social_link blocks exist */}
+            {!hasSocialLinkBlocks && (
+              <div className="hidden lg:block">
+                <ProfileSocialLinks socialLinks={profileSocial} />
+              </div>
+            )}
+
+            {/* ── Content blocks ────────────────────────────────────────────── */}
         {contentBlocks.map((block) => {
           switch (block.block_type) {
 
@@ -1561,10 +2710,30 @@ export default function PublicProfilePage({
             case 'event_listing':
               return upcomingEvents.length > 0 ? (
                 <ClickTracker key={block.id} blockId={block.id} creatorId={profile.id}>
-                  <section className="flex flex-col gap-4">
-                    {upcomingEvents.map((ev) => (
-                      <EventCard key={ev.id} event={ev} />
-                    ))}
+                  <section
+                    className={`relative ${
+                      layout === 'corporate' || layout === 'stage'
+                        ? 'card-surface rounded-2xl overflow-hidden bg-surface-container-high'
+                        : ''
+                    }`}
+                  >
+                    {/* Stacked depth shadow only makes sense on boarding-pass ticket stubs */}
+                    {layout === 'boarding-pass' && upcomingEvents.length >= 3 && (
+                      <div className="absolute inset-x-2 bottom-[-4px] h-full bg-[#FAF7F0] border border-dashed border-outline-variant/30 -z-10" />
+                    )}
+                    {layout === 'boarding-pass' && upcomingEvents.length >= 2 && (
+                      <div className="absolute inset-x-1 bottom-[-2px] h-full bg-[#FAF7F0] border border-dashed border-outline-variant/30 -z-10" />
+                    )}
+                    <div className={`flex flex-col ${
+                      layout === 'editorial' ? 'gap-0 divide-y divide-on-surface/10' :
+                      layout === 'corporate' || layout === 'stage' ? 'gap-0 divide-y divide-on-surface/8' :
+                      layout === 'zine' ? 'gap-1.5' :
+                      'gap-3'
+                    }`}>
+                      {upcomingEvents.map((ev) => (
+                        <EventCard key={ev.id} event={ev} layout={layout} />
+                      ))}
+                    </div>
                   </section>
                 </ClickTracker>
               ) : null
@@ -1582,16 +2751,25 @@ export default function PublicProfilePage({
             // ── Testimonials ──────────────────────────────────────────────
             case 'testimonial':
               return testimonials.length > 0 ? (
-                <section key={block.id} className="flex flex-col gap-3">
-                  <h3 className="font-headline font-bold text-lg text-on-surface px-1">What attendees say</h3>
-                  {testimonials.slice(0, 6).map((t, i) => (
-                    <div key={i} className="card-surface bg-surface-container-low rounded-xl p-5">
-                      <div className="flex items-center gap-2 mb-3">
-                        <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm shrink-0">
-                          {t.reviewer_name.charAt(0).toUpperCase()}
-                        </div>
-                        <span className="font-semibold text-sm text-on-surface">{t.reviewer_name}</span>
-                        <div className="ml-auto flex">
+                <section key={block.id} className="flex flex-col gap-4">
+                  <h3
+                    className="font-display font-black text-on-surface uppercase"
+                    style={{ fontSize: 'clamp(18px,3vw,24px)', letterSpacing: '-0.02em' }}
+                  >
+                    What Attendees Say
+                  </h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {testimonials.slice(0, 6).map((t, i) => (
+                      <div
+                        key={i}
+                        className="bg-[#FAF7F0] text-[#07070A] relative flex flex-col pt-6 px-4 pb-4 border border-outline-variant border-t-0"
+                        style={{
+                          clipPath: 'polygon(0% 12px, 3% 0, 8% 10px, 14% 2px, 19% 12px, 25% 0, 31% 10px, 38% 2px, 44% 12px, 51% 0, 57% 10px, 63% 2px, 69% 12px, 76% 0, 82% 10px, 88% 2px, 93% 12px, 97% 0, 100% 10px, 100% 100%, 0% 100%)',
+                          boxShadow: '4px 4px 0px rgb(var(--color-background))',
+                        }}
+                      >
+                        <span className="material-symbols-outlined text-primary opacity-40 absolute top-3 left-3 text-xl" style={{ fontVariationSettings: "'FILL' 1" }}>format_quote</span>
+                        <div className="flex gap-0.5 mb-2">
                           {[1,2,3,4,5].map((s) => (
                             <span
                               key={s}
@@ -1600,10 +2778,15 @@ export default function PublicProfilePage({
                             >star</span>
                           ))}
                         </div>
+                        <p className="font-sans font-bold text-sm leading-relaxed flex-1">
+                          &ldquo;{t.review}&rdquo;
+                        </p>
+                        <div className="mt-3 pt-3 border-t border-dashed border-[#a58b86] flex flex-col gap-0.5">
+                          <span className="font-mono text-[11px] text-[#C04A00]">{t.reviewer_name}</span>
+                        </div>
                       </div>
-                      <p className="text-sm text-on-surface-variant leading-relaxed italic">&ldquo;{t.review}&rdquo;</p>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </section>
               ) : null
 
@@ -1869,11 +3052,20 @@ export default function PublicProfilePage({
           }
         })}
 
+        {/* ── Creator posts ────────────────────────────────────────────── */}
+        {(posts.length > 0 || isOwner) && (
+          <CreatorPostsSection
+            initialPosts={posts}
+            isOwner={isOwner}
+            viewerUserId={viewerUserId}
+            creatorUsername={profile.username}
+          />
+        )}
+
         {/* ── Footer ──────────────────────────────────────────────────── */}
-        <footer className="flex flex-col items-center gap-4 pt-12 pb-8">
+        <footer className="flex flex-col items-center lg:items-start gap-4 pt-12 pb-8">
           <div className="flex items-center gap-2 grayscale opacity-50">
-            <div className="h-6 w-6 rounded bg-on-background" />
-            <span className="font-headline font-bold text-sm tracking-tighter">WIMC</span>
+            <WimcWordmark color={wordmarkColor} height={20} />
           </div>
           <Link
             href="/signin"
@@ -1884,7 +3076,43 @@ export default function PublicProfilePage({
           </Link>
         </footer>
 
-      </main>
+          </div>{/* end shared content */}
+        </div>{/* end right panel */}
+      </div>{/* end body flex */}
+
+      {/* ── DESKTOP bottom CTA bar ──────────────────────────────────────────── */}
+      <div
+        className="hidden lg:flex fixed bottom-0 right-0 z-50 items-center justify-between px-8"
+        style={{ width: '60%', height: 72, background: 'rgb(var(--color-background)/0.94)', backdropFilter: 'blur(8px)', borderTop: '2px dashed rgb(var(--color-on-background)/0.10)', boxShadow: '0 -10px 30px rgba(0,0,0,0.25)' }}
+      >
+        {nextEvent ? (
+          <>
+            <div className="flex flex-col gap-0.5">
+              <span className="font-mono text-[10px] uppercase tracking-widest" style={{ color: 'rgb(var(--color-on-background)/0.45)' }}>NEXT UP</span>
+              <span className="font-display font-bold text-sm truncate max-w-[240px]" style={{ color: 'rgb(var(--color-on-background))' }}>{nextEvent.title}</span>
+              <span className="font-mono text-[11px]" style={{ color: 'rgb(var(--color-on-background)/0.6)' }}>{formatShortDate(nextEvent.starts_at)}</span>
+            </div>
+            <div className="flex items-center gap-4">
+              <span className="font-display font-black text-xl" style={{ color: 'rgb(var(--color-primary))' }}>
+                {nextEvent.ticket_price === 0 ? 'FREE' : `₹${(nextEvent.ticket_price / 100).toLocaleString('en-IN')}`}
+              </span>
+              <Link
+                href={`/events/${nextEvent.id}`}
+                className="font-mono text-sm px-5 py-2.5 rounded transition-colors"
+                style={{ background: 'rgb(var(--color-primary))', color: 'rgb(var(--color-on-primary))' }}
+              >
+                Get tickets →
+              </Link>
+            </div>
+          </>
+        ) : (
+          <div className="flex w-full items-center justify-center">
+            <Link href="/signin" className="font-mono text-sm" style={{ color: 'rgb(var(--color-on-background)/0.6)' }}>
+              Create your own page on WIMC →
+            </Link>
+          </div>
+        )}
+      </div>
 
       {/* eslint-disable-next-line @next/next/no-page-custom-font */}
       <link
@@ -1894,4 +3122,6 @@ export default function PublicProfilePage({
       <style>{`.material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }`}</style>
     </div>
   )
-}
+})
+
+export default PublicProfilePage

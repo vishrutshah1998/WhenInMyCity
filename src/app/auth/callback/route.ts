@@ -36,13 +36,34 @@ export async function GET(request: NextRequest) {
   }
 
   const userId = data.session.user.id
+  const googleEmail = data.session.user.email ?? null
 
-  // Check both profile tables in parallel so returning users of either
+  // Check all profile tables in parallel so returning users of any
   // role are routed to the right home without re-entering onboarding.
-  const [{ data: creatorProfile }, { data: explorerProfile }] = await Promise.all([
-    supabase.from('user_profiles').select('id').eq('id', userId).maybeSingle(),
-    supabase.from('explorer_profiles').select('id').eq('auth_user_id', userId).maybeSingle(),
-  ])
+  // Creator takes priority: a dual-persona user (creator + venue) lands on
+  // /dashboard where they can switch to the Adda dashboard.
+  const [{ data: creatorProfile }, { data: explorerProfile }, { data: addaProfile }] =
+    await Promise.all([
+      supabase.from('user_profiles').select('id, contact_email').eq('id', userId).maybeSingle(),
+      supabase.from('explorer_profiles').select('id').eq('auth_user_id', userId).maybeSingle(),
+      supabase.from('adda_profiles').select('id, contact_email').eq('auth_user_id', userId).maybeSingle(),
+    ])
+
+  // Backfill contact_email from Google OAuth for returning users who don't have one yet.
+  if (googleEmail) {
+    if (creatorProfile && !creatorProfile.contact_email) {
+      await supabase
+        .from('user_profiles')
+        .update({ contact_email: googleEmail })
+        .eq('id', userId)
+    }
+    if (addaProfile && !addaProfile.contact_email) {
+      await supabase
+        .from('adda_profiles')
+        .update({ contact_email: googleEmail })
+        .eq('auth_user_id', userId)
+    }
+  }
 
   if (creatorProfile) {
     return NextResponse.redirect(new URL('/dashboard', origin))
@@ -50,6 +71,10 @@ export async function GET(request: NextRequest) {
 
   if (explorerProfile) {
     return NextResponse.redirect(new URL('/explore', origin))
+  }
+
+  if (addaProfile) {
+    return NextResponse.redirect(new URL('/business/venue/dashboard', origin))
   }
 
   // Brand-new user — take them directly to onboarding screen 1.

@@ -45,6 +45,9 @@ coverage/
 # Misc
 *.pem
 
+# Claude Code local memory
+.claude/
+
 # Large design/research files — keep locally, not in git
 *.pdf
 *.bmpr

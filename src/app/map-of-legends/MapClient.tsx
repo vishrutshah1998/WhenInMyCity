@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import { WimcWordmark } from '@/components/WimcWordmark'
 import type { LegendaryAdda } from '@/app/actions/mapOfLegends'
 
 // ---------------------------------------------------------------------------
@@ -213,11 +214,8 @@ export default function MapClient({ addas }: Props) {
         padding: '0 32px', height: 60,
         display: 'flex', alignItems: 'center', gap: 16,
       }}>
-        <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: 8, textDecoration: 'none', color: 'var(--wimc-text-primary)' }}>
-          <div style={{ width: 26, height: 26, background: 'var(--wimc-coral)', borderRadius: 7, display: 'grid', placeItems: 'center' }}>
-            <span style={{ fontSize: 13, fontWeight: 900, color: '#fff', fontFamily: 'var(--font-syne)' }}>W</span>
-          </div>
-          <span style={{ fontFamily: 'var(--font-syne)', fontWeight: 700, fontSize: 15 }}>WIMC</span>
+        <Link href="/" style={{ display: 'flex', alignItems: 'center', textDecoration: 'none' }}>
+          <WimcWordmark color="#E8705A" height={20} />
         </Link>
         <span style={{ color: 'var(--wimc-border-default)' }}>·</span>
         <span style={{ fontFamily: 'var(--font-syne)', fontWeight: 600, fontSize: 14, color: 'var(--wimc-teal)' }}>
@@ -262,7 +260,7 @@ export default function MapClient({ addas }: Props) {
             </span>
           </h1>
           <p style={{ fontSize: 16, color: 'var(--wimc-text-secondary)', maxWidth: 480, margin: '0 auto 24px', lineHeight: 1.6 }}>
-            The venues where culture doesn&apos;t just happen — it stays.
+            The Addas where culture doesn&apos;t just happen — it stays.
             Ranked by the people who keep coming back.
           </p>
 

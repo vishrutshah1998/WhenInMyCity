@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import Image from 'next/image'
 import type { PageBlock, SocialLinkConfig, YoutubeEmbedConfig, TextBioConfig, ImageGalleryConfig, CustomLinkConfig, InstagramEmbedConfig, QuoteBlockConfig, MarqueeTextConfig, StatsGridConfig } from '@/types/database'
 import type { ProfileTheme } from '@/types/theme'
@@ -355,31 +355,71 @@ function EventCalendarRenderer({ accent }: { accent: string }) {
   const highlighted = [now.getDate(), now.getDate() + 5, now.getDate() + 12].filter(d => d <= daysInMonth)
 
   return (
-    <div className="w-full rounded-2xl overflow-hidden" style={{ background: 'rgba(255,255,255,0.06)' }}>
-      <div className="px-4 py-3 flex items-center gap-2 border-b border-white/10">
-        <svg viewBox="0 0 24 24" className="w-4 h-4 fill-current" style={{ color: accent }}><path d="M17 12h-5v5h5v-5zM16 1v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2h-1V1h-2zm3 18H5V8h14v11z"/></svg>
-        <p className="font-bold text-sm" style={{ color: 'var(--pp-text)' }}>
+    <div className="w-full rounded-xl overflow-hidden" style={{ background: 'var(--pp-cal-bg, rgba(26,39,68,0.05))' }}>
+      <div className="px-4 py-3 flex items-center gap-2" style={{ borderBottom: '1px solid var(--pp-border, rgba(26,39,68,0.12))' }}>
+        <svg viewBox="0 0 24 24" className="w-4 h-4 fill-current flex-shrink-0" style={{ color: accent }}><path d="M17 12h-5v5h5v-5zM16 1v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2h-1V1h-2zm3 18H5V8h14v11z"/></svg>
+        <p className="font-bold text-sm" style={{ color: 'var(--pp-text, #1A2744)' }}>
           {now.toLocaleString('en-IN', { month: 'long', year: 'numeric' })}
         </p>
       </div>
-      <div className="p-3 grid grid-cols-7 gap-1 text-center">
+      <div className="p-3 grid grid-cols-7 gap-0.5 text-center">
         {['S','M','T','W','T','F','S'].map((d, i) => (
-          <div key={i} className="text-[10px] font-bold opacity-40 pb-1" style={{ color: 'var(--pp-text)' }}>{d}</div>
+          <div key={i} className="text-[9px] font-bold pb-1.5 opacity-40" style={{ color: 'var(--pp-text, #1A2744)' }}>{d}</div>
         ))}
         {Array.from({ length: startDay }).map((_, i) => <div key={`e-${i}`} />)}
         {days.map((d) => (
           <div
             key={d}
-            className="aspect-square flex items-center justify-center rounded-full text-[11px] font-semibold"
+            className="w-6 h-6 mx-auto flex items-center justify-center rounded-full text-[11px] font-semibold"
             style={highlighted.includes(d)
               ? { background: accent, color: '#fff' }
-              : { color: 'var(--pp-text)', opacity: 0.6 }
+              : { color: 'var(--pp-text, #1A2744)', opacity: 0.6 }
             }
           >
             {d}
           </div>
         ))}
       </div>
+    </div>
+  )
+}
+
+function EventListingBlockRenderer({ config, accent }: { config: Record<string, unknown>; accent: string }) {
+  const MONTHS = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC']
+  const m   = MONTHS[new Date().getMonth()]
+  const d0  = new Date().getDate()
+  const rows = [
+    { day: String(d0 + 2).padStart(2, '0'), label: 'Upcoming Event',  venue: 'Adda name' },
+    { day: String(d0 + 9).padStart(2, '0'), label: 'Next Event',      venue: 'Another adda' },
+  ]
+  const title = (config.title as string | undefined) || 'Upcoming Events'
+  return (
+    <div className="w-full flex flex-col">
+      <p className="text-xs font-bold uppercase tracking-widest mb-3" style={{ color: 'var(--pp-text-muted, rgba(26,39,68,0.5))', fontFamily: 'monospace' }}>
+        {title}
+      </p>
+      {rows.map((row, i) => (
+        <div
+          key={i}
+          className="flex items-center gap-3 py-2"
+          style={{ borderBottom: `1px dashed var(--pp-border, rgba(26,39,68,0.12))` }}
+        >
+          <div className="flex flex-col items-center justify-center w-10 h-10 flex-shrink-0" style={{ background: accent }}>
+            <span className="text-[15px] font-black text-white leading-none">{row.day}</span>
+            <span className="text-[7px] text-white/80 uppercase tracking-wider">{m}</span>
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="font-bold text-sm leading-tight truncate" style={{ color: 'var(--pp-text, #1A2744)' }}>{row.label}</p>
+            <p className="text-[11px] truncate mt-0.5" style={{ color: 'var(--pp-text-muted, rgba(26,39,68,0.55))' }}>{row.venue}</p>
+          </div>
+          <span className="text-[9px] font-bold flex-shrink-0 px-2 py-1" style={{ background: `${accent}18`, color: accent, fontFamily: 'monospace' }}>
+            GET TICKETS →
+          </span>
+        </div>
+      ))}
+      <p className="text-[9px] text-right mt-2 opacity-50" style={{ color: 'var(--pp-text, #1A2744)', fontFamily: 'monospace' }}>
+        auto-populated from your published events
+      </p>
     </div>
   )
 }
@@ -501,7 +541,7 @@ function VenuePartnershipRenderer({ config, accent }: { config: { venue_ids?: st
   const count = Math.min(config.venue_ids?.length ?? 2, 3)
   return (
     <div className="flex flex-col gap-3">
-      <p className="font-bold text-sm" style={{ color: 'var(--pp-text)' }}>Venue Partners</p>
+      <p className="font-bold text-sm" style={{ color: 'var(--pp-text)' }}>Adda Partners</p>
       {Array.from({ length: count }).map((_, i) => (
         <div key={i} className="flex items-center gap-3 p-3 rounded-xl" style={{ background: 'rgba(255,255,255,0.06)' }}>
           <div className="w-14 h-14 rounded-lg shrink-0" style={{ background: `${accent}20` }} />
@@ -676,6 +716,17 @@ function CountdownPreview({ accent }: { accent: string }) {
 // BlockRenderer
 // ---------------------------------------------------------------------------
 
+const ACCENT_COLORS: Record<ProfileTheme['colorScheme'], string> = {
+  default:    '#E8572A', midnight:   '#818CF8', ocean:      '#22D3EE',
+  forest:     '#6EE7B7', blush:      '#E11D48', sand:       '#B45309',
+  pista:      '#2D7A4F', gulaal:     '#E8342A', neel:       '#F5A800',
+  turmeric:   '#F5A800', steel:      '#5B8DEF', sienna:     '#C04A00',
+  indigo:     '#818CF8', aurora:     '#D946EF', sage:       '#3D7F53',
+  mint:       '#0C8B6B', electric:   '#00E5FF', velvet:     '#8B2340',
+  nightforest:'#7EC8A0', parchment:  '#4A3728', gallery:    '#1A1A1A',
+  terracotta: '#C4552A',
+}
+
 interface BlockRendererProps {
   block: PageBlock
   theme: ProfileTheme
@@ -683,20 +734,9 @@ interface BlockRendererProps {
   isHighlighted?: boolean
 }
 
-export default function BlockRenderer({ block, theme, isPreview = false, isHighlighted = false }: BlockRendererProps) {
+const BlockRenderer = React.memo(function BlockRenderer({ block, theme, isPreview = false, isHighlighted = false }: BlockRendererProps) {
   const ref = useRef<HTMLDivElement>(null)
-
-  const ACCENT: Record<ProfileTheme['colorScheme'], string> = {
-    default:    '#E8572A', midnight:   '#818CF8', ocean:      '#22D3EE',
-    forest:     '#6EE7B7', blush:      '#E11D48', sand:       '#B45309',
-    pista:      '#2D7A4F', gulaal:     '#E8342A', neel:       '#F5A800',
-    turmeric:   '#F5A800', steel:      '#5B8DEF', sienna:     '#C04A00',
-    indigo:     '#818CF8', aurora:     '#D946EF', sage:       '#3D7F53',
-    mint:       '#0C8B6B', electric:   '#00E5FF', velvet:     '#8B2340',
-    nightforest:'#7EC8A0', parchment:  '#4A3728', gallery:    '#1A1A1A',
-    terracotta: '#C4552A',
-  }
-  const accent = ACCENT[theme.colorScheme]
+  const accent = useMemo(() => ACCENT_COLORS[theme.colorScheme], [theme.colorScheme])
 
   useEffect(() => {
     if (isHighlighted && ref.current) {
@@ -747,6 +787,7 @@ export default function BlockRenderer({ block, theme, isPreview = false, isHighl
       case 'support_tip':
         return <SupportTipRenderer config={cfg as { message?: string; preset_amounts_paise?: number[] }} accent={accent} />
       case 'event_listing':
+        return <EventListingBlockRenderer config={cfg as Record<string, unknown>} accent={accent} />
       case 'event_calendar':
         return <EventCalendarRenderer accent={accent} />
       case 'past_events_gallery':
@@ -922,4 +963,6 @@ export default function BlockRenderer({ block, theme, isPreview = false, isHighl
       {rendered}
     </div>
   )
-}
+})
+
+export default BlockRenderer

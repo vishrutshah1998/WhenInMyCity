@@ -2,6 +2,7 @@
 
 import { useMemo } from 'react'
 import { useSearchParams } from 'next/navigation'
+import Link from 'next/link'
 
 import DateRangeBar, {
   rangeFromParams,
@@ -12,30 +13,22 @@ import DateRangeBar, {
 import KpiSection from './KpiSection'
 import RevOccTrendChart from './RevOccTrendChart'
 import WaterfallChart from './WaterfallChart'
-import LeadTimeChart from './LeadTimeChart'
 import CalendarHeatmap from './CalendarHeatmap'
 import DemandHeatmap from './DemandHeatmap'
-import BenchmarkPanel from './BenchmarkPanel'
 import InsightCard, { Amber } from './InsightCard'
 
 import {
-  MOCK_DAILY_METRICS,
-  MOCK_LEAD_TIME_BINS,
-  LEAD_TIME_MEDIAN_INDEX,
-  MOCK_DEMAND_GRID,
-  MOCK_BENCHMARKS,
-  MOCK_VENUE_PROFILE,
-  filterByRange,
   computeKpis,
   computeTrend,
   computeWaterfall,
   getBusiestMonth,
   getHighestOccupancyDay,
-  tierAtLeast,
 } from '@/lib/adda/mock/analyticsData'
 
+import type { AddaAnalyticsData, ProposalFunnel } from '@/app/actions/adda-analytics'
+
 // ---------------------------------------------------------------------------
-// Section heading helper
+// Section heading
 // ---------------------------------------------------------------------------
 
 function SectionHeading({ children }: { children: React.ReactNode }) {
@@ -56,32 +49,276 @@ function SectionHeading({ children }: { children: React.ReactNode }) {
 }
 
 // ---------------------------------------------------------------------------
+// Booking funnel section (real data)
+// ---------------------------------------------------------------------------
+
+function ProposalFunnelSection({ funnel }: { funnel: ProposalFunnel }) {
+  const { received, accepted, eventsCompleted } = funnel
+  const acceptRate = received > 0 ? Math.round((accepted / received) * 100) : 0
+
+  const steps = [
+    {
+      label: 'Proposals received',
+      value: received,
+      color: 'var(--adda-text-secondary)',
+      desc: 'Booking requests from makers',
+    },
+    {
+      label: 'Accepted',
+      value: accepted,
+      color: 'var(--adda-amber)',
+      desc: acceptRate > 0 ? `${acceptRate}% acceptance rate` : 'No accepted proposals yet',
+    },
+    {
+      label: 'Events completed',
+      value: eventsCompleted,
+      color: '#5DD9D0',
+      desc: 'Past events that ran at your venue',
+    },
+  ]
+
+  return (
+    <div style={{
+      background: 'var(--adda-bg-surface)',
+      border: '1px solid var(--adda-border-subtle)',
+      borderRadius: 12,
+      padding: 20,
+      marginBottom: 24,
+    }}>
+      <div style={{
+        fontSize: 13, fontWeight: 600,
+        color: 'var(--adda-text-primary)',
+        fontFamily: 'var(--font-inter), system-ui, sans-serif',
+        marginBottom: 20,
+      }}>
+        Booking Funnel
+      </div>
+
+      <div style={{ display: 'flex', alignItems: 'stretch' }}>
+        {steps.map(({ label, value, color, desc }, i) => (
+          <div
+            key={label}
+            style={{
+              flex: 1, textAlign: 'center', padding: '0 20px',
+              borderRight: i < steps.length - 1 ? '1px solid var(--adda-border-subtle)' : 'none',
+            }}
+          >
+            <div style={{
+              fontSize: 40, fontWeight: 800, color,
+              fontFamily: 'var(--font-syne, system-ui, sans-serif)',
+              lineHeight: 1,
+            }}>
+              {value}
+            </div>
+            <div style={{
+              fontSize: 12, fontWeight: 600,
+              color: 'var(--adda-text-primary)',
+              fontFamily: 'var(--font-inter), system-ui, sans-serif',
+              marginTop: 8,
+            }}>
+              {label}
+            </div>
+            <div style={{
+              fontSize: 11, color: 'var(--adda-text-muted)',
+              fontFamily: 'var(--font-inter), system-ui, sans-serif',
+              marginTop: 3,
+            }}>
+              {desc}
+            </div>
+
+            {/* Funnel arrow between steps */}
+            {i < steps.length - 1 && (
+              <div style={{
+                position: 'absolute',
+                // not easily positioned — handled by border between flex items
+              }} />
+            )}
+          </div>
+        ))}
+      </div>
+
+      {received === 0 && (
+        <div style={{
+          textAlign: 'center', marginTop: 16, paddingTop: 16,
+          borderTop: '1px solid var(--adda-border-subtle)',
+          fontSize: 12, color: 'var(--adda-text-muted)',
+          fontFamily: 'var(--font-inter), system-ui, sans-serif',
+        }}>
+          No proposals yet — your funnel will populate as makers discover and book your space.
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Traffic not-tracked notice (honest empty state)
+// ---------------------------------------------------------------------------
+
+function TrafficNotTracked({ venueSlug }: { venueSlug: string }) {
+  return (
+    <div style={{
+      background: 'var(--adda-bg-surface)',
+      border: '1px solid var(--adda-border-subtle)',
+      borderRadius: 12,
+      padding: 32,
+      marginBottom: 24,
+      textAlign: 'center',
+    }}>
+      <span
+        className="material-symbols-outlined"
+        style={{ fontSize: 32, color: 'var(--adda-text-muted)', display: 'block', marginBottom: 12 }}
+      >
+        bar_chart_4_bars
+      </span>
+      <div style={{
+        fontSize: 13, fontWeight: 600,
+        color: 'var(--adda-text-primary)',
+        fontFamily: 'var(--font-inter), system-ui, sans-serif',
+        marginBottom: 6,
+      }}>
+        Page view tracking coming soon
+      </div>
+      <div style={{
+        fontSize: 12, color: 'var(--adda-text-muted)',
+        fontFamily: 'var(--font-inter), system-ui, sans-serif',
+        maxWidth: 380, margin: '0 auto', lineHeight: 1.6,
+      }}>
+        Visits to your public listing at{' '}
+        <span style={{ color: 'var(--adda-amber)', fontFamily: 'var(--font-jetbrains-mono), monospace', fontSize: 11 }}>
+          wheninmycity.com/adda/{venueSlug}
+        </span>{' '}
+        are not yet tracked. Traffic analytics will appear here once enabled.
+      </div>
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Empty state (no data yet)
+// ---------------------------------------------------------------------------
+
+function EmptyState({ venueSlug }: { venueSlug: string }) {
+  return (
+    <div style={{
+      padding: '0 28px 48px',
+      display: 'flex', flexDirection: 'column',
+      alignItems: 'center', justifyContent: 'center',
+      minHeight: 480, gap: 20,
+    }}>
+      <div style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        width: 64, height: 64,
+        background: 'rgba(93,217,208,0.08)',
+        border: '1px solid rgba(93,217,208,0.2)',
+      }}>
+        <span className="material-symbols-outlined" style={{ fontSize: 32, color: '#5DD9D0' }}>
+          analytics
+        </span>
+      </div>
+
+      <div style={{ textAlign: 'center', maxWidth: 360 }}>
+        <div style={{
+          fontSize: 18, fontWeight: 700,
+          color: 'var(--adda-text-primary)',
+          fontFamily: 'var(--font-inter), system-ui, sans-serif',
+          marginBottom: 8,
+        }}>
+          No data yet
+        </div>
+        <div style={{
+          fontSize: 13, color: 'var(--adda-text-muted)',
+          fontFamily: 'var(--font-inter), system-ui, sans-serif',
+          lineHeight: 1.6,
+        }}>
+          Analytics will populate as creators discover and book your venue. Share your listing to get started.
+        </div>
+      </div>
+
+      <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', justifyContent: 'center' }}>
+        <Link
+          href={`/adda/${venueSlug}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{
+            display: 'flex', alignItems: 'center', gap: 6,
+            padding: '10px 20px',
+            background: '#5DD9D0', color: '#07070A',
+            fontFamily: 'var(--font-jetbrains-mono), monospace',
+            fontSize: 11, fontWeight: 700,
+            letterSpacing: '0.12em', textTransform: 'uppercase',
+            textDecoration: 'none',
+          }}
+        >
+          <span className="material-symbols-outlined" style={{ fontSize: 16 }}>open_in_new</span>
+          View your listing
+        </Link>
+        <Link
+          href="/business/venue/creators"
+          style={{
+            display: 'flex', alignItems: 'center', gap: 6,
+            padding: '10px 20px',
+            background: 'transparent',
+            border: '1px solid var(--adda-border-default)',
+            color: 'var(--adda-text-secondary)',
+            fontFamily: 'var(--font-jetbrains-mono), monospace',
+            fontSize: 11, fontWeight: 700,
+            letterSpacing: '0.12em', textTransform: 'uppercase',
+            textDecoration: 'none',
+          }}
+        >
+          <span className="material-symbols-outlined" style={{ fontSize: 16 }}>person_search</span>
+          Check proposals
+        </Link>
+      </div>
+
+      <div style={{
+        fontSize: 9, color: 'var(--adda-text-muted)',
+        fontFamily: 'var(--font-jetbrains-mono), monospace',
+        letterSpacing: '0.2em', textTransform: 'uppercase',
+      }}>
+        Analytics update in real time
+      </div>
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
 // AnalyticsPageClient
 // ---------------------------------------------------------------------------
 
 interface Props {
   venueName: string
   venueSlug: string
+  realData: AddaAnalyticsData
 }
 
-export default function AnalyticsPageClient({ venueName, venueSlug }: Props) {
+export default function AnalyticsPageClient({ venueName: _venueName, venueSlug, realData }: Props) {
   const searchParams = useSearchParams()
 
-  const currentRange  = rangeFromParams(searchParams)
-  const compareOn     = compareFromParams(searchParams)
+  const currentRange = rangeFromParams(searchParams)
+  const compareOn    = compareFromParams(searchParams)
 
-  // Compute date bounds for current + previous period
-  const { from, to } = useMemo(() => presetToDates(currentRange), [currentRange])
-  const { from: prevFrom, to: prevTo } = useMemo(
-    () => previousPeriod(from, to),
-    [from, to],
-  )
+  const { from, to }             = useMemo(() => presetToDates(currentRange), [currentRange])
+  const { from: prevFrom, to: prevTo } = useMemo(() => previousPeriod(from, to), [from, to])
 
-  // Filter daily metrics
-  const currentDays = useMemo(() => filterByRange(from, to), [from, to])
-  const prevDays    = useMemo(() => filterByRange(prevFrom, prevTo), [prevFrom, prevTo])
+  // Real daily metrics (all history)
+  const allMetrics = realData.dailyMetrics
 
-  // KPIs
+  // Filter to selected date range
+  const currentDays = useMemo(() => {
+    const fromStr = from.toISOString().slice(0, 10)
+    const toStr   = to.toISOString().slice(0, 10)
+    return allMetrics.filter(d => d.date >= fromStr && d.date <= toStr)
+  }, [from, to, allMetrics])
+
+  const prevDays = useMemo(() => {
+    const fromStr = prevFrom.toISOString().slice(0, 10)
+    const toStr   = prevTo.toISOString().slice(0, 10)
+    return allMetrics.filter(d => d.date >= fromStr && d.date <= toStr)
+  }, [prevFrom, prevTo, allMetrics])
+
+  // Aggregates
   const kpis     = useMemo(() => computeKpis(currentDays), [currentDays])
   const prevKpis = useMemo(() => (compareOn ? computeKpis(prevDays) : null), [compareOn, prevDays])
   const totalBookings     = useMemo(() => currentDays.reduce((s, d) => s + d.bookings, 0), [currentDays])
@@ -91,19 +328,19 @@ export default function AnalyticsPageClient({ venueName, venueSlug }: Props) {
   const trend     = useMemo(() => computeTrend(currentDays), [currentDays])
   const prevTrend = useMemo(() => (compareOn ? computeTrend(prevDays) : undefined), [compareOn, prevDays])
 
-  // Waterfall
+  // Waterfall (approximation — adda share ÷ 0.35 back-calculates gross)
   const waterfall = useMemo(() => computeWaterfall(currentDays), [currentDays])
 
-  // Calendar insight labels (always use full dataset for calendar)
-  const busiestMonth       = useMemo(() => getBusiestMonth(MOCK_DAILY_METRICS), [])
-  const highestOccupancyDay = useMemo(() => getHighestOccupancyDay(MOCK_DAILY_METRICS), [])
+  // Calendar insight labels (full history, not range-filtered)
+  const busiestMonth       = useMemo(() => getBusiestMonth(allMetrics),       [allMetrics])
+  const highestOccupancyDay = useMemo(() => getHighestOccupancyDay(allMetrics), [allMetrics])
 
-  // Tier gating
-  const benchmarkUnlocked = tierAtLeast(MOCK_VENUE_PROFILE.tier, 'nukkad')
-
-  // Revenue insight label (for trend section)
   const avgOccupancy = kpis.occupancyPercent
-  const peakDayLabel = 'Saturday afternoons'
+
+  // ── Empty state ────────────────────────────────────────────────────────────
+  if (!realData.hasData) {
+    return <EmptyState venueSlug={venueSlug} />
+  }
 
   return (
     <div style={{ padding: '0 28px 48px' }}>
@@ -111,7 +348,7 @@ export default function AnalyticsPageClient({ venueName, venueSlug }: Props) {
       {/* ── Date range controls ─────────────────────────────────────────────── */}
       <DateRangeBar currentRange={currentRange} compareEnabled={compareOn} />
 
-      {/* ── Section 1: KPI Row ──────────────────────────────────────────────── */}
+      {/* ── KPI Row ─────────────────────────────────────────────────────────── */}
       <KpiSection
         kpis={kpis}
         prevKpis={prevKpis}
@@ -119,46 +356,50 @@ export default function AnalyticsPageClient({ venueName, venueSlug }: Props) {
         prevTotalBookings={prevTotalBookings}
       />
 
-      {/* ── Section 2: Revenue & Occupancy Trend ────────────────────────────── */}
+      {/* ── Revenue & Occupancy Trend ────────────────────────────────────────── */}
       <SectionHeading>Revenue & Occupancy Trend</SectionHeading>
 
-      <InsightCard>
-        Your occupancy peaks on <Amber>{peakDayLabel}</Amber> — consider a peak rate for this window.
-        Average occupancy this period: <Amber>{avgOccupancy}%</Amber>.
-      </InsightCard>
+      {avgOccupancy > 0 ? (
+        <InsightCard>
+          Average occupancy this period: <Amber>{avgOccupancy}%</Amber>.{' '}
+          <Amber>{highestOccupancyDay}</Amber> are your highest-occupancy day — consider promoting those slots further in advance.
+        </InsightCard>
+      ) : (
+        <InsightCard>
+          No bookings with revenue in this date range. Try a longer window or check back after your next event.
+        </InsightCard>
+      )}
 
       <RevOccTrendChart data={trend} compareData={compareOn ? prevTrend : undefined} />
 
-      {/* ── Section 3: Two-column middle row ────────────────────────────────── */}
-      <SectionHeading>Revenue Breakdown & Booking Lead Times</SectionHeading>
+      {/* ── Revenue Breakdown ───────────────────────────────────────────────── */}
+      <SectionHeading>Revenue Breakdown</SectionHeading>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 24 }}>
-        <WaterfallChart data={waterfall} />
-        <LeadTimeChart bins={MOCK_LEAD_TIME_BINS} medianIndex={LEAD_TIME_MEDIAN_INDEX} />
-      </div>
+      <WaterfallChart data={waterfall} />
 
-      {/* ── Section 4: Occupancy Calendar ───────────────────────────────────── */}
+      {/* ── Booking Funnel (all-time) ────────────────────────────────────────── */}
+      <SectionHeading>Booking Funnel</SectionHeading>
+
+      <ProposalFunnelSection funnel={realData.proposalFunnel} />
+
+      {/* ── Occupancy Calendar (all history) ────────────────────────────────── */}
       <SectionHeading>Occupancy Calendar</SectionHeading>
 
       <CalendarHeatmap
-        days={MOCK_DAILY_METRICS}
+        days={allMetrics}
         busiestMonth={busiestMonth}
         highestOccupancyDay={highestOccupancyDay}
       />
 
-      {/* ── Section 5: Hour × Day Demand Heatmap ────────────────────────────── */}
-      <SectionHeading>Hour × Day Demand Heatmap</SectionHeading>
+      {/* ── Hour × Day Demand Pattern ────────────────────────────────────────── */}
+      <SectionHeading>Hour × Day Demand Pattern</SectionHeading>
 
-      <DemandHeatmap grid={MOCK_DEMAND_GRID} venueSlug={venueSlug} />
+      <DemandHeatmap grid={realData.demandGrid} venueSlug={venueSlug} />
 
-      {/* ── Section 6: Competitive Benchmarking ─────────────────────────────── */}
-      <SectionHeading>Competitive Benchmarking</SectionHeading>
+      {/* ── Page Views (not tracked yet) ────────────────────────────────────── */}
+      <SectionHeading>Page Views</SectionHeading>
 
-      <BenchmarkPanel
-        benchmarks={MOCK_BENCHMARKS}
-        venueTierSufficient={benchmarkUnlocked}
-        city={MOCK_VENUE_PROFILE.city}
-      />
+      <TrafficNotTracked venueSlug={venueSlug} />
 
     </div>
   )

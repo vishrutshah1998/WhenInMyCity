@@ -183,7 +183,7 @@ export const CreateAddaSchema = z.object({
   description: z.string().max(1000).optional(),
   adda_type: z
     .array(z.enum(VALID_ADDA_TYPES as [AddaType, ...AddaType[]]))
-    .min(1, 'Select at least one venue type'),
+    .min(1, 'Select at least one Adda type'),
   city: z.string().min(1, 'City is required'),
   neighbourhood: z.string().max(100).optional(),
   address: z.string().min(5, 'Address is required').max(500),

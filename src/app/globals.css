@@ -4,42 +4,46 @@
 
 @layer base {
   :root {
-    color-scheme: dark;
+    color-scheme: light;
 
-    /* ── WIMC Prototype Design System ────────────────────────────────────────
-       Dashboard & creator studio tokens. Used via CSS variables in new
-       dashboard components. Keep separate from the profile-theme system below.
+    /* ── WIMC Notice Board Design System ─────────────────────────────────────
+       Cream notice board palette with deep navy accents.
+       Sidebar is permanently navy; content area is warm cream.
     ── */
-    --wimc-bg-base:     #0A0A0B;
-    --wimc-bg-raised:   #131318;
-    --wimc-bg-elevated: #1C1C24;
-    --wimc-bg-overlay:  #242430;
-    --wimc-bg-hover:    #2E2E3C;
+    --wimc-bg-base:     #F2EDE3;            /* cork board cream */
+    --wimc-bg-raised:   #EAE3D6;            /* slightly deeper cream */
+    --wimc-bg-elevated: #FEFCF8;            /* paper white card surface */
+    --wimc-bg-overlay:  rgba(26,39,68,0.07); /* visible on both cream backgrounds */
+    --wimc-bg-hover:    rgba(26,39,68,0.05); /* subtle hover */
+    --wimc-card-border: rgba(26,39,68,0.18);
 
-    --wimc-border-subtle:  rgba(255,255,255,0.06);
-    --wimc-border-default: rgba(255,255,255,0.10);
-    --wimc-border-strong:  rgba(255,255,255,0.18);
+    --wimc-border-subtle:  rgba(26,39,68,0.07);
+    --wimc-border-default: rgba(26,39,68,0.15);
+    --wimc-border-strong:  rgba(26,39,68,0.30);
+    --wimc-border-warm:    rgba(26,39,68,0.10);
 
-    --wimc-text-primary:   #F0EFF8;
-    --wimc-text-secondary: #9896B0;
-    --wimc-text-muted:     #5C5A72;
+    --wimc-text-primary:   #1A2744;   /* deep navy */
+    --wimc-text-secondary: #4A5975;   /* medium slate */
+    --wimc-text-muted:     #8896B0;   /* light blue-grey */
 
     --wimc-coral:       #E8705A;
-    --wimc-coral-light: #FFBBA6;
-    --wimc-coral-dim:   rgba(232,112,90,0.15);
-    --wimc-coral-glow:  rgba(232,112,90,0.35);
+    --wimc-coral-light: #F08472;
+    --wimc-coral-dim:   rgba(232,112,90,0.12);
+    --wimc-coral-glow:  rgba(232,112,90,0.25);
 
-    --wimc-teal:     #5DD9D0;
-    --wimc-teal-dim: rgba(93,217,208,0.12);
+    --wimc-teal:     #0D9488;
+    --wimc-teal-dim: rgba(13,148,136,0.12);
 
-    --wimc-amber:     #F5A800;
-    --wimc-amber-dim: rgba(245,168,0,0.12);
+    --wimc-amber:     #D97706;
+    --wimc-amber-dim: rgba(217,119,6,0.12);
 
-    --wimc-gulaal: #E8342A;
-    --wimc-neel:   #3B6BCC;
-    --wimc-success: #4ADE80;
+    --wimc-navy:    #1A2744;
+    --wimc-gulaal:  #DC2626;
+    --wimc-neel:    #3B6BCC;
+    --wimc-success: #16A34A;
 
-    --wimc-sidebar-w: 220px;
+    --wimc-sidebar-w:  60px;
+    --adda-sidebar-w: 240px;
     --wimc-t-base:    220ms ease;
 
     /* Default dark-orange theme — must match existing Tailwind color hex values */
@@ -78,6 +82,85 @@
     -ms-overflow-style: none;
     scrollbar-width: none;
   }
+}
+
+/* ── Mobile nav bottom clearance ────────────────────────────────────────────
+   Replaces pb-16 md:pb-0 so content is clear of the fixed nav on all devices,
+   including iPhone X+ where the home indicator adds ~34px of safe-area inset.
+   Using a CSS class instead of a Tailwind arbitrary value because calc() with
+   env() inside arbitrary values is fragile across Tailwind/PostCSS versions. */
+.mob-nav-pb {
+  padding-bottom: calc(56px + env(safe-area-inset-bottom, 0px));
+}
+@media (min-width: 768px) {
+  .mob-nav-pb { padding-bottom: 0; }
+}
+
+/* ── Onboarding: --ob-panel-bg is set inline on the left panel div ──────── */
+/* All screens use hardcoded dark-navy values — no CSS class switching.      */
+
+/* ── Dashboard editorial grain ──────────────────────────────────────────── */
+.wimc-grain {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n' x='0' y='0'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  pointer-events: none;
+  position: fixed;
+  inset: 0;
+  opacity: 0.025;
+  z-index: 0;
+}
+
+/* ── Editorial stat card left-accent pattern ─────────────────────────────── */
+.wimc-stat-card {
+  background: var(--wimc-bg-elevated);
+  border: 1px solid var(--wimc-border-default);
+  border-left: 3px solid var(--wimc-card-accent, var(--wimc-coral));
+  padding: 20px 24px;
+  position: relative;
+}
+
+/* Brand profile page */
+.ticket-mask {
+  -webkit-mask-image:
+    radial-gradient(circle at 0px 50%, transparent 12px, black 12px),
+    radial-gradient(circle at 100% 50%, transparent 12px, black 12px);
+  mask-image:
+    radial-gradient(circle at 0px 50%, transparent 12px, black 12px),
+    radial-gradient(circle at 100% 50%, transparent 12px, black 12px);
+  -webkit-mask-composite: source-in;
+  mask-composite: intersect;
+}
+.writing-mode-vertical {
+  writing-mode: vertical-lr;
+}
+.animate-brand-marquee {
+  display: flex;
+  white-space: nowrap;
+  animation: wimc-marquee 20s linear infinite;
+}
+
+/* Rubber stamp impact animation */
+@keyframes stampIn {
+  0%   { transform: rotate(var(--stamp-rotate, -12deg)) scale(2.5); opacity: 0; }
+  60%  { transform: rotate(var(--stamp-rotate, -12deg)) scale(0.88); opacity: 0.9; }
+  80%  { transform: rotate(var(--stamp-rotate, -12deg)) scale(1.05); opacity: 1; }
+  100% { transform: rotate(var(--stamp-rotate, -12deg)) scale(1);    opacity: var(--stamp-opacity, 0.7); }
+}
+
+.rubber-stamp-animate {
+  animation: stampIn 450ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  animation-delay: 300ms;
+  opacity: 0;
+}
+
+/* Creator profile: stamp-thump tap animation */
+.stamp-thump:active {
+  animation: thump 350ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+@keyframes thump {
+  0%   { transform: scaleY(1); }
+  30%  { transform: scaleY(0.92); }
+  70%  { transform: scaleY(1.04); }
+  100% { transform: scaleY(1); }
 }
 
 @keyframes pulse-highlight {
@@ -148,6 +231,12 @@
 @keyframes wimc-bloom-pulse {
   0%,100% { transform: scale(1);    opacity: 0.85; }
   50%      { transform: scale(1.07); opacity: 1;    }
+}
+
+/* Blinking cursor — used by boarding pass artifacts in onboarding */
+@keyframes blink {
+  from, to { opacity: 1; }
+  50%       { opacity: 0; }
 }
 
 /* Marquee ticker scroll — used by marquee_text block */
@@ -327,4 +416,187 @@
     background-repeat: repeat;
     background-size: 200px 200px;
   }
+
+  /* ── Onboarding utility classes ──────────────────────────────────────────── */
+
+  .diagonal-stripes {
+    background-image: repeating-linear-gradient(
+      45deg,
+      transparent,
+      transparent 4px,
+      rgba(255,255,255,0.04) 4px,
+      rgba(255,255,255,0.04) 8px
+    );
+  }
+
+  .diagonal-stripes-light {
+    background-image: repeating-linear-gradient(
+      45deg,
+      transparent,
+      transparent 4px,
+      rgba(255,255,255,0.02) 4px,
+      rgba(255,255,255,0.02) 8px
+    );
+  }
+
+  .ticket-perforation {
+    background-image: repeating-linear-gradient(
+      to right,
+      transparent 0px,
+      transparent 6px,
+      rgba(255,255,255,0.12) 6px,
+      rgba(255,255,255,0.12) 8px
+    );
+    height: 1px;
+  }
+
+  .barcode-strip {
+    background-image: repeating-linear-gradient(
+      to right,
+      currentColor 0px,
+      currentColor 2px,
+      transparent 2px,
+      transparent 4px,
+      currentColor 4px,
+      currentColor 5px,
+      transparent 5px,
+      transparent 8px
+    );
+  }
+
+  .punch-hole-left {
+    position: absolute;
+    left: -12px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: #1A2744;
+  }
+
+  .punch-hole-right {
+    position: absolute;
+    right: -12px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: #1A2744;
+  }
+
+  .vertical-text {
+    writing-mode: vertical-rl;
+    text-orientation: mixed;
+  }
+
+  /* ── Onboarding keyframe animations ─────────────────────────────────────── */
+
+  @keyframes stamp-thump {
+    0%   { transform: scale(1.4) rotate(-2deg); opacity: 0; }
+    60%  { transform: scale(0.95) rotate(0.5deg); opacity: 1; }
+    80%  { transform: scale(1.02) rotate(-0.2deg); }
+    100% { transform: scale(1) rotate(0deg); }
+  }
+
+  .animate-stamp-thump {
+    animation: stamp-thump 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  @keyframes card-entrance {
+    from { opacity: 0; transform: translateY(12px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .animate-card-entrance {
+    animation: card-entrance 0.4s ease both;
+  }
+
+  @keyframes spin-slow {
+    from { transform: rotate(0deg); }
+    to   { transform: rotate(360deg); }
+  }
+
+  .spin-slow {
+    animation: spin-slow 8s linear infinite;
+  }
+
+  @keyframes marquee-scroll {
+    from { transform: translateX(0); }
+    to   { transform: translateX(-50%); }
+  }
+
+  .animate-marquee {
+    animation: marquee-scroll 30s linear infinite;
+  }
+
+  /* ── Explore feed utilities ─────────────────────────────────────── */
+  .font-barlow {
+    font-family: var(--font-barlow);
+  }
+
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
 }
+
+/* C3 onboarding: playing-card flip reveal — face-down → arc up → land face-up */
+@keyframes ob-card-flip-reveal {
+  0%   { transform: perspective(1200px) rotateY(-180deg) rotateZ(-2deg); }
+  38%  { transform: perspective(1200px) rotateY(-90deg)  rotateZ(-1.5deg) translateY(-32px) scale(1.04); }
+  68%  { transform: perspective(1200px) rotateY(-6deg)   rotateZ(-2deg)   translateY(5px); }
+  84%  { transform: perspective(1200px) rotateY(5deg)    rotateZ(-2.5deg) translateY(-2px); }
+  100% { transform: perspective(1200px) rotateY(0deg)    rotateZ(-2deg); }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  50%       { transform: translateY(-20px) rotate(2deg); }
+}
+
+@keyframes sonar-pulse {
+  0%   { transform: scale(1);   opacity: 0.6; }
+  100% { transform: scale(2.5); opacity: 0; }
+}
+
+@keyframes sonarExpand {
+  0%   { width: 0;    height: 0;    opacity: 1; }
+  100% { width: 120%; height: 120%; opacity: 0; }
+}
+
+@keyframes marquee {
+  0%   { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.35; }
+}
+
+/* ── Dashboard workspace entrance animations ──────────────────────────────── */
+/* Applied directly on element mount. Layouts only mount on workspace switch,
+   so these animations fire exactly once per cross-workspace navigation. */
+
+@keyframes dash-sidebar-in {
+  from { opacity: 0; transform: translateX(-36px); }
+}
+@keyframes dash-content-in {
+  from { opacity: 0; transform: translateY(28px); }
+}
+@keyframes dash-root-in {
+  from { opacity: 0; }
+}
+
+.dash-sidebar { animation: dash-sidebar-in 400ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+.dash-content { animation: dash-content-in 500ms cubic-bezier(0.22, 1, 0.36, 1) 160ms both; }
+.dash-logo    { animation: dash-root-in 260ms ease-out 100ms both; }

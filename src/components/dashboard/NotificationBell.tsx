@@ -4,28 +4,11 @@ import { useState, useRef, useEffect, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import type { Notification } from '@/types/database'
 import { markNotificationRead, markAllNotificationsRead } from '@/app/actions/notifications'
-
-// ---------------------------------------------------------------------------
-// Type → icon + colour mapping
-// ---------------------------------------------------------------------------
-
-const TYPE_META: Record<string, { icon: string; color: string }> = {
-  followed_maker_new_event:  { icon: 'event',              color: 'var(--wimc-coral)' },
-  recommended_event_nearby:  { icon: 'location_on',        color: '#3b82f6' },
-  event_reminder:            { icon: 'alarm',              color: 'var(--wimc-amber)' },
-  rating_prompt:             { icon: 'star',               color: 'var(--wimc-amber)' },
-  new_follower:              { icon: 'person_add',         color: '#a855f7' },
-  event_rsvp:                { icon: 'confirmation_number',color: '#22c55e' },
-  tier_upgrade:              { icon: 'workspace_premium',  color: 'var(--wimc-coral)' },
-  proposal_response:         { icon: 'apartment',          color: '#3b82f6' },
-  new_rating:                { icon: 'reviews',            color: 'var(--wimc-amber)' },
-  new_proposal:              { icon: 'send',               color: '#a855f7' },
-  event_confirmed:           { icon: 'check_circle',       color: '#22c55e' },
-  payment_settled:           { icon: 'payments',           color: '#22c55e' },
-}
+import { NOTIFICATION_META } from '@/lib/notifications/types'
 
 function getMeta(type: string) {
-  return TYPE_META[type] ?? { icon: 'notifications', color: 'var(--wimc-text-muted)' }
+  const m = NOTIFICATION_META[type]
+  return { icon: m?.icon ?? 'notifications', color: m?.color ?? 'var(--wimc-text-muted)' }
 }
 
 function timeAgo(iso: string): string {
@@ -161,18 +144,31 @@ export default function NotificationBell({ initialNotifications }: Props) {
                 </span>
               )}
             </div>
-            {unreadCount > 0 && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              {unreadCount > 0 && (
+                <button
+                  onClick={handleMarkAllRead}
+                  style={{
+                    background: 'none', border: 'none', cursor: 'pointer',
+                    fontSize: 12, color: 'var(--wimc-coral)', fontWeight: 600,
+                    padding: 0,
+                  }}
+                >
+                  Mark all read
+                </button>
+              )}
               <button
-                onClick={handleMarkAllRead}
+                onClick={() => { setOpen(false); router.push('/dashboard/notifications') }}
                 style={{
                   background: 'none', border: 'none', cursor: 'pointer',
-                  fontSize: 12, color: 'var(--wimc-coral)', fontWeight: 600,
+                  fontSize: 12, color: 'var(--wimc-text-secondary)', fontWeight: 500,
                   padding: 0,
+                  fontFamily: 'var(--font-jetbrains-mono)',
                 }}
               >
-                Mark all read
+                See all →
               </button>
-            )}
+            </div>
           </div>
 
           {/* List */}

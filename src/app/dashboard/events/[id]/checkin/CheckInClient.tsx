@@ -185,7 +185,7 @@ export default function CheckInClient({ eventId, eventTitle, attendees: initial 
       <header style={{
         position: 'sticky', top: 0, zIndex: 40,
         height: 56, borderBottom: '1px solid var(--wimc-border-subtle)',
-        background: 'rgba(10,10,11,0.92)', backdropFilter: 'blur(12px)',
+        background: 'rgba(242,237,227,0.96)', backdropFilter: 'blur(12px)',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         padding: '0 20px',
       }}>

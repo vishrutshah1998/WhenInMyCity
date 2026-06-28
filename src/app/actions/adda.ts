@@ -1,6 +1,7 @@
 'use server'
 
 import { z } from 'zod'
+import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { requireAuth } from '@/lib/auth/requireAuth'
@@ -12,6 +13,7 @@ import {
   type AddaSearchParams,
 } from '@/types/marketplace'
 import { notifyAddaOfProposal, notifyMakerOfProposalResponse } from '@/lib/notifications'
+import { createNotification } from '@/app/actions/notifications'
 import type {
   AddaProfile,
   MakerAddaProposal,
@@ -20,6 +22,7 @@ import type {
   UserProfile,
   UserTier,
 } from '@/types/database'
+import { resolveTheme, type ProfileTheme } from '@/types/theme'
 
 // ---------------------------------------------------------------------------
 // Proposal input schema + type
@@ -259,6 +262,120 @@ export async function getAddaProfile(
 }
 
 // ---------------------------------------------------------------------------
+// updateAddaContactInfo — editable profile fields (not identity-locked ones)
+// ---------------------------------------------------------------------------
+
+const UpdateAddaContactSchema = z.object({
+  description:        z.string().max(1000).optional(),
+  contact_email:      z.string().email().optional().or(z.literal('')),
+  contact_whatsapp:   z.string().max(20).optional().or(z.literal('')),
+  instagram_handle:   z.string().max(60).optional().or(z.literal('')),
+  event_preferences:  z.array(z.string()).optional(),
+  available_days:     z.array(z.string()).optional(),
+  capacity_min:       z.number().int().min(1).optional(),
+  capacity_max:       z.number().int().min(1).optional(),
+})
+
+export type UpdateAddaContactInput = z.infer<typeof UpdateAddaContactSchema>
+
+export async function updateAddaContactInfo(
+  addaId: string,
+  input: UpdateAddaContactInput,
+): Promise<{ error: string | null }> {
+  const { user } = await requireAuth()
+  const admin = createAdminClient()
+
+  // Verify ownership
+  const { data: adda } = await admin
+    .from('adda_profiles')
+    .select('id, auth_user_id')
+    .eq('id', addaId)
+    .maybeSingle()
+
+  if (!adda || adda.auth_user_id !== user.id) return { error: 'Adda not found.' }
+
+  const parsed = UpdateAddaContactSchema.safeParse(input)
+  if (!parsed.success) return { error: parsed.error.errors[0].message }
+
+  const d = parsed.data
+  const { error } = await admin
+    .from('adda_profiles')
+    .update({
+      ...(d.description        !== undefined ? { description:      d.description || null }          : {}),
+      ...(d.contact_email      !== undefined ? { contact_email:    d.contact_email || null }        : {}),
+      ...(d.contact_whatsapp   !== undefined ? { contact_whatsapp: d.contact_whatsapp || null }     : {}),
+      ...(d.instagram_handle   !== undefined ? { instagram_handle: d.instagram_handle || null }     : {}),
+      ...(d.event_preferences  !== undefined ? { event_preferences: d.event_preferences }           : {}),
+      ...(d.available_days     !== undefined ? { available_days:   d.available_days }               : {}),
+      ...(d.capacity_min       !== undefined ? { capacity_min:     d.capacity_min }                 : {}),
+      ...(d.capacity_max       !== undefined ? { capacity_max:     d.capacity_max }                 : {}),
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', addaId)
+
+  if (error) {
+    console.error('[updateAddaContactInfo]', error.message)
+    return { error: 'Failed to save changes.' }
+  }
+
+  return { error: null }
+}
+
+// ---------------------------------------------------------------------------
+// updateAddaStudioContent — studio-specific fields including highlights stored
+// in pricing_config.studio_highlights (no schema migration needed)
+// ---------------------------------------------------------------------------
+
+export interface UpdateAddaStudioInput {
+  event_preferences?: string[]
+  studio_highlights?: string[]
+  tagline?:           string
+  contact_whatsapp?:  string
+  instagram_handle?:  string
+}
+
+export async function updateAddaStudioContent(
+  addaId: string,
+  input: UpdateAddaStudioInput,
+): Promise<{ error: string | null }> {
+  const { user } = await requireAuth()
+  const admin = createAdminClient()
+
+  const { data: adda } = await admin
+    .from('adda_profiles')
+    .select('id, auth_user_id, pricing_config')
+    .eq('id', addaId)
+    .maybeSingle()
+
+  if (!adda || adda.auth_user_id !== user.id) return { error: 'Adda not found.' }
+
+  const existingConfig = (adda.pricing_config as Record<string, unknown>) ?? {}
+  const pricingConfig = {
+    ...existingConfig,
+    ...(input.studio_highlights !== undefined ? { studio_highlights: input.studio_highlights } : {}),
+    ...(input.tagline           !== undefined ? { tagline:           input.tagline || null }   : {}),
+  }
+  const configChanged = input.studio_highlights !== undefined || input.tagline !== undefined
+
+  const updates: Record<string, unknown> = { updated_at: new Date().toISOString() }
+  if (input.event_preferences !== undefined) updates.event_preferences = input.event_preferences
+  if (input.contact_whatsapp  !== undefined) updates.contact_whatsapp  = input.contact_whatsapp || null
+  if (input.instagram_handle  !== undefined) updates.instagram_handle  = input.instagram_handle || null
+  if (configChanged)                         updates.pricing_config    = pricingConfig
+
+  const { error } = await admin.from('adda_profiles').update(updates).eq('id', addaId)
+
+  if (error) {
+    console.error('[updateAddaStudioContent]', error.message)
+    return { error: 'Failed to save changes.' }
+  }
+
+  revalidatePath('/business/venue/studio')
+  revalidatePath(`/adda/${adda.id}`)
+  return { error: null }
+}
+
+// ---------------------------------------------------------------------------
 // updateAddaAvailability
 // ---------------------------------------------------------------------------
 
@@ -439,6 +556,29 @@ export async function respondToProposal(
     adda?.name ?? 'The Adda',
   ).catch(() => {})
 
+  // In-app notification to maker on accept or counter-offer
+  if (newStatus === 'accepted' || newStatus === 'counter_offered') {
+    createNotification({
+      recipientId: proposal.maker_id,
+      type: newStatus === 'accepted' ? 'proposal_accepted' : 'proposal_counter',
+      title: newStatus === 'accepted' ? 'Proposal accepted!' : 'Counter offer received',
+      body: newStatus === 'accepted'
+        ? `${adda.name} accepted your booking for "${proposal.event_title}".`
+        : `${adda.name} sent a counter offer for your booking request.`,
+      actionUrl: '/dashboard/venues',
+    }).catch(() => {})
+    // Adda-specific type for adda notification inbox
+    createNotification({
+      recipientId: proposal.maker_id,
+      type: newStatus === 'accepted' ? 'adda_proposal_accepted' : 'adda_proposal_counter',
+      title: newStatus === 'accepted' ? 'Booking confirmed!' : 'Counter offer received',
+      body: newStatus === 'accepted'
+        ? `${adda.name} confirmed your booking for "${proposal.event_title}".`
+        : `${adda.name} sent a counter offer for "${proposal.event_title}".`,
+      actionUrl: '/dashboard/venues',
+    }).catch(() => {})
+  }
+
   return { error: null }
 }
 
@@ -594,7 +734,7 @@ export async function sendProposal(
     .maybeSingle()
 
   if (!maker || maker.user_role !== 'maker') {
-    return { proposalId: '', error: 'Only Makers can send venue proposals.' }
+    return { proposalId: '', error: 'Only Makers can send Adda proposals.' }
   }
   if ((TIER_ORDER[maker.user_tier as UserTier] ?? 0) < TIER_ORDER['local']) {
     return {
@@ -685,6 +825,33 @@ export async function sendProposal(
     notifyAddaOfProposal(proposalRow, maker.display_name, adda.slug, adda.contact_whatsapp)
       .catch(() => { /* fire-and-forget */ })
   }
+
+  // In-app notifications to adda owner (fire-and-forget)
+  void (async () => {
+    try {
+      const { data: addaOwner } = await admin
+        .from('adda_profiles')
+        .select('auth_user_id')
+        .eq('id', d.adda_id)
+        .maybeSingle()
+      if (addaOwner?.auth_user_id) {
+        await createNotification({
+          recipientId: addaOwner.auth_user_id,
+          type: 'new_proposal',
+          title: 'New venue proposal',
+          body: `${maker.display_name ?? 'A maker'} wants to host "${d.event_title}" at your Adda.`,
+          actionUrl: '/business/venue/dashboard/proposals',
+        })
+        await createNotification({
+          recipientId: addaOwner.auth_user_id,
+          type: 'adda_new_proposal',
+          title: 'New booking request',
+          body: `${maker.display_name ?? 'A maker'} wants to host "${d.event_title}" at your space.`,
+          actionUrl: '/business/venue/bookings',
+        })
+      }
+    } catch {}
+  })()
 
   return { proposalId: inserted.id, error: null }
 }
@@ -924,6 +1091,7 @@ export async function getAddaPublicPage(slug: string): Promise<{
     cover_image_url: string | null
   }>
   stats: { total_events: number; average_rating: number }
+  theme: ProfileTheme
 } | { error: string }> {
   const supabase = await createClient()
 
@@ -943,7 +1111,7 @@ export async function getAddaPublicPage(slug: string): Promise<{
   const now = new Date().toISOString()
   const in60Days = new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString()
 
-  const [upcomingResult, pastResult] = await Promise.all([
+  const [upcomingResult, pastResult, profileResult] = await Promise.all([
     supabase
       .from('events')
       .select('*')
@@ -961,6 +1129,12 @@ export async function getAddaPublicPage(slug: string): Promise<{
       .eq('status', 'completed')
       .order('starts_at', { ascending: false })
       .limit(6),
+
+    supabase
+      .from('user_profiles')
+      .select('page_theme')
+      .eq('id', adda.auth_user_id)
+      .maybeSingle(),
   ])
 
   const upcomingEvents = upcomingResult.data ?? []
@@ -1018,10 +1192,13 @@ export async function getAddaPublicPage(slug: string): Promise<{
     average_rating: adda.average_maker_rating,
   }
 
+  const theme = resolveTheme(profileResult.data?.page_theme, { venueTypes: adda.adda_type ?? [] })
+
   return {
     adda,
     upcomingEvents: upcomingWithMakers,
     pastEvents:     pastWithCounts,
     stats,
+    theme,
   }
 }

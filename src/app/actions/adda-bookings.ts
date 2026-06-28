@@ -53,7 +53,7 @@ export async function getAddaBookings(
   addaId: string,
   statuses: ProposalStatus[],
 ): Promise<{ proposals: ProposalWithMaker[]; error: string | null }> {
-  const { user } = await requireAuth('/adda/bookings')
+  const { user } = await requireAuth('/business/venue/bookings')
 
   if (!z.string().uuid().safeParse(addaId).success) {
     return { proposals: [], error: 'Invalid Adda ID.' }

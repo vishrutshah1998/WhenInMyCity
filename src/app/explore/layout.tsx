@@ -1,8 +1,20 @@
+'use client'
+
 import type { ReactNode } from 'react'
 import Link from 'next/link'
+import { usePathname } from 'next/navigation'
 import ExploreNav from './ExploreNav'
+import { WimcWordmark } from '@/components/WimcWordmark'
+import { BottomNav } from '@/components/ui/BottomNav'
 
 export default function ExploreLayout({ children }: { children: ReactNode }) {
+  const pathname = usePathname()
+
+  // Dashboard routes have their own sidebar layout — skip the public header
+  if (pathname?.startsWith('/explore/dashboard')) {
+    return <>{children}</>
+  }
+
   return (
     <div style={{ minHeight: '100vh', background: 'var(--wimc-bg-base)' }}>
       <div style={{
@@ -16,24 +28,21 @@ export default function ExploreLayout({ children }: { children: ReactNode }) {
         <div style={{ maxWidth: 900, margin: '0 auto' }}>
           <div style={{
             display: 'flex', alignItems: 'center', gap: 10,
-            padding: '14px 0 8px',
+            padding: '16px 0',
           }}>
-            <div style={{
-              width: 28, height: 28, background: 'var(--wimc-coral)',
-              borderRadius: 7, display: 'grid', placeItems: 'center',
-            }}>
-              <span style={{ fontSize: 14, fontWeight: 900, color: '#fff', fontFamily: 'var(--font-syne)' }}>W</span>
-            </div>
-            <span style={{ fontFamily: 'var(--font-syne)', fontWeight: 800, fontSize: 17 }}>WIMC</span>
+            <Link href="/explore" style={{ display: 'flex', alignItems: 'center', textDecoration: 'none' }}>
+              <WimcWordmark color="#E8705A" height={28} />
+            </Link>
             <span style={{
               marginLeft: 4, fontSize: 11, color: 'var(--wimc-text-secondary)',
               fontFamily: 'var(--font-jetbrains-mono)',
+              letterSpacing: '0.08em', textTransform: 'uppercase',
             }}>
               Explorer
             </span>
             <Link
-              href="/explore/settings"
-              title="Profile settings"
+              href="/explore/dashboard"
+              title="My dashboard"
               style={{
                 marginLeft: 'auto',
                 display: 'grid', placeItems: 'center',
@@ -43,16 +52,20 @@ export default function ExploreLayout({ children }: { children: ReactNode }) {
                 textDecoration: 'none', flexShrink: 0,
               }}
             >
-              <span className="material-symbols-outlined" style={{ fontSize: 18 }}>settings</span>
+              <span className="material-symbols-outlined" style={{ fontSize: 18 }}>person</span>
             </Link>
           </div>
           <ExploreNav />
         </div>
       </div>
 
-      <main style={{ maxWidth: 900, margin: '0 auto', padding: '28px 24px 60px' }}>
+      <main style={{ maxWidth: 900, margin: '0 auto', padding: '28px 24px 96px' }}>
         {children}
       </main>
+
+      <div className="md:hidden">
+        <BottomNav />
+      </div>
     </div>
   )
 }

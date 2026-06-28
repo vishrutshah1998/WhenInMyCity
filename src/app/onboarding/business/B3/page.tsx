@@ -1,34 +1,39 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { SK } from '@/lib/onboarding/session-keys'
 
-
-const TEAL    = '#5DD9D0'
-const AMBER   = '#F5A800'
-const WARM_BG = '#FFF8F5'
+const TEAL   = '#5DD9D0'
+const AMBER  = '#F5A800'
+const MONO   = "var(--font-jetbrains-mono), 'JetBrains Mono', monospace"
+const BARLOW = "var(--font-barlow), 'Barlow Condensed', sans-serif"
+const OUTFIT = "'Outfit', sans-serif"
+const ABRIL  = "var(--font-abril), 'Abril Fatface', serif"
+const DM     = "'DM Sans', sans-serif"
 
 type PathType = 'venue' | 'brand'
 
 const PATHS = [
   {
     id:       'venue'  as PathType,
-    emoji:    '🏠',
     accent:   TEAL,
-    label:    'Open your doors',
-    subtitle: 'Café, rooftop, studio, gallery — creators book your space',
+    icon:     'museum',
+    label:    'SPACES & VENUES',
+    heading:  'VENUE',
+    desc:     'Café, rooftop, studio, gallery — creators book your space.',
     cta:      '→ Get a WIMC Adda listing',
-    next:     '/onboarding/business/V4',
+    next:     '/onboarding/business/B2',
   },
   {
     id:       'brand' as PathType,
-    emoji:    '🏷️',
     accent:   AMBER,
-    label:    'Partner with culture',
-    subtitle: 'Shop, agency, startup, D2C — reach creators and culture lovers',
+    icon:     'corporate_fare',
+    label:    'BRANDS & BUSINESSES',
+    heading:  'BRAND',
+    desc:     'Shop, agency, startup, D2C — reach creators and culture lovers.',
     cta:      '→ Get a WIMC brand page',
-    next:     '/onboarding/business/R4',
+    next:     '/onboarding/business/B2',
   },
 ] as const
 
@@ -36,75 +41,157 @@ export default function B3Page() {
   const router = useRouter()
   const [selected,  setSelected]  = useState<PathType | null>(null)
   const [advancing, setAdvancing] = useState(false)
-  const [bName,     setBName]     = useState('')
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return
-    const name = sessionStorage.getItem(SK.b_name) ?? ''
-    if (!name) { router.replace('/onboarding/business/B2'); return }
-    setBName(name)
-  }, [router])
+  const [hovered,   setHovered]   = useState<PathType | null>(null)
 
   async function handleSelect(type: PathType, next: string) {
     if (advancing) return
     setSelected(type)
     setAdvancing(true)
     try { sessionStorage.setItem(SK.b_subpath, type) } catch {}
-    await new Promise<void>(r => setTimeout(r, 500))
+    await new Promise<void>(r => setTimeout(r, 600))
     router.push(next)
   }
 
   return (
     <>
-      <div style={{ minHeight: '100%', overflowY: 'auto', paddingTop: 48, paddingBottom: 96, paddingLeft: 24, paddingRight: 24 }}>
-        <h1 style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 900, fontSize: 'clamp(28px,7vw,44px)', color: '#F0EFF8', lineHeight: 1.05, margin: '0 0 8px', maxWidth: 480 }}>
-          How do you show up to culture?
-        </h1>
-        <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 15, color: 'rgba(240,239,248,0.5)', margin: '0 0 40px', maxWidth: 400 }}>
-          Your category defines how you appear in discovery
+      <div style={{ minHeight: '100%', overflowY: 'auto', paddingTop: 20, paddingBottom: 96, paddingLeft: 24, paddingRight: 24 }}>
+
+        <p style={{
+          fontFamily:    BARLOW, fontWeight: 600, fontSize: 10,
+          letterSpacing: '0.3em', textTransform: 'uppercase',
+          color:         `${TEAL}99`, margin: '0 0 10px',
+        }}>
+          — ONE MORE THING
         </p>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, maxWidth: 480 }}>
+        <h1 style={{
+          fontFamily: ABRIL,
+          fontSize:   'clamp(28px, 7vw, 44px)',
+          color:      '#F0EFF8',
+          lineHeight: 1.05,
+          margin:     '0 0 8px',
+        }}>
+          Are you listing a space, or a brand?
+        </h1>
+        <p style={{ fontFamily: DM, fontSize: 13, color: '#9896B0', margin: '0 0 28px' }}>
+          Your category shapes how creators and explorers discover you.
+        </p>
+
+        {/* Decision tiles */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           {PATHS.map(p => {
             const isSel   = selected === p.id
             const isOther = selected !== null && !isSel
             return (
-              <button key={p.id} type="button" onClick={() => handleSelect(p.id, p.next)} disabled={advancing && !isSel}
+              <button
+                key={p.id}
+                type="button"
+                onClick={() => handleSelect(p.id, p.next)}
+                onMouseEnter={() => {
+                  if (advancing) return
+                  setHovered(p.id)
+                  window.dispatchEvent(new CustomEvent('b3-left-hover', { detail: p.id }))
+                }}
+                onMouseLeave={() => {
+                  setHovered(null)
+                  window.dispatchEvent(new CustomEvent('b3-left-hover', { detail: null }))
+                }}
+                disabled={advancing && !isSel}
                 style={{
-                  width: '100%', textAlign: 'left', padding: '16px 20px', cursor: advancing ? 'default' : 'pointer',
-                  border:       `1px solid ${isSel ? `${p.accent}40` : 'rgba(255,255,255,0.09)'}`,
-                  borderLeft:   `4px solid ${isSel ? p.accent : 'rgba(255,255,255,0.08)'}`,
-                  background:   isSel ? `${p.accent}14` : 'rgba(9,9,14,0.45)',
-                  opacity:      isOther ? 0.30 : 1,
-                  transition:   'all 200ms',
-                  display:      'flex',
-                  alignItems:   'center',
-                  gap:          14,
+                  display:        'flex',
+                  flexDirection:  'column',
+                  justifyContent: 'space-between',
+                  width:          '100%',
+                  minHeight:      128,
+                  textAlign:      'left',
+                  background:     isSel
+                    ? `${p.accent}12`
+                    : hovered === p.id
+                      ? `${p.accent}08`
+                      : '#09090E',
+                  border:         `2px solid ${isSel ? p.accent : hovered === p.id ? p.accent + 'AA' : p.accent + '50'}`,
+                  boxShadow:      isSel ? 'none' : '4px 4px 0px 0px rgba(0,0,0,1)',
+                  transform:      isSel ? 'translate(4px, 4px)' : 'translate(0, 0)',
+                  opacity:        isOther ? 0.30 : 1,
+                  cursor:         advancing ? 'default' : 'pointer',
+                  overflow:       'hidden',
+                  position:       'relative',
+                  padding:        0,
+                  transition:     'all 180ms ease',
                 }}
               >
-                <span style={{ fontSize: 22, lineHeight: 1, flexShrink: 0 }}>{p.emoji}</span>
-                <div>
-                  <div style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 900, fontSize: 18, color: isSel ? p.accent : '#F0EFF8', marginBottom: 4, transition: 'color 200ms' }}>
+                {/* Skewed accent strip — right side */}
+                <div style={{
+                  position:      'absolute',
+                  right:         0, top: 0,
+                  width:         128, height: '100%',
+                  background:    `${p.accent}09`,
+                  transform:     'skewX(-20deg) translateX(64px)',
+                  pointerEvents: 'none',
+                }} />
+
+                {/* Main content */}
+                <div style={{ padding: '14px 16px 8px', position: 'relative', zIndex: 1, flex: 1 }}>
+                  <span style={{
+                    fontFamily:    BARLOW, fontWeight: 700, fontSize: 10,
+                    color:         `${p.accent}AA`, letterSpacing: '0.20em',
+                    textTransform: 'uppercase', display: 'block', marginBottom: 6,
+                  }}>
                     {p.label}
+                  </span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 5 }}>
+                    <span className="material-symbols-outlined" style={{ fontSize: 26, color: p.accent }}>
+                      {p.icon}
+                    </span>
+                    <span style={{
+                      fontFamily:    OUTFIT, fontWeight: 900, fontSize: 22,
+                      color:         '#F0EFF8', textTransform: 'uppercase', letterSpacing: '-0.02em',
+                    }}>
+                      {p.heading}
+                    </span>
                   </div>
-                  <div style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 13, color: 'rgba(240,239,248,0.45)', marginBottom: 6 }}>
-                    {p.subtitle}
-                  </div>
-                  <div style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 12, color: p.accent, opacity: 0.75 }}>
+                  <p style={{ fontFamily: DM, fontSize: 12, color: 'rgba(240,239,248,0.55)', margin: 0, maxWidth: '82%', lineHeight: 1.4 }}>
+                    {p.desc}
+                  </p>
+                </div>
+
+                {/* Footer strip */}
+                <div style={{
+                  padding:    '6px 16px',
+                  background: 'rgba(0,0,0,0.35)',
+                  borderTop:  `1px solid ${p.accent}30`,
+                  position:   'relative', zIndex: 1, flexShrink: 0,
+                }}>
+                  <span style={{
+                    fontFamily:    MONO, fontSize: 9, color: `${p.accent}AA`,
+                    letterSpacing: '0.12em', textTransform: 'uppercase',
+                  }}>
                     {p.cta}
-                  </div>
+                  </span>
                 </div>
               </button>
             )
           })}
         </div>
-        <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 13, color: 'rgba(240,239,248,0.25)', marginTop: 20, fontStyle: 'italic' }}>
-          Not sure? Pick the closest — you can always add the other later.
+
+        <p style={{ fontFamily: DM, fontSize: 13, color: 'rgba(255,255,255,0.30)', fontStyle: 'italic', margin: '20px 0 0' }}>
+          Not sure? Pick the closest — you can add the other from your dashboard later.
         </p>
+
       </div>
 
-      <footer style={{ position: 'fixed', bottom: 0, left: 0, right: 0, height: 72, zIndex: 50, display: 'flex', alignItems: 'center', padding: '0 24px', background: 'linear-gradient(to top, #1A2744 60%, transparent 100%)' }}>
-        <button type="button" onClick={() => router.push('/onboarding/business/B2')} style={{ background: 'none', border: 'none', fontFamily: "'DM Sans', sans-serif", fontSize: 15, color: 'rgba(240,239,248,0.35)', cursor: 'pointer', padding: 0 }}>← Back</button>
+      <footer style={{
+        position:   'fixed', bottom: 0, left: 0, right: 0, height: 72, zIndex: 50,
+        display:    'flex', alignItems: 'center', padding: '0 24px',
+        background: 'linear-gradient(to top, var(--ob-panel-bg, #1A2744) 60%, transparent 100%)',
+      }}>
+        <button
+          type="button"
+          onClick={() => router.push('/onboarding')}
+          style={{ background: 'none', border: 'none', fontFamily: DM, fontSize: 15, color: 'rgba(255,255,255,0.25)', cursor: 'pointer', padding: 0 }}
+        >
+          ← Back
+        </button>
       </footer>
     </>
   )

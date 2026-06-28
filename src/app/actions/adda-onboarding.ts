@@ -16,13 +16,25 @@ import type { PricingModel, AvailabilitySlotType } from '@/types/database'
 // ---------------------------------------------------------------------------
 
 const Step1Schema = z.object({
-  name:          z.string().min(2, 'Name must be at least 2 characters').max(100),
-  description:   z.string().max(1000).optional(),
-  city:          z.string().min(1, 'City is required'),
-  neighbourhood: z.string().max(100).optional(),
-  address:       z.string().min(5, 'Address is required').max(500),
-  lat:           z.number().min(-90).max(90).optional(),
-  lng:           z.number().min(-180).max(180).optional(),
+  name:              z.string().min(2, 'Name must be at least 2 characters').max(100),
+  description:       z.string().max(1000).optional(),
+  city:              z.string().min(1, 'City is required'),
+  neighbourhood:     z.string().max(100).optional(),
+  address:           z.string().min(5, 'Address is required').max(500),
+  lat:               z.number().min(-90).max(90).optional(),
+  lng:               z.number().min(-180).max(180).optional(),
+  google_place_id:   z.string().optional(),
+  google_name:       z.string().optional(),
+  phone:             z.string().optional(),
+  website:           z.string().url().optional().or(z.literal('')),
+  google_rating:     z.number().min(1).max(5).optional(),
+  google_reviews:    z.array(z.object({
+    author_name: z.string(),
+    rating:      z.number(),
+    text:        z.string(),
+    time:        z.number(),
+  })).optional(),
+  google_photo_urls: z.array(z.string().url()).max(5).optional(),
 })
 
 const VALID_ADDA_TYPES = [
@@ -45,8 +57,20 @@ const Step2Schema = z.object({
 )
 
 const VALID_AMENITIES = [
-  'projector', 'pa_system', 'natural_light', 'parking',
-  'accessible', 'wifi', 'whiteboard', 'kitchen', 'outdoor_space', 'ac',
+  // Connectivity & Tech
+  'wifi', 'projector', 'sound_system', 'pa_system', 'microphone', 'power_backup',
+  // Food & Drink
+  'serves_food', 'bar_alcohol', 'coffee_tea', 'outside_catering', 'kitchen',
+  // Space & Access
+  'parking', 'ac', 'wheelchair', 'accessible', 'outdoor', 'outdoor_space', 'near_transit',
+  // Vibe & Rules
+  'board_games', 'photo_friendly', 'natural_light', 'dj_ok', 'smoking_area', 'late_night',
+  // Legacy
+  'whiteboard',
+] as const
+
+const VALID_DAYS = [
+  'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday',
 ] as const
 
 const Step3Schema = z.object({
@@ -59,6 +83,7 @@ const Step3Schema = z.object({
     hybrid_split_percent: z.number().min(0).max(100).optional(),
     f_and_b_minimum_paise: z.number().int().positive().optional(),
   }).default({}),
+  available_days: z.array(z.enum(VALID_DAYS)).default([]),
 })
 
 const Step4Schema = z.object({
@@ -89,13 +114,25 @@ export type AddaOnboardingStepData =
 
 const CompleteAddaSchema = z.object({
   // Step 1
-  name:          z.string().min(2).max(100),
-  description:   z.string().max(1000).optional(),
-  city:          z.string().min(1),
-  neighbourhood: z.string().max(100).optional(),
-  address:       z.string().min(5).max(500),
-  lat:           z.number().optional(),
-  lng:           z.number().optional(),
+  name:              z.string().min(2).max(100),
+  description:       z.string().max(1000).optional(),
+  city:              z.string().min(1),
+  neighbourhood:     z.string().max(100).optional(),
+  address:           z.string().min(5).max(500),
+  lat:               z.number().optional(),
+  lng:               z.number().optional(),
+  google_place_id:   z.string().optional(),
+  google_name:       z.string().optional(),
+  phone:             z.string().optional(),
+  website:           z.string().url().optional().or(z.literal('')),
+  google_rating:     z.number().min(1).max(5).optional(),
+  google_reviews:    z.array(z.object({
+    author_name: z.string(),
+    rating:      z.number(),
+    text:        z.string(),
+    time:        z.number(),
+  })).optional(),
+  google_photo_urls: z.array(z.string().url()).max(5).optional(),
   // Step 2
   adda_type:                z.array(z.enum(VALID_ADDA_TYPES)).min(1),
   capacity_min:             z.number().int().min(1).optional(),
@@ -111,65 +148,24 @@ const CompleteAddaSchema = z.object({
     hybrid_split_percent:  z.number().min(0).max(100).optional(),
     f_and_b_minimum_paise: z.number().int().positive().optional(),
   }).default({}),
+  available_days: z.array(z.enum(VALID_DAYS)).default([]),
   // Step 4
   contact_whatsapp: z.string().optional().or(z.literal('')),
   contact_email:    z.string().email().optional().or(z.literal('')),
   instagram_handle: z.string().max(30).optional().or(z.literal('')),
+  // New extended fields
+  preferred_times:    z.array(z.enum(['morning', 'afternoon', 'evening', 'late_night'])).default([]),
+  event_preferences:  z.array(z.string()).default([]),
+  lead_time_weeks:    z.number().int().min(1).max(52).optional(),
+  alcohol_license:    z.boolean().default(false),
+  sound_curfew_time:  z.string().optional(),
+  google_place_types: z.array(z.string()).default([]),
 }).refine(
   (d) => d.capacity_min == null || d.capacity_max == null || d.capacity_max >= d.capacity_min,
   { message: 'Maximum capacity must be ≥ minimum capacity', path: ['capacity_max'] },
 )
 
 export type CompleteAddaInput = z.infer<typeof CompleteAddaSchema>
-
-// ---------------------------------------------------------------------------
-// Slug validation regex (3-50 chars, lowercase alphanumeric + hyphens)
-// ---------------------------------------------------------------------------
-
-const SLUG_RE = /^[a-z0-9][a-z0-9-]{1,48}[a-z0-9]$|^[a-z0-9]{3,50}$/
-
-// ---------------------------------------------------------------------------
-// checkAddaSlugAvailable
-// ---------------------------------------------------------------------------
-
-/**
- * Checks whether a proposed Adda URL slug is valid and unoccupied.
- *
- * Validation rules:
- *  - 3–50 characters
- *  - Lowercase alphanumeric characters and hyphens only
- *  - No leading or trailing hyphens
- *
- * The check is case-insensitive (slugs are stored lowercase by convention).
- *
- * @param slug - The candidate slug (as typed by the user).
- * @returns `{ available: true }` or `{ available: false, error: string }`.
- */
-export async function checkAddaSlugAvailable(
-  slug: string,
-): Promise<{ available: boolean; error?: string }> {
-  if (!SLUG_RE.test(slug)) {
-    return {
-      available: false,
-      error: 'Slug must be 3–50 characters and contain only lowercase letters, numbers, and hyphens.',
-    }
-  }
-
-  const admin = createAdminClient()
-
-  const { data, error } = await admin
-    .from('adda_profiles')
-    .select('slug')
-    .eq('slug', slug.toLowerCase())
-    .maybeSingle()
-
-  if (error) {
-    console.error('[checkAddaSlugAvailable]', error.message)
-    return { available: false, error: 'Could not check slug availability. Please try again.' }
-  }
-
-  return data === null ? { available: true } : { available: false, error: 'That slug is already taken.' }
-}
 
 // ---------------------------------------------------------------------------
 // saveAddaOnboardingStep
@@ -185,7 +181,7 @@ export async function checkAddaSlugAvailable(
  * Steps:
  *  1. basicInfo  — name, description, city, neighbourhood, address, lat/lng
  *  2. venueType  — adda_type, capacity_min/max, capacity_configurations
- *  3. amenities  — amenities, pricing_model, pricing_config
+ *  3. amenities  — amenities, pricing_model, pricing_config, available_days
  *  4. contact    — contact_whatsapp, contact_email, instagram_handle
  *
  * @param step  Step number (1–4).
@@ -246,13 +242,10 @@ export async function saveAddaOnboardingStep(
  *  3. Uploads the cover image to `adda-covers/{adda_id}/cover.{ext}`.
  *  4. Uploads up to 12 gallery images to `adda-covers/{adda_id}/gallery/{n}.{ext}`.
  *  5. Inserts the `adda_profiles` row.
- *  6. Creates default `adda_availability` rows: every day for the next 30 days,
- *     `slot_type = 'full_day'`, `status = 'available'`.
+ *  6. Seeds `adda_availability` for the next 30 days, restricted to the
+ *     days the venue selected in V7 (available_days). If available_days is
+ *     empty, seeds all 7 days as a safe fallback.
  *  7. Clears the `adda_onboarding` key from `user_metadata`.
- *
- * File uploads are accepted via `coverImageFile` and `galleryImageFiles` on the
- * input object. These are optional — the profile can be completed with
- * pre-uploaded URLs (e.g. if the client already called `uploadAddaCoverImage`).
  *
  * @param data            Validated onboarding payload (all four steps merged).
  * @param coverImageFile  Optional cover image `File` to upload.
@@ -265,6 +258,11 @@ export async function completeAddaOnboarding(
   galleryFiles?: File[],
 ): Promise<{ slug: string; error: string | null }> {
   const { user } = await requireAuth('/onboarding/adda')
+
+  // City is required for /{city}/{slug} URL routing
+  if (!data.city || data.city.trim() === '') {
+    return { slug: '', error: 'City is required to complete onboarding.' }
+  }
 
   const parsed = CompleteAddaSchema.safeParse(data)
   if (!parsed.success) {
@@ -308,6 +306,10 @@ export async function completeAddaOnboarding(
     if (result.url) galleryUrls.push(result.url)
   }
 
+  // Merge Google-prefetched photos (already in Supabase Storage) with any
+  // user-uploaded gallery files, capped at the 12-image DB constraint.
+  const allGallery = [...(d.google_photo_urls ?? []), ...galleryUrls].slice(0, 12)
+
   // Insert adda_profiles row
   const { error: insertError } = await admin.from('adda_profiles').insert({
     auth_user_id:            user.id,
@@ -320,8 +322,8 @@ export async function completeAddaOnboarding(
     address:                 d.address,
     lat:                     d.lat ?? null,
     lng:                     d.lng ?? null,
-    cover_image_url:         coverUrl,
-    gallery_images:          galleryUrls,
+    cover_image_url:         coverUrl ?? (allGallery[0] ?? null),
+    gallery_images:          allGallery,
     capacity_min:            d.capacity_min ?? null,
     capacity_max:            d.capacity_max ?? null,
     capacity_configurations: d.capacity_configurations,
@@ -331,6 +333,18 @@ export async function completeAddaOnboarding(
     contact_whatsapp:        d.contact_whatsapp || null,
     contact_email:           d.contact_email || null,
     instagram_handle:        d.instagram_handle || null,
+    google_place_id:         d.google_place_id ?? null,
+    google_name:             d.google_name ?? null,
+    phone:                   d.phone || null,
+    website:                 d.website || null,
+    google_rating:           d.google_rating ?? null,
+    google_reviews:          d.google_reviews ?? [],
+    preferred_times:         d.preferred_times,
+    event_preferences:       d.event_preferences,
+    lead_time_weeks:         d.lead_time_weeks ?? 2,
+    alcohol_license:         d.alcohol_license,
+    sound_curfew_time:       d.sound_curfew_time ?? null,
+    google_place_types:      d.google_place_types,
   })
 
   if (insertError) {
@@ -345,10 +359,10 @@ export async function completeAddaOnboarding(
     .eq('slug', slug)
     .maybeSingle()
 
-  // Seed default availability: next 30 days as full_day / available
+  // Seed availability: next 30 days, restricted to the days the venue selected.
+  // Falls back to all 7 days if available_days is empty (safe default).
   if (newAdda) {
-    const availabilityRows = buildDefaultAvailability(newAdda.id)
-    // Insert in chunks to stay within Supabase's row limits
+    const availabilityRows = buildDefaultAvailability(newAdda.id, d.available_days)
     const chunkSize = 50
     for (let i = 0; i < availabilityRows.length; i += chunkSize) {
       await admin
@@ -361,6 +375,21 @@ export async function completeAddaOnboarding(
   await admin.auth.admin.updateUserById(user.id, {
     user_metadata: { adda_onboarding: null },
   }).catch(() => { /* non-fatal */ })
+
+  // Ensure 'venue' is in the personas array on user_profiles so business layout
+  // guards work correctly for users who completed onboarding before this was set.
+  const { data: up } = await admin
+    .from('user_profiles')
+    .select('personas')
+    .eq('id', user.id)
+    .maybeSingle()
+  const existingPersonas = (up?.personas ?? []) as string[]
+  if (!existingPersonas.includes('venue')) {
+    await admin
+      .from('user_profiles')
+      .update({ personas: [...existingPersonas, 'venue'] })
+      .eq('id', user.id)
+  }
 
   return { slug, error: null }
 }
@@ -388,17 +417,16 @@ async function generateUniqueSlug(
   const candidates = [
     base,
     ...Array.from({ length: 6 }, () => `${base}-${Math.floor(100 + Math.random() * 900)}`),
-  ]
+  ].filter((c) => c.length >= 3)
 
-  for (const candidate of candidates) {
-    if (candidate.length < 3) continue
-    const { data } = await admin
-      .from('adda_profiles')
-      .select('slug')
-      .eq('slug', candidate)
-      .maybeSingle()
-    if (data === null) return candidate
-  }
+  const { data: taken } = await admin
+    .from('adda_profiles')
+    .select('slug')
+    .in('slug', candidates)
+
+  const takenSet = new Set((taken ?? []).map((r) => r.slug))
+  const free = candidates.find((c) => !takenSet.has(c))
+  if (free) return free
 
   return `adda-${Math.floor(100000 + Math.random() * 900000)}`
 }
@@ -432,13 +460,31 @@ async function uploadImage(
   return { url: urlData.publicUrl, error: null }
 }
 
+// Day-of-week index: 0 = Sunday … 6 = Saturday (matches JS Date.getDay())
+const DAY_INDICES: Record<string, number> = {
+  sunday: 0, monday: 1, tuesday: 2, wednesday: 3,
+  thursday: 4, friday: 5, saturday: 6,
+}
+
 /**
- * Builds `adda_availability` rows for the next 30 days (full_day / available).
- * Used to seed a freshly onboarded Adda's calendar.
+ * Builds `adda_availability` rows for the next 30 days.
+ *
+ * Only days that appear in `availableDays` are included. If `availableDays`
+ * is empty (venue skipped V7 or it wasn't collected), all 7 days are seeded
+ * as a safe fallback — matching the old behaviour.
+ *
+ * @param addaId       The newly inserted adda_profiles.id
+ * @param availableDays  Array of day names from V7 (e.g. ['monday','friday'])
  */
 function buildDefaultAvailability(
   addaId: string,
+  availableDays: string[],
 ): Array<{ adda_id: string; date: string; slot_type: AvailabilitySlotType; status: 'available' }> {
+  // Normalise to lowercase for safe comparison
+  const allowedIndices = availableDays.length > 0
+    ? new Set(availableDays.map(d => DAY_INDICES[d.toLowerCase()]).filter(i => i !== undefined))
+    : null // null = allow all days
+
   const rows: ReturnType<typeof buildDefaultAvailability> = []
   const today = new Date()
   today.setHours(0, 0, 0, 0)
@@ -446,6 +492,10 @@ function buildDefaultAvailability(
   for (let i = 1; i <= 30; i++) {
     const d = new Date(today)
     d.setDate(today.getDate() + i)
+
+    // Skip days the venue said they're unavailable
+    if (allowedIndices !== null && !allowedIndices.has(d.getDay())) continue
+
     rows.push({
       adda_id:   addaId,
       date:      d.toISOString().split('T')[0],

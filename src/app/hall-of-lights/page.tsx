@@ -5,7 +5,7 @@ import HallClient from './HallClient'
 import type { UserTier } from '@/types/marketplace'
 
 export const metadata = {
-  title: 'Hall of Lights — WIMC',
+  title: "Hall of Lights — WIMC's Top Creators",
   description: 'Meet the Lantern and Beacon creators powering offline culture across India\'s Tier-2 cities.',
 }
 

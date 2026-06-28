@@ -53,6 +53,14 @@ export type CreatorType =
   | 'professional_portfolio'
   | 'community_impact'
   | 'exploring'
+  // v3 categories
+  | 'dance'
+  | 'food_culinary'
+  | 'fitness_wellness'
+  | 'spirituality'
+  | 'travel_adventure'
+  | 'literature_poetry'
+  | 'crafts_making'
 
 export type BlockFamily = 'identity' | 'social' | 'events' | 'content' | 'community'
 
@@ -345,6 +353,17 @@ export interface Database {
           show_city_mastery: boolean
           // Setup checklist (migration 028)
           setup_checklist_dismissed: string[]
+          // Onboarding v3 (migration 031)
+          explorer_scene: string | null
+          explorer_creator_intent: string[]
+          business_categories: string[]
+          wimc_goals: string[]
+          target_audience: string[]
+          contact_whatsapp: string | null
+          contact_email: string | null
+          website_url: string | null
+          // Multi-persona support (migration 035)
+          personas: string[]
           created_at: string
           updated_at: string
         }
@@ -395,6 +414,15 @@ export interface Database {
           neighbourhood?: string | null
           show_city_mastery?: boolean
           setup_checklist_dismissed?: string[]
+          explorer_scene?: string | null
+          explorer_creator_intent?: string[]
+          business_categories?: string[]
+          wimc_goals?: string[]
+          target_audience?: string[]
+          contact_whatsapp?: string | null
+          contact_email?: string | null
+          website_url?: string | null
+          personas?: string[]
           created_at?: string
           updated_at?: string
         }
@@ -445,6 +473,15 @@ export interface Database {
           neighbourhood?: string | null
           show_city_mastery?: boolean
           setup_checklist_dismissed?: string[]
+          explorer_scene?: string | null
+          explorer_creator_intent?: string[]
+          business_categories?: string[]
+          wimc_goals?: string[]
+          target_audience?: string[]
+          contact_whatsapp?: string | null
+          contact_email?: string | null
+          website_url?: string | null
+          personas?: string[]
           created_at?: string
           updated_at?: string
         }
@@ -962,6 +999,13 @@ export interface Database {
           repeat_attendee_rate: number
           unique_lantern_beacon_hosts: number
           beloved_since: string | null
+          // Onboarding v3 (migration 031)
+          event_preferences: string[]
+          available_days: string[]
+          preferred_times: string[]
+          lead_time_weeks: number
+          google_calendar_connected: boolean
+          google_calendar_refresh_token: string | null
           created_at: string
           updated_at: string
         }
@@ -1000,6 +1044,12 @@ export interface Database {
           repeat_attendee_rate?: number
           unique_lantern_beacon_hosts?: number
           beloved_since?: string | null
+          event_preferences?: string[]
+          available_days?: string[]
+          preferred_times?: string[]
+          lead_time_weeks?: number
+          google_calendar_connected?: boolean
+          google_calendar_refresh_token?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -1038,6 +1088,12 @@ export interface Database {
           repeat_attendee_rate?: number
           unique_lantern_beacon_hosts?: number
           beloved_since?: string | null
+          event_preferences?: string[]
+          available_days?: string[]
+          preferred_times?: string[]
+          lead_time_weeks?: number
+          google_calendar_connected?: boolean
+          google_calendar_refresh_token?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -1162,6 +1218,63 @@ export interface Database {
             columns: ['event_id']
             isOneToOne: false
             referencedRelation: 'events'
+            referencedColumns: ['id']
+          }
+        ]
+      }
+
+      adda_availability_rules: {
+        Row: {
+          id: string
+          adda_id: string
+          rule_type: 'recurring_closed' | 'holiday_block' | 'booking_window'
+          day_of_week: number[] | null
+          time_start: string | null
+          time_end: string | null
+          date_start: string | null
+          date_end: string | null
+          label: string | null
+          min_advance_days: number | null
+          max_advance_days: number | null
+          is_active: boolean
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          adda_id: string
+          rule_type: 'recurring_closed' | 'holiday_block' | 'booking_window'
+          day_of_week?: number[] | null
+          time_start?: string | null
+          time_end?: string | null
+          date_start?: string | null
+          date_end?: string | null
+          label?: string | null
+          min_advance_days?: number | null
+          max_advance_days?: number | null
+          is_active?: boolean
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          adda_id?: string
+          rule_type?: 'recurring_closed' | 'holiday_block' | 'booking_window'
+          day_of_week?: number[] | null
+          time_start?: string | null
+          time_end?: string | null
+          date_start?: string | null
+          date_end?: string | null
+          label?: string | null
+          min_advance_days?: number | null
+          max_advance_days?: number | null
+          is_active?: boolean
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'adda_availability_rules_adda_id_fkey'
+            columns: ['adda_id']
+            isOneToOne: false
+            referencedRelation: 'adda_profiles'
             referencedColumns: ['id']
           }
         ]
@@ -1759,6 +1872,69 @@ export interface Database {
             columns: ['creator_id']
             isOneToOne: false
             referencedRelation: 'user_profiles'
+            referencedColumns: ['id']
+          }
+        ]
+      }
+
+      adda_payout_requests: {
+        Row: {
+          id: string
+          adda_id: string
+          booking_ids: string[]
+          gross_paise: number
+          platform_fee_paise: number
+          adda_share_paise: number
+          payment_method: 'bank' | 'upi'
+          bank_account_name: string | null
+          bank_account_number: string | null
+          bank_ifsc: string | null
+          upi_id: string | null
+          status: 'pending' | 'approved' | 'paid' | 'rejected'
+          rejection_reason: string | null
+          requested_at: string
+          processed_at: string | null
+        }
+        Insert: {
+          id?: string
+          adda_id: string
+          booking_ids?: string[]
+          gross_paise?: number
+          platform_fee_paise?: number
+          adda_share_paise?: number
+          payment_method: 'bank' | 'upi'
+          bank_account_name?: string | null
+          bank_account_number?: string | null
+          bank_ifsc?: string | null
+          upi_id?: string | null
+          status?: 'pending' | 'approved' | 'paid' | 'rejected'
+          rejection_reason?: string | null
+          requested_at?: string
+          processed_at?: string | null
+        }
+        Update: {
+          id?: string
+          adda_id?: string
+          booking_ids?: string[]
+          gross_paise?: number
+          platform_fee_paise?: number
+          adda_share_paise?: number
+          payment_method?: 'bank' | 'upi'
+          bank_account_name?: string | null
+          bank_account_number?: string | null
+          bank_ifsc?: string | null
+          upi_id?: string | null
+          status?: 'pending' | 'approved' | 'paid' | 'rejected'
+          rejection_reason?: string | null
+          requested_at?: string
+          processed_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'adda_payout_requests_adda_id_fkey'
+            columns: ['adda_id']
+            isOneToOne: false
+            referencedRelation: 'adda_profiles'
             referencedColumns: ['id']
           }
         ]

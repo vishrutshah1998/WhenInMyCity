@@ -1,136 +1,177 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { SK } from '@/lib/onboarding/session-keys'
-import { savePersonaScreen } from '@/app/actions/persona-complete'
-import { getCategoryColour, getCategoryWarmBg } from '@/lib/onboarding/design-tokens'
-import { INTEREST_TAGS } from '@/lib/constants/interests'
-import { getCategoryConfig } from '@/lib/constants/categories'
-import type { CreatorType } from '@/types/database'
+import { PLATFORM_REGISTRY } from '@/lib/platforms'
+import { CreatorEventTicket } from '@/components/onboarding/BoardingPassArtifact'
+import { getCategoryColour } from '@/lib/onboarding/design-tokens'
+
+// Local icon filenames in /public/platform-icons/
+const ICON_FILE: Record<string, string> = {
+  instagram:  'instagram',
+  youtube:    'youtube',
+  whatsapp:   'whatsapp',
+  spotify:    'spotify',
+  soundcloud: 'soundcloud',
+  twitter:    'x',
+  linkedin:   'linkedin',
+  website:    'website',
+  telegram:   'telegram',
+  substack:   'substack',
+  behance:    'behance',
+  github:     'github',
+}
 
 export default function C6Page() {
   const router = useRouter()
-
-  const [selected,    setSelected]    = useState<string[]>([])
-  const [accent,      setAccent]      = useState('#E8705A')
-  const [warmBg,      setWarmBg]      = useState('#FFF8F5')
-  const [holderName,  setHolderName]  = useState('')
-  const [city,        setCity]        = useState('')
-  const [category,    setCategory]    = useState('')
-  const [isAdvancing, setIsAdvancing] = useState(false)
+  const [selected,  setSelected]  = useState<string[]>([])
+  const [name,      setName]      = useState('')
+  const [category,  setCategory]  = useState('')
+  const [city,      setCity]      = useState('')
+  const [accent,    setAccent]    = useState('#F5A800')
+  const [advancing, setAdvancing] = useState(false)
 
   useEffect(() => {
     if (typeof window === 'undefined') return
     const subtypes = sessionStorage.getItem(SK.c_subtypes)
     if (!subtypes) { router.replace('/onboarding/creator/C5'); return }
-    const name = sessionStorage.getItem(SK.c_name) || ''
-    const c    = sessionStorage.getItem(SK.c_city) || ''
-    const cat  = sessionStorage.getItem(SK.c_category) || ''
-    setHolderName(name)
-    setCity(c)
+    const cat = sessionStorage.getItem(SK.c_category) || ''
     setCategory(cat)
     setAccent(getCategoryColour(cat))
-    setWarmBg(getCategoryWarmBg(cat))
+    const n = sessionStorage.getItem(SK.c_name)
+    if (n) setName(n)
+    const c = sessionStorage.getItem(SK.c_city)
+    if (c) setCity(c)
     try {
-      const saved = JSON.parse(sessionStorage.getItem(SK.c_interests) || '[]') as string[]
+      const saved = JSON.parse(sessionStorage.getItem(SK.c_platforms) || '[]') as string[]
       if (saved.length > 0) setSelected(saved)
     } catch {}
   }, [router])
 
-  const prevScreen = useMemo(() => {
-    if (typeof window === 'undefined') return '/onboarding/creator/C5'
-    const cat = sessionStorage.getItem(SK.c_category) || ''
-    const config = getCategoryConfig(cat as CreatorType)
-    const hasOfflineActs = config?.offlineActivities && config.offlineActivities.length > 0
-    return hasOfflineActs ? '/onboarding/creator/C5b' : '/onboarding/creator/C5'
-  }, [])
-
-  function toggle(val: string) {
-    setSelected(prev => prev.includes(val) ? prev.filter(t => t !== val) : [...prev, val])
+  function toggle(id: string) {
+    setSelected(prev => {
+      const next = prev.includes(id) ? prev.filter(s => s !== id) : [...prev, id]
+      try {
+        sessionStorage.setItem(SK.c_platforms, JSON.stringify(next))
+        window.dispatchEvent(new Event('ob-snap-update'))
+      } catch {}
+      return next
+    })
   }
 
-  async function handleContinue() {
-    if (isAdvancing) return
-    setIsAdvancing(true)
-    try { sessionStorage.setItem(SK.c_interests, JSON.stringify(selected)) } catch {}
-    await savePersonaScreen({ persona: 'creator', screen: 'C6', data: { interests: selected } })
-    router.push('/onboarding/creator/C7')
+  function handleContinue() {
+    if (advancing) return
+    setAdvancing(true)
+    router.push('/onboarding/creator/C8')
   }
 
   function handleSkip() {
-    try { sessionStorage.setItem(SK.c_interests, '[]') } catch {}
-    router.push('/onboarding/creator/C7')
+    if (advancing) return
+    setAdvancing(true)
+    try { sessionStorage.setItem(SK.c_platforms, '[]') } catch {}
+    router.push('/onboarding/creator/C8')
   }
+
+  const canProceed = selected.length > 0
 
   return (
     <>
-      <div style={{
-        minHeight:     '100%',
-        overflowY:     'auto',
-        paddingTop:    48,
-        paddingBottom: 96,
-        paddingLeft:   24,
-        paddingRight:  24,
-      }}>
+      <div style={{ minHeight: '100%', overflowY: 'auto', paddingTop: 20, paddingBottom: 96, paddingLeft: 24, paddingRight: 24 }}>
+        <CreatorEventTicket
+          name={name || undefined}
+          category={category || undefined}
+          city={city || undefined}
+          accent={accent}
+        />
+
         <h1 style={{
-          fontFamily:  "'Outfit', sans-serif",
-          fontWeight:  900,
-          fontSize:    'clamp(28px, 7vw, 44px)',
-          color:       '#F0EFF8',
-          lineHeight:  1.05,
-          margin:      '0 0 8px',
-          maxWidth:    480,
-        }}>
-          What does your audience care about?
-        </h1>
-        <p style={{
-          fontFamily: "'DM Sans', sans-serif",
-          fontSize:   15,
-          color:      'rgba(240,239,248,0.5)',
+          fontFamily: "var(--font-abril), 'Abril Fatface', serif",
+          fontSize:   'clamp(28px, 7vw, 42px)',
+          color:      '#F0EFF8',
+          lineHeight: 1.05,
           margin:     '0 0 8px',
-          maxWidth:   400,
+          maxWidth:   480,
         }}>
-          Helps us match you with the right events and venues
-        </p>
-        <p style={{
-          fontFamily: "'DM Sans', sans-serif",
-          fontSize:   13,
-          color:      'rgba(240,239,248,0.30)',
-          margin:     '0 0 40px',
-          maxWidth:   400,
-          fontStyle:  'italic',
-        }}>
-          These won&apos;t show on your page — they help us find your crowd
+          Where are you<br />creating?
+        </h1>
+        <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 15, color: '#9896B0', margin: '0 0 20px', maxWidth: 400 }}>
+          Pick every platform you&apos;re active on
         </p>
 
-        {/* Interest pills */}
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, maxWidth: 520 }}>
-          {INTEREST_TAGS.map(tag => {
-            const isSel = selected.includes(tag.id)
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(3, 1fr)',
+          gap: 10,
+        }}>
+          {PLATFORM_REGISTRY.map(plat => {
+            const isSel = selected.includes(plat.id)
+            const slug  = ICON_FILE[plat.id] ?? ''
             return (
               <button
-                key={tag.id}
+                key={plat.id}
                 type="button"
-                onClick={() => toggle(tag.id)}
+                onClick={() => toggle(plat.id)}
                 style={{
-                  padding:      '10px 18px',
-                  borderRadius: 999,
-                  fontFamily:   "'DM Sans', sans-serif",
-                  fontWeight:   600,
-                  fontSize:     15,
-                  cursor:       'pointer',
-                  transition:   'all 150ms',
-                  border:       isSel ? `1px solid ${accent}` : '1px solid rgba(255,255,255,0.14)',
-                  background:   isSel ? accent : 'rgba(255,255,255,0.06)',
-                  color:        isSel ? '#ffffff' : 'rgba(240,239,248,0.75)',
-                  display:      'flex',
-                  alignItems:   'center',
-                  gap:          6,
+                  display:        'flex',
+                  flexDirection:  'column',
+                  alignItems:     'center',
+                  justifyContent: 'center',
+                  gap:            8,
+                  padding:        '16px 8px',
+                  borderRadius:   14,
+                  border:         isSel ? `1.5px solid ${plat.color}` : '1.5px solid rgba(255,255,255,0.07)',
+                  background:     isSel ? `${plat.color}1A` : 'rgba(255,255,255,0.03)',
+                  cursor:         'pointer',
+                  transition:     'all 150ms',
+                  position:       'relative',
                 }}
               >
-                <span>{tag.emoji}</span>
-                {tag.label}
+                {/* checkmark badge */}
+                {isSel && (
+                  <div style={{
+                    position:       'absolute', top: 7, right: 7,
+                    width:          16, height: 16, borderRadius: '50%',
+                    background:     plat.color,
+                    display:        'flex', alignItems: 'center', justifyContent: 'center',
+                    flexShrink:     0,
+                  }}>
+                    <svg viewBox="0 0 24 24" width="9" height="9" fill="none"
+                      stroke="#fff" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M5 13l4 4L19 7" />
+                    </svg>
+                  </div>
+                )}
+
+                {/* icon circle */}
+                <div style={{
+                  width:          38, height: 38, borderRadius: '50%',
+                  background:     isSel ? plat.color : 'rgba(255,255,255,0.09)',
+                  display:        'flex', alignItems: 'center', justifyContent: 'center',
+                  flexShrink:     0,
+                  transition:     'background 150ms',
+                }}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={`/platform-icons/${slug}.svg`}
+                    width={20} height={20}
+                    alt={plat.label}
+                    style={{ objectFit: 'contain', filter: 'brightness(0) invert(1)' }}
+                  />
+                </div>
+
+                {/* label */}
+                <span style={{
+                  fontFamily:  "'DM Sans', sans-serif",
+                  fontSize:    11,
+                  fontWeight:  600,
+                  color:       isSel ? '#F0EFF8' : 'rgba(255,255,255,0.38)',
+                  textAlign:   'center',
+                  lineHeight:  1.2,
+                  transition:  'color 150ms',
+                }}>
+                  {plat.label}
+                </span>
               </button>
             )
           })}
@@ -138,41 +179,35 @@ export default function C6Page() {
       </div>
 
       <footer style={{
-        position:       'fixed',
-        bottom:         0,
-        left:           0,
-        right:          0,
-        height:         72,
-        zIndex:         50,
-        display:        'flex',
-        alignItems:     'center',
-        justifyContent: 'space-between',
-        padding:        '0 24px',
-        background:     'linear-gradient(to top, #1A2744 60%, transparent 100%)',
+        position: 'fixed', bottom: 0, left: 0, right: 0, height: 72, zIndex: 50,
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 24px',
+        background: 'linear-gradient(to top, var(--ob-panel-bg, #1A2744) 60%, transparent 100%)',
       }}>
-        <button type="button" onClick={() => router.push(prevScreen)}
-          style={{ background: 'none', border: 'none', fontFamily: "'DM Sans', sans-serif", fontSize: 15, color: 'rgba(240,239,248,0.35)', cursor: 'pointer', padding: 0 }}>
+        <button type="button" onClick={() => router.push('/onboarding/creator/C5')}
+          style={{ background: 'none', border: 'none', fontFamily: "'DM Sans', sans-serif", fontSize: 15, color: 'rgba(255,255,255,0.25)', cursor: 'pointer', padding: 0 }}>
           ← Back
         </button>
         <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
           <button type="button" onClick={handleSkip}
-            style={{ background: 'none', border: 'none', fontFamily: "'DM Sans', sans-serif", fontSize: 14, color: 'rgba(240,239,248,0.35)', cursor: 'pointer', padding: 0, textDecoration: 'underline', textDecorationStyle: 'dashed', textUnderlineOffset: 3 }}>
+            style={{ background: 'none', border: 'none', fontFamily: "'DM Sans', sans-serif", fontSize: 14, color: 'rgba(255,255,255,0.25)', cursor: 'pointer', padding: 0, textDecoration: 'underline', textDecorationStyle: 'dashed', textUnderlineOffset: 3 }}>
             Skip
           </button>
-          <button type="button" onClick={handleContinue} disabled={isAdvancing}
+          <button type="button" onClick={handleContinue} disabled={!canProceed || advancing}
             style={{
-              background: accent,
-              color:      '#ffffff',
-              fontFamily: "'DM Sans', sans-serif",
-              fontWeight: 600,
-              fontSize:   15,
-              padding:    '12px 32px',
-              border:     'none',
-              cursor:     'pointer',
-              opacity:    isAdvancing ? 0.6 : 1,
-              transition: 'opacity 200ms',
+              background:    canProceed ? accent : 'rgba(255,255,255,0.08)',
+              color:         canProceed ? '#1A2744' : 'rgba(255,255,255,0.22)',
+              fontFamily:    "var(--font-barlow), 'Barlow Condensed', sans-serif",
+              fontWeight:    700,
+              fontSize:      15,
+              letterSpacing: '0.08em',
+              textTransform: 'uppercase',
+              padding:       '12px 32px',
+              border:        'none',
+              boxShadow:     canProceed ? '8px 8px 0px 0px #000000' : 'none',
+              cursor:        canProceed ? 'pointer' : 'not-allowed',
+              transition:    'background 200ms',
             }}>
-            {isAdvancing ? 'Saving...' : `Continue${selected.length > 0 ? ` (${selected.length})` : ''}`}
+            {canProceed ? `Continue (${selected.length})` : 'Continue'}
           </button>
         </div>
       </footer>

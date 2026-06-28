@@ -39,6 +39,7 @@ import { checkRSVPRateLimit } from '@/lib/ratelimit'
 import { bumpUserMetric } from '@/lib/metrics'
 import { updateAttendanceStreak } from '@/lib/streak'
 import { redeemReferralCode } from '@/app/actions/referral'
+import { createNotification } from '@/app/actions/notifications'
 import type { UserTier } from '@/types/database'
 
 // ---------------------------------------------------------------------------
@@ -599,6 +600,26 @@ export async function confirmRSVPPayment(params: {
     bumpUserMetric(admin, anchor.attendee_user_id, 'rsvps_total_count', updated.length, 'confirmRSVPPayment')
   }
 
+  // Notify the event creator about the new ticket sale (fire-and-forget).
+  void (async () => {
+    try {
+      const { data: ev } = await admin
+        .from('events')
+        .select('creator_id, title')
+        .eq('id', anchor.event_id)
+        .maybeSingle()
+      if (ev?.creator_id && ev.creator_id !== anchor.attendee_user_id) {
+        await createNotification({
+          recipientId: ev.creator_id,
+          type: 'new_rsvp',
+          title: `New ticket sold — ${ev.title}`,
+          body: `${updated.length > 1 ? `${updated.length} tickets` : 'A ticket'} just sold for your event.`,
+          actionUrl: '/dashboard/events',
+        })
+      }
+    } catch {}
+  })()
+
   // Return the first ticket's QR token (anchor RSVP).
   const anchorRow = updated.find((r) => r.id === rsvpId) ?? updated[0]
 
@@ -861,6 +882,86 @@ export async function getMyRSVPForEvent(
       tierName: data.ticket_tier_name ?? null,
     },
   }
+}
+
+// ---------------------------------------------------------------------------
+// casualRSVP
+// ---------------------------------------------------------------------------
+
+/**
+ * Records a Going / Maybe / Not Going signal for a free casual event.
+ *
+ * Intent is stored in attendee_name as a bracket prefix ("[going] Name",
+ * "[maybe] Name", "[not_going] Name") to avoid a schema migration.
+ * Upserts so the user can change their mind without creating duplicate rows.
+ */
+export async function casualRSVP(params: {
+  eventId: string
+  intent: 'going' | 'maybe' | 'not_going'
+}): Promise<{ error: string | null }> {
+  const eventIdParsed = z.string().uuid().safeParse(params.eventId)
+  const intentParsed = z.enum(['going', 'maybe', 'not_going']).safeParse(params.intent)
+  if (!eventIdParsed.success || !intentParsed.success) return { error: 'Invalid input.' }
+
+  const { user } = await requireAuth()
+  const admin = createAdminClient()
+
+  const { data: event } = await admin
+    .from('events')
+    .select('id, status, starts_at, ticket_price')
+    .eq('id', params.eventId)
+    .maybeSingle()
+
+  if (!event) return { error: 'Event not found.' }
+  if (event.status !== 'published') return { error: 'This event is not available for RSVP.' }
+  if (new Date(event.starts_at) <= new Date()) return { error: 'This event has already started.' }
+  if (event.ticket_price !== 0) return { error: 'Casual RSVP is only available for free events.' }
+
+  const { data: profile } = await admin
+    .from('user_profiles')
+    .select('display_name')
+    .eq('id', user.id)
+    .maybeSingle()
+
+  const displayName = profile?.display_name ?? 'Guest'
+  const prefixedName = `[${params.intent}] ${displayName}`
+
+  // Upsert: update attendee_name if already RSVPed, otherwise insert a fresh row
+  const { data: existing } = await admin
+    .from('rsvps')
+    .select('id')
+    .eq('event_id', params.eventId)
+    .eq('attendee_user_id', user.id)
+    .eq('payment_status', 'captured')
+    .maybeSingle()
+
+  if (existing) {
+    const { error: updateError } = await admin
+      .from('rsvps')
+      .update({ attendee_name: prefixedName })
+      .eq('id', existing.id)
+
+    if (updateError) return { error: 'Failed to update your RSVP.' }
+  } else {
+    const { error: insertError } = await admin
+      .from('rsvps')
+      .insert({
+        event_id:            params.eventId,
+        attendee_user_id:    user.id,
+        payment_status:      'captured' as const,
+        amount_paid:         0,
+        attendee_name:       prefixedName,
+        attendee_phone:      '',
+        platform_fee_paise:  0,
+        maker_payout_paise:  0,
+        venue_fee_paise:     0,
+        split_tier:          null,
+      })
+
+    if (insertError) return { error: 'Failed to save your RSVP.' }
+  }
+
+  return { error: null }
 }
 
 // ---------------------------------------------------------------------------

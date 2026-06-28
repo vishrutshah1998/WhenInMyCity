@@ -41,6 +41,7 @@ export default async function AddaSlugPage({
       upcomingEvents={result.upcomingEvents}
       pastEvents={result.pastEvents}
       stats={result.stats}
+      theme={result.theme}
     />
   )
 }

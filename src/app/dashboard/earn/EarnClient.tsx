@@ -1,7 +1,9 @@
 'use client'
 
+import { useState } from 'react'
 import Link from 'next/link'
 import type { UserTier } from '@/types/database'
+import { profileUrl } from '@/lib/profile-url'
 
 // ── Tier helpers ──────────────────────────────────────────────────────────────
 
@@ -44,7 +46,7 @@ function TierGate({ current, required, eventsHosted }: {
     <div style={{
       background: 'var(--wimc-bg-overlay)',
       border: '1px solid var(--wimc-border-subtle)',
-      borderRadius: 10, padding: '14px 16px', marginTop: 16,
+      borderRadius: 0, padding: '14px 16px', marginTop: 16,
     }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
         <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--wimc-text-secondary)' }}>
@@ -101,8 +103,8 @@ function ProductCard({
   return (
     <div style={{
       background: 'var(--wimc-bg-elevated)',
-      border: `1px solid ${unlocked || isWanderer ? 'var(--wimc-border-default)' : 'var(--wimc-border-subtle)'}`,
-      borderRadius: 18, overflow: 'hidden',
+      border: `1px solid ${unlocked || isWanderer ? 'rgba(26,39,68,0.14)' : 'var(--wimc-border-subtle)'}`,
+      borderRadius: 0, overflow: 'hidden',
       opacity: unlocked || isWanderer ? 1 : 0.75,
       position: 'relative',
     }}>
@@ -127,13 +129,13 @@ function ProductCard({
         {/* Icon + title */}
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14, marginBottom: 14 }}>
           <div style={{
-            width: 44, height: 44, borderRadius: 10, flexShrink: 0,
+            width: 44, height: 44, borderRadius: 0, flexShrink: 0,
             display: 'grid', placeItems: 'center', background: iconBg, color: iconColor,
           }}>
             <span className="material-symbols-outlined" style={{ fontSize: 22, fontVariationSettings: "'FILL' 1" }}>{icon}</span>
           </div>
           <div>
-            <div style={{ fontFamily: 'var(--font-syne)', fontSize: 16, fontWeight: 800, marginBottom: 4 }}>
+            <div style={{ fontFamily: 'var(--font-abril)', fontSize: 20, marginBottom: 4 }}>
               {title}
             </div>
             <div style={{ fontSize: 13, color: 'var(--wimc-text-secondary)', lineHeight: 1.5 }}>
@@ -161,7 +163,7 @@ function ProductCard({
                   href={activeHref}
                   style={{
                     display: 'inline-flex', alignItems: 'center', gap: 6,
-                    padding: '8px 16px', borderRadius: 8, fontSize: 13, fontWeight: 600,
+                    padding: '8px 16px', borderRadius: 0, fontSize: 13, fontWeight: 600,
                     background: iconBg, color: iconColor, textDecoration: 'none',
                     border: `1px solid ${iconColor}30`,
                   }}
@@ -175,7 +177,7 @@ function ProductCard({
                   href={setupHref}
                   style={{
                     display: 'inline-flex', alignItems: 'center', gap: 6,
-                    padding: '8px 16px', borderRadius: 8, fontSize: 13, fontWeight: 600,
+                    padding: '8px 16px', borderRadius: 0, fontSize: 13, fontWeight: 600,
                     background: isActive ? 'transparent' : iconBg,
                     color: isActive ? 'var(--wimc-text-secondary)' : iconColor,
                     textDecoration: 'none',
@@ -224,11 +226,11 @@ function TierMatrix() {
   return (
     <div style={{
       background: 'var(--wimc-bg-elevated)',
-      border: '1px solid var(--wimc-border-default)',
-      borderRadius: 18, overflow: 'hidden',
+      border: '1px solid rgba(26,39,68,0.14)',
+      borderRadius: 0, overflow: 'hidden',
     }}>
       <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--wimc-border-subtle)' }}>
-        <div style={{ fontFamily: 'var(--font-syne)', fontSize: 15, fontWeight: 700 }}>
+        <div style={{ fontFamily: 'var(--font-abril)', fontSize: 22 }}>
           What you unlock at each tier
         </div>
       </div>
@@ -268,26 +270,113 @@ function TierMatrix() {
   )
 }
 
+// ── Referral row ──────────────────────────────────────────────────────────────
+
+interface ReferralRow {
+  id: string
+  title: string
+  starts_at: string
+  total: number
+  redeemed: number
+  code: string | null
+}
+
+function ReferralEventRow({ event, profileUsername, profileCity }: {
+  event: ReferralRow
+  profileUsername: string
+  profileCity: string
+}) {
+  const [copied, setCopied] = useState(false)
+
+  const referralUrl = event.code
+    ? `https://wheninmycity.com${profileUrl(profileCity, profileUsername)}/ref/${event.code}`
+    : null
+
+  function handleCopy() {
+    if (!referralUrl) return
+    navigator.clipboard.writeText(referralUrl).catch(() => {})
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'center', gap: 12,
+      padding: '12px 16px',
+      background: 'var(--wimc-bg-elevated)',
+      border: '1px solid var(--wimc-border-subtle)',
+      borderRadius: 0,
+    }}>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--wimc-text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {event.title}
+        </div>
+        <div style={{ fontSize: 11, color: 'var(--wimc-text-muted)', fontFamily: 'var(--font-jetbrains-mono)', marginTop: 2 }}>
+          {new Date(event.starts_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+        </div>
+      </div>
+      <div style={{ textAlign: 'right', flexShrink: 0 }}>
+        <span style={{ fontFamily: 'var(--font-jetbrains-mono)', fontSize: 12, fontWeight: 700, color: '#4ADE80' }}>
+          {event.redeemed}
+        </span>
+        <span style={{ fontFamily: 'var(--font-jetbrains-mono)', fontSize: 12, color: 'var(--wimc-text-muted)' }}>
+          /{event.total}
+        </span>
+        <div style={{ fontSize: 9, color: 'var(--wimc-text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: 'var(--font-jetbrains-mono)' }}>
+          redeemed
+        </div>
+      </div>
+      {referralUrl && (
+        <button
+          onClick={handleCopy}
+          style={{
+            flexShrink: 0,
+            background: copied ? '#4ADE80' : 'transparent',
+            border: '1px solid var(--wimc-border-default)',
+            color: copied ? '#07070A' : 'var(--wimc-text-secondary)',
+            fontFamily: 'var(--font-jetbrains-mono)',
+            fontSize: 10, fontWeight: 700,
+            textTransform: 'uppercase', letterSpacing: '0.1em',
+            padding: '6px 12px', cursor: 'pointer',
+            transition: 'all 0.2s', borderRadius: 0,
+          }}
+        >
+          {copied ? '✓' : 'Copy'}
+        </button>
+      )}
+    </div>
+  )
+}
+
 // ── Main component ────────────────────────────────────────────────────────────
 
 interface EarnClientProps {
   tier: UserTier
   eventsHosted: number
   hasBookingBlock: boolean
+  referralOverview: ReferralRow[]
+  profileUsername: string
+  profileCity: string
 }
 
-export default function EarnClient({ tier, eventsHosted, hasBookingBlock }: EarnClientProps) {
+export default function EarnClient({ tier, eventsHosted, hasBookingBlock, referralOverview, profileUsername, profileCity }: EarnClientProps) {
   const topbar: React.CSSProperties = {
     height: 64, borderBottom: '1px solid var(--wimc-border-subtle)',
     display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+    flexWrap: 'wrap', gap: 8,
     padding: '0 32px', position: 'sticky', top: 0,
-    background: 'rgba(10,10,11,0.85)', backdropFilter: 'blur(12px)', zIndex: 40,
+    background: 'rgba(242,237,227,0.96)', backdropFilter: 'blur(12px)', zIndex: 40,
   }
 
   return (
     <>
       <header style={topbar}>
-        <div style={{ fontFamily: 'var(--font-syne)', fontSize: 20, fontWeight: 700 }}>Earn</div>
+        <div>
+          <div style={{ fontSize: 10, fontFamily: 'var(--font-jetbrains-mono)', color: 'var(--wimc-text-muted)', letterSpacing: '1.8px', textTransform: 'uppercase', marginBottom: 2 }}>
+            Creator Studio
+          </div>
+          <div style={{ fontFamily: 'var(--font-syne)', fontSize: 18, fontWeight: 800, lineHeight: 1 }}>Earn</div>
+        </div>
         <Link
           href="/dashboard/tier"
           style={{
@@ -303,11 +392,11 @@ export default function EarnClient({ tier, eventsHosted, hasBookingBlock }: Earn
         </Link>
       </header>
 
-      <div style={{ padding: 32, display: 'grid', gap: 24, maxWidth: 820 }}>
+      <div style={{ padding: 'clamp(16px, 4vw, 40px) clamp(16px, 4vw, 40px) 80px', display: 'grid', gap: 24 }}>
 
         {/* Intro */}
         <div>
-          <div style={{ fontFamily: 'var(--font-syne)', fontSize: 24, fontWeight: 800, marginBottom: 6 }}>
+          <div style={{ fontFamily: 'var(--font-abril)', fontSize: 32, marginBottom: 6 }}>
             Monetise your audience
           </div>
           <div style={{ fontSize: 14, color: 'var(--wimc-text-secondary)' }}>
@@ -364,6 +453,43 @@ export default function EarnClient({ tier, eventsHosted, hasBookingBlock }: Earn
 
         {/* Tier matrix */}
         <TierMatrix />
+
+        {/* Referral links */}
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+            <span style={{
+              fontFamily: 'var(--font-jetbrains-mono)', fontSize: 9,
+              color: 'var(--wimc-coral)', letterSpacing: '0.2em', textTransform: 'uppercase',
+            }}>
+              — REFERRAL LINKS
+            </span>
+            <span style={{ fontFamily: 'var(--font-dm-sans), sans-serif', fontSize: 13, color: 'var(--wimc-text-secondary)' }}>
+              Track who&apos;s bringing people in
+            </span>
+          </div>
+
+          {referralOverview.length === 0 ? (
+            <div style={{
+              color: 'var(--wimc-border-strong)',
+              fontFamily: 'var(--font-jetbrains-mono)', fontSize: 11,
+              textTransform: 'uppercase', letterSpacing: '0.1em',
+              padding: '24px 0',
+            }}>
+              No published events yet
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              {referralOverview.map((event) => (
+                <ReferralEventRow
+                  key={event.id}
+                  event={event}
+                  profileUsername={profileUsername}
+                  profileCity={profileCity}
+                />
+              ))}
+            </div>
+          )}
+        </div>
 
       </div>
     </>

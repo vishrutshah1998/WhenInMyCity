@@ -450,14 +450,18 @@ export const ProfileThemeSchema = z.object({
   dropShadow: z.enum(['off', 'thicc', 'natural']).optional(),
   noiseBg: z.boolean().optional(),
   heavyBorders: z.boolean().optional(),
+  /** Page layout template. Undefined/omitted falls back to 'boarding-pass' for backwards compatibility. */
+  layoutPreset: z.enum(['boarding-pass', 'poster', 'editorial', 'minimal', 'reel', 'corporate', 'stage', 'zine']).optional(),
 })
 
 export type ProfileTheme = z.infer<typeof ProfileThemeSchema>
 
 export const DEFAULT_PROFILE_THEME: ProfileTheme = {
   colorScheme: 'default',
-  fontFamily: 'inter',
+  fontFamily: 'archivo-black',
   backgroundStyle: 'solid',
+  noiseBg: true,
+  heavyBorders: true,
 }
 
 /**
@@ -475,17 +479,12 @@ export const PICKER_SCHEME_IDS = [
 
 /**
  * Per-creator-category default themes — one bespoke look per creator type.
- * Not surfaced in the theme picker; applied automatically from creator_type.
+ * Includes both legacy V1 types and current V2 types.
  *
- * Category → scheme:
- *   content_creation  → steel    (near-black + steel-gray surface + gold)
- *   comedy_open_mic   → turmeric (ink + turmeric gold + red accents)
- *   food_lifestyle    → sienna   (ink + burnt sienna)
- *   music_performance → indigo   (ink + electric indigo)
- *   art_design        → gulaal   (ink + gulaal red)
- *   workshops_teaching→ pista    (ink + pista green)
+ * V2 presets match the curated themes shown in the studio theme picker.
  */
 export const CREATOR_DEFAULT_THEMES: Record<string, ProfileTheme> = {
+  // ── Legacy V1 types ────────────────────────────────────────────────────────
   content_creation: {
     colorScheme: 'steel',
     fontFamily: 'space-grotesk',
@@ -512,12 +511,6 @@ export const CREATOR_DEFAULT_THEMES: Record<string, ProfileTheme> = {
     backgroundStyle: 'solid',
     noiseBg: true,
   },
-  art_design: {
-    colorScheme: 'gulaal',
-    fontFamily: 'archivo-black',
-    backgroundStyle: 'solid',
-    noiseBg: true,
-  },
   workshops_teaching: {
     colorScheme: 'pista',
     fontFamily: 'archivo-black',
@@ -525,22 +518,360 @@ export const CREATOR_DEFAULT_THEMES: Record<string, ProfileTheme> = {
     noiseBg: true,
     heavyBorders: true,
   },
+
+  // ── V2 creator types ───────────────────────────────────────────────────────
+  // Matches the curated "Indigo" preset — dark ink + electric indigo + aurora nebula
+  music: {
+    colorScheme: 'indigo',
+    fontFamily: 'space-grotesk',
+    backgroundStyle: 'aurora',
+    auroraStyle: 'nebula',
+  },
+  // Matches "Turmeric" — ink + turmeric gold, heavy borders for stage energy
+  comedy_theatre: {
+    colorScheme: 'turmeric',
+    fontFamily: 'archivo-black',
+    backgroundStyle: 'solid',
+    noiseBg: true,
+    heavyBorders: true,
+  },
+  // Matches "Gulaal" — ink + gulaal red, noise for tactile feel
+  art_design: {
+    colorScheme: 'gulaal',
+    fontFamily: 'archivo-black',
+    backgroundStyle: 'solid',
+    noiseBg: true,
+  },
+  // Matches "Steel" — near-black + steel blue, gritty content creator vibe
+  video_content: {
+    colorScheme: 'steel',
+    fontFamily: 'archivo-black',
+    backgroundStyle: 'solid',
+    noiseBg: true,
+    heavyBorders: true,
+  },
+  // Matches "Pista" — ink + pista green, clean and grounded
+  teaching_coaching: {
+    colorScheme: 'pista',
+    fontFamily: 'inter',
+    backgroundStyle: 'solid',
+  },
+  // Matches "Sienna" — ink + burnt sienna, warm lifestyle warmth
+  lifestyle_wellness: {
+    colorScheme: 'sienna',
+    fontFamily: 'inter',
+    backgroundStyle: 'solid',
+  },
+  // Matches "Ivory" — warm parchment + amber, professional and clean
+  business_brand: {
+    colorScheme: 'sand',
+    fontFamily: 'inter',
+    backgroundStyle: 'solid',
+  },
+  // Matches "Ocean" — deep navy + luminous cyan, techy aurora mesh
+  professional_portfolio: {
+    colorScheme: 'ocean',
+    fontFamily: 'space-grotesk',
+    backgroundStyle: 'aurora',
+    auroraStyle: 'mesh',
+  },
+  // Matches "Forest" — dark green + jade, organic editorial with dot pattern
+  community_impact: {
+    colorScheme: 'forest',
+    fontFamily: 'playfair',
+    backgroundStyle: 'pattern',
+    patternStyle: 'dots',
+    patternColorCombo: 'cool',
+  },
+  // Matches "Ember" — warm dark with terracotta, bold default
+  exploring: {
+    colorScheme: 'default',
+    fontFamily: 'archivo-black',
+    backgroundStyle: 'solid',
+  },
 }
 
 /**
- * Resolves the active theme for a creator.
- *
- * Rules:
- * 1. If the saved theme uses a picker scheme (one the user explicitly chose),
- *    return it as-is — the user's customisation is respected.
- * 2. Otherwise (no theme saved, or it's a category-auto scheme that may be
- *    stale after a creator_type change) — derive from the current creator_type.
- * 3. If there's no category mapping either, fall back to DEFAULT_PROFILE_THEME.
+ * Per-explorer-scene default themes.
+ * Assigned based on the explorer_scene field collected during onboarding.
  */
-export function resolveTheme(raw: unknown, creatorType?: string): ProfileTheme {
+export const EXPLORER_SCENE_THEMES: Record<string, ProfileTheme> = {
+  // Music fans — deep navy + turmeric gold, stage energy
+  music: {
+    colorScheme: 'neel',
+    fontFamily: 'space-grotesk',
+    backgroundStyle: 'solid',
+    noiseBg: true,
+  },
+  // Theatre goers — deep wine-dark, velvet curtain
+  theatre: {
+    colorScheme: 'velvet',
+    fontFamily: 'playfair',
+    backgroundStyle: 'solid',
+    noiseBg: true,
+    heavyBorders: true,
+  },
+  // Art explorers — clean white gallery wall, minimal
+  art: {
+    colorScheme: 'gallery',
+    fontFamily: 'inter',
+    backgroundStyle: 'solid',
+  },
+  // Film buffs — near-black + steel blue, cinematic
+  film: {
+    colorScheme: 'steel',
+    fontFamily: 'space-grotesk',
+    backgroundStyle: 'solid',
+    noiseBg: true,
+  },
+  // Book lovers — aged parchment + warm brown, literary
+  books: {
+    colorScheme: 'parchment',
+    fontFamily: 'playfair',
+    backgroundStyle: 'solid',
+  },
+  // Comedy fans — ink + turmeric gold, bold energy
+  comedy: {
+    colorScheme: 'turmeric',
+    fontFamily: 'archivo-black',
+    backgroundStyle: 'solid',
+    noiseBg: true,
+    heavyBorders: true,
+  },
+  // Podcast fans — deep blue + indigo, audio/digital
+  podcast: {
+    colorScheme: 'midnight',
+    fontFamily: 'inter',
+    backgroundStyle: 'aurora',
+    auroraStyle: 'mesh',
+  },
+  // Photography fans — gallery white, editorial minimal
+  photography: {
+    colorScheme: 'gallery',
+    fontFamily: 'space-grotesk',
+    backgroundStyle: 'solid',
+    heavyBorders: true,
+  },
+  // Event hunters — electric cyan on near-black, nightlife energy
+  events: {
+    colorScheme: 'electric',
+    fontFamily: 'archivo-black',
+    backgroundStyle: 'solid',
+    noiseBg: true,
+  },
+  // Dance enthusiasts — aurora magenta, performance
+  dance: {
+    colorScheme: 'aurora',
+    fontFamily: 'archivo-black',
+    backgroundStyle: 'aurora',
+    auroraStyle: 'ripple',
+  },
+  // Poetry fans — warm parchment, literary + intimate
+  poetry: {
+    colorScheme: 'parchment',
+    fontFamily: 'playfair',
+    backgroundStyle: 'pattern',
+    patternStyle: 'dots',
+    patternColorCombo: 'warm',
+  },
+  // Food explorers — warm linen + clay, culinary warmth
+  food: {
+    colorScheme: 'terracotta',
+    fontFamily: 'inter',
+    backgroundStyle: 'solid',
+  },
+}
+
+/**
+ * Per-venue-type default themes.
+ * Applied when creator_type is a venue type (from V4 onboarding).
+ * Keyed to the venue type IDs from the venue onboarding screen.
+ */
+export const VENUE_TYPE_THEMES: Record<string, ProfileTheme> = {
+  // ── Showcase (poster) ─────────────────────────────────────────────────────
+  // Visual / photo-forward spaces: the space itself is the hero
+  cafe: {
+    colorScheme: 'terracotta',
+    fontFamily: 'inter',
+    backgroundStyle: 'solid',
+    layoutPreset: 'boarding-pass',
+  },
+  coworking: {
+    colorScheme: 'steel',
+    fontFamily: 'space-grotesk',
+    backgroundStyle: 'solid',
+    layoutPreset: 'boarding-pass',
+  },
+  studio: {
+    colorScheme: 'indigo',
+    fontFamily: 'space-grotesk',
+    backgroundStyle: 'solid',
+    noiseBg: true,
+    layoutPreset: 'poster',
+  },
+  rooftop: {
+    colorScheme: 'midnight',
+    fontFamily: 'archivo-black',
+    backgroundStyle: 'aurora',
+    auroraStyle: 'rays',
+    layoutPreset: 'reel',
+  },
+  gallery: {
+    colorScheme: 'gallery',
+    fontFamily: 'inter',
+    backgroundStyle: 'solid',
+    layoutPreset: 'poster',
+  },
+  theatre: {
+    colorScheme: 'velvet',
+    fontFamily: 'playfair',
+    backgroundStyle: 'solid',
+    noiseBg: true,
+    heavyBorders: true,
+    layoutPreset: 'stage',
+  },
+  event_hall: {
+    colorScheme: 'neel',
+    fontFamily: 'archivo-black',
+    backgroundStyle: 'solid',
+    noiseBg: true,
+    layoutPreset: 'corporate',
+  },
+  retail: {
+    colorScheme: 'terracotta',
+    fontFamily: 'space-grotesk',
+    backgroundStyle: 'solid',
+    layoutPreset: 'minimal',
+  },
+  bar: {
+    colorScheme: 'electric',
+    fontFamily: 'archivo-black',
+    backgroundStyle: 'solid',
+    noiseBg: true,
+    layoutPreset: 'reel',
+  },
+  outdoor: {
+    colorScheme: 'forest',
+    fontFamily: 'inter',
+    backgroundStyle: 'pattern',
+    patternStyle: 'dots',
+    patternColorCombo: 'cool',
+    layoutPreset: 'minimal',
+  },
+  library: {
+    colorScheme: 'parchment',
+    fontFamily: 'playfair',
+    backgroundStyle: 'solid',
+    layoutPreset: 'minimal',
+  },
+  sports: {
+    colorScheme: 'turmeric',
+    fontFamily: 'archivo-black',
+    backgroundStyle: 'solid',
+    noiseBg: true,
+    heavyBorders: true,
+    layoutPreset: 'reel',
+  },
+  film_set: {
+    colorScheme: 'steel',
+    fontFamily: 'space-grotesk',
+    backgroundStyle: 'solid',
+    noiseBg: true,
+    layoutPreset: 'poster',
+  },
+  hotel_hall: {
+    colorScheme: 'sand',
+    fontFamily: 'inter',
+    backgroundStyle: 'solid',
+    layoutPreset: 'corporate',
+  },
+  garden: {
+    colorScheme: 'nightforest',
+    fontFamily: 'inter',
+    backgroundStyle: 'pattern',
+    patternStyle: 'dots',
+    patternColorCombo: 'cool',
+    layoutPreset: 'stage',
+  },
+  workshop: {
+    colorScheme: 'pista',
+    fontFamily: 'archivo-black',
+    backgroundStyle: 'solid',
+    noiseBg: true,
+    heavyBorders: true,
+    layoutPreset: 'boarding-pass',
+  },
+}
+
+/**
+ * Per-brand-category default themes — one bespoke layout per business category.
+ * Applied when the brand has no explicit saved theme with a picker colour scheme.
+ */
+export const BRAND_CATEGORY_THEMES: Record<string, ProfileTheme> = {
+  retail:    { colorScheme: 'turmeric',  fontFamily: 'archivo-black', backgroundStyle: 'solid',  noiseBg: true,                         layoutPreset: 'poster'        },
+  agency:    { colorScheme: 'parchment', fontFamily: 'playfair',      backgroundStyle: 'solid',                                         layoutPreset: 'editorial'     },
+  startup:   { colorScheme: 'midnight',  fontFamily: 'space-grotesk', backgroundStyle: 'aurora', auroraStyle: 'nebula',                 layoutPreset: 'reel'          },
+  creative:  { colorScheme: 'neel',      fontFamily: 'archivo-black', backgroundStyle: 'solid',  noiseBg: true, heavyBorders: true,     layoutPreset: 'boarding-pass' },
+  fnb:       { colorScheme: 'turmeric',  fontFamily: 'archivo-black', backgroundStyle: 'solid',  noiseBg: true,                         layoutPreset: 'poster'        },
+  fashion:   { colorScheme: 'parchment', fontFamily: 'playfair',      backgroundStyle: 'solid',                                         layoutPreset: 'editorial'     },
+  tech:      { colorScheme: 'ocean',     fontFamily: 'inter',         backgroundStyle: 'solid',                                         layoutPreset: 'corporate'     },
+  media:     { colorScheme: 'midnight',  fontFamily: 'space-grotesk', backgroundStyle: 'aurora', auroraStyle: 'nebula',                 layoutPreset: 'reel'          },
+  beauty:    { colorScheme: 'gallery',   fontFamily: 'inter',         backgroundStyle: 'solid',                                         layoutPreset: 'minimal'       },
+  education: { colorScheme: 'ocean',     fontFamily: 'inter',         backgroundStyle: 'solid',                                         layoutPreset: 'corporate'     },
+  health:    { colorScheme: 'forest',    fontFamily: 'inter',         backgroundStyle: 'solid',                                         layoutPreset: 'minimal'       },
+  other:     { colorScheme: 'neel',      fontFamily: 'archivo-black', backgroundStyle: 'solid',  noiseBg: true,                         layoutPreset: 'boarding-pass' },
+}
+
+export interface ThemeContext {
+  creatorType?:        string
+  explorerScene?:      string | null
+  businessCategories?: string[] | null
+  venueTypes?:         string[] | null
+}
+
+/**
+ * Resolves the active theme for a profile.
+ *
+ * Priority:
+ * 1. If the saved theme uses a picker scheme (explicit user choice), return it as-is.
+ * 2. Explorer scene → EXPLORER_SCENE_THEMES
+ * 3. Venue type (first entry of venueTypes) → VENUE_TYPE_THEMES
+ * 4. Creator type → CREATOR_DEFAULT_THEMES
+ * 5. Fall back to DEFAULT_PROFILE_THEME
+ */
+export function resolveTheme(raw: unknown, creatorTypeOrCtx?: string | ThemeContext): ProfileTheme {
   const result = ProfileThemeSchema.safeParse(raw)
   if (result.success && (PICKER_SCHEME_IDS as readonly string[]).includes(result.data.colorScheme)) {
     return result.data
   }
-  return (creatorType ? CREATOR_DEFAULT_THEMES[creatorType] : undefined) ?? DEFAULT_PROFILE_THEME
+
+  const ctx: ThemeContext = typeof creatorTypeOrCtx === 'string'
+    ? { creatorType: creatorTypeOrCtx }
+    : (creatorTypeOrCtx ?? {})
+
+  // Explorer scene takes priority for explorers
+  if (ctx.explorerScene) {
+    const sceneTheme = EXPLORER_SCENE_THEMES[ctx.explorerScene]
+    if (sceneTheme) return sceneTheme
+  }
+
+  // Venue type (first type listed) for venue profiles
+  if (ctx.venueTypes && ctx.venueTypes.length > 0) {
+    const venueTheme = VENUE_TYPE_THEMES[ctx.venueTypes[0]]
+    if (venueTheme) return venueTheme
+  }
+
+  // Brand category (first category listed) for business brand profiles
+  if (ctx.businessCategories && ctx.businessCategories.length > 0) {
+    const brandTheme = BRAND_CATEGORY_THEMES[ctx.businessCategories[0].toLowerCase()]
+    if (brandTheme) return brandTheme
+  }
+
+  // Creator type
+  if (ctx.creatorType) {
+    const creatorTheme = CREATOR_DEFAULT_THEMES[ctx.creatorType]
+    if (creatorTheme) return creatorTheme
+  }
+
+  return DEFAULT_PROFILE_THEME
 }

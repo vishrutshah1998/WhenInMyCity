@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { respondToProposal } from '@/app/actions/adda'
 import type { MakerAddaProposal } from '@/types/database'
+import ProposalActionButtons from '@/components/adda/ProposalActionButtons'
 
 const SLOT_LABEL: Record<string, string> = {
   morning:   'Morning',
@@ -170,44 +171,12 @@ function ProposalCard({
       </div>
 
       {/* Actions */}
-      <div style={{ display: 'flex', gap: 8, opacity: isPending ? 0.5 : 1, transition: 'opacity 160ms ease' }}>
-        <button
-          onClick={() => handle('accept')}
-          disabled={isPending}
-          style={{
-            flex: 1,
-            padding: '6px 0',
-            borderRadius: 6,
-            fontSize: 12,
-            fontWeight: 600,
-            fontFamily: 'var(--font-inter), system-ui, sans-serif',
-            cursor: 'pointer',
-            border: 'none',
-            background: 'var(--adda-amber)',
-            color: '#000',
-          }}
-        >
-          Accept
-        </button>
-        <button
-          onClick={() => handle('decline')}
-          disabled={isPending}
-          style={{
-            flex: 1,
-            padding: '6px 0',
-            borderRadius: 6,
-            fontSize: 12,
-            fontWeight: 600,
-            fontFamily: 'var(--font-inter), system-ui, sans-serif',
-            cursor: 'pointer',
-            background: 'transparent',
-            border: '1px solid var(--adda-border-default)',
-            color: 'var(--adda-text-secondary)',
-          }}
-        >
-          Decline
-        </button>
-      </div>
+      <ProposalActionButtons
+        onAccept={() => handle('accept')}
+        onDecline={() => handle('decline')}
+        disabled={isPending}
+        size="compact"
+      />
     </div>
   )
 }
@@ -334,7 +303,7 @@ export default function PendingRequests({ proposals: initialProposals }: Props) 
               borderTop: '1px solid var(--adda-border-subtle)',
             }}>
               <Link
-                href="/adda/bookings"
+                href="/business/venue/bookings"
                 style={{
                   fontSize: 12.5,
                   fontWeight: 600,

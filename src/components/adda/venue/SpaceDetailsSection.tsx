@@ -191,7 +191,7 @@ export default function SpaceDetailsSection({ state, onChange, isEditing }: Prop
 
               {/* Venue name */}
               <div>
-                <FieldLabel>Venue Name</FieldLabel>
+                <FieldLabel>Adda Name</FieldLabel>
                 <TextInput
                   value={state.name}
                   onChange={v => onChange('name', v)}
@@ -202,7 +202,7 @@ export default function SpaceDetailsSection({ state, onChange, isEditing }: Prop
 
               {/* Venue type — chip selector */}
               <div>
-                <FieldLabel>Venue Type</FieldLabel>
+                <FieldLabel>Adda Type</FieldLabel>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                   {ADDA_TYPES.map(t => {
                     const on = state.adda_type.includes(t.slug)

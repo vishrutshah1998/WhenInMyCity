@@ -86,13 +86,13 @@ export const CreateEventSchema = z
 
     venue_name: z
       .string()
-      .min(1, 'Venue name is required')
-      .max(120, 'Venue name must be at most 120 characters'),
+      .min(1, 'Adda name is required')
+      .max(120, 'Adda name must be at most 120 characters'),
 
     venue_address: z
       .string()
-      .min(5, 'Venue address must be at least 5 characters')
-      .max(255, 'Venue address must be at most 255 characters'),
+      .min(5, 'Adda address must be at least 5 characters')
+      .max(255, 'Adda address must be at most 255 characters'),
 
     venue_lat: z.number().min(-90).max(90).optional(),
     venue_lng: z.number().min(-180).max(180).optional(),
@@ -153,6 +153,13 @@ export const CreateEventSchema = z
       .array(TicketTierSchema)
       .max(5, 'Maximum 5 ticket tiers')
       .optional(),
+
+    /**
+     * 'casual'   — free events using Going / Maybe / Not Going signals.
+     * 'ticketed' — standard flow (paid or free with name+phone collection).
+     * Only valid when ticket_price === 0; form enforces this.
+     */
+    rsvp_style: z.enum(['ticketed', 'casual']).optional(),
   })
   .refine(
     (data) => {

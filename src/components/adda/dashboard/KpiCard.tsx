@@ -108,6 +108,7 @@ export default function KpiCard({
       style={{
         background: 'var(--adda-bg-surface)',
         border: '1px solid var(--adda-border-subtle)',
+        borderTop: '3px solid var(--adda-accent)',
         borderRadius: 12,
         padding: '20px 20px 0',
         display: 'flex',

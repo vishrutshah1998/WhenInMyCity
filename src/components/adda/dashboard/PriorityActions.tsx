@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import type { MakerAddaProposal } from '@/types/database'
+import type { MakerAddaProposal, AddaProfile } from '@/types/database'
+import type { AddaDashboardStats } from '@/app/actions/adda-dashboard'
 
 interface ActionChip {
   id: string
@@ -14,7 +15,11 @@ interface ActionChip {
 // Builds the list of actionable chips from live data.
 // Chips with a static id (e.g. "no-photos") are permanently dismissible.
 // Chips derived from live counts (e.g. proposal requests) reappear when data changes.
-function buildChips(pendingProposals: MakerAddaProposal[]): ActionChip[] {
+function buildChips(
+  pendingProposals: MakerAddaProposal[],
+  adda?: AddaProfile | null,
+  stats?: AddaDashboardStats | null,
+): ActionChip[] {
   const chips: ActionChip[] = []
 
   if (pendingProposals.length > 0) {
@@ -32,9 +37,35 @@ function buildChips(pendingProposals: MakerAddaProposal[]): ActionChip[] {
       id: `proposals-${pendingProposals.length}`,
       icon: 'pending_actions',
       message: `${pendingProposals.length} booking request${pendingProposals.length === 1 ? '' : 's'} awaiting response — ${expiryLabel}`,
-      href: '/adda/bookings',
+      href: '/business/venue/bookings',
       urgency: hoursLeft <= 24 ? 'high' : 'low',
     })
+  }
+
+  if (adda && stats) {
+    const isNew = stats.total_events_hosted === 0 &&
+      (Date.now() - new Date(adda.created_at).getTime()) < 30 * 24 * 60 * 60 * 1000
+
+    if (isNew) {
+      if (!adda.cover_image_url) {
+        chips.push({
+          id: 'no-cover',
+          icon: 'add_photo_alternate',
+          message: 'Add a cover photo so creators can find you',
+          href: '/business/venue/venue',
+          urgency: 'high',
+        })
+      }
+      if (!adda.description) {
+        chips.push({
+          id: 'no-description',
+          icon: 'edit_note',
+          message: 'Write a short description of your space',
+          href: '/business/venue/venue',
+          urgency: 'low',
+        })
+      }
+    }
   }
 
   return chips
@@ -42,11 +73,13 @@ function buildChips(pendingProposals: MakerAddaProposal[]): ActionChip[] {
 
 interface Props {
   pendingProposals: MakerAddaProposal[]
+  adda?: AddaProfile | null
+  stats?: AddaDashboardStats | null
 }
 
 const DISMISSED_KEY = 'adda-dismissed-chips'
 
-export default function PriorityActions({ pendingProposals }: Props) {
+export default function PriorityActions({ pendingProposals, adda, stats }: Props) {
   const [dismissed, setDismissed] = useState<Set<string>>(new Set())
   const [mounted, setMounted] = useState(false)
 
@@ -68,7 +101,7 @@ export default function PriorityActions({ pendingProposals }: Props) {
     })
   }
 
-  const chips = buildChips(pendingProposals)
+  const chips = buildChips(pendingProposals, adda, stats)
   // Live-data chips (proposals) are never permanently dismissed — only static advice chips are.
   // For proposal chips, we only dismiss until the count changes (id includes count).
   const visible = chips.filter(c => !dismissed.has(c.id))

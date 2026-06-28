@@ -60,7 +60,7 @@ export async function updateSession(request: NextRequest): Promise<NextResponse>
   const isServerAction = request.headers.has('Next-Action')
 
   // ── Unauthenticated guard ────────────────────────────────────────────────
-  const protectedPrefixes = ['/dashboard', '/onboarding']
+  const protectedPrefixes = ['/dashboard', '/onboarding', '/adda']
   const isProtected = protectedPrefixes.some((prefix) =>
     pathname.startsWith(prefix),
   )

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useMemo } from 'react'
+import Link from 'next/link'
 import type { LinkClickStats, AudienceBreakdown } from '@/app/actions/analytics'
 
 interface SlimBlock {
@@ -18,13 +19,14 @@ export interface EventStat {
 }
 
 interface AnalyticsClientProps {
-  stats7:     LinkClickStats
-  stats30:    LinkClickStats
-  stats365:   LinkClickStats
-  blocks:     SlimBlock[]
-  username:   string
-  eventStats: EventStat[]
-  audience:   AudienceBreakdown
+  stats7:      LinkClickStats
+  stats30:     LinkClickStats
+  stats365:    LinkClickStats
+  blocks:      SlimBlock[]
+  username:    string
+  profilePath: string
+  eventStats:  EventStat[]
+  audience:    AudienceBreakdown
 }
 
 type Window = '7d' | '30d' | 'all'
@@ -34,7 +36,7 @@ type Window = '7d' | '30d' | 'all'
 // ---------------------------------------------------------------------------
 
 const TIER_RING: Array<{ key: keyof Omit<AudienceBreakdown,'total'>; label: string; color: string; r: number; stroke: number }> = [
-  { key: 'wanderer', label: 'Wanderers', color: 'rgba(255,255,255,0.18)', r: 80, stroke: 18 },
+  { key: 'wanderer', label: 'Wanderers', color: 'rgba(26,39,68,0.22)', r: 80, stroke: 18 },
   { key: 'local',    label: 'Locals',    color: 'var(--wimc-teal)',        r: 56, stroke: 18 },
   { key: 'lantern',  label: 'Lanterns',  color: 'var(--wimc-amber)',       r: 32, stroke: 18 },
   { key: 'beacon',   label: 'Beacons',   color: '#a855f7',                 r: 12, stroke: 10 },
@@ -45,10 +47,10 @@ function AudienceSection({ audience }: { audience: AudienceBreakdown }) {
 
   return (
     <div style={{
-      background: 'var(--wimc-bg-elevated)', border: '1px solid var(--wimc-border-default)',
-      borderRadius: 18, overflow: 'hidden',
+      background: 'var(--wimc-bg-elevated)', border: '1px solid rgba(26,39,68,0.14)',
+      borderRadius: 0, overflow: 'hidden',
     }}>
-      <div style={{ padding: '16px 24px', borderBottom: '1px solid var(--wimc-border-subtle)', fontFamily: 'var(--font-syne)', fontWeight: 700, fontSize: 15 }}>
+      <div style={{ padding: '16px 24px', borderBottom: '1px solid var(--wimc-border-subtle)', fontFamily: 'var(--font-abril)', fontSize: 22 }}>
         Your Audience
       </div>
 
@@ -130,25 +132,28 @@ const STATUS_COLORS: Record<string, string> = {
   completed:  'var(--wimc-text-secondary)',
 }
 
-export default function AnalyticsClient({ stats7, stats30, stats365, blocks, username, eventStats, audience }: AnalyticsClientProps) {
+export default function AnalyticsClient({ stats7, stats30, stats365, blocks, username, profilePath, eventStats, audience }: AnalyticsClientProps) {
   const [win, setWin] = useState<Window>('30d')
 
   const stats = win === '7d' ? stats7 : win === '30d' ? stats30 : stats365
-  const blockMap = Object.fromEntries(blocks.map((b) => [b.id, b]))
+  const blockMap = useMemo(
+    () => Object.fromEntries(blocks.map((b) => [b.id, b])),
+    [blocks],
+  )
 
   const topbar: React.CSSProperties = {
     height: 64, borderBottom: '1px solid var(--wimc-border-subtle)',
-    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+    display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap',
     padding: '0 32px', position: 'sticky', top: 0,
-    background: 'rgba(10,10,11,0.9)', backdropFilter: 'blur(12px)', zIndex: 40,
+    background: 'rgba(242,237,227,0.96)', backdropFilter: 'blur(12px)', zIndex: 40,
   }
 
   const deviceTotal = stats.deviceBreakdown.mobile + stats.deviceBreakdown.tablet + stats.deviceBreakdown.desktop || 1
-  const deviceBars = [
+  const deviceBars = useMemo(() => [
     { label: 'Mobile',  value: stats.deviceBreakdown.mobile,  color: 'var(--wimc-coral)' },
     { label: 'Desktop', value: stats.deviceBreakdown.desktop, color: 'var(--wimc-teal)' },
     { label: 'Tablet',  value: stats.deviceBreakdown.tablet,  color: 'var(--wimc-amber)' },
-  ]
+  ], [stats.deviceBreakdown.mobile, stats.deviceBreakdown.desktop, stats.deviceBreakdown.tablet])
 
   // Build chart data: daily for 7d/30d, monthly buckets for all
   const chartData = useMemo(() => {
@@ -172,20 +177,27 @@ export default function AnalyticsClient({ stats7, stats30, stats365, blocks, use
     }))
   }, [win, stats7.byDay, stats30.byDay, stats365.byDay])
 
-  const chartMax = Math.max(...chartData.map((d) => d.count), 1)
+  const chartMax = useMemo(() => Math.max(...chartData.map((d) => d.count), 1), [chartData])
 
   // Week-over-week comparison (only meaningful for 7d/30d)
   const prevClicksLabel = win === '7d' ? 'vs prev 7d' : win === '30d' ? 'vs prev 30d' : null
   const currentTotal = stats.totalClicks
 
+  const isEmpty = eventStats.length === 0 && stats365.totalClicks === 0 && audience.total === 0
+
   return (
     <>
       <header style={topbar}>
-        <div style={{ fontFamily: 'var(--font-syne)', fontSize: 20, fontWeight: 700 }}>Analytics</div>
-        <div style={{ display: 'flex', gap: 4, padding: 4, background: 'var(--wimc-bg-elevated)', borderRadius: 8, border: '1px solid var(--wimc-border-default)' }}>
+        <div>
+          <div style={{ fontSize: 10, fontFamily: 'var(--font-jetbrains-mono)', color: 'var(--wimc-text-muted)', letterSpacing: '1.8px', textTransform: 'uppercase', marginBottom: 2 }}>
+            Creator Studio
+          </div>
+          <div style={{ fontFamily: 'var(--font-syne)', fontSize: 18, fontWeight: 800, lineHeight: 1 }}>Analytics</div>
+        </div>
+        <div style={{ display: 'flex', gap: 4, padding: 4, background: 'var(--wimc-bg-elevated)', borderRadius: 0, border: '1px solid var(--wimc-border-default)' }}>
           {(['7d', '30d', 'all'] as const).map((w) => (
             <button key={w} onClick={() => setWin(w)} style={{
-              padding: '4px 14px', borderRadius: 5, fontSize: 12, fontWeight: 600,
+              padding: '4px 14px', borderRadius: 0, fontSize: 12, fontWeight: 600,
               fontFamily: 'var(--font-jetbrains-mono)', cursor: 'pointer', border: 'none',
               background: win === w ? 'var(--wimc-coral)' : 'transparent',
               color: win === w ? '#fff' : 'var(--wimc-text-secondary)',
@@ -196,10 +208,65 @@ export default function AnalyticsClient({ stats7, stats30, stats365, blocks, use
         </div>
       </header>
 
-      <div style={{ padding: 32, display: 'flex', flexDirection: 'column', gap: 24 }}>
+      <div style={{ padding: 'clamp(16px, 4vw, 40px) clamp(16px, 4vw, 40px) 80px', display: 'flex', flexDirection: 'column', gap: 24 }}>
+
+        {isEmpty ? (
+          <div className="flex flex-col items-center justify-center min-h-[400px] gap-6 py-16">
+            <div
+              className="flex items-center justify-center w-16 h-16"
+              style={{ background: 'rgba(232,112,90,0.08)', border: '1px solid rgba(232,112,90,0.2)' }}
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: 32, color: '#E8705A' }}>
+                analytics
+              </span>
+            </div>
+            <div className="text-center flex flex-col gap-2 max-w-sm">
+              <h3 style={{ fontFamily: 'Outfit, sans-serif', fontSize: 20, fontWeight: 900, color: '#F0EFF8', margin: 0 }}>
+                No data yet
+              </h3>
+              <p style={{ fontFamily: 'DM Sans, sans-serif', fontSize: 14, color: '#9896B0', lineHeight: 1.6, margin: 0 }}>
+                Publish your first event and share your page to start seeing
+                traffic, ticket sales, and audience data here.
+              </p>
+            </div>
+            <div className="flex flex-col sm:flex-row gap-3 w-full max-w-xs">
+              <Link
+                href="/dashboard/events/create"
+                className="flex-1 flex items-center justify-center gap-2 py-3 px-4 transition-colors"
+                style={{
+                  background: '#E8705A', color: '#07070A',
+                  fontFamily: 'JetBrains Mono, monospace', fontSize: 11, fontWeight: 700,
+                  letterSpacing: '0.15em', textTransform: 'uppercase', textDecoration: 'none',
+                }}
+              >
+                <span className="material-symbols-outlined" style={{ fontSize: 16 }}>add</span>
+                Create event
+              </Link>
+              <Link
+                href="/dashboard/studio"
+                className="flex-1 flex items-center justify-center gap-2 py-3 px-4 transition-colors"
+                style={{
+                  background: 'transparent', border: '1px solid #57423e',
+                  color: '#9896B0', fontFamily: 'JetBrains Mono, monospace',
+                  fontSize: 11, fontWeight: 700, letterSpacing: '0.15em',
+                  textTransform: 'uppercase', textDecoration: 'none',
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.color = '#F0EFF8'; e.currentTarget.style.borderColor = '#F0EFF8' }}
+                onMouseLeave={(e) => { e.currentTarget.style.color = '#9896B0'; e.currentTarget.style.borderColor = '#57423e' }}
+              >
+                <span className="material-symbols-outlined" style={{ fontSize: 16 }}>edit</span>
+                Edit your page
+              </Link>
+            </div>
+            <p style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 9, color: '#57423e', letterSpacing: '0.2em', textTransform: 'uppercase' }}>
+              Analytics update daily
+            </p>
+          </div>
+        ) : (
+          <>
 
         {/* KPI row */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16 }}>
           {[
             { label: 'Total Link Clicks', value: currentTotal, color: 'var(--wimc-coral)', icon: 'ads_click', sub: prevClicksLabel },
             { label: 'Active Blocks',     value: blocks.length,                                 color: 'var(--wimc-teal)',  icon: 'grid_view',  sub: null },
@@ -209,12 +276,12 @@ export default function AnalyticsClient({ stats7, stats30, stats365, blocks, use
               color: 'var(--wimc-amber)', icon: 'bar_chart', sub: null,
             },
           ].map(({ label, value, color, icon }) => (
-            <div key={label} style={{ background: 'var(--wimc-bg-elevated)', border: '1px solid var(--wimc-border-default)', borderRadius: 16, padding: '20px 24px', display: 'flex', gap: 16, alignItems: 'center' }}>
-              <div style={{ width: 44, height: 44, borderRadius: 12, background: `${color}22`, display: 'grid', placeItems: 'center', color, flexShrink: 0 }}>
+            <div key={label} style={{ background: 'var(--wimc-bg-elevated)', border: '1px solid rgba(26,39,68,0.14)', borderLeft: `3px solid ${color}`, borderRadius: 0, padding: '20px 24px', display: 'flex', gap: 16, alignItems: 'center' }}>
+              <div style={{ width: 44, height: 44, borderRadius: 0, background: `${color}22`, display: 'grid', placeItems: 'center', color, flexShrink: 0 }}>
                 <span className="material-symbols-outlined" style={{ fontSize: 22 }}>{icon}</span>
               </div>
               <div>
-                <div style={{ fontFamily: 'var(--font-syne)', fontSize: 26, fontWeight: 800, color }}>{value}</div>
+                <div style={{ fontFamily: 'var(--font-syne)', fontSize: 48, fontWeight: 900, lineHeight: 1, color }}>{value}</div>
                 <div style={{ fontSize: 11, color: 'var(--wimc-text-secondary)', fontFamily: 'var(--font-jetbrains-mono)', textTransform: 'uppercase', letterSpacing: '0.8px', marginTop: 2 }}>{label}</div>
               </div>
             </div>
@@ -222,8 +289,8 @@ export default function AnalyticsClient({ stats7, stats30, stats365, blocks, use
         </div>
 
         {/* Clicks over time chart */}
-        <div style={{ background: 'var(--wimc-bg-elevated)', border: '1px solid var(--wimc-border-default)', borderRadius: 18, padding: 24 }}>
-          <div style={{ fontFamily: 'var(--font-syne)', fontWeight: 700, fontSize: 15, marginBottom: 20 }}>
+        <div style={{ background: 'var(--wimc-bg-elevated)', border: '1px solid rgba(26,39,68,0.14)', borderRadius: 0, padding: 24 }}>
+          <div style={{ fontFamily: 'var(--font-abril)', fontSize: 22, marginBottom: 20 }}>
             Clicks Over Time
             <span style={{ fontFamily: 'var(--font-jetbrains-mono)', fontWeight: 400, fontSize: 11, color: 'var(--wimc-text-secondary)', marginLeft: 10 }}>
               {win === 'all' ? 'monthly' : 'daily'}
@@ -240,7 +307,7 @@ export default function AnalyticsClient({ stats7, stats30, stats365, blocks, use
                   <div style={{
                     width: '100%',
                     height: Math.max(3, Math.round((count / chartMax) * 80)),
-                    background: count > 0 ? 'var(--wimc-coral)' : 'var(--wimc-bg-overlay)',
+                    background: count > 0 ? 'var(--wimc-coral)' : 'rgba(26,39,68,0.08)',
                     borderRadius: '3px 3px 0 0',
                     transition: 'height 300ms ease',
                   }} />
@@ -255,10 +322,10 @@ export default function AnalyticsClient({ stats7, stats30, stats365, blocks, use
           )}
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 24 }}>
           {/* Device breakdown */}
-          <div style={{ background: 'var(--wimc-bg-elevated)', border: '1px solid var(--wimc-border-default)', borderRadius: 18, padding: 24 }}>
-            <div style={{ fontFamily: 'var(--font-syne)', fontWeight: 700, fontSize: 15, marginBottom: 20 }}>Device Breakdown</div>
+          <div style={{ background: 'var(--wimc-bg-elevated)', border: '1px solid rgba(26,39,68,0.14)', borderRadius: 0, padding: 24 }}>
+            <div style={{ fontFamily: 'var(--font-abril)', fontSize: 22, marginBottom: 20 }}>Device Breakdown</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               {deviceBars.map(({ label, value, color }) => (
                 <div key={label}>
@@ -275,8 +342,8 @@ export default function AnalyticsClient({ stats7, stats30, stats365, blocks, use
           </div>
 
           {/* Top blocks */}
-          <div style={{ background: 'var(--wimc-bg-elevated)', border: '1px solid var(--wimc-border-default)', borderRadius: 18, overflow: 'hidden' }}>
-            <div style={{ padding: '16px 24px', borderBottom: '1px solid var(--wimc-border-subtle)', fontFamily: 'var(--font-syne)', fontWeight: 700, fontSize: 15 }}>
+          <div style={{ background: 'var(--wimc-bg-elevated)', border: '1px solid rgba(26,39,68,0.14)', borderRadius: 0, overflow: 'hidden' }}>
+            <div style={{ padding: '16px 24px', borderBottom: '1px solid var(--wimc-border-subtle)', fontFamily: 'var(--font-abril)', fontSize: 22 }}>
               Top Blocks
             </div>
             {stats.byBlock.length === 0 ? (
@@ -310,8 +377,8 @@ export default function AnalyticsClient({ stats7, stats30, stats365, blocks, use
 
         {/* Event performance table */}
         {eventStats.length > 0 && (
-          <div style={{ background: 'var(--wimc-bg-elevated)', border: '1px solid var(--wimc-border-default)', borderRadius: 18, overflow: 'hidden' }}>
-            <div style={{ padding: '16px 24px', borderBottom: '1px solid var(--wimc-border-subtle)', fontFamily: 'var(--font-syne)', fontWeight: 700, fontSize: 15 }}>
+          <div style={{ background: 'var(--wimc-bg-elevated)', border: '1px solid rgba(26,39,68,0.14)', borderRadius: 0, overflow: 'hidden' }}>
+            <div style={{ padding: '16px 24px', borderBottom: '1px solid var(--wimc-border-subtle)', fontFamily: 'var(--font-abril)', fontSize: 22 }}>
               Event Performance
             </div>
             <div style={{ overflowX: 'auto' }}>
@@ -365,14 +432,14 @@ export default function AnalyticsClient({ stats7, stats30, stats365, blocks, use
         <AudienceSection audience={audience} />
 
         {/* Public page link */}
-        <div style={{ background: 'var(--wimc-bg-elevated)', border: '1px solid var(--wimc-border-default)', borderRadius: 14, padding: '16px 24px', display: 'flex', alignItems: 'center', gap: 14 }}>
+        <div style={{ background: 'var(--wimc-bg-elevated)', border: '1px solid rgba(26,39,68,0.14)', borderRadius: 0, padding: '16px 24px', display: 'flex', alignItems: 'center', gap: 14 }}>
           <span className="material-symbols-outlined" style={{ color: 'var(--wimc-teal)', fontSize: 20 }}>link</span>
           <div>
             <div style={{ fontSize: 12, color: 'var(--wimc-text-secondary)', fontFamily: 'var(--font-jetbrains-mono)', marginBottom: 3 }}>Your public page</div>
-            <div style={{ fontSize: 14, fontWeight: 600 }}>wheninmycity.com/{username}</div>
+            <div style={{ fontSize: 14, fontWeight: 600 }}>wheninmycity.com{profilePath}</div>
           </div>
           <a
-            href={`/${username}`}
+            href={profilePath}
             target="_blank"
             rel="noopener noreferrer"
             style={{ marginLeft: 'auto', fontSize: 12, color: 'var(--wimc-coral)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4, fontFamily: 'var(--font-dm-sans)', fontWeight: 600 }}
@@ -380,6 +447,8 @@ export default function AnalyticsClient({ stats7, stats30, stats365, blocks, use
             View <span className="material-symbols-outlined" style={{ fontSize: 14 }}>open_in_new</span>
           </a>
         </div>
+          </>
+        )}
       </div>
     </>
   )

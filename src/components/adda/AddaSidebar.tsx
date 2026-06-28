@@ -1,4 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
+import { requireAuth } from '@/lib/auth/requireAuth'
+import { getAddaNotifications } from '@/app/actions/adda-notifications'
 import AddaSidebarClient from './AddaSidebarClient'
 
 interface Props {
@@ -7,6 +9,7 @@ interface Props {
   ownerName: string
   initials: string
   avatarUrl?: string
+  businessType?: 'venue' | 'brand'
 }
 
 // Server Component — fetches live badge counts, delegates interactivity to client.
@@ -16,24 +19,39 @@ export default async function AddaSidebar({
   ownerName,
   initials,
   avatarUrl,
+  businessType = 'venue',
 }: Props) {
   const supabase = await createClient()
+  const { user } = await requireAuth()
 
-  // Pending booking requests — the number that appears on the Bookings badge.
-  const { count: pendingCount } = await supabase
-    .from('maker_adda_proposals')
-    .select('id', { count: 'exact', head: true })
-    .eq('adda_id', addaId)
-    .eq('status', 'pending')
+  const [{ count: pendingCount }, { totalUnreadCount }, { data: profile }] = await Promise.all([
+    supabase
+      .from('maker_adda_proposals')
+      .select('id', { count: 'exact', head: true })
+      .eq('adda_id', addaId)
+      .eq('status', 'pending'),
+    getAddaNotifications(addaId, 1),
+    supabase
+      .from('user_profiles')
+      .select('personas, user_role')
+      .eq('id', user.id)
+      .maybeSingle(),
+  ])
+
+  const personas = (profile?.personas ?? []) as string[]
+  const hasCreatorProfile = personas.includes('creator') || profile?.user_role === 'maker'
 
   return (
     <AddaSidebarClient
-      venueName={venueName}
+      businessName={venueName}
       ownerName={ownerName}
       initials={initials}
       avatarUrl={avatarUrl}
       pendingCount={pendingCount ?? 0}
-      unreadCount={0}
+      unreadCount={totalUnreadCount}
+      hasCreatorProfile={hasCreatorProfile}
+      businessType={businessType}
+      personas={personas}
     />
   )
 }

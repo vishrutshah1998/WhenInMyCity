@@ -7,9 +7,9 @@
 
 ## Current Status → Resume Here
 
-**Last completed:** S52 — Block System Wave 4: added `digital_product` (Razorpay checkout → file_url redirect), `waitlist` (email sign-up form → `waitlist_entries`), `fan_membership` (read-only tier showcase) across all layers — migration 030 (`digital_purchases` + `waitlist_entries`); 3 config interfaces + BlockType values in `database.ts`; `blocks.ts` constants; server actions in `digital.ts` (`initiateDigitalPurchase`, `confirmDigitalPurchase`, `joinWaitlist`, `getWaitlistCount`); standalone components `DigitalProductBlock`, `WaitlistBlock`, `FanMembershipBlock`; 3 editor forms + `BlockEditPanel` wiring; preview renderers + switch cases in `BlockRenderer.tsx`; switch cases in `PublicProfilePage.tsx`; typecheck clean
+**Last completed:** S58 — Adda dashboard mobile layout + button primitive: responsive pass on `AddaDashboardClient.tsx` (2-col stats, stacked main grid, topbar link hiding via CSS media queries); created `ProposalActionButtons` shared primitive (compact/full size, confirm-state, inter font, radius 8); wired into `PendingRequests.tsx`; `BookingRequestCard.tsx` normalized to radius 8 / padding 13px; typecheck clean. Note: `src/app/adda/dashboard/AddaDashboardClient.tsx` is dead code — the live adda dashboard is `src/app/adda/dashboard/page.tsx` + its component imports.
 **Blocker:** None.
-**Next task:** See Backlog. S53–S55 (consultant onboarding HSV research) are complete.
+**Next task:** S39 — Landing Page Product Proof & Revenue Honesty (see Backlog → Critical section). Note: S39 tasks are all marked [x] — verify completion or re-open if landing page still needs these changes.
 
 ---
 
@@ -170,6 +170,28 @@ See design spec in the Reference section below for full criteria.
 ---
 
 ## Backlog (not yet sequenced)
+
+### Design — Boarding Pass UI System
+
+#### S56 · Event Page — Boarding Pass Layout ✅ done this session
+**Goal:** Redesign `/events/[slug]` to match the WIMC design language HTML mockups — full-bleed primary-color hero with poster Outfit typography, boarding pass info bar (FROM / TO / CLASS / DATE / TIME), two-column desktop layout (left: content, right: sticky paper ticket card with punch holes + barcode stub), torn-paper review cards. All RSVP sheets and payment logic untouched. Mobile retains the existing bottom CTA sheet flow.
+
+- [x] **S56-T1** — Replace hero with `bg-primary` block + poster `font-display` title (`clamp(36px,7vw,96px)`); grain overlay; cover image as 15%-opacity mix-blend-multiply underlay; creator handle chip
+- [x] **S56-T2** — Add boarding pass info bar (FROM / TO / CLASS / DATE / TIME / GOING) with left primary accent stripe + barcode-strip element; `font-mono` throughout
+- [x] **S56-T3** — Two-column layout: left flex column (About, Host, Venue, Reviews); right sticky `w-72` paper ticket card (`#FAF7F0` bg, `8px 8px` shadow, dark border, punch-hole perforation divider, barcode stub, ADMIT ONE label)
+- [x] **S56-T4** — Reviews rendered as torn-paper cards (clip-path jagged top edge, light paper bg, shadow, JetBrains Mono reviewer name)
+- [x] **S56-T5** — `data-noise="true"` on root div for grain overlay; remove unused `RubberStamp` / `IconBox` references; typecheck clean
+
+#### S57 · Public Profile Page — Boarding Pass Layout
+**Goal:** Bring `PublicProfilePage.tsx` in line with the Jazz Jaipur HTML mockup: torn-edge paper header card with avatar overlapping bottom edge, event listing blocks rendered as boarding-pass ticket cards (left accent bar, punch holes, barcode stub, ADMIT ONE stub), review blocks as torn-paper cards, and a "WIMC Classic" editorial preset in ThemeEditor that bundles `heavyBorders + noiseBg + default scheme + archivo-black`.
+
+- [x] **S57-T1** — Profile header: `bg-[#FAF7F0]` paper card with border-2 dashed, torn-edge clip-path at the bottom (`polygon` with `calc()` jagged points + `pb-6`), location/type stamp in `font-mono`, avatar overlapping bottom edge via negative margin
+- [x] **S57-T2** — Upcoming events section: render each event as a boarding-pass ticket card (left-side primary accent bar, `font-mono` metadata header `TKT-XXXX`, punch-hole perforation divider, barcode stub + ADMIT ONE footer strip)
+- [x] **S57-T3** — Reviews section: torn-paper card style (same clip-path as event page) with `format_quote` icon, `#FAF7F0` bg, shadow
+- [x] **S57-T4** — Add "WIMC Classic" preset to `EDITORIAL_PRESETS` in `ThemeEditor.tsx`: `{ colorScheme: 'default', fontFamily: 'archivo-black', backgroundStyle: 'solid', noiseBg: true, heavyBorders: true }`
+- [x] **S57-T5** — Typecheck pass (clean)
+
+---
 
 ### Critical — UX & Trust Fixes (from Linktree benchmarking + founder review)
 

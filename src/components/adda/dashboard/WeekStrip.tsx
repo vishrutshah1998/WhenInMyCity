@@ -100,7 +100,7 @@ export default function WeekStrip({ availability }: Props) {
           This Week
         </span>
         <Link
-          href="/adda/calendar"
+          href="/business/venue/calendar"
           style={{
             fontSize: 12,
             color: 'var(--adda-amber)',
@@ -133,7 +133,7 @@ export default function WeekStrip({ availability }: Props) {
           return (
             <Link
               key={key}
-              href="/adda/calendar"
+              href="/business/venue/calendar"
               style={{
                 display: 'flex',
                 flexDirection: 'column',

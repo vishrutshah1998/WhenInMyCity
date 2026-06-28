@@ -10,6 +10,47 @@ import type { CreatorType } from '@/types/database'
 import { UsernameSchema } from '@/types/onboarding'
 
 // ---------------------------------------------------------------------------
+// Scheme → theme preset map (duplicated from onboarding.ts to keep server-only)
+// ---------------------------------------------------------------------------
+
+const SCHEME_PRESETS: Record<string, ProfileTheme> = {
+  default:    { colorScheme: 'default',    fontFamily: 'archivo-black', backgroundStyle: 'solid' },
+  midnight:   { colorScheme: 'midnight',   fontFamily: 'inter',         backgroundStyle: 'aurora',  auroraStyle: 'nebula' },
+  ocean:      { colorScheme: 'ocean',      fontFamily: 'space-grotesk', backgroundStyle: 'aurora',  auroraStyle: 'mesh'   },
+  forest:     { colorScheme: 'forest',     fontFamily: 'playfair',      backgroundStyle: 'pattern', patternStyle: 'dots', patternColorCombo: 'cool' },
+  blush:      { colorScheme: 'blush',      fontFamily: 'playfair',      backgroundStyle: 'solid' },
+  sand:       { colorScheme: 'sand',       fontFamily: 'inter',         backgroundStyle: 'solid' },
+  pista:      { colorScheme: 'pista',      fontFamily: 'archivo-black', backgroundStyle: 'solid',   noiseBg: true, heavyBorders: true },
+  gulaal:     { colorScheme: 'gulaal',     fontFamily: 'archivo-black', backgroundStyle: 'solid',   noiseBg: true },
+  neel:       { colorScheme: 'neel',       fontFamily: 'archivo-black', backgroundStyle: 'solid' },
+  turmeric:   { colorScheme: 'turmeric',   fontFamily: 'archivo-black', backgroundStyle: 'solid',   noiseBg: true, heavyBorders: true },
+  steel:      { colorScheme: 'steel',      fontFamily: 'space-grotesk', backgroundStyle: 'solid',   noiseBg: true, heavyBorders: true },
+  sienna:     { colorScheme: 'sienna',     fontFamily: 'inter',         backgroundStyle: 'solid' },
+  indigo:     { colorScheme: 'indigo',     fontFamily: 'archivo-black', backgroundStyle: 'solid',   noiseBg: true },
+  aurora:     { colorScheme: 'aurora',     fontFamily: 'playfair',      backgroundStyle: 'aurora',  auroraStyle: 'nebula' },
+  sage:       { colorScheme: 'sage',       fontFamily: 'inter',         backgroundStyle: 'solid' },
+  mint:       { colorScheme: 'mint',       fontFamily: 'space-grotesk', backgroundStyle: 'solid' },
+  electric:   { colorScheme: 'electric',   fontFamily: 'inter',         backgroundStyle: 'solid' },
+  velvet:     { colorScheme: 'velvet',     fontFamily: 'playfair',      backgroundStyle: 'solid' },
+  nightforest:{ colorScheme: 'nightforest',fontFamily: 'inter',         backgroundStyle: 'solid' },
+  parchment:  { colorScheme: 'parchment',  fontFamily: 'inter',         backgroundStyle: 'solid' },
+  gallery:    { colorScheme: 'gallery',    fontFamily: 'inter',         backgroundStyle: 'solid' },
+  terracotta: { colorScheme: 'terracotta', fontFamily: 'inter',         backgroundStyle: 'solid' },
+}
+
+// ---------------------------------------------------------------------------
+// updateColorScheme — pick a scheme by id, full theme is derived server-side
+// ---------------------------------------------------------------------------
+
+export async function updateColorScheme(
+  schemeId: string,
+): Promise<{ error: string | null }> {
+  const preset = SCHEME_PRESETS[schemeId]
+  if (!preset) return { error: 'Unknown color scheme.' }
+  return updateProfileTheme(preset)
+}
+
+// ---------------------------------------------------------------------------
 // updateProfileTheme
 // ---------------------------------------------------------------------------
 
@@ -89,10 +130,15 @@ export interface UpdateProfileInput {
   creator_type?: CreatorType
   sub_types: string[]
   offline_activities: string[]
+  interest_tags?: string[]
   social_links: Record<string, string>
   avatar_url?: string
   neighbourhood?: string
   show_city_mastery?: boolean
+  contact_email?: string
+  website_url?: string
+  explorer_scene?: string
+  explorer_creator_intent?: string[]
 }
 
 export async function updateProfile(
@@ -146,10 +192,15 @@ export async function updateProfile(
       ...(input.creator_type ? { creator_type: input.creator_type } : {}),
       sub_types:          input.sub_types,
       offline_activities: input.offline_activities,
+      ...(input.interest_tags !== undefined ? { interest_tags: input.interest_tags } : {}),
       social_links:       socialLinks,
       ...(input.avatar_url ? { avatar_url: input.avatar_url } : {}),
       neighbourhood:      input.neighbourhood?.trim() || null,
       ...(input.show_city_mastery !== undefined ? { show_city_mastery: input.show_city_mastery } : {}),
+      contact_email:      input.contact_email?.trim() || null,
+      website_url:        input.website_url?.trim() || null,
+      ...(input.explorer_scene !== undefined ? { explorer_scene: input.explorer_scene?.trim() || null } : {}),
+      ...(input.explorer_creator_intent !== undefined ? { explorer_creator_intent: input.explorer_creator_intent } : {}),
       updated_at:         new Date().toISOString(),
     })
     .eq('id', user.id)

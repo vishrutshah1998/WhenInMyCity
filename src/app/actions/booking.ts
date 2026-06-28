@@ -4,6 +4,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { requireAuth } from '@/lib/auth/requireAuth'
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
+import { createNotification } from '@/app/actions/notifications'
 
 const InquirySchema = z.object({
   creatorId:      z.string().uuid(),
@@ -36,6 +37,18 @@ export async function submitBookingInquiry(
     console.error('[submitBookingInquiry]', error.message)
     return { success: false, error: 'Failed to submit inquiry. Please try again.' }
   }
+
+  void (async () => {
+    try {
+      await createNotification({
+        recipientId: creatorId,
+        type: 'new_booking_inquiry',
+        title: 'New booking inquiry',
+        body: `${requesterName} wants to book you${eventType ? ` for ${eventType}` : ''}.`,
+        actionUrl: '/dashboard/bookings',
+      })
+    } catch {}
+  })()
 
   return { success: true }
 }

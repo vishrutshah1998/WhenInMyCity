@@ -72,6 +72,41 @@ const DEFAULT_CONFIGS: Record<BlockType, unknown> = {
 }
 
 // ---------------------------------------------------------------------------
+// seedPersonaDefaultBlocks
+// ---------------------------------------------------------------------------
+
+const PERSONA_DEFAULT_BLOCKS: Record<'brand' | 'adda' | 'explorer', BlockType[]> = {
+  brand:    ['text_bio', 'collab_invite', 'social_links_row', 'announcement'],
+  adda:     ['text_bio', 'booking_request', 'image_gallery', 'whatsapp_community'],
+  explorer: ['text_bio', 'social_links_row', 'instagram_embed'],
+}
+
+export async function seedPersonaDefaultBlocks(
+  persona: 'brand' | 'adda' | 'explorer',
+  profileId: string,
+): Promise<void> {
+  const admin = createAdminClient()
+  const { count } = await admin
+    .from('page_blocks')
+    .select('id', { count: 'exact', head: true })
+    .eq('profile_id', profileId)
+  if ((count ?? 0) > 0) return
+
+  const types = PERSONA_DEFAULT_BLOCKS[persona]
+  await admin.from('page_blocks').insert(
+    types.map((bt, i) => ({
+      profile_id:   profileId,
+      block_type:   bt,
+      position:     i,
+      is_visible:   true,
+      config:       (DEFAULT_CONFIGS[bt] ?? {}) as Json,
+      block_family: BLOCK_FAMILIES[bt] ?? 'content',
+      minimum_tier: 'wanderer' as const,
+    })),
+  )
+}
+
+// ---------------------------------------------------------------------------
 // toggleBlockVisibility
 // ---------------------------------------------------------------------------
 
@@ -99,7 +134,19 @@ export async function toggleBlockVisibility(
     return { error: 'Failed to update block.' }
   }
 
+  const { data: profile } = await supabase
+    .from('user_profiles')
+    .select('username, city')
+    .eq('id', userId)
+    .maybeSingle()
+
   revalidatePath('/dashboard')
+  if (profile?.username) {
+    const citySlug = (profile.city ?? 'india').toLowerCase().replace(/\s+/g, '-')
+    revalidatePath(`/${citySlug}/${profile.username}`)
+    revalidatePath(`/${profile.username}`)
+  }
+
   return { error: null }
 }
 
