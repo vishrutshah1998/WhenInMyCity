@@ -116,3 +116,16 @@ NEXT_PUBLIC_RAZORPAY_KEY_ID
 RAZORPAY_KEY_SECRET                # Server-only
 RAZORPAY_WEBHOOK_SECRET            # Server-only
 ```
+
+## Known Tech Debt
+
+### DPDP consent — localStorage → server-persisted flag
+**Location:** `src/app/explore/guide/GuideClient.tsx`, `CivicReportFlow.tsx`, `TrafficViolationFlow.tsx`
+
+Three `localStorage` keys (`wimc_city_guide_consent_v1`, `wimc_civic_report_consent_v1`, `wimc_traffic_report_consent_v1`) store DPDP Act consent for the civic data processing notice. This works for single-device UX but has two gaps:
+- Consent is lost when the user clears browser storage or switches devices.
+- Provable compliance (audit trail, withdrawal timestamp) requires server persistence.
+
+**Deferred action:** Move each consent flag to a dedicated column on `explorer_profiles` (e.g., `city_guide_consent_at TIMESTAMPTZ`, `civic_report_consent_at`, `traffic_report_consent_at`). Read on component mount via a lightweight server action; write on acceptance. Do not block the civic UI behind an auth wall — unauthenticated users should still see the notice and be able to dismiss it locally (localStorage fallback acceptable for guests).
+
+**Priority:** Medium — required before DPDP compliance audit; not urgent for feature launch.
