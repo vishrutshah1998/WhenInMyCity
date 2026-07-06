@@ -826,16 +826,61 @@ function MobileHero({ C, brand, initial, primaryCat, layout }: MobileHeroProps) 
 }
 
 // ---------------------------------------------------------------------------
+// Archive Collabs empty state — brand-themed (uses C.* color tokens, not MD3)
+// ---------------------------------------------------------------------------
+
+function BrandCollabsEmptyState({
+  C,
+  displayName,
+  isOwner,
+  isPreview,
+}: {
+  C: LayoutColors
+  displayName: string
+  isOwner: boolean
+  isPreview: boolean
+}) {
+  const forOwner = isOwner || isPreview
+  return (
+    <div
+      className="flex flex-col items-center justify-center gap-4 py-12 px-6 text-center border-2 border-dashed"
+      style={{ borderColor: C.border }}
+    >
+      <span
+        className="material-symbols-outlined text-[40px]"
+        style={{ color: C.textMuted, fontVariationSettings: "'FILL' 0, 'wght' 200" }}
+      >
+        {forOwner ? 'handshake' : 'auto_awesome'}
+      </span>
+      <div className="flex flex-col gap-2 max-w-xs">
+        <p className="text-[15px] font-bold" style={{ color: C.text, fontFamily: 'var(--font-dm-sans)' }}>
+          {forOwner
+            ? 'Your archive is empty for now.'
+            : `${displayName} is just getting started.`}
+        </p>
+        <p className="text-[11px] leading-relaxed" style={{ color: C.textMuted, fontFamily: 'var(--font-jetbrains-mono)' }}>
+          {forOwner
+            ? "Past collaborations will appear here once you've partnered with creators."
+            : 'Check back soon for collaborations and events.'}
+        </p>
+      </div>
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
 // Main component
 // ---------------------------------------------------------------------------
 
 interface BrandPublicPageProps {
-  brand:    BrandRow
-  creators: CreatorRow[]
-  theme?:   ProfileTheme
+  brand:      BrandRow
+  creators:   CreatorRow[]
+  theme?:     ProfileTheme
+  isPreview?: boolean
+  isOwner?:   boolean
 }
 
-export default function BrandPublicPage({ brand, creators, theme }: BrandPublicPageProps) {
+export default function BrandPublicPage({ brand, creators, theme, isPreview = false, isOwner = false }: BrandPublicPageProps) {
   const layout   = resolveLayoutId(theme)
   const C        = LAYOUT_COLORS[layout]
 
@@ -850,7 +895,7 @@ export default function BrandPublicPage({ brand, creators, theme }: BrandPublicP
 
   return (
     <div style={{ background: C.pageBg, minHeight: '100vh' }}>
-      <Grain />
+      {!isPreview && <Grain />}
 
       {/* ================================================================
           DESKTOP LAYOUT  (md+)
@@ -859,7 +904,7 @@ export default function BrandPublicPage({ brand, creators, theme }: BrandPublicP
 
         {/* Header */}
         <header
-          className="sticky top-0 z-50 h-16 backdrop-blur border-b-2 border-dashed flex items-center justify-between px-6"
+          className={`${isPreview ? 'relative' : 'sticky top-0'} z-50 h-16 backdrop-blur border-b-2 border-dashed flex items-center justify-between px-6`}
           style={{ background: `${C.pageBg}f0`, borderColor: C.border }}
         >
           <div className="flex items-center gap-10">
@@ -905,12 +950,12 @@ export default function BrandPublicPage({ brand, creators, theme }: BrandPublicP
         </header>
 
         {/* Main */}
-        <div className="flex min-h-[calc(100vh-64px)]">
+        <div className="flex" style={isPreview ? { minHeight: 900 } : { minHeight: 'calc(100vh-64px)' }}>
 
           {/* Left sidebar */}
           <aside
-            className="w-[35%] p-6 border-r-2 border-dashed sticky top-16 h-[calc(100vh-64px)] overflow-y-auto flex-shrink-0"
-            style={{ borderColor: C.border }}
+            className={`w-[35%] p-6 border-r-2 border-dashed ${isPreview ? '' : 'sticky top-16'} overflow-y-auto flex-shrink-0`}
+            style={{ borderColor: C.border, height: isPreview ? 'auto' : 'calc(100vh - 64px)', minHeight: isPreview ? 900 : undefined }}
           >
             {layout === 'boarding-pass' && <BoardingPassCard {...cardProps} />}
             {layout === 'poster'        && <PosterCard        {...cardProps} />}
@@ -920,22 +965,18 @@ export default function BrandPublicPage({ brand, creators, theme }: BrandPublicP
             {layout === 'reel'          && <ReelCard          {...cardProps} />}
 
             {/* Stats */}
-            <div className="grid grid-cols-3 gap-4 mb-10">
-              {([
-                ['0', 'PARTNERSHIPS'],
-                ['0', 'EVENTS'],
-                [brand.city ? '1' : '0', 'CITIES'],
-              ] as const).map(([val, label]) => (
-                <div key={label} className="border-l-[3px] pl-2" style={{ borderColor: C.primary }}>
+            {brand.city && (
+              <div className="mb-10">
+                <div className="border-l-[3px] pl-2" style={{ borderColor: C.primary }}>
                   <div className="text-[28px] font-black leading-none" style={{ color: C.primary, fontFamily: 'var(--font-syne)' }}>
-                    {val}
+                    1
                   </div>
                   <div className="text-[10px] uppercase" style={{ color: C.textMuted, fontFamily: 'var(--font-jetbrains-mono)' }}>
-                    {label}
+                    CITIES
                   </div>
                 </div>
-              ))}
-            </div>
+              </div>
+            )}
 
             {/* Action buttons */}
             <div className="flex flex-col gap-4 mb-10">
@@ -980,7 +1021,7 @@ export default function BrandPublicPage({ brand, creators, theme }: BrandPublicP
           <main className="w-[65%] min-h-screen relative">
 
             {/* Sticky right badge */}
-            <div
+            {!isPreview && <div
               className="fixed right-0 top-1/2 z-50 px-[4px] py-4 border-l-2"
               style={{
                 background: C.primary,
@@ -993,7 +1034,7 @@ export default function BrandPublicPage({ brand, creators, theme }: BrandPublicP
               <span className="text-[10px]" style={{ fontFamily: 'var(--font-jetbrains-mono)' }}>
                 BRAND · {brand.display_name?.toUpperCase()} · BRAND · {brand.display_name?.toUpperCase()}
               </span>
-            </div>
+            </div>}
 
             {/* Page header — layout-specific */}
             {layout === 'boarding-pass' && <BoardingPassHeader {...headerProps} />}
@@ -1017,9 +1058,6 @@ export default function BrandPublicPage({ brand, creators, theme }: BrandPublicP
                 {[1, 0.6, 0.3].map((opacity, i) => (
                   <div key={i} className="w-3 h-3" style={{ background: C.primary, opacity }} />
                 ))}
-                <div className="text-[10px] mt-2" style={{ color: C.primary, fontFamily: 'var(--font-jetbrains-mono)' }}>
-                  QUOTA: 0/3 PARTNERSHIPS
-                </div>
               </div>
             </div>
 
@@ -1032,9 +1070,11 @@ export default function BrandPublicPage({ brand, creators, theme }: BrandPublicP
                 >
                   Open Collaborations
                 </h2>
-                <span className="text-[12px] uppercase" style={{ color: C.primary, fontFamily: 'var(--font-jetbrains-mono)' }}>
-                  {creators.length} {creators.length === 1 ? 'Match' : 'Matches'} Found
-                </span>
+                {creators.length > 0 && (
+                  <span className="text-[12px] uppercase" style={{ color: C.primary, fontFamily: 'var(--font-jetbrains-mono)' }}>
+                    {creators.length} {creators.length === 1 ? 'Match' : 'Matches'} Found
+                  </span>
+                )}
               </div>
 
               {creators.length > 0 ? (
@@ -1087,7 +1127,7 @@ export default function BrandPublicPage({ brand, creators, theme }: BrandPublicP
                 <div className="p-12 flex flex-col items-center justify-center border-2 border-dashed" style={{ borderColor: C.border }}>
                   <span className="material-symbols-outlined text-[48px] mb-3" style={{ color: C.textMuted }}>group_add</span>
                   <span className="text-[12px] uppercase tracking-widest" style={{ color: C.textMuted, fontFamily: 'var(--font-jetbrains-mono)' }}>
-                    NO MATCHES IN {brand.city?.toUpperCase()} YET
+                    BRINGING CREATORS TO {brand.city?.toUpperCase()} — CHECK BACK SOON
                   </span>
                 </div>
               )}
@@ -1123,37 +1163,8 @@ export default function BrandPublicPage({ brand, creators, theme }: BrandPublicP
 
             {/* Archive collabs */}
             <div className="p-[40px]">
-              <div className="flex justify-between items-end mb-6">
-                <h2 className="text-[36px]" style={{ color: C.text, fontFamily: 'var(--font-abril)' }}>Archive Collabs</h2>
-                <span className="text-[10px]" style={{ color: C.textMuted, fontFamily: 'var(--font-jetbrains-mono)' }}>SCROLL TO DISCOVER →</span>
-              </div>
-              <div className="flex overflow-x-auto gap-6 pb-6">
-                {(['POP-UP EVENT', 'CITY COLLAB', 'BRAND TAKEOVER'] as const).map((name, i) => (
-                  <div
-                    key={i}
-                    className="min-w-[280px] p-4 flex-shrink-0"
-                    style={{ background: C.panelBg, borderLeft: `4px solid ${C.primary}` }}
-                  >
-                    <div className="flex items-center gap-3 mb-4">
-                      <div
-                        className="w-8 h-8 flex items-center justify-center text-sm font-black"
-                        style={{ border: `1px solid ${C.primary}`, color: C.primary, fontFamily: 'var(--font-syne)' }}
-                      >
-                        {initial}
-                      </div>
-                      <span className="text-[10px]" style={{ color: C.textMuted, fontFamily: 'var(--font-jetbrains-mono)' }}>
-                        WIMC × COLLAB_0{i + 1}
-                      </span>
-                    </div>
-                    <div className="text-[20px] leading-tight font-black" style={{ color: C.text, fontFamily: 'var(--font-syne)' }}>
-                      {name}
-                    </div>
-                    <div className="text-[10px] mt-2" style={{ color: C.textMuted, fontFamily: 'var(--font-jetbrains-mono)' }}>
-                      {brand.city?.toUpperCase()} · {sinceYear}
-                    </div>
-                  </div>
-                ))}
-              </div>
+              <h2 className="text-[36px] mb-6" style={{ color: C.text, fontFamily: 'var(--font-abril)' }}>Archive Collabs</h2>
+              <BrandCollabsEmptyState C={C} displayName={brand.display_name} isOwner={isOwner} isPreview={isPreview} />
             </div>
 
             {/* Marquee */}
@@ -1196,7 +1207,7 @@ export default function BrandPublicPage({ brand, creators, theme }: BrandPublicP
         </div>
 
         {/* Postmark decoration */}
-        <div
+        {!isPreview && <div
           className="fixed bottom-24 right-12 w-24 h-24 border-2 rounded-full flex items-center justify-center -rotate-12 pointer-events-none opacity-30 z-10"
           style={{ borderColor: C.primary }}
         >
@@ -1205,13 +1216,13 @@ export default function BrandPublicPage({ brand, creators, theme }: BrandPublicP
               VALIDATED<br />WIMC<br />{sinceYear}
             </span>
           </div>
-        </div>
+        </div>}
       </div>
 
       {/* ================================================================
           MOBILE LAYOUT  (< md)
       ================================================================ */}
-      <div className="md:hidden">
+      {!isPreview && <div className="md:hidden">
 
         {/* Mobile header */}
         <header
@@ -1259,31 +1270,24 @@ export default function BrandPublicPage({ brand, creators, theme }: BrandPublicP
               {([1, 0.6, 0.3] as const).map((opacity, i) => (
                 <div key={i} className="w-2.5 h-2.5" style={{ background: C.primary, opacity }} />
               ))}
-              <div className="text-[9px] mt-2" style={{ color: C.primary, fontFamily: 'var(--font-jetbrains-mono)' }}>
-                QUOTA: 0/3
-              </div>
             </div>
           </div>
 
           <div className="px-6 pt-8 space-y-10">
 
             {/* Stats */}
-            <div className="grid grid-cols-3 gap-4">
-              {([
-                ['0', 'CREATORS\nPARTNERED'],
-                ['0', 'EVENTS\nBACKED'],
-                [brand.city ? '1' : '0', 'CITIES'],
-              ] as const).map(([val, label]) => (
-                <div key={label} className="border-l-[3px] pl-3" style={{ borderColor: C.primary }}>
+            {brand.city && (
+              <div>
+                <div className="border-l-[3px] pl-3" style={{ borderColor: C.primary }}>
                   <span className="text-[28px] font-black leading-none block" style={{ color: C.primary, fontFamily: 'var(--font-syne)' }}>
-                    {val}
+                    1
                   </span>
-                  <span className="text-[9px] uppercase mt-1 block" style={{ color: C.textMuted, fontFamily: 'var(--font-jetbrains-mono)', whiteSpace: 'pre-line' }}>
-                    {label}
+                  <span className="text-[9px] uppercase mt-1 block" style={{ color: C.textMuted, fontFamily: 'var(--font-jetbrains-mono)' }}>
+                    CITIES
                   </span>
                 </div>
-              ))}
-            </div>
+              </div>
+            )}
 
             {/* CTA */}
             <div className="flex flex-col gap-3">
@@ -1312,9 +1316,11 @@ export default function BrandPublicPage({ brand, creators, theme }: BrandPublicP
                 >
                   Open Collaborations
                 </h2>
-                <span className="text-[10px] mb-1" style={{ color: C.textMuted, fontFamily: 'var(--font-jetbrains-mono)' }}>
-                  {creators.length} {creators.length === 1 ? 'MATCH' : 'MATCHES'}
-                </span>
+                {creators.length > 0 && (
+                  <span className="text-[10px] mb-1" style={{ color: C.textMuted, fontFamily: 'var(--font-jetbrains-mono)' }}>
+                    {creators.length} {creators.length === 1 ? 'MATCH' : 'MATCHES'}
+                  </span>
+                )}
               </div>
               <div className="space-y-3">
                 {creators.length > 0 ? (
@@ -1356,7 +1362,7 @@ export default function BrandPublicPage({ brand, creators, theme }: BrandPublicP
                   <div className="border-2 border-dashed p-8 flex flex-col items-center" style={{ borderColor: C.border }}>
                     <span className="material-symbols-outlined text-[36px] mb-2" style={{ color: C.textMuted }}>group_add</span>
                     <span className="text-[11px] uppercase" style={{ color: C.textMuted, fontFamily: 'var(--font-jetbrains-mono)' }}>
-                      NO MATCHES IN {brand.city?.toUpperCase()} YET
+                      BRINGING CREATORS TO {brand.city?.toUpperCase()} — CHECK BACK SOON
                     </span>
                   </div>
                 )}
@@ -1465,39 +1471,10 @@ export default function BrandPublicPage({ brand, creators, theme }: BrandPublicP
             </div>
           </div>
 
-          {/* Archive Collabs — horizontal scroll */}
+          {/* Archive Collabs */}
           <div className="px-6 py-8">
-            <div className="flex justify-between items-end mb-5">
-              <h2 className="text-[28px]" style={{ color: C.text, fontFamily: 'var(--font-abril)' }}>Archive Collabs</h2>
-              <span className="text-[10px]" style={{ color: C.textMuted, fontFamily: 'var(--font-jetbrains-mono)' }}>SCROLL →</span>
-            </div>
-            <div className="flex overflow-x-auto gap-4 pb-4 -mx-6 px-6" style={{ scrollbarWidth: 'none' }}>
-              {(['POP-UP EVENT', 'CITY COLLAB', 'BRAND TAKEOVER'] as const).map((name, i) => (
-                <div
-                  key={i}
-                  className="min-w-[220px] p-4 flex-shrink-0"
-                  style={{ background: C.panelBg, borderLeft: `4px solid ${C.primary}` }}
-                >
-                  <div className="flex items-center gap-2 mb-3">
-                    <div
-                      className="w-7 h-7 flex items-center justify-center text-xs font-black"
-                      style={{ border: `1px solid ${C.primary}`, color: C.primary, fontFamily: 'var(--font-syne)' }}
-                    >
-                      {initial}
-                    </div>
-                    <span className="text-[9px]" style={{ color: C.textMuted, fontFamily: 'var(--font-jetbrains-mono)' }}>
-                      WIMC × COLLAB_0{i + 1}
-                    </span>
-                  </div>
-                  <div className="text-[18px] font-black leading-tight" style={{ color: C.text, fontFamily: 'var(--font-syne)' }}>
-                    {name}
-                  </div>
-                  <div className="text-[9px] mt-2" style={{ color: C.textMuted, fontFamily: 'var(--font-jetbrains-mono)' }}>
-                    {brand.city?.toUpperCase()} · {sinceYear}
-                  </div>
-                </div>
-              ))}
-            </div>
+            <h2 className="text-[28px] mb-5" style={{ color: C.text, fontFamily: 'var(--font-abril)' }}>Archive Collabs</h2>
+            <BrandCollabsEmptyState C={C} displayName={brand.display_name} isOwner={isOwner} isPreview={isPreview} />
           </div>
 
           {/* Marquee — primary color band */}
@@ -1540,7 +1517,7 @@ export default function BrandPublicPage({ brand, creators, theme }: BrandPublicP
             PARTNER WITH US
           </button>
         </div>
-      </div>
+      </div>}
     </div>
   )
 }

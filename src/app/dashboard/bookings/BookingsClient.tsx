@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useTransition } from 'react'
+import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { updateInquiryStatus } from '@/app/actions/booking'
 
@@ -115,26 +116,40 @@ function TicketSalesTab({ events, rsvps }: { events: SlimEvent[]; rsvps: SlimRsv
       </div>
 
       {/* Revenue chart */}
-      {filtered.length > 0 && (
-        <div style={{ background: 'var(--wimc-bg-elevated)', border: '1px solid rgba(26,39,68,0.14)', borderRadius: 0, padding: 24 }}>
-          <div style={{ fontFamily: 'var(--font-abril)', fontSize: 22, marginBottom: 20 }}>Revenue over time</div>
-          <div style={{ display: 'flex', alignItems: 'flex-end', gap: 3, height: 80 }}>
-            {dayValues.map((v, i) => (
-              <div key={i} title={`${dayLabels[i]}: ${formatRevenue(v)}`} style={{
-                flex: 1, minWidth: 0,
-                height: `${Math.max(4, Math.round((v / maxVal) * 80))}px`,
-                background: v > 0 ? 'var(--wimc-amber)' : 'rgba(26,39,68,0.08)',
-                borderRadius: '3px 3px 0 0',
-                transition: 'height 300ms ease',
-              }} />
-            ))}
+      <div style={{ background: 'var(--wimc-bg-elevated)', border: '1px solid rgba(26,39,68,0.14)', borderRadius: 0, padding: 24 }}>
+        <div style={{ fontFamily: 'var(--font-abril)', fontSize: 22, marginBottom: 20 }}>Revenue over time</div>
+        {filtered.length > 0 ? (
+          <>
+            <div style={{ display: 'flex', alignItems: 'flex-end', gap: 3, height: 80 }}>
+              {dayValues.map((v, i) => (
+                <div key={i} title={`${dayLabels[i]}: ${formatRevenue(v)}`} style={{
+                  flex: 1, minWidth: 0,
+                  height: `${Math.max(4, Math.round((v / maxVal) * 80))}px`,
+                  background: v > 0 ? 'var(--wimc-amber)' : 'rgba(26,39,68,0.08)',
+                  borderRadius: '3px 3px 0 0',
+                  transition: 'height 300ms ease',
+                }} />
+              ))}
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6, fontSize: 10, fontFamily: 'var(--font-jetbrains-mono)', color: 'var(--wimc-text-secondary)' }}>
+              <span>{dayLabels[0]}</span>
+              <span>{dayLabels[dayLabels.length - 1]}</span>
+            </div>
+          </>
+        ) : (
+          <div style={{
+            height: 80,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: 13,
+            fontFamily: 'var(--font-jetbrains-mono)',
+            color: 'var(--wimc-text-secondary)',
+          }}>
+            No sales in this period
           </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6, fontSize: 10, fontFamily: 'var(--font-jetbrains-mono)', color: 'var(--wimc-text-secondary)' }}>
-            <span>{dayLabels[0]}</span>
-            <span>{dayLabels[dayLabels.length - 1]}</span>
-          </div>
-        </div>
-      )}
+        )}
+      </div>
 
       {/* Per-event breakdown */}
       {eventSummary.length > 0 && (
@@ -160,7 +175,19 @@ function TicketSalesTab({ events, rsvps }: { events: SlimEvent[]; rsvps: SlimRsv
         <div style={{ border: '2px dashed var(--wimc-border-default)', borderRadius: 0, padding: 48, textAlign: 'center' }}>
           <span className="material-symbols-outlined" style={{ fontSize: 40, color: 'var(--wimc-text-secondary)', display: 'block', marginBottom: 12 }}>receipt_long</span>
           <div style={{ fontFamily: 'var(--font-syne)', fontSize: 16, fontWeight: 700, marginBottom: 6 }}>No ticket sales in this period</div>
-          <div style={{ fontSize: 13, color: 'var(--wimc-text-secondary)' }}>Paid ticket purchases will appear here.</div>
+          <div style={{ fontSize: 13, color: 'var(--wimc-text-secondary)', marginBottom: 20 }}>Paid ticket purchases will appear here.</div>
+          <Link
+            href="/dashboard/events/create"
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: 6,
+              padding: '7px 16px', borderRadius: 0, fontSize: 13, fontWeight: 600,
+              fontFamily: 'var(--font-dm-sans)', background: 'var(--wimc-coral)',
+              color: '#fff', textDecoration: 'none',
+            }}
+          >
+            <span className="material-symbols-outlined" style={{ fontSize: 15 }}>add</span>
+            Create event
+          </Link>
         </div>
       )}
     </div>
@@ -333,11 +360,25 @@ function InquiriesTab({ inquiries }: { inquiries: SlimInquiry[] }) {
           <div style={{ fontFamily: 'var(--font-syne)', fontSize: 16, fontWeight: 700, marginBottom: 6 }}>
             {filter === 'all' ? 'No booking inquiries yet' : `No ${filter} inquiries`}
           </div>
-          <div style={{ fontSize: 13, color: 'var(--wimc-text-secondary)' }}>
+          <div style={{ fontSize: 13, color: 'var(--wimc-text-secondary)', marginBottom: filter === 'all' ? 20 : 0 }}>
             {filter === 'all'
               ? 'Add a Booking Request block to your page to start receiving inquiries.'
               : 'Change the filter to see other inquiries.'}
           </div>
+          {filter === 'all' && (
+            <Link
+              href="/dashboard/studio"
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 6,
+                padding: '7px 16px', borderRadius: 0, fontSize: 13, fontWeight: 600,
+                fontFamily: 'var(--font-dm-sans)', background: 'var(--wimc-coral)',
+                color: '#fff', textDecoration: 'none',
+              }}
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: 15 }}>add_box</span>
+              Add blocks in Studio
+            </Link>
+          )}
         </div>
       )}
 

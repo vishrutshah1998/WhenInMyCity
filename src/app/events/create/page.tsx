@@ -124,18 +124,18 @@ function CalendarOverlay({ onConfirm, onClose }: { onConfirm: (d: Date) => void;
   return (
     <div className="fixed inset-0 bg-black/50 z-[100] flex items-end justify-start"
          onClick={e => { if (e.target === e.currentTarget) onClose() }}>
-      <div className="bg-[#FAF7F0] w-[40%] border-t-2 border-r-2 border-[#1A2744] p-8"
+      <div className="bg-[#FAF7F0] w-full md:w-[40%] border-t-2 border-r-2 border-[#1A2744] p-5 md:p-8"
            style={{ animation: 'slideUp 200ms ease-out' }}>
         <div className="flex items-center justify-between mb-6">
           <span style={{ fontFamily: 'var(--font-barlow)' }} className="text-[#1A2744] text-[24px] font-bold uppercase tracking-wide">SELECT DATE</span>
-          <button onClick={onClose} className="text-[#1A2744] hover:rotate-90 transition-transform duration-200 text-[24px] leading-none">×</button>
+          <button onClick={onClose} className="text-[#1A2744] hover:rotate-90 transition-transform duration-200 text-[24px] leading-none w-11 h-11 flex items-center justify-center">×</button>
         </div>
         <div className="flex items-center justify-between mb-4">
-          <button onClick={() => { if (month === 0) { setMonth(11); setYear(y => y - 1) } else setMonth(m => m - 1) }} className="text-[#1A2744] hover:text-[#E8705A] transition-colors p-1">
+          <button onClick={() => { if (month === 0) { setMonth(11); setYear(y => y - 1) } else setMonth(m => m - 1) }} className="text-[#1A2744] hover:text-[#E8705A] transition-colors p-3">
             <span className="material-symbols-outlined text-[20px]">chevron_left</span>
           </button>
           <span style={{ fontFamily: 'var(--font-jetbrains-mono)' }} className="text-[#1A2744] text-[13px] font-bold uppercase tracking-widest">{MONTH_NAMES[month]} {year}</span>
-          <button onClick={() => { if (month === 11) { setMonth(0); setYear(y => y + 1) } else setMonth(m => m + 1) }} className="text-[#1A2744] hover:text-[#E8705A] transition-colors p-1">
+          <button onClick={() => { if (month === 11) { setMonth(0); setYear(y => y + 1) } else setMonth(m => m + 1) }} className="text-[#1A2744] hover:text-[#E8705A] transition-colors p-3">
             <span className="material-symbols-outlined text-[20px]">chevron_right</span>
           </button>
         </div>
@@ -152,7 +152,7 @@ function CalendarOverlay({ onConfirm, onClose }: { onConfirm: (d: Date) => void;
             const isToday = thisDate.toDateString() === today.toDateString()
             return (
               <button key={day} onClick={() => setPicked(thisDate)} style={{ fontFamily: 'var(--font-jetbrains-mono)' }}
-                      className={['w-10 h-10 flex items-center justify-center text-[13px] transition-colors', isPicked ? 'bg-[#E8705A] text-white' : isToday ? 'border border-[#E8705A] text-[#E8705A]' : 'text-[#1A2744] hover:bg-[#1A2744]/5'].join(' ')}>
+                      className={['w-full h-11 flex items-center justify-center text-[13px] transition-colors', isPicked ? 'bg-[#E8705A] text-white' : isToday ? 'border border-[#E8705A] text-[#E8705A]' : 'text-[#1A2744] hover:bg-[#1A2744]/5'].join(' ')}>
                 {day}
               </button>
             )
@@ -177,18 +177,18 @@ function TimeOverlay({ onConfirm, onClose }: { onConfirm: (h: number, m: number)
   return (
     <div className="fixed inset-0 bg-black/50 z-[100] flex items-end justify-start"
          onClick={e => { if (e.target === e.currentTarget) onClose() }}>
-      <div className="bg-[#FAF7F0] w-[40%] border-t-2 border-r-2 border-[#1A2744] p-8"
+      <div className="bg-[#FAF7F0] w-full md:w-[40%] border-t-2 border-r-2 border-[#1A2744] p-5 md:p-8"
            style={{ animation: 'slideUp 200ms ease-out' }}>
         <div className="flex items-center justify-between mb-6">
           <span style={{ fontFamily: 'var(--font-barlow)' }} className="text-[#1A2744] text-[24px] font-bold uppercase tracking-wide">SELECT TIME</span>
-          <button onClick={onClose} className="text-[#1A2744] hover:rotate-90 transition-transform duration-200 text-[24px] leading-none">×</button>
+          <button onClick={onClose} className="text-[#1A2744] hover:rotate-90 transition-transform duration-200 text-[24px] leading-none w-11 h-11 flex items-center justify-center">×</button>
         </div>
         <div className="mb-6">
           <div style={{ fontFamily: 'var(--font-jetbrains-mono)' }} className="text-[10px] text-[#1A2744]/50 uppercase tracking-widest mb-3">HOUR</div>
           <div className="grid grid-cols-8 gap-2">
             {Array.from({ length: 24 }, (_, i) => (
               <button key={i} onClick={() => setHour(i)}
-                      className={['h-9 text-[12px] transition-colors', hour === i ? 'bg-[#E8705A] text-white' : 'bg-[#1A2744]/5 text-[#1A2744] hover:bg-[#1A2744]/10'].join(' ')}
+                      className={['h-11 text-[12px] transition-colors', hour === i ? 'bg-[#E8705A] text-white' : 'bg-[#1A2744]/5 text-[#1A2744] hover:bg-[#1A2744]/10'].join(' ')}
                       style={{ fontFamily: 'var(--font-jetbrains-mono)' }}>
                 {String(i).padStart(2, '0')}
               </button>

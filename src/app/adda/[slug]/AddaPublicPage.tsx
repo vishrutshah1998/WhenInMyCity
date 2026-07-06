@@ -25,6 +25,7 @@ interface Props {
   pastEvents:     PastEvent[]
   stats:          { total_events: number; average_rating: number }
   theme?:         ProfileTheme
+  isPreview?:     boolean
 }
 
 // ─── Layout colour system ─────────────────────────────────────────────────────
@@ -238,7 +239,7 @@ const GRID_BG_STYLE: React.CSSProperties = {
 
 type GoogleReview = { author_name: string; rating: number; text: string; time: number }
 
-export default function AddaPublicPage({ adda, stats, theme }: Props) {
+export default function AddaPublicPage({ adda, stats, theme, isPreview = false }: Props) {
   const hourlyRate = getHourlyRate(adda)
   const googleReviews = ((adda as unknown as { google_reviews?: GoogleReview[] }).google_reviews ?? []).filter(r => r.text)
   const types = adda.adda_type
@@ -286,7 +287,7 @@ export default function AddaPublicPage({ adda, stats, theme }: Props) {
 
       {/* Grain overlay */}
       <div
-        className="adda-grain fixed inset-0 pointer-events-none z-[999]"
+        className={`adda-grain pointer-events-none z-[999] ${isPreview ? 'absolute' : 'fixed'} inset-0`}
         style={{ opacity: 0.028 }}
         aria-hidden="true"
       />
@@ -295,7 +296,7 @@ export default function AddaPublicPage({ adda, stats, theme }: Props) {
       <div className="hidden lg:block min-h-screen" style={{ background: C.pageBg, color: C.text, fontFamily: C.font }}>
 
         {/* Header */}
-        <header className="sticky top-0 h-16 backdrop-blur-sm z-40 flex items-center justify-between px-8" style={{ background: `${C.headerBg}F5`, borderBottom: `2px dashed ${C.borderDash}` }}>
+        <header className={`${isPreview ? 'relative' : 'sticky top-0'} h-16 backdrop-blur-sm z-40 flex items-center justify-between px-8`} style={{ background: `${C.headerBg}F5`, borderBottom: `2px dashed ${C.borderDash}` }}>
           <Link href="/explore">
             <WimcWordmark color={layout === 'minimal' ? 'black' : 'white'} height={28} />
           </Link>
@@ -325,7 +326,7 @@ export default function AddaPublicPage({ adda, stats, theme }: Props) {
         </header>
 
         {/* Two-column main */}
-        <div className="flex" style={{ height: 'calc(100vh - 64px)' }}>
+        <div className="flex" style={isPreview ? { minHeight: 900 } : { height: 'calc(100vh - 64px)' }}>
 
           {/* ── LEFT PANEL ──────────────────────────────────────────────────── */}
           <div
@@ -784,7 +785,7 @@ export default function AddaPublicPage({ adda, stats, theme }: Props) {
         </div>
 
         {/* Sticky footer — right panel only */}
-        <div
+        {!isPreview && <div
           className="fixed bottom-0 right-0 w-[60%] h-[80px] backdrop-blur-sm z-50 flex items-center justify-between px-12"
           style={{ background: `${C.footerBg}F5`, borderTop: `2px dashed ${C.borderDash}`, boxShadow: '0 -10px 30px rgba(0,0,0,0.5)' }}
         >
@@ -812,12 +813,12 @@ export default function AddaPublicPage({ adda, stats, theme }: Props) {
               <Link href="/onboarding" className="underline transition-colors" style={{ color: `${C.primary}50` }}>Join free</Link>
             </p>
           </div>
-        </div>
+        </div>}
 
       </div>
 
       {/* ═══════════════════════════ MOBILE ═════════════════════════════════════ */}
-      <div className="block lg:hidden min-h-screen" style={{ background: C.pageBg, color: C.text, fontFamily: C.font }}>
+      {!isPreview && <div className="block lg:hidden min-h-screen" style={{ background: C.pageBg, color: C.text, fontFamily: C.font }}>
 
         {/* Header */}
         <header className="fixed top-0 left-0 right-0 h-16 backdrop-blur-sm z-[100] flex items-center justify-between px-4" style={{ background: `${C.headerBg}F5`, borderBottom: `2px dashed ${C.borderDash}` }}>
@@ -1089,7 +1090,7 @@ export default function AddaPublicPage({ adda, stats, theme }: Props) {
           </Link>
         </div>
 
-      </div>
+      </div>}
     </>
   )
 }

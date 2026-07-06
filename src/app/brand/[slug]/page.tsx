@@ -77,5 +77,7 @@ export default async function BrandPage({
     businessCategories: brand.business_categories ?? [],
   })
 
-  return <BrandPublicPage brand={brand} creators={creators} theme={theme} />
+  const { data: { user } } = await supabase.auth.getUser()
+
+  return <BrandPublicPage brand={brand} creators={creators} theme={theme} isOwner={user?.id === brand.id} />
 }

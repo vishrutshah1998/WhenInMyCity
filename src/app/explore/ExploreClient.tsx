@@ -68,6 +68,7 @@ interface Props {
   followedCreatorIds?: string[]
   viewerUserId?:      string | null
   inDashboard?:       boolean
+  basePath?:          string
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -680,12 +681,13 @@ function SubscribedPostsSection({ posts }: { posts: SubscribedPost[] }) {
 // ─── ALL tab content ──────────────────────────────────────────────────────────
 
 function AllTabContent({
-  events, creators, venues, subscribedPosts = [],
+  events, creators, venues, subscribedPosts = [], city = '',
 }: {
   events:          ExploreEvent[]
   creators:        ExploreCreator[]
   venues:          ExploreVenue[]
   subscribedPosts: SubscribedPost[]
+  city?:           string
 }) {
   const featuredEvent = events[0]
 
@@ -768,7 +770,7 @@ function AllTabContent({
               ))}
               {events.length === 0 && (
                 <div className="col-span-3 border-2 border-dashed border-[#E8705A]/30 p-10 text-center font-mono text-[12px] text-[#1A2744]/40 uppercase tracking-widest">
-                  NO UPCOMING EVENTS IN {'{city}'.toUpperCase()} — CHECK BACK SOON
+                  NO UPCOMING EVENTS IN {(city || 'YOUR CITY').toUpperCase()} — CHECK BACK SOON
                 </div>
               )}
             </div>
@@ -835,6 +837,11 @@ function AllTabContent({
             {events.slice(0, 3).map((ev, i) => (
               <MobileEventCard key={ev.id} event={ev} index={i} />
             ))}
+            {events.length === 0 && (
+              <div className="border-2 border-dashed border-[#E8705A]/40 p-6 text-center font-mono text-[11px] text-[#1A2744]/40 uppercase tracking-widest">
+                NO UPCOMING EVENTS IN {(city || 'YOUR CITY').toUpperCase()} — CHECK BACK SOON
+              </div>
+            )}
           </div>
           <Link href="/explore?tab=events" className="block text-right mt-3 font-mono text-[10px] text-[#E8705A] uppercase tracking-widest font-bold">
             SEE ALL EVENTS →
@@ -1847,6 +1854,7 @@ export default function ExploreClient({
   followedCreatorIds = [],
   viewerUserId       = null,
   inDashboard        = false,
+  basePath:          basePathProp,
 }: Props) {
   const router = useRouter()
   const [subscribedPosts, setSubscribedPosts] = useState<SubscribedPost[]>(initialSubscribedPosts)
@@ -1890,7 +1898,7 @@ export default function ExploreClient({
     return () => { supabase.removeChannel(channel) }
   }, [viewerUserId, followedCreatorIds])
 
-  const basePath = inDashboard ? '/dashboard/explore' : '/explore'
+  const basePath = basePathProp ?? (inDashboard ? '/dashboard/explore' : '/explore')
   const bgColor  = inDashboard ? '#F2EDE3' : '#F5ECD7'
 
   function setCity(c: string) {
@@ -1911,7 +1919,7 @@ export default function ExploreClient({
           <TabBar activeTab={tab} city={city} basePath={basePath} stickyTop="top-0" />
 
           <div className="pb-12">
-            {tab === 'all'      && <AllTabContent      events={events} creators={creators} venues={venues} subscribedPosts={subscribedPosts} />}
+            {tab === 'all'      && <AllTabContent      events={events} creators={creators} venues={venues} subscribedPosts={subscribedPosts} city={city} />}
             {tab === 'events'   && <EventsTabContent   events={events} />}
             {tab === 'creators' && <CreatorsTabContent creators={creators} />}
             {tab === 'venues'   && <VenuesTabContent venues={venues} city={city} />}

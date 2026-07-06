@@ -367,8 +367,8 @@ export default function DashboardPage() {
             const missing = ALL_P.filter(p => !personas.includes(p))
             if (missing.length === 0) return null
             const PERSONA_URL: Record<string, string> = {
-              creator: '/onboarding/creator/C2?mode=add', explorer: '/onboarding/explorer/E2?mode=add',
-              venue: '/onboarding/business/B2?mode=add&type=venue', brand: '/onboarding/business/B2?mode=add&type=brand',
+              creator: '/onboarding?mode=add&persona=creator', explorer: '/onboarding?mode=add&persona=explorer',
+              venue: '/onboarding?mode=add&persona=venue', brand: '/onboarding?mode=add&persona=brand',
             }
             const PERSONA_LABEL: Record<string, string> = {
               creator: 'Become a Creator', explorer: 'Become an Explorer',
@@ -470,6 +470,52 @@ export default function DashboardPage() {
               </a>
             ))}
           </div>
+
+          {/* ── Earn snapshot — gateway to /dashboard/earn ──────────────────── */}
+          <a
+            href="/dashboard/earn"
+            style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              background: '#FEFCF8',
+              border: '1px solid rgba(217,119,6,0.2)',
+              borderTop: '3px solid #D97706',
+              padding: '18px 24px', marginBottom: 32,
+              textDecoration: 'none',
+              boxShadow: '0 2px 8px rgba(26,39,68,0.05)',
+              cursor: 'pointer',
+            }}
+            onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = 'rgba(26,39,68,0.02)'}
+            onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = '#FEFCF8'}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+              <div style={{
+                width: 44, height: 44, flexShrink: 0,
+                background: 'rgba(217,119,6,0.10)', display: 'grid', placeItems: 'center', color: '#D97706',
+              }}>
+                <span className="material-symbols-outlined" style={{ fontSize: 22, fontVariationSettings: "'FILL' 1" }}>sell</span>
+              </div>
+              <div>
+                <p style={{ fontSize: 9, color: 'rgba(26,39,68,0.35)', fontFamily: 'var(--font-jetbrains-mono)', textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: 4 }}>EARN HUB</p>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: 14 }}>
+                  <span style={{ fontFamily: 'var(--font-syne)', fontSize: 28, fontWeight: 900, lineHeight: 1, color: '#D97706' }}>
+                    {formatPaiseCompact(mtdEarnedPaise)}
+                  </span>
+                  <span style={{ fontSize: 11, color: 'rgba(26,39,68,0.45)', fontFamily: 'var(--font-dm-sans)' }}>
+                    earned this month · {formatPaiseFull(availablePaise)} available
+                  </span>
+                </div>
+              </div>
+            </div>
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: 6,
+              color: '#D97706', fontFamily: 'var(--font-jetbrains-mono)',
+              fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1.2,
+              border: '1px solid rgba(217,119,6,0.3)', padding: '8px 16px', flexShrink: 0,
+            }}>
+              Booking requests &amp; more
+              <span className="material-symbols-outlined" style={{ fontSize: 15 }}>arrow_forward</span>
+            </div>
+          </a>
 
           {/* ── Quick Actions ───────────────────────────────────────────────── */}
           <div style={{ marginBottom: 32 }}>
@@ -822,6 +868,32 @@ export default function DashboardPage() {
           </div>
         </div>
 
+        {/* Earn snapshot — compact card gateway to /dashboard/earn */}
+        <a
+          href="/dashboard/earn"
+          style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            margin: '0 16px 16px',
+            padding: '14px 16px',
+            background: '#FEFCF8',
+            border: '1px solid rgba(217,119,6,0.2)',
+            borderLeft: '3px solid #D97706',
+            textDecoration: 'none',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <span className="material-symbols-outlined" style={{ fontSize: 20, color: '#D97706', fontVariationSettings: "'FILL' 1" }}>sell</span>
+            <div>
+              <p style={{ fontSize: 8, color: 'rgba(26,39,68,0.4)', fontFamily: 'var(--font-jetbrains-mono)', textTransform: 'uppercase', letterSpacing: 1.2, marginBottom: 2 }}>EARN HUB</p>
+              <p style={{ fontFamily: 'var(--font-dm-sans)', fontSize: 14, fontWeight: 700, color: '#1A2744', lineHeight: 1.2 }}>
+                {formatPaiseCompact(mtdEarnedPaise)}{' '}
+                <span style={{ fontSize: 11, fontWeight: 400, color: 'rgba(26,39,68,0.5)' }}>this month</span>
+              </p>
+            </div>
+          </div>
+          <span className="material-symbols-outlined" style={{ fontSize: 16, color: '#D97706' }}>arrow_forward</span>
+        </a>
+
         {/* PostComposer */}
         <div style={{ padding: '16px' }}>
           <PostComposer onPostCreated={(post) => setDashPosts(prev => [post, ...prev].slice(0, 5))} />
@@ -852,7 +924,7 @@ export default function DashboardPage() {
             { icon: 'edit_note',  label: 'MY PAGE',   href: '/dashboard/studio' },
             { icon: 'event',      label: 'ADD EVENT', href: '/dashboard/events/create' },
             { icon: 'bar_chart',  label: 'ANALYTICS', href: '/dashboard/analytics' },
-            { icon: 'payments',   label: 'PAYOUTS',   href: '/dashboard/payouts' },
+            { icon: 'sell',       label: 'EARN',      href: '/dashboard/earn' },
           ].map(({ icon, label, href }) => (
             <a key={label} href={href} style={{ background: '#FEFCF8', border: '1px solid rgba(26,39,68,0.12)', padding: 16, aspectRatio: '1', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10, textDecoration: 'none' }}>
               <span className="material-symbols-outlined" style={{ fontSize: 26, color: '#E8705A', fontVariationSettings: "'FILL' 1" }}>{icon}</span>

@@ -62,7 +62,16 @@ export default function FeedClient({ events, followedCount }: Props) {
         <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 6 }}>
           Nothing upcoming from {followedCount} creator{followedCount !== 1 ? 's' : ''} you follow
         </div>
-        <div style={{ fontSize: 13 }}>Check back soon — new events will appear here.</div>
+        <div style={{ fontSize: 13, marginBottom: 20 }}>Check back soon — new events will appear here.</div>
+        <Link
+          href="/explore"
+          style={{
+            padding: '9px 20px', borderRadius: 8, fontSize: 13, fontWeight: 600,
+            background: 'var(--wimc-coral)', color: '#fff', textDecoration: 'none',
+          }}
+        >
+          Discover events
+        </Link>
       </div>
     )
   }

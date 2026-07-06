@@ -160,7 +160,7 @@ export function NotificationsPageClient({ notifications: initial, unreadCount: i
             display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12,
           }}>
             <span className="material-symbols-outlined" style={{ fontSize: 40, color: 'var(--wimc-text-muted)', opacity: 0.4 }}>
-              notifications_off
+              notifications
             </span>
             <span style={{
               fontFamily: 'var(--font-jetbrains-mono)',
@@ -169,7 +169,7 @@ export function NotificationsPageClient({ notifications: initial, unreadCount: i
               letterSpacing: '0.1em',
               textTransform: 'uppercase',
             }}>
-              No notifications here
+              You&rsquo;re all caught up
             </span>
           </div>
         ) : (

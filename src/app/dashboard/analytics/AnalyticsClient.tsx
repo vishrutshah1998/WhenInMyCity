@@ -148,7 +148,8 @@ export default function AnalyticsClient({ stats7, stats30, stats365, blocks, use
     background: 'rgba(242,237,227,0.96)', backdropFilter: 'blur(12px)', zIndex: 40,
   }
 
-  const deviceTotal = stats.deviceBreakdown.mobile + stats.deviceBreakdown.tablet + stats.deviceBreakdown.desktop || 1
+  const deviceRawTotal = stats.deviceBreakdown.mobile + stats.deviceBreakdown.tablet + stats.deviceBreakdown.desktop
+  const deviceTotal = deviceRawTotal || 1
   const deviceBars = useMemo(() => [
     { label: 'Mobile',  value: stats.deviceBreakdown.mobile,  color: 'var(--wimc-coral)' },
     { label: 'Desktop', value: stats.deviceBreakdown.desktop, color: 'var(--wimc-teal)' },
@@ -326,19 +327,25 @@ export default function AnalyticsClient({ stats7, stats30, stats365, blocks, use
           {/* Device breakdown */}
           <div style={{ background: 'var(--wimc-bg-elevated)', border: '1px solid rgba(26,39,68,0.14)', borderRadius: 0, padding: 24 }}>
             <div style={{ fontFamily: 'var(--font-abril)', fontSize: 22, marginBottom: 20 }}>Device Breakdown</div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-              {deviceBars.map(({ label, value, color }) => (
-                <div key={label}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, fontFamily: 'var(--font-jetbrains-mono)', marginBottom: 6 }}>
-                    <span style={{ color: 'var(--wimc-text-secondary)' }}>{label}</span>
-                    <span style={{ color }}>{value} ({Math.round((value / deviceTotal) * 100)}%)</span>
+            {deviceRawTotal === 0 ? (
+              <div style={{ textAlign: 'center', color: 'var(--wimc-text-secondary)', fontSize: 13, padding: '24px 0' }}>
+                No visitor data yet — this will populate once people view your page.
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                {deviceBars.map(({ label, value, color }) => (
+                  <div key={label}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, fontFamily: 'var(--font-jetbrains-mono)', marginBottom: 6 }}>
+                      <span style={{ color: 'var(--wimc-text-secondary)' }}>{label}</span>
+                      <span style={{ color }}>{value} ({Math.round((value / deviceTotal) * 100)}%)</span>
+                    </div>
+                    <div style={{ height: 8, background: 'var(--wimc-bg-overlay)', borderRadius: 4, overflow: 'hidden' }}>
+                      <div style={{ height: '100%', width: `${Math.round((value / deviceTotal) * 100)}%`, background: color, borderRadius: 4, transition: 'width 500ms ease' }} />
+                    </div>
                   </div>
-                  <div style={{ height: 8, background: 'var(--wimc-bg-overlay)', borderRadius: 4, overflow: 'hidden' }}>
-                    <div style={{ height: '100%', width: `${Math.round((value / deviceTotal) * 100)}%`, background: color, borderRadius: 4, transition: 'width 500ms ease' }} />
-                  </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Top blocks */}

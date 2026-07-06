@@ -28,6 +28,7 @@ import type {
 } from '@/types/database'
 import { type ProfileTheme, schemeToStyle, DEFAULT_PROFILE_THEME } from '@/types/theme'
 import FollowButton from './FollowButton'
+import PublicPageEmptyState from './PublicPageEmptyState'
 import CreatorPostsSection from './CreatorPostsSection'
 import type { CreatorPostWithReactions } from '@/app/actions/posts'
 import CityMasteryMap from './CityMasteryMap'
@@ -2365,6 +2366,7 @@ interface PublicProfilePageProps {
   cityMasteryMap?:      MasteryNeighbourhood[]
   posts?:               CreatorPostWithReactions[]
   viewerUserId?:        string | null
+  isPreview?:           boolean
 }
 
 const PublicProfilePage = React.memo(function PublicProfilePage({
@@ -2386,6 +2388,7 @@ const PublicProfilePage = React.memo(function PublicProfilePage({
   cityMasteryMap = [],
   posts = [],
   viewerUserId = null,
+  isPreview = false,
 }: PublicProfilePageProps) {
   const resolvedTheme = useMemo<ProfileTheme>(() => theme ?? DEFAULT_PROFILE_THEME, [theme])
   const contentBlocks = useMemo(() => blocks.filter((b) => b.is_visible), [blocks])
@@ -2421,7 +2424,7 @@ const PublicProfilePage = React.memo(function PublicProfilePage({
       )}
       {/* ── DESKTOP sticky top bar ──────────────────────────────────────────── */}
       <div
-        className="hidden lg:flex sticky top-0 z-40 items-center justify-between px-8 w-full shrink-0"
+        className={`hidden lg:flex ${isPreview ? 'relative' : 'sticky top-0'} z-40 items-center justify-between px-8 w-full shrink-0`}
         style={{ height: 64, background: 'rgb(var(--color-background)/0.92)', backdropFilter: 'blur(8px)', borderBottom: '2px dashed rgb(var(--color-on-background)/0.10)' }}
       >
         <WimcWordmark color={wordmarkColor} height={28} />
@@ -2436,12 +2439,12 @@ const PublicProfilePage = React.memo(function PublicProfilePage({
       </div>
 
       {/* ── Body: sidebar + right panel (stacks vertically on mobile) ──────── */}
-      <div className="flex flex-col lg:flex-row relative z-10" style={{ minHeight: 'calc(100vh - 64px)' }}>
+      <div className="flex flex-col lg:flex-row relative z-10" style={isPreview ? { minHeight: 900 } : { minHeight: 'calc(100vh - 64px)' }}>
 
         {/* DESKTOP left sidebar: 40% sticky, hidden on mobile */}
         <aside
-          className="hidden lg:block lg:sticky lg:top-16 shrink-0 overflow-y-auto"
-          style={{ width: '40%', height: 'calc(100vh - 64px)', borderRight: '2px dashed rgb(var(--color-on-background)/0.10)' }}
+          className={`hidden lg:block ${isPreview ? '' : 'lg:sticky lg:top-16'} shrink-0 overflow-y-auto`}
+          style={{ width: '40%', height: isPreview ? 'auto' : 'calc(100vh - 64px)', minHeight: isPreview ? 900 : undefined, borderRight: '2px dashed rgb(var(--color-on-background)/0.10)' }}
         >
           <DesktopSidebar
             profile={profile}
@@ -2676,7 +2679,14 @@ const PublicProfilePage = React.memo(function PublicProfilePage({
             )}
 
             {/* ── Content blocks ────────────────────────────────────────────── */}
-        {contentBlocks.map((block) => {
+            {contentBlocks.length === 0 ? (
+              <PublicPageEmptyState
+                displayName={profile.display_name}
+                isOwner={isOwner}
+                isPreview={isPreview}
+                followSlot={viewerIsExplorer ? <FollowButton makerId={profile.id} initialIsFollowing={isFollowing} /> : undefined}
+              />
+            ) : contentBlocks.map((block) => {
           switch (block.block_type) {
 
             // ── Original blocks ───────────────────────────────────────────
@@ -3081,7 +3091,7 @@ const PublicProfilePage = React.memo(function PublicProfilePage({
       </div>{/* end body flex */}
 
       {/* ── DESKTOP bottom CTA bar ──────────────────────────────────────────── */}
-      <div
+      {!isPreview && <div
         className="hidden lg:flex fixed bottom-0 right-0 z-50 items-center justify-between px-8"
         style={{ width: '60%', height: 72, background: 'rgb(var(--color-background)/0.94)', backdropFilter: 'blur(8px)', borderTop: '2px dashed rgb(var(--color-on-background)/0.10)', boxShadow: '0 -10px 30px rgba(0,0,0,0.25)' }}
       >
@@ -3112,7 +3122,7 @@ const PublicProfilePage = React.memo(function PublicProfilePage({
             </Link>
           </div>
         )}
-      </div>
+      </div>}
 
       {/* eslint-disable-next-line @next/next/no-page-custom-font */}
       <link
