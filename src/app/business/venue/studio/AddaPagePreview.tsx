@@ -42,8 +42,8 @@ const PALETTES: Record<LayoutId, Palette> = {
     font: "'Inter', system-ui, sans-serif", mono: "'JetBrains Mono', monospace",
   },
   'boarding-pass': {
-    bg: '#121212', bgCard: '#1E1E1E', bgPanel: '#2C2C2C',
-    primary: '#E8572A', text: '#F2F0EF', textMuted: 'rgba(242,240,239,0.5)', border: 'rgba(232,87,42,0.3)',
+    bg: '#07070A', bgCard: '#0D0B0A', bgPanel: '#1A2744',
+    primary: '#5DD9D0', text: '#F0EFF8', textMuted: 'rgba(152,150,176,1)', border: 'rgba(93,217,208,0.3)',
     font: "'Archivo Black', 'Arial Black', sans-serif", mono: "'JetBrains Mono', monospace",
   },
   minimal: {

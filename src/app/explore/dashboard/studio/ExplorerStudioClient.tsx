@@ -7,6 +7,7 @@ import { reorderBlocks } from '@/app/actions/blocks'
 import BlockEditor from '@/components/dashboard/BlockEditor'
 import ThemeEditor from '@/components/dashboard/ThemeEditor'
 import ExplorerPagePreview from './ExplorerPagePreview'
+import StudioShell, { type StudioTab } from '@/components/dashboard/StudioShell'
 import { INTEREST_TAGS } from '@/lib/constants/interests'
 import type { PageBlock } from '@/types/database'
 import type { ProfileTheme } from '@/types/theme'
@@ -30,7 +31,13 @@ const S = {
 const MONO  = "'JetBrains Mono', monospace"
 const INTER = "'Inter', system-ui, sans-serif"
 
-type Tab = 'content' | 'blocks' | 'theme'
+type TabKey = 'content' | 'blocks' | 'theme'
+
+const EXPLORER_TABS: StudioTab[] = [
+  { key: 'content', label: 'Content', icon: 'edit'    },
+  { key: 'blocks',  label: 'Blocks',  icon: 'add_box' },
+  { key: 'theme',   label: 'Theme',   icon: 'palette' },
+]
 
 // ── Sub-components ─────────────────────────────────────────────────────────────
 
@@ -93,7 +100,7 @@ interface Props {
 // ── Main component ─────────────────────────────────────────────────────────────
 
 export default function ExplorerStudioClient({ explorerProfile, userProfile, initialBlocks, theme: initialTheme }: Props) {
-  const [tab, setTab] = useState<Tab>('content')
+  const [tab, setTab] = useState<TabKey>('content')
 
   // ── Content state ──────────────────────────────────────────────────────────
   const [displayName,      setDisplayName]      = useState(explorerProfile.display_name ?? '')
@@ -215,9 +222,9 @@ export default function ExplorerStudioClient({ explorerProfile, userProfile, ini
     }
   }
 
-  function handleDiscard() {
+  function discardTab(key: string) {
     if (!window.confirm('Discard unsaved changes?')) return
-    if (tab === 'content') {
+    if (key === 'content') {
       setDisplayName(origContent.current.displayName)
       setBio(origContent.current.bio)
       setCity(origContent.current.city)
@@ -225,7 +232,7 @@ export default function ExplorerStudioClient({ explorerProfile, userProfile, ini
       setInstagramHandle(origContent.current.instagramHandle)
       setContentDirty(false)
       setContentStatus('idle')
-    } else if (tab === 'blocks') {
+    } else if (key === 'blocks') {
       setBlocks([...origBlocks.current])
       setBlocksDirty(false)
       setBlocksStatus('idle')
@@ -235,6 +242,8 @@ export default function ExplorerStudioClient({ explorerProfile, userProfile, ini
       setThemeStatus('idle')
     }
   }
+
+  function handleDiscard() { discardTab(tab) }
 
   function handleSave() {
     if (tab === 'content') handleContentSave()
@@ -253,7 +262,221 @@ export default function ExplorerStudioClient({ explorerProfile, userProfile, ini
     color: S.text, outline: 'none',
   }
 
+  // ── ContentPanel: render function (not a component) for the content tab ────
+  // Called as ContentPanel() so inputs never lose focus on re-render.
+  // Rendered in both the desktop left panel and the mobile StudioShell drawer.
+  function ContentPanel() {
+    return (
+      <div style={{ padding: '20px 20px 36px', display: 'flex', flexDirection: 'column', gap: 22 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span className="material-symbols-outlined" style={{ fontSize: 14, color: S.muted }}>edit</span>
+          <span style={{ fontFamily: MONO, fontSize: 10, color: S.muted, letterSpacing: '1.2px', textTransform: 'uppercase' }}>Public Profile</span>
+        </div>
+
+        {/* Display name */}
+        <div>
+          <FieldLabel label="Display Name" icon="badge" />
+          <input
+            type="text"
+            value={displayName}
+            onChange={(e) => { setDisplayName(e.target.value); markContentDirty() }}
+            maxLength={50}
+            placeholder="Your name…"
+            style={inputBase}
+          />
+        </div>
+
+        {/* Bio */}
+        <div>
+          <FieldLabel label="Bio" icon="notes" />
+          <textarea
+            value={bio}
+            onChange={(e) => { setBio(e.target.value); markContentDirty() }}
+            maxLength={300}
+            rows={4}
+            placeholder="Tell people about yourself and what kinds of events you love…"
+            style={{ ...inputBase, resize: 'vertical', lineHeight: 1.6 }}
+          />
+          <div style={{ textAlign: 'right', fontFamily: MONO, fontSize: 10, color: S.muted, marginTop: 4 }}>
+            {bio.length}/300
+          </div>
+        </div>
+
+        {/* City */}
+        <div>
+          <FieldLabel label="City" icon="location_on" />
+          <input
+            type="text"
+            value={city}
+            onChange={(e) => { setCity(e.target.value); markContentDirty() }}
+            maxLength={50}
+            placeholder="Your city…"
+            style={inputBase}
+          />
+        </div>
+
+        {/* Interests */}
+        <div>
+          <FieldLabel label={`Interests (${interestTags.length}/5)`} icon="interests" />
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, maxHeight: 240, overflowY: 'auto', padding: '2px 0' }}>
+            {INTEREST_TAGS.map((tag) => {
+              const active = interestTags.includes(tag.id)
+              const maxed  = !active && interestTags.length >= 5
+              return (
+                <button
+                  key={tag.id}
+                  onClick={() => !maxed && toggleInterestTag(tag.id)}
+                  title={maxed ? 'Remove a tag to select another' : undefined}
+                  style={{
+                    padding: '4px 9px', fontSize: 11, border: '1px solid',
+                    borderColor: active ? S.lav : 'rgba(155,143,255,0.2)',
+                    background: active ? S.lavTint : 'transparent',
+                    color: active ? S.lav : maxed ? S.muted : S.textSub,
+                    borderRadius: 4, cursor: maxed ? 'not-allowed' : 'pointer',
+                    fontFamily: INTER, transition: 'all 160ms ease',
+                    opacity: maxed ? 0.45 : 1,
+                  }}
+                >
+                  {tag.emoji} {tag.label}
+                </button>
+              )
+            })}
+          </div>
+          <p style={{ fontFamily: MONO, fontSize: 9, color: S.muted, marginTop: 6 }}>
+            Pick up to 5. These appear as pills on your public page.
+          </p>
+        </div>
+
+        {/* Instagram */}
+        <div>
+          <FieldLabel label="Instagram" icon="alternate_email" />
+          <div style={{ position: 'relative' }}>
+            <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', fontFamily: INTER, fontSize: 13, color: S.muted }}>@</span>
+            <input
+              type="text"
+              value={instagramHandle}
+              onChange={(e) => { setInstagramHandle(e.target.value.replace(/^@/, '')); markContentDirty() }}
+              placeholder="yourhandle"
+              style={{ ...inputBase, paddingLeft: 28 }}
+            />
+          </div>
+        </div>
+
+        {/* Locked note */}
+        <div style={{ borderTop: `1px solid ${S.border}`, paddingTop: 16, display: 'flex', alignItems: 'center', gap: 6 }}>
+          <span className="material-symbols-outlined" style={{ fontSize: 14, color: S.muted }}>lock</span>
+          <span style={{ fontFamily: MONO, fontSize: 10, color: S.muted, letterSpacing: '0.04em' }}>
+            Avatar is set via your profile photo.&nbsp;
+            <a href="/explore/dashboard" style={{ color: S.lav, textDecoration: 'none' }}>Edit profile →</a>
+          </span>
+        </div>
+      </div>
+    )
+  }
+
+  // ── renderExplorerPanel: per-tab drawer content for the mobile StudioShell ──
+  // BlockEditor and ThemeEditor render their own save controls; only the
+  // content tab needs a save bar added here.
+  function renderExplorerPanel(key: string): React.ReactNode {
+    if (key === 'content') {
+      return (
+        <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+          {/* Mobile save bar */}
+          <div style={{
+            padding: '8px 16px', flexShrink: 0,
+            borderBottom: `1px solid ${S.border}`,
+            display: 'flex', alignItems: 'center', gap: 8,
+            background: S.panel,
+          }}>
+            <div style={{ flex: 1, fontFamily: MONO, fontSize: 11 }}>
+              {contentSaving && <span style={{ color: S.muted }}>Saving…</span>}
+              {!contentSaving && contentStatus === 'saved'  && <span style={{ color: S.success }}>✓ Saved</span>}
+              {!contentSaving && contentStatus === 'error'  && <span style={{ color: S.danger  }}>Save failed</span>}
+              {!contentSaving && contentStatus === 'idle' && contentDirty && <span style={{ color: S.muted }}>Unsaved changes</span>}
+            </div>
+            {contentDirty && !contentSaving && (
+              <button
+                onClick={() => discardTab('content')}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: MONO, fontSize: 11, color: S.danger, padding: 0, textDecoration: 'underline' }}
+              >
+                Discard
+              </button>
+            )}
+            <button
+              onClick={handleContentSave}
+              disabled={contentSaving || !contentDirty}
+              style={{
+                background: contentSaving || !contentDirty ? 'rgba(155,143,255,0.25)' : S.lav,
+                border: 'none', borderRadius: 4, padding: '5px 14px',
+                color: contentSaving || !contentDirty ? 'rgba(0,0,0,0.4)' : '#0F1629',
+                cursor: contentSaving || !contentDirty ? 'not-allowed' : 'pointer',
+                fontFamily: MONO, fontSize: 10, fontWeight: 700,
+                letterSpacing: '0.8px', textTransform: 'uppercase',
+              }}
+            >
+              Save
+            </button>
+          </div>
+          {/* Content form — scrollable within its own container */}
+          <div style={{ flex: 1, overflowY: 'auto' }}>
+            {ContentPanel()}
+          </div>
+        </div>
+      )
+    }
+    if (key === 'blocks') {
+      return (
+        <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+          <BlockEditor
+            persona="explorer"
+            blocks={blocks}
+            events={[]}
+            onBlocksChange={handleBlocksChange}
+            isDirty={blocksDirty}
+            isSaving={blocksSaving || isPending}
+            onSave={handleBlocksSave}
+          />
+        </div>
+      )
+    }
+    if (key === 'theme') {
+      return (
+        <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+          <ThemeEditor
+            persona="explorer"
+            theme={theme}
+            onThemeChange={handleThemeChange}
+            onThemeReplace={handleThemeReplace}
+            isDirty={themeDirty}
+            isSaving={themeSaving}
+            onSave={handleThemeSave}
+          />
+        </div>
+      )
+    }
+    return null
+  }
+
   return (
+    <StudioShell
+      preview={
+        <ExplorerPagePreview
+          displayName={displayName}
+          bio={bio}
+          city={city}
+          interestTags={interestTags}
+          instagramHandle={instagramHandle}
+          avatarUrl={explorerProfile.avatar_url}
+          username={userProfile?.username}
+          blocks={blocks}
+          pageTheme={theme}
+        />
+      }
+      tabs={EXPLORER_TABS}
+      renderPanel={renderExplorerPanel}
+      accentColor={S.lav}
+      panelBg={S.panel}
+    >
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: S.bg }}>
 
       {/* ── Topbar ──────────────────────────────────────────────────────────── */}
@@ -328,112 +551,7 @@ export default function ExplorerStudioClient({ explorerProfile, userProfile, ini
         <div style={{ width: 380, flexShrink: 0, background: S.panel, borderRight: `1px solid ${S.border}`, overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
 
           {/* ── Content tab ───────────────────────────────────────────────── */}
-          {tab === 'content' && (
-            <div style={{ padding: '20px 20px 36px', display: 'flex', flexDirection: 'column', gap: 22 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span className="material-symbols-outlined" style={{ fontSize: 14, color: S.muted }}>edit</span>
-                <span style={{ fontFamily: MONO, fontSize: 10, color: S.muted, letterSpacing: '1.2px', textTransform: 'uppercase' }}>Public Profile</span>
-              </div>
-
-              {/* Display name */}
-              <div>
-                <FieldLabel label="Display Name" icon="badge" />
-                <input
-                  type="text"
-                  value={displayName}
-                  onChange={(e) => { setDisplayName(e.target.value); markContentDirty() }}
-                  maxLength={50}
-                  placeholder="Your name…"
-                  style={inputBase}
-                />
-              </div>
-
-              {/* Bio */}
-              <div>
-                <FieldLabel label="Bio" icon="notes" />
-                <textarea
-                  value={bio}
-                  onChange={(e) => { setBio(e.target.value); markContentDirty() }}
-                  maxLength={300}
-                  rows={4}
-                  placeholder="Tell people about yourself and what kinds of events you love…"
-                  style={{ ...inputBase, resize: 'vertical', lineHeight: 1.6 }}
-                />
-                <div style={{ textAlign: 'right', fontFamily: MONO, fontSize: 10, color: S.muted, marginTop: 4 }}>
-                  {bio.length}/300
-                </div>
-              </div>
-
-              {/* City */}
-              <div>
-                <FieldLabel label="City" icon="location_on" />
-                <input
-                  type="text"
-                  value={city}
-                  onChange={(e) => { setCity(e.target.value); markContentDirty() }}
-                  maxLength={50}
-                  placeholder="Your city…"
-                  style={inputBase}
-                />
-              </div>
-
-              {/* Interests */}
-              <div>
-                <FieldLabel label={`Interests (${interestTags.length}/5)`} icon="interests" />
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, maxHeight: 240, overflowY: 'auto', padding: '2px 0' }}>
-                  {INTEREST_TAGS.map((tag) => {
-                    const active = interestTags.includes(tag.id)
-                    const maxed  = !active && interestTags.length >= 5
-                    return (
-                      <button
-                        key={tag.id}
-                        onClick={() => !maxed && toggleInterestTag(tag.id)}
-                        title={maxed ? 'Remove a tag to select another' : undefined}
-                        style={{
-                          padding: '4px 9px', fontSize: 11, border: '1px solid',
-                          borderColor: active ? S.lav : 'rgba(155,143,255,0.2)',
-                          background: active ? S.lavTint : 'transparent',
-                          color: active ? S.lav : maxed ? S.muted : S.textSub,
-                          borderRadius: 4, cursor: maxed ? 'not-allowed' : 'pointer',
-                          fontFamily: INTER, transition: 'all 160ms ease',
-                          opacity: maxed ? 0.45 : 1,
-                        }}
-                      >
-                        {tag.emoji} {tag.label}
-                      </button>
-                    )
-                  })}
-                </div>
-                <p style={{ fontFamily: MONO, fontSize: 9, color: S.muted, marginTop: 6 }}>
-                  Pick up to 5. These appear as pills on your public page.
-                </p>
-              </div>
-
-              {/* Instagram */}
-              <div>
-                <FieldLabel label="Instagram" icon="alternate_email" />
-                <div style={{ position: 'relative' }}>
-                  <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', fontFamily: INTER, fontSize: 13, color: S.muted }}>@</span>
-                  <input
-                    type="text"
-                    value={instagramHandle}
-                    onChange={(e) => { setInstagramHandle(e.target.value.replace(/^@/, '')); markContentDirty() }}
-                    placeholder="yourhandle"
-                    style={{ ...inputBase, paddingLeft: 28 }}
-                  />
-                </div>
-              </div>
-
-              {/* Locked note */}
-              <div style={{ borderTop: `1px solid ${S.border}`, paddingTop: 16, display: 'flex', alignItems: 'center', gap: 6 }}>
-                <span className="material-symbols-outlined" style={{ fontSize: 14, color: S.muted }}>lock</span>
-                <span style={{ fontFamily: MONO, fontSize: 10, color: S.muted, letterSpacing: '0.04em' }}>
-                  Avatar is set via your profile photo.&nbsp;
-                  <a href="/explore/dashboard" style={{ color: S.lav, textDecoration: 'none' }}>Edit profile →</a>
-                </span>
-              </div>
-            </div>
-          )}
+          {tab === 'content' && ContentPanel()}
 
           {/* ── Blocks tab ────────────────────────────────────────────────── */}
           {tab === 'blocks' && (
@@ -491,5 +609,6 @@ export default function ExplorerStudioClient({ explorerProfile, userProfile, ini
         </div>
       </div>
     </div>
+    </StudioShell>
   )
 }

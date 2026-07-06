@@ -6,6 +6,7 @@ import { updateProfileTheme } from '@/app/actions/profile'
 import { reorderBlocks } from '@/app/actions/blocks'
 import BlockEditor from '@/components/dashboard/BlockEditor'
 import ThemeEditor from '@/components/dashboard/ThemeEditor'
+import StudioShell, { type StudioTab } from '@/components/dashboard/StudioShell'
 import AddaPagePreview from './AddaPagePreview'
 import AddaPublicPage from '@/app/adda/[slug]/AddaPublicPage'
 import type { AddaProfile, PageBlock } from '@/types/database'
@@ -33,6 +34,12 @@ const MONO  = "'JetBrains Mono', monospace"
 const INTER = "'Inter', system-ui, sans-serif"
 
 type Tab = 'content' | 'blocks' | 'theme'
+
+const ADDA_TABS: StudioTab[] = [
+  { key: 'content', label: 'Content', icon: 'edit'    },
+  { key: 'blocks',  label: 'Blocks',  icon: 'add_box' },
+  { key: 'theme',   label: 'Theme',   icon: 'palette' },
+]
 
 const EVENT_PREF_OPTIONS = [
   { id: 'music_live',  label: '🎵 Live Music' },
@@ -232,9 +239,9 @@ export default function AddaStudioClient({ adda, initialBlocks, upcomingEvents, 
     }
   }
 
-  function handleDiscard() {
+  function discardTab(key: string) {
     if (!window.confirm('Discard unsaved changes?')) return
-    if (tab === 'content') {
+    if (key === 'content') {
       setTagline(origContent.current.tagline)
       setEventPrefs([...origContent.current.eventPrefs])
       setHighlights([...origContent.current.highlights])
@@ -242,7 +249,7 @@ export default function AddaStudioClient({ adda, initialBlocks, upcomingEvents, 
       setInstagramHandle(origContent.current.instagramHandle)
       setContentDirty(false)
       setContentStatus('idle')
-    } else if (tab === 'blocks') {
+    } else if (key === 'blocks') {
       setBlocks([...origBlocks.current])
       setBlocksDirty(false)
       setBlocksStatus('idle')
@@ -252,6 +259,8 @@ export default function AddaStudioClient({ adda, initialBlocks, upcomingEvents, 
       setThemeStatus('idle')
     }
   }
+
+  function handleDiscard() { discardTab(tab) }
 
   function handleSave() {
     if (tab === 'content') handleContentSave()
@@ -270,7 +279,243 @@ export default function AddaStudioClient({ adda, initialBlocks, upcomingEvents, 
     color: S.text, outline: 'none',
   }
 
+  // ── liveAdda: DB record with in-progress edits applied ────────────────────
+  // Used in both the desktop browser-mockup preview and the mobile shell preview
+  // so the merge logic is defined once.
+  const liveAdda = {
+    ...adda,
+    contact_whatsapp: contactWhatsapp || adda.contact_whatsapp,
+    instagram_handle: instagramHandle || adda.instagram_handle,
+    event_preferences: eventPrefs as unknown as typeof adda.event_preferences,
+    pricing_config: {
+      ...(typeof adda.pricing_config === 'object' && adda.pricing_config !== null
+        ? adda.pricing_config as Record<string, unknown>
+        : {}),
+      tagline,
+      studio_highlights: highlights,
+    } as unknown as typeof adda.pricing_config,
+  }
+
+  // ── ContentPanel: render function (not a component) for the content tab ────
+  // Called as ContentPanel() — not as <ContentPanel /> — so React never creates
+  // a component instance boundary and inputs never lose focus on re-render.
+  // Rendered in both the desktop left panel and the mobile StudioShell drawer.
+  function ContentPanel() {
+    return (
+      <div style={{ padding: '20px 20px 40px', display: 'flex', flexDirection: 'column', gap: 0 }}>
+
+        {/* ─── Section: PAGE VOICE ──────────────────────────────────── */}
+        <SectionDivider label="Page Voice" icon="record_voice_over" />
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 18, padding: '18px 0 24px' }}>
+
+          {/* Tagline */}
+          <div>
+            <FieldLabel label="Tagline" icon="format_quote" />
+            <input
+              type="text"
+              value={tagline}
+              onChange={(e) => { setTagline(e.target.value); markContentDirty() }}
+              maxLength={100}
+              placeholder="One punchy line about your space…"
+              style={inputBase}
+            />
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4 }}>
+              <span style={{ fontFamily: MONO, fontSize: 9, color: S.muted }}>Shown below your venue name on the public page</span>
+              <span style={{ fontFamily: MONO, fontSize: 9, color: S.muted }}>{tagline.length}/100</span>
+            </div>
+          </div>
+
+          {/* Key highlights */}
+          <div>
+            <FieldLabel label="Key Highlights" icon="star" />
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {highlights.map((h, i) => (
+                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{ color: S.teal, fontSize: 10, flexShrink: 0, fontFamily: MONO }}>✦</span>
+                  <input
+                    type="text"
+                    value={h}
+                    onChange={(e) => setHighlight(i, e.target.value)}
+                    maxLength={100}
+                    placeholder={['Natural light & open layout', 'PA system included', 'Easy parking'][i] + '…'}
+                    style={inputBase}
+                  />
+                </div>
+              ))}
+            </div>
+            <p style={{ fontFamily: MONO, fontSize: 9, color: S.muted, marginTop: 6 }}>Three selling points shown as bullet callouts on your page.</p>
+          </div>
+        </div>
+
+        {/* ─── Section: WHAT WE HOST ────────────────────────────────── */}
+        <SectionDivider label="What We Host" icon="event" />
+        <div style={{ padding: '18px 0 24px' }}>
+          <FieldLabel label="Event types you welcome" icon="category" />
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 4 }}>
+            {EVENT_PREF_OPTIONS.map((opt) => {
+              const active = eventPrefs.includes(opt.id)
+              return (
+                <button
+                  key={opt.id}
+                  onClick={() => toggleEventPref(opt.id)}
+                  style={{
+                    padding: '5px 11px', fontSize: 11.5, border: '1px solid',
+                    borderColor: active ? S.teal : 'rgba(93,217,208,0.18)',
+                    background: active ? S.tealTint : 'transparent',
+                    color: active ? S.teal : S.textSub,
+                    borderRadius: 4, cursor: 'pointer', fontFamily: INTER,
+                    transition: 'all 160ms ease',
+                  }}
+                >
+                  {opt.label}
+                </button>
+              )
+            })}
+          </div>
+          <p style={{ fontFamily: MONO, fontSize: 9, color: S.muted, marginTop: 8 }}>Shown as "Best for" tags on your listing.</p>
+        </div>
+
+        {/* ─── Section: SOCIAL & CONTACT ────────────────────────────── */}
+        <SectionDivider label="Social & Contact" icon="link" />
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14, padding: '18px 0 24px' }}>
+          <div>
+            <FieldLabel label="WhatsApp (booking enquiries)" icon="chat" />
+            <input
+              type="tel"
+              value={contactWhatsapp}
+              onChange={(e) => { setContactWhatsapp(e.target.value); markContentDirty() }}
+              placeholder="+91 98765 43210"
+              style={inputBase}
+            />
+            <p style={{ fontFamily: MONO, fontSize: 9, color: S.muted, marginTop: 4 }}>Appears as the primary "Book this space" CTA on your page.</p>
+          </div>
+          <div>
+            <FieldLabel label="Instagram Handle" icon="alternate_email" />
+            <div style={{ position: 'relative' }}>
+              <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', fontFamily: INTER, fontSize: 13, color: S.muted }}>@</span>
+              <input
+                type="text"
+                value={instagramHandle}
+                onChange={(e) => { setInstagramHandle(e.target.value.replace(/^@/, '')); markContentDirty() }}
+                placeholder="yourvenue"
+                style={{ ...inputBase, paddingLeft: 28 }}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Locked fields note */}
+        <div style={{ borderTop: `1px solid ${S.border}`, paddingTop: 14, display: 'flex', alignItems: 'center', gap: 6 }}>
+          <span className="material-symbols-outlined" style={{ fontSize: 13, color: S.muted }}>info</span>
+          <span style={{ fontFamily: MONO, fontSize: 9.5, color: S.muted, lineHeight: 1.5 }}>
+            Venue name, type & location are managed in&nbsp;
+            <a href="/business/venue/venue" style={{ color: S.teal, textDecoration: 'none' }}>My Venue →</a>
+          </span>
+        </div>
+      </div>
+    )
+  }
+
+  // ── renderAddaPanel: per-tab drawer content for the mobile StudioShell ─────
+  // BlockEditor and ThemeEditor render their own save controls; only the
+  // content tab needs a save bar added here.
+  function renderAddaPanel(key: string): React.ReactNode {
+    if (key === 'content') {
+      return (
+        <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+          {/* Mobile save bar */}
+          <div style={{
+            padding: '8px 16px', flexShrink: 0,
+            borderBottom: `1px solid ${S.border}`,
+            display: 'flex', alignItems: 'center', gap: 8,
+            background: S.panel,
+          }}>
+            <div style={{ flex: 1, fontFamily: MONO, fontSize: 11 }}>
+              {contentSaving && <span style={{ color: S.muted }}>Saving…</span>}
+              {!contentSaving && contentStatus === 'saved'  && <span style={{ color: S.success }}>✓ Saved</span>}
+              {!contentSaving && contentStatus === 'error'  && <span style={{ color: S.danger  }}>Save failed</span>}
+              {!contentSaving && contentStatus === 'idle' && contentDirty && <span style={{ color: S.muted }}>Unsaved changes</span>}
+            </div>
+            {contentDirty && !contentSaving && (
+              <button
+                onClick={() => discardTab('content')}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: MONO, fontSize: 11, color: S.danger, padding: 0, textDecoration: 'underline' }}
+              >
+                Discard
+              </button>
+            )}
+            <button
+              onClick={() => { handleContentSave() }}
+              disabled={contentSaving || !contentDirty}
+              style={{
+                background: contentSaving || !contentDirty ? 'rgba(93,217,208,0.25)' : S.teal,
+                border: 'none', borderRadius: 4, padding: '5px 14px',
+                color: contentSaving || !contentDirty ? 'rgba(0,0,0,0.4)' : '#060D11',
+                cursor: contentSaving || !contentDirty ? 'not-allowed' : 'pointer',
+                fontFamily: MONO, fontSize: 10, fontWeight: 700,
+                letterSpacing: '0.8px', textTransform: 'uppercase',
+              }}
+            >
+              Save
+            </button>
+          </div>
+          {/* Content form — scrollable within its own container */}
+          <div style={{ flex: 1, overflowY: 'auto' }}>
+            {ContentPanel()}
+          </div>
+        </div>
+      )
+    }
+    if (key === 'blocks') {
+      return (
+        <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+          <BlockEditor
+            persona="adda"
+            blocks={blocks}
+            events={[]}
+            onBlocksChange={handleBlocksChange}
+            isDirty={blocksDirty}
+            isSaving={blocksSaving || isPending}
+            onSave={handleBlocksSave}
+          />
+        </div>
+      )
+    }
+    if (key === 'theme') {
+      return (
+        <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+          <ThemeEditor
+            persona="adda"
+            theme={theme}
+            onThemeChange={handleThemeChange}
+            onThemeReplace={handleThemeReplace}
+            isDirty={themeDirty}
+            isSaving={themeSaving}
+            onSave={handleThemeSave}
+          />
+        </div>
+      )
+    }
+    return null
+  }
+
   return (
+    <StudioShell
+      preview={
+        <AddaPublicPage
+          adda={liveAdda}
+          upcomingEvents={[]}
+          pastEvents={[]}
+          stats={{ total_events: 0, average_rating: 0 }}
+          theme={theme}
+          isPreview
+        />
+      }
+      tabs={ADDA_TABS}
+      renderPanel={renderAddaPanel}
+      accentColor={S.teal}
+      panelBg={S.panel}
+    >
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: S.bg }}>
 
       {/* ── Topbar ──────────────────────────────────────────────────────────── */}
@@ -367,119 +612,7 @@ export default function AddaStudioClient({ adda, initialBlocks, upcomingEvents, 
         <div style={{ width: 380, flexShrink: 0, background: S.panel, borderRight: `1px solid ${S.border}`, overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
 
           {/* ── Content tab ───────────────────────────────────────────────── */}
-          {tab === 'content' && (
-            <div style={{ padding: '20px 20px 40px', display: 'flex', flexDirection: 'column', gap: 0 }}>
-
-              {/* ─── Section: PAGE VOICE ──────────────────────────────────── */}
-              <SectionDivider label="Page Voice" icon="record_voice_over" />
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 18, padding: '18px 0 24px' }}>
-
-                {/* Tagline */}
-                <div>
-                  <FieldLabel label="Tagline" icon="format_quote" />
-                  <input
-                    type="text"
-                    value={tagline}
-                    onChange={(e) => { setTagline(e.target.value); markContentDirty() }}
-                    maxLength={100}
-                    placeholder="One punchy line about your space…"
-                    style={inputBase}
-                  />
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4 }}>
-                    <span style={{ fontFamily: MONO, fontSize: 9, color: S.muted }}>Shown below your venue name on the public page</span>
-                    <span style={{ fontFamily: MONO, fontSize: 9, color: S.muted }}>{tagline.length}/100</span>
-                  </div>
-                </div>
-
-                {/* Key highlights */}
-                <div>
-                  <FieldLabel label="Key Highlights" icon="star" />
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                    {highlights.map((h, i) => (
-                      <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <span style={{ color: S.teal, fontSize: 10, flexShrink: 0, fontFamily: MONO }}>✦</span>
-                        <input
-                          type="text"
-                          value={h}
-                          onChange={(e) => setHighlight(i, e.target.value)}
-                          maxLength={100}
-                          placeholder={['Natural light & open layout', 'PA system included', 'Easy parking'][i] + '…'}
-                          style={inputBase}
-                        />
-                      </div>
-                    ))}
-                  </div>
-                  <p style={{ fontFamily: MONO, fontSize: 9, color: S.muted, marginTop: 6 }}>Three selling points shown as bullet callouts on your page.</p>
-                </div>
-              </div>
-
-              {/* ─── Section: WHAT WE HOST ────────────────────────────────── */}
-              <SectionDivider label="What We Host" icon="event" />
-              <div style={{ padding: '18px 0 24px' }}>
-                <FieldLabel label="Event types you welcome" icon="category" />
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 4 }}>
-                  {EVENT_PREF_OPTIONS.map((opt) => {
-                    const active = eventPrefs.includes(opt.id)
-                    return (
-                      <button
-                        key={opt.id}
-                        onClick={() => toggleEventPref(opt.id)}
-                        style={{
-                          padding: '5px 11px', fontSize: 11.5, border: '1px solid',
-                          borderColor: active ? S.teal : 'rgba(93,217,208,0.18)',
-                          background: active ? S.tealTint : 'transparent',
-                          color: active ? S.teal : S.textSub,
-                          borderRadius: 4, cursor: 'pointer', fontFamily: INTER,
-                          transition: 'all 160ms ease',
-                        }}
-                      >
-                        {opt.label}
-                      </button>
-                    )
-                  })}
-                </div>
-                <p style={{ fontFamily: MONO, fontSize: 9, color: S.muted, marginTop: 8 }}>Shown as "Best for" tags on your listing.</p>
-              </div>
-
-              {/* ─── Section: SOCIAL & CONTACT ────────────────────────────── */}
-              <SectionDivider label="Social & Contact" icon="link" />
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 14, padding: '18px 0 24px' }}>
-                <div>
-                  <FieldLabel label="WhatsApp (booking enquiries)" icon="chat" />
-                  <input
-                    type="tel"
-                    value={contactWhatsapp}
-                    onChange={(e) => { setContactWhatsapp(e.target.value); markContentDirty() }}
-                    placeholder="+91 98765 43210"
-                    style={inputBase}
-                  />
-                  <p style={{ fontFamily: MONO, fontSize: 9, color: S.muted, marginTop: 4 }}>Appears as the primary "Book this space" CTA on your page.</p>
-                </div>
-                <div>
-                  <FieldLabel label="Instagram Handle" icon="alternate_email" />
-                  <div style={{ position: 'relative' }}>
-                    <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', fontFamily: INTER, fontSize: 13, color: S.muted }}>@</span>
-                    <input
-                      type="text"
-                      value={instagramHandle}
-                      onChange={(e) => { setInstagramHandle(e.target.value.replace(/^@/, '')); markContentDirty() }}
-                      placeholder="yourvenue"
-                      style={{ ...inputBase, paddingLeft: 28 }}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Locked fields note */}
-              <div style={{ borderTop: `1px solid ${S.border}`, paddingTop: 14, display: 'flex', alignItems: 'center', gap: 6 }}>
-                <span className="material-symbols-outlined" style={{ fontSize: 13, color: S.muted }}>info</span>
-                <span style={{ fontFamily: MONO, fontSize: 9.5, color: S.muted, lineHeight: 1.5 }}>
-                  Venue name, type & location are managed in&nbsp;
-                  <a href="/business/venue/venue" style={{ color: S.teal, textDecoration: 'none' }}>My Venue →</a>
-                </span>
-              </div>
-            </div>
-          )}
+          {tab === 'content' && ContentPanel()}
 
           {/* ── Blocks tab ────────────────────────────────────────────────── */}
           {tab === 'blocks' && (
@@ -568,21 +701,12 @@ export default function AddaStudioClient({ adda, initialBlocks, upcomingEvents, 
                 <div style={{ overflowY: 'auto', overflowX: 'hidden', maxHeight: 'calc(100vh - 162px)' }}>
                   <div style={{ width: 1280, zoom: 0.65, transformOrigin: 'top left' }}>
                   <AddaPublicPage
-                    adda={{
-                      ...adda,
-                      contact_whatsapp: contactWhatsapp || adda.contact_whatsapp,
-                      instagram_handle: instagramHandle || adda.instagram_handle,
-                      event_preferences: eventPrefs as unknown as typeof adda.event_preferences,
-                      pricing_config: {
-                        ...(typeof adda.pricing_config === 'object' && adda.pricing_config !== null ? adda.pricing_config as Record<string, unknown> : {}),
-                        tagline,
-                        studio_highlights: highlights,
-                      } as unknown as typeof adda.pricing_config,
-                    }}
+                    adda={liveAdda}
                     upcomingEvents={[]}
                     pastEvents={[]}
                     stats={{ total_events: 0, average_rating: 0 }}
                     theme={theme}
+                    isPreview
                   />
                   </div>
                 </div>
@@ -592,5 +716,6 @@ export default function AddaStudioClient({ adda, initialBlocks, upcomingEvents, 
         </div>
       </div>
     </div>
+    </StudioShell>
   )
 }

@@ -7,12 +7,14 @@ import type { ProfileTheme } from '@/types/theme'
 import BlockEditor from '@/components/dashboard/BlockEditor'
 import ThemeEditor from '@/components/dashboard/ThemeEditor'
 import PreviewPanel from '@/components/dashboard/PreviewPanel'
+import PublicProfilePage from '@/components/profile/PublicProfilePage'
+import StudioShell, { type StudioTab } from '@/components/dashboard/StudioShell'
 import { reorderBlocks, toggleBlockVisibility } from '@/app/actions/blocks'
-import { updateProfileTheme } from '@/app/actions/profile'
+import { updateProfileTheme, updateCreatorStudioContent } from '@/app/actions/profile'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-type StudioTab = 'blocks' | 'theme'
+type TabKey = 'content' | 'blocks' | 'theme'
 type Device = 'mobile' | 'desktop'
 
 interface StudioClientProps {
@@ -26,6 +28,9 @@ interface StudioClientProps {
 // ── Studio colour tokens (always dark, creation-tool aesthetic) ───────────────
 // The studio is intentionally dark regardless of the cream dashboard theme.
 // BlockEditor + ThemeEditor were built for dark backgrounds.
+
+const MONO  = "'JetBrains Mono', monospace"
+const INTER = "'Inter', system-ui, sans-serif"
 
 const S = {
   bg:         '#1A2744',   // deep navy — studio identity
@@ -43,6 +48,12 @@ const S = {
   preview:    '#F2EDE3',   // right panel: warm cream canvas
 }
 
+const CREATOR_TABS: StudioTab[] = [
+  { key: 'content', label: 'Content', icon: 'edit'    },
+  { key: 'blocks',  label: 'Blocks',  icon: 'add_box' },
+  { key: 'theme',   label: 'Theme',   icon: 'palette' },
+]
+
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export default function StudioClient({
@@ -58,17 +69,47 @@ export default function StudioClient({
     : `/${profile.username}`
 
   const router = useRouter()
-  const [tab, setTab] = useState<StudioTab>('blocks')
+  const [tab, setTab] = useState<TabKey>('content')
   const [device, setDevice] = useState<Device>('mobile')
+
+  // ── Content tab state ────────────────────────────────────────────────────
+  const [bio,             setBio]             = useState(profile.bio             ?? '')
+  const [instagramHandle, setInstagramHandle] = useState(profile.instagram_handle ?? '')
+  const [websiteUrl,      setWebsiteUrl]      = useState(profile.website_url      ?? '')
+  const [contactEmail,    setContactEmail]    = useState(profile.contact_email    ?? '')
+  const [contentDirty,    setContentDirty]    = useState(false)
+  const [contentSaving,   setContentSaving]   = useState(false)
+  const [contentStatus,   setContentStatus]   = useState<'idle' | 'saved' | 'error'>('idle')
+
+  const origContent = useRef({
+    bio:             profile.bio             ?? '',
+    instagramHandle: profile.instagram_handle ?? '',
+    websiteUrl:      profile.website_url      ?? '',
+    contactEmail:    profile.contact_email    ?? '',
+  })
+
+  // ── Blocks tab state ─────────────────────────────────────────────────────
   const [blocks, setBlocks] = useState<PageBlock[]>(initialBlocks)
-  const [theme, setTheme] = useState<ProfileTheme>(initialTheme)
   const [highlightedBlockId, setHighlightedBlockId] = useState<string | null>(null)
-  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle')
-  const [isDirty, setIsDirty] = useState(false)
+  const [blocksDirty,  setBlocksDirty]  = useState(false)
+  const [blocksSaving, setBlocksSaving] = useState(false)
+  const [blocksStatus, setBlocksStatus] = useState<'idle' | 'saved' | 'error'>('idle')
+
+  // ── Theme tab state ──────────────────────────────────────────────────────
+  const [theme, setTheme] = useState<ProfileTheme>(initialTheme)
+  const [themeDirty,  setThemeDirty]  = useState(false)
+  const [themeSaving, setThemeSaving] = useState(false)
+  const [themeStatus, setThemeStatus] = useState<'idle' | 'saved' | 'error'>('idle')
+
   const [isPending, startTransition] = useTransition()
   const origBlocks = useRef<PageBlock[]>([...initialBlocks])
   const origTheme  = useRef<ProfileTheme>({ ...initialTheme })
   const [revealBanner, setRevealBanner] = useState(showRevealBanner)
+
+  // ── Derived per-tab dirty / saving / status ──────────────────────────────
+  const isDirty  = tab === 'content' ? contentDirty  : tab === 'blocks' ? blocksDirty  : themeDirty
+  const isSaving = tab === 'content' ? contentSaving : tab === 'blocks' ? blocksSaving : themeSaving
+  const status   = tab === 'content' ? contentStatus : tab === 'blocks' ? blocksStatus : themeStatus
 
   useEffect(() => {
     if (!showRevealBanner) return
@@ -79,69 +120,332 @@ export default function StudioClient({
     return () => clearTimeout(t)
   }, [showRevealBanner, router])
 
+  // ── Content handlers ────────────────────────────────────────────────────────
+
+  function markContentDirty() { setContentDirty(true); setContentStatus('idle') }
+
+  async function handleContentSave() {
+    setContentSaving(true)
+    const result = await updateCreatorStudioContent({
+      bio,
+      instagram_handle: instagramHandle,
+      website_url:      websiteUrl,
+      contact_email:    contactEmail,
+    })
+    setContentSaving(false)
+    if (result.error) {
+      setContentStatus('error')
+    } else {
+      setContentStatus('saved')
+      setContentDirty(false)
+      origContent.current = { bio, instagramHandle, websiteUrl, contactEmail }
+      setTimeout(() => setContentStatus('idle'), 2000)
+    }
+  }
+
+  // ── Blocks handlers ─────────────────────────────────────────────────────────
+
   const handleBlocksChange = useCallback((updated: PageBlock[]) => {
     setBlocks(updated)
-    setIsDirty(true)
+    setBlocksDirty(true)
+    setBlocksStatus('idle')
   }, [])
 
-  const handleThemeChange = useCallback((partial: Partial<ProfileTheme>) => {
-    setTheme((prev) => ({ ...prev, ...partial }))
-    setIsDirty(true)
-  }, [])
-
-  const handleThemeReplace = useCallback((newTheme: ProfileTheme) => {
-    setTheme(newTheme)
-    setIsDirty(true)
-  }, [])
-
-  async function handleSave() {
-    if (!isDirty) return
-    setSaveStatus('saving')
+  async function handleBlocksSave() {
+    setBlocksSaving(true)
     startTransition(async () => {
       try {
-        if (tab === 'blocks') {
-          const orderedIds = blocks.map((b) => b.id)
-          await reorderBlocks(orderedIds)
-          for (const b of blocks) {
-            await toggleBlockVisibility(b.id, b.is_visible)
-          }
-          origBlocks.current = [...blocks]
-        } else {
-          await updateProfileTheme(theme)
-          origTheme.current = { ...theme }
+        const orderedIds = blocks.map((b) => b.id)
+        await reorderBlocks(orderedIds)
+        for (const b of blocks) {
+          await toggleBlockVisibility(b.id, b.is_visible)
         }
-        setSaveStatus('saved')
-        setIsDirty(false)
-        setTimeout(() => setSaveStatus('idle'), 2000)
+        origBlocks.current = [...blocks]
+        setBlocksSaving(false)
+        setBlocksDirty(false)
+        setBlocksStatus('saved')
+        setTimeout(() => setBlocksStatus('idle'), 2000)
       } catch {
-        setSaveStatus('idle')
+        setBlocksSaving(false)
       }
     })
   }
 
-  function handleDiscard() {
-    if (!window.confirm('Discard unsaved changes?')) return
-    if (tab === 'blocks') {
-      setBlocks([...origBlocks.current])
+  // ── Theme handlers ───────────────────────────────────────────────────────────
+
+  const handleThemeChange = useCallback((partial: Partial<ProfileTheme>) => {
+    setTheme((prev) => ({ ...prev, ...partial }))
+    setThemeDirty(true)
+    setThemeStatus('idle')
+  }, [])
+
+  const handleThemeReplace = useCallback((newTheme: ProfileTheme) => {
+    setTheme(newTheme)
+    setThemeDirty(true)
+    setThemeStatus('idle')
+  }, [])
+
+  async function handleThemeSave() {
+    setThemeSaving(true)
+    const result = await updateProfileTheme(theme)
+    setThemeSaving(false)
+    if (result.error) {
+      setThemeStatus('error')
     } else {
-      setTheme({ ...origTheme.current })
+      setThemeStatus('saved')
+      setThemeDirty(false)
+      origTheme.current = { ...theme }
+      setTimeout(() => setThemeStatus('idle'), 2000)
     }
-    setIsDirty(false)
-    setSaveStatus('idle')
   }
 
+  // ── Unified save / discard for desktop topbar ────────────────────────────────
+
+  function handleSave() {
+    if (tab === 'content') handleContentSave()
+    else if (tab === 'blocks') handleBlocksSave()
+    else handleThemeSave()
+  }
+
+  function discardTab(key: string) {
+    if (!window.confirm('Discard unsaved changes?')) return
+    if (key === 'content') {
+      setBio(origContent.current.bio)
+      setInstagramHandle(origContent.current.instagramHandle)
+      setWebsiteUrl(origContent.current.websiteUrl)
+      setContactEmail(origContent.current.contactEmail)
+      setContentDirty(false)
+      setContentStatus('idle')
+    } else if (key === 'blocks') {
+      setBlocks([...origBlocks.current])
+      setBlocksDirty(false)
+      setBlocksStatus('idle')
+    } else {
+      setTheme({ ...origTheme.current })
+      setThemeDirty(false)
+      setThemeStatus('idle')
+    }
+  }
+
+  function handleDiscard() { discardTab(tab) }
+
   const saveLabel =
-    saveStatus === 'saving' ? 'Saving…'
-    : saveStatus === 'saved' ? 'Saved ✓'
-    : isDirty ? 'Unsaved'
+    isSaving           ? 'Saving…'
+    : status === 'saved' ? 'Saved ✓'
+    : isDirty            ? 'Unsaved'
     : 'All saved'
 
   const saveColor =
-    saveStatus === 'saved' ? '#5DD9D0'
-    : isDirty ? '#F5A800'
+    status === 'saved' ? '#5DD9D0'
+    : isDirty          ? '#F5A800'
     : S.textMuted
 
+  // ── Shared input style ────────────────────────────────────────────────────────
+
+  const inputBase: React.CSSProperties = {
+    width: '100%', boxSizing: 'border-box',
+    background: 'rgba(255,255,255,0.06)',
+    border: '1px solid rgba(255,255,255,0.12)',
+    borderRadius: 4, padding: '10px 12px',
+    fontFamily: INTER, fontSize: 13.5,
+    color: S.text, outline: 'none',
+  }
+
+  // ── ContentPanel: render function (not a component) for the content tab ───────
+  // Called as ContentPanel() — not as <ContentPanel /> — so inputs never lose
+  // focus on re-render. Rendered in both the desktop left panel and the mobile
+  // StudioShell drawer.
+  function ContentPanel() {
+    return (
+      <div style={{ padding: '20px 20px 36px', display: 'flex', flexDirection: 'column', gap: 22 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span className="material-symbols-outlined" style={{ fontSize: 14, color: S.textMuted }}>edit</span>
+          <span style={{ fontFamily: MONO, fontSize: 10, color: S.textMuted, letterSpacing: '1.2px', textTransform: 'uppercase' }}>
+            Page Content
+          </span>
+        </div>
+
+        {/* Bio */}
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+            <span className="material-symbols-outlined" style={{ fontSize: 14, color: S.textMuted }}>description</span>
+            <span style={{ fontFamily: MONO, fontSize: 10, color: S.textMuted, letterSpacing: '0.12em', textTransform: 'uppercase' }}>Bio</span>
+          </div>
+          <textarea
+            value={bio}
+            onChange={e => { setBio(e.target.value); markContentDirty() }}
+            maxLength={160}
+            rows={4}
+            placeholder="Describe yourself — what you make, what you care about…"
+            style={{ ...inputBase, resize: 'vertical', lineHeight: 1.6 }}
+          />
+          <div style={{ textAlign: 'right', fontFamily: MONO, fontSize: 10, color: S.textMuted, marginTop: 4 }}>
+            {bio.length}/160
+          </div>
+        </div>
+
+        {/* Contact email + Website */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+              <span className="material-symbols-outlined" style={{ fontSize: 14, color: S.textMuted }}>mail</span>
+              <span style={{ fontFamily: MONO, fontSize: 10, color: S.textMuted, letterSpacing: '0.12em', textTransform: 'uppercase' }}>Contact Email</span>
+            </div>
+            <input
+              type="email"
+              value={contactEmail}
+              onChange={e => { setContactEmail(e.target.value); markContentDirty() }}
+              placeholder="you@email.com"
+              style={inputBase}
+            />
+          </div>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+              <span className="material-symbols-outlined" style={{ fontSize: 14, color: S.textMuted }}>language</span>
+              <span style={{ fontFamily: MONO, fontSize: 10, color: S.textMuted, letterSpacing: '0.12em', textTransform: 'uppercase' }}>Website</span>
+            </div>
+            <input
+              type="url"
+              value={websiteUrl}
+              onChange={e => { setWebsiteUrl(e.target.value); markContentDirty() }}
+              placeholder="https://yoursite.com"
+              style={inputBase}
+            />
+          </div>
+        </div>
+
+        {/* Instagram */}
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+            <span className="material-symbols-outlined" style={{ fontSize: 14, color: S.textMuted }}>alternate_email</span>
+            <span style={{ fontFamily: MONO, fontSize: 10, color: S.textMuted, letterSpacing: '0.12em', textTransform: 'uppercase' }}>Instagram</span>
+          </div>
+          <div style={{ position: 'relative' }}>
+            <span style={{
+              position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)',
+              fontFamily: INTER, fontSize: 13, color: S.textMuted, userSelect: 'none',
+            }}>@</span>
+            <input
+              type="text"
+              value={instagramHandle}
+              onChange={e => { setInstagramHandle(e.target.value.replace(/^@/, '')); markContentDirty() }}
+              placeholder="yourhandle"
+              style={{ ...inputBase, paddingLeft: 28 }}
+            />
+          </div>
+        </div>
+
+        {/* Locked note */}
+        <div style={{ borderTop: `1px solid ${S.border}`, paddingTop: 16, display: 'flex', alignItems: 'center', gap: 6 }}>
+          <span className="material-symbols-outlined" style={{ fontSize: 14, color: S.textMuted }}>lock</span>
+          <span style={{ fontFamily: MONO, fontSize: 10, color: S.textMuted, letterSpacing: '0.04em' }}>
+            Username, city &amp; creator type are fixed.&nbsp;
+            <a href="/dashboard/profile/settings" style={{ color: S.coral, textDecoration: 'none' }}>
+              Full profile settings →
+            </a>
+          </span>
+        </div>
+      </div>
+    )
+  }
+
+  // ── renderCreatorPanel: per-tab drawer content for the mobile StudioShell ─────
+  function renderCreatorPanel(key: string): React.ReactNode {
+    if (key === 'content') {
+      return (
+        <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+          {/* Mobile save bar */}
+          <div style={{
+            padding: '8px 16px', flexShrink: 0,
+            borderBottom: `1px solid ${S.panelBorder}`,
+            display: 'flex', alignItems: 'center', gap: 8,
+            background: S.panel,
+          }}>
+            <div style={{ flex: 1, fontFamily: MONO, fontSize: 11 }}>
+              {contentSaving && <span style={{ color: S.textMuted }}>Saving…</span>}
+              {!contentSaving && contentStatus === 'saved'  && <span style={{ color: '#5DD9D0' }}>✓ Saved</span>}
+              {!contentSaving && contentStatus === 'error'  && <span style={{ color: '#E05555' }}>Save failed</span>}
+              {!contentSaving && contentStatus === 'idle' && contentDirty && <span style={{ color: S.textMuted }}>Unsaved changes</span>}
+            </div>
+            {contentDirty && !contentSaving && (
+              <button
+                onClick={() => discardTab('content')}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: MONO, fontSize: 11, color: '#E05555', padding: 0, textDecoration: 'underline' }}
+              >
+                Discard
+              </button>
+            )}
+            <button
+              onClick={handleContentSave}
+              disabled={contentSaving || !contentDirty}
+              style={{
+                background: contentSaving || !contentDirty ? 'rgba(232,112,90,0.25)' : S.coral,
+                border: 'none', borderRadius: 4, padding: '5px 14px',
+                color: contentSaving || !contentDirty ? 'rgba(0,0,0,0.4)' : '#fff',
+                cursor: contentSaving || !contentDirty ? 'not-allowed' : 'pointer',
+                fontFamily: MONO, fontSize: 10, fontWeight: 700,
+                letterSpacing: '0.8px', textTransform: 'uppercase',
+              }}
+            >
+              Save
+            </button>
+          </div>
+          {/* Content form — scrollable within its own container */}
+          <div style={{ flex: 1, overflowY: 'auto' }}>
+            {ContentPanel()}
+          </div>
+        </div>
+      )
+    }
+    if (key === 'blocks') {
+      return (
+        <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+          <BlockEditor
+            blocks={blocks}
+            events={upcomingEvents}
+            onBlocksChange={handleBlocksChange}
+            onEditBlock={(id) => setHighlightedBlockId(id)}
+            isDirty={blocksDirty}
+            isSaving={blocksSaving || isPending}
+            onSave={handleBlocksSave}
+            userTier={profile.user_tier}
+          />
+        </div>
+      )
+    }
+    if (key === 'theme') {
+      return (
+        <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+          <ThemeEditor
+            theme={theme}
+            onThemeChange={handleThemeChange}
+            onThemeReplace={handleThemeReplace}
+            isDirty={themeDirty}
+            isSaving={themeSaving}
+            onSave={handleThemeSave}
+          />
+        </div>
+      )
+    }
+    return null
+  }
+
   return (
+    <StudioShell
+      preview={
+        <PublicProfilePage
+          profile={profile}
+          blocks={blocks}
+          upcomingEvents={upcomingEvents}
+          theme={theme}
+          isPreview
+        />
+      }
+      tabs={CREATOR_TABS}
+      renderPanel={renderCreatorPanel}
+      accentColor={S.coral}
+      panelBg={S.panel}
+    >
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: S.bg }}>
 
       {/* ── Reveal banner ──────────────────────────────────────────────────── */}
@@ -182,19 +486,27 @@ export default function StudioClient({
           borderRadius: 8,
           border: `1px solid ${S.border}`,
         }}>
-          {(['blocks', 'theme'] as StudioTab[]).map((t) => (
+          {([
+            { key: 'content', label: 'Content', icon: 'edit'    },
+            { key: 'blocks',  label: 'Blocks',  icon: 'add_box' },
+            { key: 'theme',   label: 'Theme',   icon: 'palette' },
+          ] as { key: TabKey; label: string; icon: string }[]).map(({ key, label, icon }) => (
             <button
-              key={t}
-              onClick={() => setTab(t)}
+              key={key}
+              onClick={() => setTab(key)}
               style={{
-                padding: '4px 14px', borderRadius: 6, fontSize: 12.5, fontWeight: 600,
+                display: 'flex', alignItems: 'center', gap: 5,
+                padding: '4px 12px', borderRadius: 6, fontSize: 12, fontWeight: 600,
                 fontFamily: 'var(--font-dm-sans)', cursor: 'pointer', border: 'none',
-                background: tab === t ? S.coral : 'transparent',
-                color: tab === t ? '#fff' : S.textSub,
+                background: tab === key ? S.coral : 'transparent',
+                color: tab === key ? '#fff' : S.textSub,
                 transition: 'all 180ms ease',
               }}
             >
-              {t === 'blocks' ? 'Blocks' : 'Theme'}
+              <span className="material-symbols-outlined" style={{ fontSize: 14, color: tab === key ? '#fff' : S.textMuted }}>
+                {icon}
+              </span>
+              {label}
             </button>
           ))}
         </div>
@@ -241,7 +553,7 @@ export default function StudioClient({
         >
           {saveLabel}
         </span>
-        {isDirty && saveStatus === 'idle' && (
+        {isDirty && !isSaving && (
           <>
             <span className="hidden md:inline" style={{ fontSize: 11, color: S.textMuted }}>·</span>
             <button
@@ -279,22 +591,22 @@ export default function StudioClient({
         {/* Save button */}
         <button
           onClick={handleSave}
-          disabled={!isDirty || isPending}
+          disabled={!isDirty || isSaving}
           style={{
             display: 'inline-flex', alignItems: 'center', gap: 6,
             padding: '5px 16px', borderRadius: 7, fontSize: 12, fontWeight: 600,
-            fontFamily: 'var(--font-dm-sans)', cursor: isDirty && !isPending ? 'pointer' : 'default',
+            fontFamily: 'var(--font-dm-sans)', cursor: isDirty && !isSaving ? 'pointer' : 'default',
             border: 'none',
-            background: isDirty && !isPending ? S.coral : S.overlay,
-            color: isDirty && !isPending ? '#fff' : S.textMuted,
+            background: isDirty && !isSaving ? S.coral : S.overlay,
+            color: isDirty && !isSaving ? '#fff' : S.textMuted,
             transition: 'all 180ms ease',
-            opacity: !isDirty || isPending ? 0.55 : 1,
+            opacity: !isDirty || isSaving ? 0.55 : 1,
           }}
         >
           <span className="material-symbols-outlined" style={{ fontSize: 13 }}>
-            {saveStatus === 'saving' ? 'sync' : 'save'}
+            {isSaving ? 'sync' : 'save'}
           </span>
-          {saveStatus === 'saving' ? 'Saving…' : 'Save'}
+          {isSaving ? 'Saving…' : 'Save'}
         </button>
       </header>
 
@@ -322,25 +634,29 @@ export default function StudioClient({
             '--wimc-text-secondary': S.textSub,
             '--wimc-text-muted':     S.textMuted,
           } as React.CSSProperties}>
-          {tab === 'blocks' ? (
+          {tab === 'content' && ContentPanel()}
+
+          {tab === 'blocks' && (
             <BlockEditor
               blocks={blocks}
               events={upcomingEvents}
               onBlocksChange={handleBlocksChange}
               onEditBlock={(id) => setHighlightedBlockId(id)}
-              isDirty={isDirty}
-              isSaving={isPending}
-              onSave={handleSave}
+              isDirty={blocksDirty}
+              isSaving={blocksSaving || isPending}
+              onSave={handleBlocksSave}
               userTier={profile.user_tier}
             />
-          ) : (
+          )}
+
+          {tab === 'theme' && (
             <ThemeEditor
               theme={theme}
               onThemeChange={handleThemeChange}
               onThemeReplace={handleThemeReplace}
-              isDirty={isDirty}
-              isSaving={isPending}
-              onSave={handleSave}
+              isDirty={themeDirty}
+              isSaving={themeSaving}
+              onSave={handleThemeSave}
             />
           )}
         </div>
@@ -362,7 +678,7 @@ export default function StudioClient({
               events={upcomingEvents}
               theme={theme}
               highlightedBlockId={highlightedBlockId}
-              saveStatus={saveStatus}
+              saveStatus={isSaving ? 'saving' : status === 'error' ? 'idle' : status}
               isDirty={isDirty}
               device="mobile"
             />
@@ -414,7 +730,7 @@ export default function StudioClient({
                   events={upcomingEvents}
                   theme={theme}
                   highlightedBlockId={highlightedBlockId}
-                  saveStatus={saveStatus}
+                  saveStatus={isSaving ? 'saving' : status === 'error' ? 'idle' : status}
                   isDirty={isDirty}
                   device="desktop"
                 />
@@ -423,33 +739,8 @@ export default function StudioClient({
             </div>
           )}
         </div>
-
-        {/* ── Mobile fallback — studio preview requires tablet/desktop ────── */}
-        <div
-          className="flex-1 flex md:hidden flex-col items-center justify-center gap-5 px-6 text-center"
-          style={{ background: S.preview }}
-        >
-          <span className="material-symbols-outlined" style={{ fontSize: 40, color: 'rgba(26,39,68,0.2)' }}>
-            desktop_mac
-          </span>
-          <p style={{ color: 'rgba(26,39,68,0.45)', fontSize: 13, lineHeight: 1.65, maxWidth: 240 }}>
-            Live preview works best on a tablet or desktop screen.
-          </p>
-          <a
-            href={profilePath}
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{
-              display: 'inline-flex', alignItems: 'center', gap: 6,
-              color: S.coral, fontSize: 13, fontWeight: 600,
-              fontFamily: 'var(--font-dm-sans)', textDecoration: 'none',
-            }}
-          >
-            <span className="material-symbols-outlined" style={{ fontSize: 14 }}>open_in_new</span>
-            View live page
-          </a>
-        </div>
       </div>
     </div>
+    </StudioShell>
   )
 }

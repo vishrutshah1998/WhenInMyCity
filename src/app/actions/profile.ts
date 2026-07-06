@@ -217,6 +217,47 @@ export async function updateProfile(
 }
 
 // ---------------------------------------------------------------------------
+// updateCreatorStudioContent — saves only the content-tab fields from the
+// creator studio (bio, instagram, website, contact email). Narrower than
+// updateProfile so the studio doesn't need to send the whole profile shape.
+// ---------------------------------------------------------------------------
+
+export async function updateCreatorStudioContent(input: {
+  bio:              string
+  instagram_handle: string
+  website_url:      string
+  contact_email:    string
+}): Promise<{ error: string | null }> {
+  const supabase = await createClient()
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  if (authError || !user) return { error: 'Not authenticated.' }
+
+  if (input.bio.length > 160) return { error: 'Bio must be 160 characters or fewer.' }
+
+  const { error, data: updated } = await supabase
+    .from('user_profiles')
+    .update({
+      bio:              input.bio.trim()              || null,
+      instagram_handle: input.instagram_handle.trim() || null,
+      website_url:      input.website_url.trim()      || null,
+      contact_email:    input.contact_email.trim()    || null,
+      updated_at:       new Date().toISOString(),
+    })
+    .eq('id', user.id)
+    .select('username')
+    .single()
+
+  if (error) {
+    console.error('[updateCreatorStudioContent]', error.message)
+    return { error: 'Failed to save changes.' }
+  }
+
+  if (updated?.username) revalidatePath(`/${updated.username}`)
+  revalidatePath('/dashboard')
+  return { error: null }
+}
+
+// ---------------------------------------------------------------------------
 // dismissChecklistTask
 // ---------------------------------------------------------------------------
 

@@ -8,6 +8,7 @@ import BlockEditor from '@/components/dashboard/BlockEditor'
 import ThemeEditor from '@/components/dashboard/ThemeEditor'
 import BrandPagePreview from './BrandPagePreview'
 import BrandPublicPage from '@/app/brand/[slug]/BrandPublicPage'
+import StudioShell, { type StudioTab } from '@/components/dashboard/StudioShell'
 import type { UserProfile, PageBlock, Event } from '@/types/database'
 import type { ProfileTheme } from '@/types/theme'
 
@@ -34,7 +35,13 @@ const INTER = "'Inter', system-ui, sans-serif"
 
 // ── Tab type ──────────────────────────────────────────────────────────────────
 
-type Tab = 'content' | 'blocks' | 'theme'
+type TabKey = 'content' | 'blocks' | 'theme'
+
+const BRAND_TABS: StudioTab[] = [
+  { key: 'content', label: 'Content', icon: 'edit'    },
+  { key: 'blocks',  label: 'Blocks',  icon: 'add_box' },
+  { key: 'theme',   label: 'Theme',   icon: 'palette' },
+]
 
 // ── Goal/audience options ─────────────────────────────────────────────────────
 
@@ -109,7 +116,7 @@ export default function BrandPageEditorClient({
   theme: initialTheme,
   brandPageUrl,
 }: Props) {
-  const [tab, setTab]       = useState<Tab>('content')
+  const [tab, setTab]       = useState<TabKey>('content')
   const [device, setDevice] = useState<Device>('mobile')
 
   // ── Content tab state ──────────────────────────────────────────────────────
@@ -150,7 +157,7 @@ export default function BrandPageEditorClient({
   const origTheme  = useRef<ProfileTheme>({ ...initialTheme })
 
   // ── Derived ────────────────────────────────────────────────────────────────
-  const isDirty  = tab === 'content' ? contentDirty : tab === 'blocks' ? blocksDirty : themeDirty
+  const isDirty  = tab === 'content' ? contentDirty  : tab === 'blocks' ? blocksDirty  : themeDirty
   const isSaving = tab === 'content' ? contentSaving : tab === 'blocks' ? blocksSaving : themeSaving
   const status   = tab === 'content' ? contentStatus : tab === 'blocks' ? blocksStatus : themeStatus
 
@@ -238,9 +245,9 @@ export default function BrandPageEditorClient({
     }
   }
 
-  function handleDiscard() {
+  function discardTab(key: string) {
     if (!window.confirm('Discard unsaved changes?')) return
-    if (tab === 'content') {
+    if (key === 'content') {
       setBio(origContent.current.bio)
       setContactEmail(origContent.current.contactEmail)
       setInstagramHandle(origContent.current.instagramHandle)
@@ -249,7 +256,7 @@ export default function BrandPageEditorClient({
       setTargetAudience([...origContent.current.targetAudience])
       setContentDirty(false)
       setContentStatus('idle')
-    } else if (tab === 'blocks') {
+    } else if (key === 'blocks') {
       setBlocks([...origBlocks.current])
       setBlocksDirty(false)
       setBlocksStatus('idle')
@@ -259,6 +266,8 @@ export default function BrandPageEditorClient({
       setThemeStatus('idle')
     }
   }
+
+  function handleDiscard() { discardTab(tab) }
 
   // ── Unified save dispatcher ────────────────────────────────────────────────
 
@@ -279,7 +288,266 @@ export default function BrandPageEditorClient({
     color: S.text, outline: 'none',
   }
 
+  // ── ContentPanel: render function (not a component) for the content tab ────
+  // Called as ContentPanel() so inputs never lose focus on re-render.
+  // Rendered in both the desktop left panel and the mobile StudioShell drawer.
+  function ContentPanel() {
+    return (
+      <div style={{ padding: '20px 20px 36px', display: 'flex', flexDirection: 'column', gap: 22 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span className="material-symbols-outlined" style={{ fontSize: 14, color: S.muted }}>edit</span>
+          <span style={{ fontFamily: MONO, fontSize: 10, color: S.muted, letterSpacing: '1.2px', textTransform: 'uppercase' }}>
+            Page Content
+          </span>
+        </div>
+
+        {/* Bio */}
+        <div>
+          <FieldLabel label="Brand Bio" icon="description" />
+          <textarea
+            value={bio}
+            onChange={e => { setBio(e.target.value); markContentDirty() }}
+            maxLength={500}
+            rows={4}
+            placeholder="Describe your brand — mission, values, what you stand for…"
+            style={{ ...inputBase, resize: 'vertical', lineHeight: 1.6 }}
+          />
+          <div style={{ textAlign: 'right', fontFamily: MONO, fontSize: 10, color: S.muted, marginTop: 4 }}>
+            {bio.length}/500
+          </div>
+        </div>
+
+        {/* Contact */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          <div>
+            <FieldLabel label="Contact Email" icon="mail" />
+            <input
+              type="email"
+              value={contactEmail}
+              onChange={e => { setContactEmail(e.target.value); markContentDirty() }}
+              placeholder="hello@yourbrand.com"
+              style={inputBase}
+            />
+          </div>
+          <div>
+            <FieldLabel label="Website" icon="language" />
+            <input
+              type="url"
+              value={websiteUrl}
+              onChange={e => { setWebsiteUrl(e.target.value); markContentDirty() }}
+              placeholder="https://yourbrand.com"
+              style={inputBase}
+            />
+          </div>
+        </div>
+
+        {/* Instagram */}
+        <div>
+          <FieldLabel label="Instagram" icon="alternate_email" />
+          <div style={{ position: 'relative' }}>
+            <span style={{
+              position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)',
+              fontFamily: INTER, fontSize: 13, color: S.muted, userSelect: 'none',
+            }}>@</span>
+            <input
+              type="text"
+              value={instagramHandle}
+              onChange={e => { setInstagramHandle(e.target.value.replace(/^@/, '')); markContentDirty() }}
+              placeholder="yourbrand"
+              style={{ ...inputBase, paddingLeft: 28 }}
+            />
+          </div>
+        </div>
+
+        {/* Goals */}
+        <div>
+          <FieldLabel label="Goals on WIMC" icon="flag" />
+          <p style={{ fontFamily: INTER, fontSize: 12, color: S.muted, margin: '0 0 10px' }}>
+            What do you want to achieve on the platform?
+          </p>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+            {WIMC_GOAL_OPTIONS.map(goal => {
+              const active = wimcGoals.includes(goal.id)
+              return (
+                <button
+                  key={goal.id}
+                  type="button"
+                  onClick={() => toggleGoal(goal.id)}
+                  style={{
+                    padding: '5px 12px', fontFamily: INTER, fontSize: 12,
+                    border: '1px solid',
+                    borderColor: active ? S.amber : 'rgba(255,255,255,0.18)',
+                    background: active ? S.amberTint : 'transparent',
+                    color: active ? S.amber : S.textSub,
+                    cursor: 'pointer', borderRadius: 9999,
+                    transition: 'all 160ms ease',
+                  }}
+                >
+                  {goal.label}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+
+        {/* Target audience */}
+        <div>
+          <FieldLabel label="Target Audience" icon="people" />
+          <p style={{ fontFamily: INTER, fontSize: 12, color: S.muted, margin: '0 0 10px' }}>
+            Who are you trying to reach through WIMC?
+          </p>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+            {AUDIENCE_OPTIONS.map(label => {
+              const active = targetAudience.includes(label)
+              return (
+                <button
+                  key={label}
+                  type="button"
+                  onClick={() => toggleAudience(label)}
+                  style={{
+                    padding: '5px 10px', fontFamily: MONO, fontSize: 10,
+                    letterSpacing: '0.08em',
+                    border: '1px solid',
+                    borderColor: active ? S.amber : 'rgba(255,255,255,0.18)',
+                    background: active ? S.amberTint : 'transparent',
+                    color: active ? S.amber : S.textSub,
+                    cursor: 'pointer', borderRadius: 2,
+                    transition: 'all 160ms ease',
+                  }}
+                >
+                  {label}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+
+        {/* Locked note */}
+        <div style={{ borderTop: `1px solid ${S.border}`, paddingTop: 16, display: 'flex', alignItems: 'center', gap: 6 }}>
+          <span className="material-symbols-outlined" style={{ fontSize: 14, color: S.muted }}>lock</span>
+          <span style={{ fontFamily: MONO, fontSize: 10, color: S.muted, letterSpacing: '0.04em' }}>
+            Brand name, city &amp; category are fixed.&nbsp;
+            <a href="/business/brand/profile" style={{ color: S.amber, textDecoration: 'none' }}>
+              View full profile →
+            </a>
+          </span>
+        </div>
+      </div>
+    )
+  }
+
+  // ── renderBrandPanel: per-tab drawer content for the mobile StudioShell ─────
+  // BlockEditor and ThemeEditor render their own save controls; only the
+  // content tab needs a save bar added here.
+  function renderBrandPanel(key: string): React.ReactNode {
+    if (key === 'content') {
+      return (
+        <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+          {/* Mobile save bar */}
+          <div style={{
+            padding: '8px 16px', flexShrink: 0,
+            borderBottom: `1px solid ${S.border}`,
+            display: 'flex', alignItems: 'center', gap: 8,
+            background: S.panel,
+          }}>
+            <div style={{ flex: 1, fontFamily: MONO, fontSize: 11 }}>
+              {contentSaving && <span style={{ color: S.muted }}>Saving…</span>}
+              {!contentSaving && contentStatus === 'saved'  && <span style={{ color: S.success }}>✓ Saved</span>}
+              {!contentSaving && contentStatus === 'error'  && <span style={{ color: S.danger  }}>Save failed</span>}
+              {!contentSaving && contentStatus === 'idle' && contentDirty && <span style={{ color: S.muted }}>Unsaved changes</span>}
+            </div>
+            {contentDirty && !contentSaving && (
+              <button
+                onClick={() => discardTab('content')}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: MONO, fontSize: 11, color: S.danger, padding: 0, textDecoration: 'underline' }}
+              >
+                Discard
+              </button>
+            )}
+            <button
+              onClick={handleContentSave}
+              disabled={contentSaving || !contentDirty}
+              style={{
+                background: contentSaving || !contentDirty ? 'rgba(245,168,0,0.25)' : S.amber,
+                border: 'none', borderRadius: 4, padding: '5px 14px',
+                color: contentSaving || !contentDirty ? 'rgba(0,0,0,0.4)' : '#000',
+                cursor: contentSaving || !contentDirty ? 'not-allowed' : 'pointer',
+                fontFamily: MONO, fontSize: 10, fontWeight: 700,
+                letterSpacing: '0.8px', textTransform: 'uppercase',
+              }}
+            >
+              Save
+            </button>
+          </div>
+          {/* Content form — scrollable within its own container */}
+          <div style={{ flex: 1, overflowY: 'auto' }}>
+            {ContentPanel()}
+          </div>
+        </div>
+      )
+    }
+    if (key === 'blocks') {
+      return (
+        <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+          <BlockEditor
+            persona="brand"
+            blocks={blocks}
+            events={upcomingEvents}
+            onBlocksChange={handleBlocksChange}
+            isDirty={blocksDirty}
+            isSaving={blocksSaving || isPending}
+            onSave={handleBlocksSave}
+          />
+        </div>
+      )
+    }
+    if (key === 'theme') {
+      return (
+        <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+          <ThemeEditor
+            persona="brand"
+            theme={theme}
+            onThemeChange={handleThemeChange}
+            onThemeReplace={handleThemeReplace}
+            isDirty={themeDirty}
+            isSaving={themeSaving}
+            onSave={handleThemeSave}
+          />
+        </div>
+      )
+    }
+    return null
+  }
+
   return (
+    <StudioShell
+      preview={
+        <BrandPublicPage
+          brand={{
+            id:                  profile.id,
+            display_name:        profile.display_name ?? '',
+            username:            profile.username ?? '',
+            city:                profile.city ?? '',
+            bio,
+            business_categories: (profile.business_categories as string[]) ?? [],
+            wimc_goals:          wimcGoals,
+            target_audience:     targetAudience,
+            contact_whatsapp:    profile.contact_whatsapp,
+            contact_email:       contactEmail,
+            instagram_handle:    instagramHandle,
+            website_url:         websiteUrl,
+            created_at:          profile.created_at,
+          }}
+          creators={[]}
+          theme={theme}
+          isPreview
+        />
+      }
+      tabs={BRAND_TABS}
+      renderPanel={renderBrandPanel}
+      accentColor={S.amber}
+      panelBg={S.panel}
+    >
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: S.bg }}>
 
       {/* ── Topbar ──────────────────────────────────────────────────────────── */}
@@ -405,148 +673,7 @@ export default function BrandPageEditorClient({
         }}>
 
           {/* ── Content tab ─────────────────────────────────────────────────── */}
-          {tab === 'content' && (
-            <div style={{ padding: '20px 20px 36px', display: 'flex', flexDirection: 'column', gap: 22 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span className="material-symbols-outlined" style={{ fontSize: 14, color: S.muted }}>edit</span>
-                <span style={{ fontFamily: MONO, fontSize: 10, color: S.muted, letterSpacing: '1.2px', textTransform: 'uppercase' }}>
-                  Page Content
-                </span>
-              </div>
-
-              {/* Bio */}
-              <div>
-                <FieldLabel label="Brand Bio" icon="description" />
-                <textarea
-                  value={bio}
-                  onChange={e => { setBio(e.target.value); markContentDirty() }}
-                  maxLength={500}
-                  rows={4}
-                  placeholder="Describe your brand — mission, values, what you stand for…"
-                  style={{ ...inputBase, resize: 'vertical', lineHeight: 1.6 }}
-                />
-                <div style={{ textAlign: 'right', fontFamily: MONO, fontSize: 10, color: S.muted, marginTop: 4 }}>
-                  {bio.length}/500
-                </div>
-              </div>
-
-              {/* Contact */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                <div>
-                  <FieldLabel label="Contact Email" icon="mail" />
-                  <input
-                    type="email"
-                    value={contactEmail}
-                    onChange={e => { setContactEmail(e.target.value); markContentDirty() }}
-                    placeholder="hello@yourbrand.com"
-                    style={inputBase}
-                  />
-                </div>
-                <div>
-                  <FieldLabel label="Website" icon="language" />
-                  <input
-                    type="url"
-                    value={websiteUrl}
-                    onChange={e => { setWebsiteUrl(e.target.value); markContentDirty() }}
-                    placeholder="https://yourbrand.com"
-                    style={inputBase}
-                  />
-                </div>
-              </div>
-
-              {/* Instagram */}
-              <div>
-                <FieldLabel label="Instagram" icon="alternate_email" />
-                <div style={{ position: 'relative' }}>
-                  <span style={{
-                    position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)',
-                    fontFamily: INTER, fontSize: 13, color: S.muted, userSelect: 'none',
-                  }}>@</span>
-                  <input
-                    type="text"
-                    value={instagramHandle}
-                    onChange={e => { setInstagramHandle(e.target.value.replace(/^@/, '')); markContentDirty() }}
-                    placeholder="yourbrand"
-                    style={{ ...inputBase, paddingLeft: 28 }}
-                  />
-                </div>
-              </div>
-
-              {/* Goals */}
-              <div>
-                <FieldLabel label="Goals on WIMC" icon="flag" />
-                <p style={{ fontFamily: INTER, fontSize: 12, color: S.muted, margin: '0 0 10px' }}>
-                  What do you want to achieve on the platform?
-                </p>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                  {WIMC_GOAL_OPTIONS.map(goal => {
-                    const active = wimcGoals.includes(goal.id)
-                    return (
-                      <button
-                        key={goal.id}
-                        type="button"
-                        onClick={() => toggleGoal(goal.id)}
-                        style={{
-                          padding: '5px 12px', fontFamily: INTER, fontSize: 12,
-                          border: '1px solid',
-                          borderColor: active ? S.amber : 'rgba(255,255,255,0.18)',
-                          background: active ? S.amberTint : 'transparent',
-                          color: active ? S.amber : S.textSub,
-                          cursor: 'pointer', borderRadius: 9999,
-                          transition: 'all 160ms ease',
-                        }}
-                      >
-                        {goal.label}
-                      </button>
-                    )
-                  })}
-                </div>
-              </div>
-
-              {/* Target audience */}
-              <div>
-                <FieldLabel label="Target Audience" icon="people" />
-                <p style={{ fontFamily: INTER, fontSize: 12, color: S.muted, margin: '0 0 10px' }}>
-                  Who are you trying to reach through WIMC?
-                </p>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                  {AUDIENCE_OPTIONS.map(label => {
-                    const active = targetAudience.includes(label)
-                    return (
-                      <button
-                        key={label}
-                        type="button"
-                        onClick={() => toggleAudience(label)}
-                        style={{
-                          padding: '5px 10px', fontFamily: MONO, fontSize: 10,
-                          letterSpacing: '0.08em',
-                          border: '1px solid',
-                          borderColor: active ? S.amber : 'rgba(255,255,255,0.18)',
-                          background: active ? S.amberTint : 'transparent',
-                          color: active ? S.amber : S.textSub,
-                          cursor: 'pointer', borderRadius: 2,
-                          transition: 'all 160ms ease',
-                        }}
-                      >
-                        {label}
-                      </button>
-                    )
-                  })}
-                </div>
-              </div>
-
-              {/* Locked note */}
-              <div style={{ borderTop: `1px solid ${S.border}`, paddingTop: 16, display: 'flex', alignItems: 'center', gap: 6 }}>
-                <span className="material-symbols-outlined" style={{ fontSize: 14, color: S.muted }}>lock</span>
-                <span style={{ fontFamily: MONO, fontSize: 10, color: S.muted, letterSpacing: '0.04em' }}>
-                  Brand name, city &amp; category are fixed.&nbsp;
-                  <a href="/business/brand/profile" style={{ color: S.amber, textDecoration: 'none' }}>
-                    View full profile →
-                  </a>
-                </span>
-              </div>
-            </div>
-          )}
+          {tab === 'content' && ContentPanel()}
 
           {/* ── Blocks tab ──────────────────────────────────────────────────── */}
           {tab === 'blocks' && (
@@ -664,6 +791,7 @@ export default function BrandPageEditorClient({
                     }}
                     creators={[]}
                     theme={theme}
+                    isPreview
                   />
                   </div>
                 </div>
@@ -673,5 +801,6 @@ export default function BrandPageEditorClient({
         </div>
       </div>
     </div>
+    </StudioShell>
   )
 }

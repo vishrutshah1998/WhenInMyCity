@@ -48,6 +48,7 @@ export default function PreviewPanel({
         blocks={blocks}
         upcomingEvents={events}
         theme={theme}
+        isPreview
       />
     )
   }
