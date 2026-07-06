@@ -278,7 +278,10 @@ export default function C2Page() {
   useEffect(() => {
     if (typeof window === 'undefined') return
     if (!isAddMode && sessionStorage.getItem(SK.persona) !== 'creator') { router.replace('/onboarding'); return }
-    if (isAddMode) sessionStorage.setItem('wimc_ob_mode', 'add')
+    if (isAddMode) {
+      sessionStorage.setItem('wimc_ob_mode', 'add')
+      sessionStorage.setItem(SK.persona, 'creator')
+    }
     const saved = sessionStorage.getItem(SK.c_name)
     if (saved) {
       setDisplayName(saved)
