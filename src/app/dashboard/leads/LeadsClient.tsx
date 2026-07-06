@@ -1,7 +1,9 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import type { UserTier } from '@/types/database'
+import { TierGate } from '@/components/dashboard/TierGate'
 
 interface Subscriber {
   id: string
@@ -15,6 +17,7 @@ interface LeadsClientProps {
   subscribers: Subscriber[]
   total: number
   tier: UserTier
+  eventsHosted: number
 }
 
 const SOURCE_LABEL: Record<string, string> = {
@@ -22,7 +25,7 @@ const SOURCE_LABEL: Record<string, string> = {
   rsvp_confirmation: 'Event RSVP',
 }
 
-export default function LeadsClient({ subscribers, total, tier }: LeadsClientProps) {
+export default function LeadsClient({ subscribers, total, tier, eventsHosted }: LeadsClientProps) {
   const [search, setSearch] = useState('')
   const canExport = tier === 'lantern' || tier === 'beacon'
 
@@ -80,14 +83,27 @@ export default function LeadsClient({ subscribers, total, tier }: LeadsClientPro
               Export CSV
             </button>
           ) : (
-            <div style={{ fontSize: 12, color: 'var(--wimc-amber)', fontFamily: 'var(--font-jetbrains-mono)', padding: '6px 12px', background: 'var(--wimc-amber-dim)', borderRadius: 0 }}>
-              CSV export unlocks at Lantern tier
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: 5,
+              background: 'var(--wimc-bg-overlay)',
+              border: '1px solid var(--wimc-border-default)',
+              borderRadius: 9999, padding: '4px 10px',
+              fontSize: 11, fontWeight: 600,
+              color: 'var(--wimc-text-muted)',
+              fontFamily: 'var(--font-jetbrains-mono)',
+            }}>
+              <span className="material-symbols-outlined" style={{ fontSize: 13, fontVariationSettings: "'FILL' 1" }}>lock</span>
+              Lantern+
             </div>
           )}
         </div>
       </header>
 
       <div style={{ padding: 'clamp(16px, 4vw, 40px) clamp(16px, 4vw, 40px) 80px', display: 'flex', flexDirection: 'column', gap: 24 }}>
+        {/* CSV tier gate */}
+        {!canExport && (
+          <TierGate current={tier} required="lantern" eventsHosted={eventsHosted} />
+        )}
         {/* Stats */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16 }}>
           {[
@@ -106,9 +122,38 @@ export default function LeadsClient({ subscribers, total, tier }: LeadsClientPro
           <div style={{ border: '2px dashed var(--wimc-border-default)', borderRadius: 0, padding: 48, textAlign: 'center' }}>
             <span className="material-symbols-outlined" style={{ fontSize: 40, color: 'var(--wimc-text-secondary)', display: 'block', marginBottom: 12 }}>group</span>
             <div style={{ fontFamily: 'var(--font-syne)', fontSize: 16, fontWeight: 700, marginBottom: 6 }}>{search ? 'No matches' : 'No leads yet'}</div>
-            <div style={{ fontSize: 13, color: 'var(--wimc-text-secondary)' }}>
+            <div style={{ fontSize: 13, color: 'var(--wimc-text-secondary)', marginBottom: search ? 0 : 20 }}>
               {search ? 'Try a different search term.' : 'Add a newsletter block to your page or run a paid event to collect leads.'}
             </div>
+            {!search && (
+              <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap' }}>
+                <Link
+                  href="/dashboard/events/create"
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 6,
+                    padding: '7px 16px', borderRadius: 0, fontSize: 13, fontWeight: 600,
+                    fontFamily: 'var(--font-dm-sans)', background: 'var(--wimc-coral)',
+                    color: '#fff', textDecoration: 'none',
+                  }}
+                >
+                  <span className="material-symbols-outlined" style={{ fontSize: 15 }}>add</span>
+                  Create event
+                </Link>
+                <Link
+                  href="/dashboard/studio"
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 6,
+                    padding: '7px 16px', borderRadius: 0, fontSize: 13, fontWeight: 600,
+                    fontFamily: 'var(--font-dm-sans)', background: 'var(--wimc-bg-elevated)',
+                    color: 'var(--wimc-text-primary)', textDecoration: 'none',
+                    border: '1px solid var(--wimc-border-default)',
+                  }}
+                >
+                  <span className="material-symbols-outlined" style={{ fontSize: 15 }}>add_box</span>
+                  Add newsletter block
+                </Link>
+              </div>
+            )}
           </div>
         ) : (
           <div style={{ background: 'var(--wimc-bg-elevated)', border: '1px solid rgba(26,39,68,0.14)', borderRadius: 0 }}>

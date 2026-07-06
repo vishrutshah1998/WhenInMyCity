@@ -17,6 +17,7 @@ export default async function LeadsPage() {
       subscribers={subscribers ?? []}
       total={count ?? 0}
       tier={profile.user_tier ?? 'wanderer'}
+      eventsHosted={profile.cumulative_events_hosted ?? 0}
     />
   )
 }
