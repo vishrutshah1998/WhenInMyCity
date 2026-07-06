@@ -108,6 +108,7 @@ export default function B2Page() {
     }
     if (isAddMode) {
       sessionStorage.setItem('wimc_ob_mode', 'add')
+      sessionStorage.setItem(SK.persona, 'business')
       sessionStorage.setItem(SK.b_subpath, addType)
     }
 

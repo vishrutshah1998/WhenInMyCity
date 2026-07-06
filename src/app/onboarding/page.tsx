@@ -87,15 +87,36 @@ function S1Inner() {
     } catch {}
   }, [])
 
-  // Deep-link: ?persona=creator/venue/explorer skips S1
+  // Deep-link: ?persona=creator/venue/explorer/brand
+  // Fresh onboarding (?persona only): skip S1 entirely.
+  // Add-persona (?mode=add&persona): pre-select and auto-advance so the user
+  // briefly sees which persona was chosen before moving on.
   useEffect(() => {
-    const p = searchParams.get('persona')
+    const p     = searchParams.get('persona')
+    const isAdd = searchParams.get('mode') === 'add'
     if (!p) return
-    try {
-      if (p === 'creator')  { sessionStorage.setItem(SK.persona, 'creator');  router.replace('/onboarding/creator/C2')   }
-      else if (p === 'venue') { sessionStorage.setItem(SK.persona, 'business'); router.replace('/onboarding/business/B3') }
-      else if (p === 'explorer') { sessionStorage.setItem(SK.persona, 'explorer'); router.replace('/onboarding/explorer/E2') }
-    } catch {}
+
+    const PERSONA_MAP: Record<string, { skValue: string; selectedId: string; freshNext: string; addNext: string }> = {
+      creator:  { skValue: 'creator',  selectedId: 'creator',  freshNext: '/onboarding/creator/C2',       addNext: '/onboarding/creator/C2?mode=add' },
+      explorer: { skValue: 'explorer', selectedId: 'explorer', freshNext: '/onboarding/explorer/E2',      addNext: '/onboarding/explorer/E2?mode=add' },
+      venue:    { skValue: 'business', selectedId: 'business', freshNext: '/onboarding/business/B3',      addNext: '/onboarding/business/B2?mode=add&type=venue' },
+      brand:    { skValue: 'business', selectedId: 'business', freshNext: '/onboarding/business/B3',      addNext: '/onboarding/business/B2?mode=add&type=brand' },
+    }
+
+    const entry = PERSONA_MAP[p]
+    if (!entry) return
+
+    try { sessionStorage.setItem(SK.persona, entry.skValue) } catch {}
+
+    if (isAdd) {
+      // Show S1 with the persona pre-selected, then navigate.
+      // router.replace so the back button from the next step skips this page.
+      setSelected(entry.selectedId as typeof PERSONAS[number]['id'])
+      setAdvancing(true)
+      setTimeout(() => router.replace(entry.addNext), 600)
+    } else {
+      router.replace(entry.freshNext)
+    }
   }, [searchParams, router])
 
   function handleSelect(id: typeof PERSONAS[number]['id']) {

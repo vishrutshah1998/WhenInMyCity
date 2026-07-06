@@ -65,10 +65,10 @@ type PersonaKey = typeof ALL_PERSONAS[number]
 
 function personaEntryUrl(persona: PersonaKey): string {
   switch (persona) {
-    case 'creator':  return '/onboarding/creator/C2?mode=add'
-    case 'explorer': return '/onboarding/explorer/E2?mode=add'
-    case 'venue':    return '/onboarding/business/B2?mode=add&type=venue'
-    case 'brand':    return '/onboarding/business/B2?mode=add&type=brand'
+    case 'creator':  return '/onboarding?mode=add&persona=creator'
+    case 'explorer': return '/onboarding?mode=add&persona=explorer'
+    case 'venue':    return '/onboarding?mode=add&persona=venue'
+    case 'brand':    return '/onboarding?mode=add&persona=brand'
   }
 }
 
@@ -81,7 +81,7 @@ function personaLabel(persona: PersonaKey): string {
 const WORKSPACE_META: Record<string, { icon: string; label: string; color: string; href: string }> = {
   creator:  { icon: 'palette',    label: 'Creator',  color: '#E8705A', href: '/dashboard' },
   venue:    { icon: 'storefront', label: 'Adda',     color: '#5DD9D0', href: '/business/venue/dashboard' },
-  explorer: { icon: 'explore',    label: 'Explorer', color: '#9B8FFF', href: '/dashboard' },
+  explorer: { icon: 'explore',    label: 'Explorer', color: '#9B8FFF', href: '/explore/dashboard' },
   brand:    { icon: 'campaign',   label: 'Brand',    color: '#F5A800', href: '/business/brand/dashboard' },
 }
 

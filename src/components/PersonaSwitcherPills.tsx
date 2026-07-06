@@ -13,7 +13,7 @@ const DASHBOARD_URL: Record<string, string> = {
   creator:  '/dashboard',
   brand:    '/business/brand/dashboard',
   venue:    '/business/venue/dashboard',
-  explorer: '/dashboard',
+  explorer: '/explore/dashboard',
 }
 
 const LABEL: Record<string, string> = {
