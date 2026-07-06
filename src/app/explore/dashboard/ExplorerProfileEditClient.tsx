@@ -65,6 +65,7 @@ export default function ExplorerProfileEditClient({ explorerProfile, username, c
         interest_tags:            tags,
         neighbourhood_preference: neighbourhood || null,
         price_range_max_paise:    priceMax * 100,
+        preferred_formats:        [],
         notification_preferences: {
           whatsapp:         notifWa,
           digest_frequency: digestFreq as 'daily' | 'weekly' | 'never',

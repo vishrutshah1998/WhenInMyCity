@@ -22,6 +22,9 @@ export default function E6Page() {
     if (sessionStorage.getItem(SK.persona) !== 'explorer') { router.replace('/onboarding'); return }
     const interests = sessionStorage.getItem(SK.e_interests)
     if (interests === null) { router.replace('/onboarding/explorer/E5'); return }
+    if (sessionStorage.getItem(SK.e_formats) === null && sessionStorage.getItem(SK.e_price_max) === null) {
+      // tolerate missing E5b keys for users mid-flow; don't force redirect
+    }
     const savedIntent = sessionStorage.getItem(SK.e_intent)
     if (savedIntent) setSelectedIntent(savedIntent)
   }, [router])
@@ -49,7 +52,7 @@ export default function E6Page() {
           margin:     '0 0 8px',
           maxWidth:   480,
         }}>
-          Any creators<br />you already follow?
+          Would you consider<br />hosting an event?
         </h1>
         <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 15, color: '#9896B0', margin: '0 0 32px', maxWidth: 400 }}>
           Just a quick gut check — totally optional
@@ -107,7 +110,7 @@ export default function E6Page() {
         display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 24px',
         background: 'linear-gradient(to top, var(--ob-panel-bg, #1A2744) 60%, transparent 100%)',
       }}>
-        <button type="button" onClick={() => router.push('/onboarding/explorer/E5')}
+        <button type="button" onClick={() => router.push('/onboarding/explorer/E5b')}
           style={{ background: 'none', border: 'none', fontFamily: "'DM Sans', sans-serif", fontSize: 15, color: 'rgba(255,255,255,0.25)', cursor: 'pointer', padding: 0 }}>
           ← Back
         </button>

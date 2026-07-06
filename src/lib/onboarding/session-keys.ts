@@ -75,12 +75,17 @@ export const SK = {
   r_contact:    'wimc_ob_r_contact',
 
   // Explorer
-  e_name:       'wimc_ob_e_name',
-  e_username:   'wimc_ob_e_username',
-  e_scene:      'wimc_ob_e_scene',
-  e_city:       'wimc_ob_e_city',
-  e_interests:  'wimc_ob_e_interests',
-  e_intent:     'wimc_ob_e_intent',
+  e_name:         'wimc_ob_e_name',
+  e_username:     'wimc_ob_e_username',
+  e_scene:        'wimc_ob_e_scene',
+  e_city:         'wimc_ob_e_city',
+  e_neighbourhood:'wimc_ob_e_neighbourhood',
+  e_interests:    'wimc_ob_e_interests',
+  e_formats:      'wimc_ob_e_formats',
+  e_price_max:    'wimc_ob_e_price_max',
+  e_notif_wa:     'wimc_ob_e_notif_wa',
+  e_digest_freq:  'wimc_ob_e_digest_freq',
+  e_intent:       'wimc_ob_e_intent',
 } as const
 
 export function clearNewOnboardingKeys(): void {

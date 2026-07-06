@@ -12,8 +12,12 @@ interface ExplorerPayload {
   displayName: string
   username: string
   city: string
+  neighbourhood: string | null
   explorerScene: string
   interestTags: string[]
+  preferredFormats: string[]
+  priceRangeMaxPaise: number
+  notificationPreferences: { whatsapp: boolean; digest_frequency: 'daily' | 'weekly' | 'never' }
   explorerCreatorIntent: string[]
 }
 
@@ -30,10 +34,14 @@ export async function completeExplorerOnboarding(payload: ExplorerPayload) {
   const { error: explorerError } = await supabase
     .from('explorer_profiles')
     .upsert({
-      auth_user_id: user.id,
-      display_name: payload.displayName,
-      city: payload.city,
-      interest_tags: payload.interestTags,
+      auth_user_id:             user.id,
+      display_name:             payload.displayName,
+      city:                     payload.city,
+      interest_tags:            payload.interestTags,
+      neighbourhood_preference: payload.neighbourhood,
+      preferred_formats:        payload.preferredFormats,
+      price_range_max_paise:    payload.priceRangeMaxPaise,
+      notification_preferences: payload.notificationPreferences,
     }, { onConflict: 'auth_user_id' })
 
   if (explorerError) throw new Error(explorerError.message)

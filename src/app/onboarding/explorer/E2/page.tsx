@@ -31,7 +31,10 @@ export default function E2Page() {
   useEffect(() => {
     if (typeof window === 'undefined') return
     if (!isAddMode && sessionStorage.getItem(SK.persona) !== 'explorer') { router.replace('/onboarding'); return }
-    if (isAddMode) sessionStorage.setItem('wimc_ob_mode', 'add')
+    if (isAddMode) {
+      sessionStorage.setItem('wimc_ob_mode', 'add')
+      sessionStorage.setItem(SK.persona, 'explorer')
+    }
     const saved = sessionStorage.getItem(SK.e_name)
     if (saved) setDisplayName(saved)
   }, [router, isAddMode])

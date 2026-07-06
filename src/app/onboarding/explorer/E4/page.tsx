@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { SK } from '@/lib/onboarding/session-keys'
 const ACCENT = '#9B8FFF'
@@ -22,12 +22,13 @@ const DEFAULT_TOP = ['Ahmedabad', 'Indore', 'Jaipur', 'Chandigarh', 'Kochi', 'Be
 
 export default function E4Page() {
   const router = useRouter()
-  const [selectedCity, setSelectedCity] = useState<City | null>(null)
-  const [searchQuery,  setSearchQuery]  = useState('')
-  const [showDropdown, setShowDropdown] = useState(true)
-  const [isAdvancing,  setIsAdvancing]  = useState(false)
-  const [eName,        setEName]        = useState('')
-  const [eScene,       setEScene]       = useState('')
+  const [selectedCity,   setSelectedCity]   = useState<City | null>(null)
+  const [searchQuery,    setSearchQuery]    = useState('')
+  const [showDropdown,   setShowDropdown]   = useState(true)
+  const [isAdvancing,    setIsAdvancing]    = useState(false)
+  const [eName,          setEName]          = useState('')
+  const [eScene,         setEScene]         = useState('')
+  const [neighbourhood,  setNeighbourhood]  = useState('')
 
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -42,6 +43,8 @@ export default function E4Page() {
       const city = CITIES.find(c => c.name === saved)
       if (city) { setSelectedCity(city); setSearchQuery(city.name); setShowDropdown(false) }
     }
+    const savedNeighbourhood = sessionStorage.getItem(SK.e_neighbourhood)
+    if (savedNeighbourhood) setNeighbourhood(savedNeighbourhood)
   }, [router])
 
   const filteredCities = useMemo<City[]>(() => {
@@ -65,7 +68,10 @@ export default function E4Page() {
   function handleContinue() {
     if (!selectedCity || isAdvancing) return
     setIsAdvancing(true)
-    try { sessionStorage.setItem(SK.e_city, selectedCity.name) } catch {}
+    try {
+      sessionStorage.setItem(SK.e_city, selectedCity.name)
+      sessionStorage.setItem(SK.e_neighbourhood, neighbourhood.trim())
+    } catch {}
     router.push('/onboarding/explorer/E5')
   }
 
@@ -189,6 +195,33 @@ export default function E4Page() {
               })}
             </div>
           )}
+        </div>
+
+        {/* Neighbourhood — optional */}
+        <div style={{ maxWidth: 480, marginTop: 36 }}>
+          <label style={{ fontFamily: "var(--font-jetbrains-mono), 'JetBrains Mono', monospace", fontSize: 9, fontWeight: 700, color: 'rgba(155,143,255,0.60)', letterSpacing: '0.2em', textTransform: 'uppercase', display: 'block', marginBottom: 8 }}>
+            Neighbourhood <span style={{ fontWeight: 400, opacity: 0.6 }}>(optional)</span>
+          </label>
+          <input
+            type="text"
+            value={neighbourhood}
+            onChange={e => setNeighbourhood(e.target.value)}
+            placeholder="e.g. Satellite, Koramangala, Baner"
+            style={{
+              width:         '100%',
+              background:    'transparent',
+              border:        'none',
+              borderBottom:  `2px solid ${neighbourhood ? ACCENT : 'rgba(255,255,255,0.10)'}`,
+              fontFamily:    "'DM Sans', sans-serif",
+              fontWeight:    500,
+              fontSize:      18,
+              color:         '#F0EFF8',
+              outline:       'none',
+              paddingBottom: 6,
+              caretColor:    ACCENT,
+              transition:    'border-color 200ms',
+            }}
+          />
         </div>
       </div>
 

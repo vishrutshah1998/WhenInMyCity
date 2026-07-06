@@ -1,10 +1,13 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useState, useEffect, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { updateExplorerProfile } from '@/app/actions/explorer'
 import type { ExplorerProfile } from '@/types/database'
 import { CITIES, INTEREST_TAGS } from '@/lib/constants/interests'
+
+const CITY_GUIDE_CONSENT_KEY = 'wimc_city_guide_consent_v1'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -56,6 +59,16 @@ export default function SettingsClient({ profile }: { profile: ExplorerProfile }
   const [notifPrefs, setNotifPrefs]         = useState(() => parseNotifPrefs(profile.notification_preferences))
   const [error, setError]                   = useState<string | null>(null)
   const [saved, setSaved]                   = useState(false)
+  const [cityGuideConsent, setCityGuideConsent] = useState(false)
+
+  useEffect(() => {
+    setCityGuideConsent(!!localStorage.getItem(CITY_GUIDE_CONSENT_KEY))
+  }, [])
+
+  function revokeCityGuideConsent() {
+    localStorage.removeItem(CITY_GUIDE_CONSENT_KEY)
+    setCityGuideConsent(false)
+  }
 
   function toggleTag(id: string) {
     setSelectedTags((prev) =>
@@ -82,6 +95,7 @@ export default function SettingsClient({ profile }: { profile: ExplorerProfile }
         interest_tags:            selectedTags,
         neighbourhood_preference: neighbourhood || null,
         price_range_max_paise:    priceMax,
+        preferred_formats:        [],
         notification_preferences: notifPrefs,
       })
 
@@ -255,7 +269,7 @@ export default function SettingsClient({ profile }: { profile: ExplorerProfile }
           </Section>
 
           {/* ── Notifications ───────────────────────────────────────────── */}
-          <Section title="Notifications">
+          <Section title="Notifications — WhatsApp & Email">
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
               {/* WhatsApp toggle */}
               <div style={{
@@ -323,6 +337,103 @@ export default function SettingsClient({ profile }: { profile: ExplorerProfile }
                   })}
                 </div>
               </div>
+            </div>
+          </Section>
+
+          {/* ── Privacy & Data (DPDP) ───────────────────────────────────── */}
+          <Section title="Privacy & Data">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+
+              {/* Location consent */}
+              <div style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                padding: '14px 16px', borderRadius: 10,
+                background: 'var(--wimc-bg-raised)',
+                border: '1px solid var(--wimc-border-subtle)',
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <span className="material-symbols-outlined" style={{ fontSize: 20, color: 'var(--wimc-coral)' }}>location_on</span>
+                  <div>
+                    <div style={{ fontSize: 14, fontWeight: 600 }}>City Guide location access</div>
+                    <div style={{ fontSize: 12, color: 'var(--wimc-text-muted)' }}>
+                      {cityGuideConsent
+                        ? 'Consent given — your approximate location centres the map (not stored).'
+                        : 'Not given — no location is used until you opt in within City Guide.'}
+                    </div>
+                  </div>
+                </div>
+                {cityGuideConsent && (
+                  <button
+                    type="button"
+                    onClick={revokeCityGuideConsent}
+                    style={{
+                      flexShrink: 0, padding: '5px 12px', borderRadius: 9999,
+                      fontSize: 12, fontWeight: 600, cursor: 'pointer',
+                      border: '1.5px solid var(--wimc-border-subtle)',
+                      background: 'var(--wimc-bg-base)',
+                      color: 'var(--wimc-text-secondary)',
+                    }}
+                  >
+                    Revoke
+                  </button>
+                )}
+              </div>
+
+              {/* DPDP rights summary */}
+              <div style={{
+                padding: '14px 16px', borderRadius: 10,
+                background: 'var(--wimc-bg-raised)',
+                border: '1px solid var(--wimc-border-subtle)',
+                fontSize: 13, color: 'var(--wimc-text-secondary)', lineHeight: 1.65,
+              }}>
+                <div style={{ fontWeight: 600, marginBottom: 6 }}>Your rights under the DPDP Act, 2023</div>
+                <ul style={{ margin: 0, paddingLeft: 18, display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  <li><strong>Access</strong> — request a summary of data we hold about you.</li>
+                  <li><strong>Correction &amp; erasure</strong> — correct inaccurate data or delete your account.</li>
+                  <li><strong>Withdraw consent</strong> — revoke location access above at any time.</li>
+                  <li><strong>Grievance redressal</strong> — contact our Grievance Officer; 30-day SLA.</li>
+                </ul>
+              </div>
+
+              {/* Grievance Officer */}
+              <div style={{
+                padding: '14px 16px', borderRadius: 10,
+                background: 'var(--wimc-bg-raised)',
+                border: '1px solid var(--wimc-border-subtle)',
+              }}>
+                <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 4 }}>
+                  Grievance Officer — City Collective LLP
+                </div>
+                <div style={{ fontSize: 13, color: 'var(--wimc-text-muted)', lineHeight: 1.6 }}>
+                  <div><strong style={{ color: 'var(--wimc-text-primary)' }}>Vishrut Shah</strong> · Founder</div>
+                  <div>
+                    <a
+                      href="mailto:wheninmycity@gmail.com?subject=DPDP%20Grievance"
+                      style={{ color: 'var(--wimc-coral)', textDecoration: 'none' }}
+                    >
+                      wheninmycity@gmail.com
+                    </a>
+                    {' '}· Response within 30 days
+                  </div>
+                </div>
+              </div>
+
+              {/* Legal links */}
+              <div style={{ display: 'flex', gap: 20, paddingTop: 4 }}>
+                <Link
+                  href="/legal/privacy"
+                  style={{ fontSize: 13, color: 'var(--wimc-coral)', textDecoration: 'none', fontWeight: 500 }}
+                >
+                  Privacy Notice →
+                </Link>
+                <Link
+                  href="/legal/terms"
+                  style={{ fontSize: 13, color: 'var(--wimc-coral)', textDecoration: 'none', fontWeight: 500 }}
+                >
+                  Terms of Use →
+                </Link>
+              </div>
+
             </div>
           </Section>
 
