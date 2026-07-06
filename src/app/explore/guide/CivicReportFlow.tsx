@@ -593,7 +593,7 @@ export default function CivicReportFlow({
                       <li>Your report (category, description, photo if added, location if attached) will be stored by WIMC and forwarded to <strong>{catConfig.targetLabel}</strong>.</li>
                       <li>Location coordinates you attach are stored to identify the site and forwarded with the report. They are not used for any other purpose.</li>
                       <li>WIMC is a <strong>capture-and-forward service only</strong>. We do not investigate, resolve, or track the status of your report after it is forwarded.</li>
-                      <li>You can request erasure of your report data at any time by emailing <a href="mailto:grievance@wheninmycity.com?subject=DPDP%20Erasure%20Request" style={{ color: '#9B8FFF' }}>grievance@wheninmycity.com</a>.</li>
+                      <li>You can request erasure of your report data at any time by emailing <a href="mailto:wheninmycity@gmail.com?subject=DPDP%20Erasure%20Request" style={{ color: '#9B8FFF' }}>wheninmycity@gmail.com</a>.</li>
                     </ul>
                   </>
                 )}
@@ -746,8 +746,8 @@ export default function CivicReportFlow({
                     : `Contact ${targetLabel} directly using the details above to follow up on this issue.`
                   }{' '}
                   To request erasure of your report data, email{' '}
-                  <a href="mailto:grievance@wheninmycity.com?subject=DPDP%20Erasure%20Request" style={{ color: '#9B8FFF' }}>
-                    grievance@wheninmycity.com
+                  <a href="mailto:wheninmycity@gmail.com?subject=DPDP%20Erasure%20Request" style={{ color: '#9B8FFF' }}>
+                    wheninmycity@gmail.com
                   </a>.
                 </div>
 

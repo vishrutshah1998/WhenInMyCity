@@ -3,20 +3,35 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 
-const TABS = [
-  { href: '/explore',          label: 'Discover',  icon: 'explore',              exact: true },
-  { href: '/explore/saved',    label: 'Saved',     icon: 'bookmark',             exact: false },
-  { href: '/explore/feed',     label: 'Following', icon: 'people',               exact: false },
-  { href: '/explore/tickets',  label: 'Tickets',   icon: 'confirmation_number',  exact: false },
-  { href: '/explore/city',     label: 'City',      icon: 'local_fire_department', exact: false },
+// City IDs with an active City (Government Edition). Add new clusters here.
+const CITY_EDITION_IDS = new Set(['ahmedabad', 'gandhinagar'])
+
+const BASE_TABS = [
+  { href: '/explore',         label: 'Discover',  icon: 'explore', exact: true  },
+  { href: '/explore/feed',    label: 'Following', icon: 'people',  exact: false },
+  { href: '/explore/profile', label: 'Profile',   icon: 'person',  exact: false },
 ]
 
-export default function ExploreNav() {
+const CITY_GUIDE_TAB = { href: '/explore/guide', label: 'City Guide', icon: 'map', exact: false }
+
+interface Props {
+  // City ID from the user's explorer profile (e.g. 'ahmedabad', 'pune').
+  // When absent the guide tab is hidden until the city is resolved.
+  userCity?: string | null
+}
+
+export default function ExploreNav({ userCity }: Props) {
   const pathname = usePathname()
+
+  // City Guide tab is inserted between Following and Profile only for
+  // explorer users in cities with an active City Government Edition.
+  const tabs = CITY_EDITION_IDS.has(userCity ?? '')
+    ? [BASE_TABS[0], BASE_TABS[1], CITY_GUIDE_TAB, BASE_TABS[2]]
+    : BASE_TABS
 
   return (
     <nav style={{ display: 'flex', gap: 0 }}>
-      {TABS.map((tab) => {
+      {tabs.map((tab) => {
         const active = tab.exact ? pathname === tab.href : pathname.startsWith(tab.href)
         return (
           <Link

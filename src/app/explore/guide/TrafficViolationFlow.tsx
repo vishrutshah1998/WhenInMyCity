@@ -648,8 +648,8 @@ export default function TrafficViolationFlow({
                     <li>Vehicle number, photo (if added), and location (if attached) are stored privately by WIMC and forwarded to Gujarat Traffic Police via a pre-filled message you send from your device.</li>
                     <li>This data is used solely for the purpose of reporting a traffic violation to the authorities.</li>
                     <li>You can request erasure at any time by emailing{' '}
-                      <a href="mailto:grievance@wheninmycity.com?subject=DPDP%20Erasure%20Request" style={{ color: '#9B8FFF' }}>
-                        grievance@wheninmycity.com
+                      <a href="mailto:wheninmycity@gmail.com?subject=DPDP%20Erasure%20Request" style={{ color: '#9B8FFF' }}>
+                        wheninmycity@gmail.com
                       </a>.
                     </li>
                   </ul>
@@ -772,8 +772,8 @@ export default function TrafficViolationFlow({
                 <strong style={{ color: 'var(--wimc-text-primary)' }}>Privacy:</strong>{' '}
                 This report is visible only to you. WIMC does not publish traffic violation
                 reports to other users or any public surface. To request erasure, email{' '}
-                <a href="mailto:grievance@wheninmycity.com?subject=DPDP%20Erasure%20Request" style={{ color: '#9B8FFF' }}>
-                  grievance@wheninmycity.com
+                <a href="mailto:wheninmycity@gmail.com?subject=DPDP%20Erasure%20Request" style={{ color: '#9B8FFF' }}>
+                  wheninmycity@gmail.com
                 </a>.
               </div>
 

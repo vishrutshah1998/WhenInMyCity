@@ -1,14 +1,34 @@
 'use client'
 
 import type { ReactNode } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import ExploreNav from './ExploreNav'
 import { WimcWordmark } from '@/components/WimcWordmark'
 import { BottomNav } from '@/components/ui/BottomNav'
+import { createClient } from '@/lib/supabase/client'
 
 export default function ExploreLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname()
+  const [userCity, setUserCity] = useState<string | null>(null)
+
+  useEffect(() => {
+    // Fetch the explorer profile city so ExploreNav can gate the City Guide tab
+    // to users in cities with an active City (Government Edition).
+    const supabase = createClient()
+    supabase.auth.getUser().then(({ data }) => {
+      if (!data.user) return
+      supabase
+        .from('explorer_profiles')
+        .select('city')
+        .eq('auth_user_id', data.user.id)
+        .maybeSingle()
+        .then(({ data: ep }) => {
+          if (ep?.city) setUserCity(ep.city)
+        })
+    })
+  }, [])
 
   // Dashboard routes have their own sidebar layout — skip the public header
   if (pathname?.startsWith('/explore/dashboard')) {
@@ -55,7 +75,7 @@ export default function ExploreLayout({ children }: { children: ReactNode }) {
               <span className="material-symbols-outlined" style={{ fontSize: 18 }}>person</span>
             </Link>
           </div>
-          <ExploreNav />
+          <ExploreNav userCity={userCity} />
         </div>
       </div>
 
