@@ -995,10 +995,13 @@ export interface UpdateExplorerInput {
   interest_tags: string[]
   neighbourhood_preference: string | null
   price_range_max_paise: number
+  preferred_formats: string[]
   notification_preferences: {
     whatsapp: boolean
     digest_frequency: 'daily' | 'weekly' | 'never'
   }
+  explorer_scene?: string
+  explorer_creator_intent?: string[]
 }
 
 /**
@@ -1022,7 +1025,7 @@ export async function updateExplorerProfile(
 
   const admin = createAdminClient()
 
-  const { error } = await admin
+  const { error: epError } = await admin
     .from('explorer_profiles')
     .update({
       display_name:             data.display_name.trim(),
@@ -1030,13 +1033,30 @@ export async function updateExplorerProfile(
       interest_tags:            data.interest_tags,
       neighbourhood_preference: data.neighbourhood_preference || null,
       price_range_max_paise:    data.price_range_max_paise,
+      preferred_formats:        data.preferred_formats,
       notification_preferences: data.notification_preferences,
     })
     .eq('auth_user_id', user.id)
 
-  if (error) {
-    console.error('[updateExplorerProfile]', error.message)
+  if (epError) {
+    console.error('[updateExplorerProfile]', epError.message)
     return { error: 'Failed to save your settings. Please try again.' }
+  }
+
+  if (data.explorer_scene !== undefined || data.explorer_creator_intent !== undefined) {
+    const upUpdates: Record<string, unknown> = {}
+    if (data.explorer_scene !== undefined) upUpdates.explorer_scene = data.explorer_scene || null
+    if (data.explorer_creator_intent !== undefined) upUpdates.explorer_creator_intent = data.explorer_creator_intent
+
+    const { error: upError } = await admin
+      .from('user_profiles')
+      .update(upUpdates)
+      .eq('id', user.id)
+
+    if (upError) {
+      console.error('[updateExplorerProfile] user_profiles', upError.message)
+      return { error: 'Failed to save your settings. Please try again.' }
+    }
   }
 
   return { error: null }
@@ -1078,6 +1098,50 @@ export async function updateExplorerStudioProfile(input: {
 
   revalidatePath('/explore/dashboard/studio')
   return { error: null }
+}
+
+// ---------------------------------------------------------------------------
+// getExplorerIdentity — identity card data for the profile surface
+// Joins explorer_profiles (display name, avatar, city, interests) with
+// user_profiles (bio, instagram) into one type-safe response.
+// ---------------------------------------------------------------------------
+
+export interface ExplorerIdentity {
+  displayName:     string
+  avatarUrl:       string | null
+  city:            string
+  interestTags:    string[]
+  bio:             string | null
+  instagramHandle: string | null
+}
+
+export async function getExplorerIdentity(): Promise<ExplorerIdentity | null> {
+  const { user } = await requireAuth('/signin')
+  const admin    = createAdminClient()
+
+  const [ep, up] = await Promise.all([
+    admin
+      .from('explorer_profiles')
+      .select('display_name, avatar_url, city, interest_tags')
+      .eq('auth_user_id', user.id)
+      .maybeSingle(),
+    admin
+      .from('user_profiles')
+      .select('bio, instagram_handle')
+      .eq('id', user.id)
+      .maybeSingle(),
+  ])
+
+  if (!ep.data) return null
+
+  return {
+    displayName:     ep.data.display_name,
+    avatarUrl:       ep.data.avatar_url   ?? null,
+    city:            ep.data.city,
+    interestTags:    ep.data.interest_tags ?? [],
+    bio:             up.data?.bio              ?? null,
+    instagramHandle: up.data?.instagram_handle ?? null,
+  }
 }
 
 // ---------------------------------------------------------------------------

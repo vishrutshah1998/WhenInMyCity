@@ -29,14 +29,14 @@ interface NavItem {
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { href: '/explore',                       icon: 'explore',               label: 'Explore',        exact: true },
-  { href: '/explore/dashboard',             icon: 'person',                label: 'My Profile',     exact: true },
-  { href: '/explore/dashboard/studio',      icon: 'web',                   label: 'My Page',        exact: true },
-  { href: '/explore/dashboard/saved',       icon: 'bookmark',              label: 'Saved Events' },
-  { href: '/explore/dashboard/following',   icon: 'group',                 label: 'Following' },
-  { href: '/explore/dashboard/tickets',     icon: 'confirmation_number',   label: 'Tickets' },
+  { href: '/explore/dashboard/browse',        icon: 'explore',             label: 'Explore',        exact: false },
+  { href: '/explore/guide',                   icon: 'map',                 label: 'City Guide',     exact: false },
+  { href: '/explore/dashboard',               icon: 'person',              label: 'My Profile',     exact: true },
+  { href: '/explore/dashboard/studio',        icon: 'web',                 label: 'My Page',        exact: true },
+  { href: '/explore/dashboard/saved',         icon: 'bookmark',            label: 'Saved Events' },
+  { href: '/explore/dashboard/following',     icon: 'group',               label: 'Following' },
+  { href: '/explore/dashboard/tickets',       icon: 'confirmation_number', label: 'Tickets' },
   { href: '/explore/dashboard/notifications', icon: 'notifications',       label: 'Notifications' },
-  { href: '/explore/dashboard/settings',    icon: 'settings',              label: 'Settings' },
 ]
 
 // ---------------------------------------------------------------------------
@@ -121,7 +121,7 @@ export default function ExplorerSidebar({
 
         {isExpanded && (
           <div style={{ overflow: 'hidden', whiteSpace: 'nowrap', minWidth: 0 }}>
-            <WimcWordmark color={LAVENDER} height={22} />
+            <WimcWordmark color="white" height={22} />
           </div>
         )}
       </div>
@@ -192,24 +192,6 @@ export default function ExplorerSidebar({
           )
         })}
       </nav>
-
-      {/* ── Switch to public explore ────────────────────────────────────── */}
-      {isExpanded && (
-        <div style={{ padding: '10px 14px', borderTop: `1px solid ${SB_BORDER}` }}>
-          <Link
-            href="/explore"
-            style={{
-              display: 'flex', alignItems: 'center', gap: 8,
-              textDecoration: 'none', color: SB_MUTED,
-              fontSize: 11, fontFamily: 'var(--font-jetbrains-mono)',
-              letterSpacing: '0.12em', textTransform: 'uppercase',
-            }}
-          >
-            <span className="material-symbols-outlined" style={{ fontSize: 16, color: LAVENDER }}>explore</span>
-            Browse Events →
-          </Link>
-        </div>
-      )}
 
       {/* ── User footer ─────────────────────────────────────────────────── */}
       <Link
