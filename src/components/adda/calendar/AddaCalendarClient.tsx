@@ -11,6 +11,8 @@ import CalendarToolbar from './CalendarToolbar'
 import BlockTimeModal, { type BlockTimePayload } from './BlockTimeModal'
 import ResizeConfirmModal from './ResizeConfirmModal'
 import GoogleSyncDrawer from './GoogleSyncDrawer'
+import MobileCalendarView from './MobileCalendarView'
+import { useIsMobile } from '@/hooks/useIsMobile'
 import {
   MOCK_CALENDAR_EVENTS,
   getDayRevenueSummary,
@@ -277,6 +279,7 @@ interface Props {
 }
 
 export default function AddaCalendarClient({ venueName, addaId, googleCalendarConnected }: Props) {
+  const isMobile = useIsMobile()
   const [events, setEvents] = useState<CalendarEvent[]>(MOCK_CALENDAR_EVENTS)
   const [view, setView] = useState<View>(Views.WEEK)
   const [date, setDate] = useState(new Date())
@@ -364,6 +367,34 @@ export default function AddaCalendarClient({ venueName, addaId, googleCalendarCo
       timeSlotWrapper: SlotWrapperBound as any,
     }
   }, [handleBlockFromSlot]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Mobile view — rendered below 768px, desktop calendar untouched above ──
+
+  if (isMobile) {
+    return (
+      <div className="adda-theme" style={{ height: '100%' }}>
+        <MobileCalendarView
+          events={events}
+          onBlockTime={() => {
+            setBlockInitialDate(undefined)
+            setBlockInitialStart(undefined)
+            setBlockModalOpen(true)
+          }}
+        />
+        <BlockTimeModal
+          open={blockModalOpen}
+          initialDate={blockInitialDate}
+          initialStart={blockInitialStart}
+          onClose={() => {
+            setBlockModalOpen(false)
+            setBlockInitialDate(undefined)
+            setBlockInitialStart(undefined)
+          }}
+          onConfirm={handleBlockConfirm}
+        />
+      </div>
+    )
+  }
 
   const isDay = view === Views.DAY
 

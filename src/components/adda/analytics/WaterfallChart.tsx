@@ -146,60 +146,81 @@ export default function WaterfallChart({ data }: Props) {
         </div>
       </div>
 
-      <ResponsiveContainer width="100%" height={220}>
-        <BarChart data={rows} margin={{ top: 8, right: 8, bottom: 0, left: 8 }} barSize={56}>
-          <CartesianGrid strokeDasharray="3 3" stroke="var(--adda-border-subtle)" vertical={false} />
-          <XAxis
-            dataKey="name"
-            tick={{ fontSize: 11, fill: 'var(--adda-text-muted)', fontFamily: 'var(--font-inter)' }}
-            axisLine={{ stroke: 'var(--adda-border-subtle)' }}
-            tickLine={false}
-          />
-          <YAxis
-            domain={[0, maxY * 1.05]}
-            tickFormatter={v => `₹${(v / 100000).toFixed(1)}L`}
-            tick={{ fontSize: 10, fill: 'var(--adda-text-muted)', fontFamily: 'var(--font-jetbrains-mono)' }}
-            axisLine={false}
-            tickLine={false}
-            width={48}
-          />
-          <Tooltip content={<ChartTooltip />} cursor={{ fill: 'rgba(255,255,255,0.03)' }} />
-
-          {/* Invisible offset bar to "float" deduction bars */}
-          <Bar dataKey="offset" stackId="wf" fill="transparent" isAnimationActive={false} />
-
-          {/* Visible value bar */}
-          <Bar dataKey="value" stackId="wf" radius={[4, 4, 0, 0]} isAnimationActive={false}>
-            {rows.map((row, idx) => (
-              <Cell key={idx} fill={row.fill} fillOpacity={row.isDeduction ? 0.75 : 1} />
-            ))}
-            <LabelList dataKey="label" content={<CustomLabel />} />
-          </Bar>
-        </BarChart>
-      </ResponsiveContainer>
-
-      {/* Plain-language summary */}
-      <div
-        style={{
-          marginTop: 14,
-          padding: '8px 12px',
+      {data.grossPaise === 0 ? (
+        <div style={{
+          height: 220,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
           background: 'var(--adda-bg-elevated)',
-          borderRadius: 7,
-          fontSize: 12,
-          color: 'var(--adda-text-secondary)',
-          fontFamily: 'var(--font-inter)',
-          lineHeight: 1.5,
-        }}
-      >
-        WIMC keeps{' '}
-        <span style={{ color: '#ef4444', fontWeight: 600, fontFamily: 'var(--font-jetbrains-mono)' }}>
-          {paise2Inr(data.platformFeePaise + data.processingFeePaise)}
-        </span>{' '}
-        per period. Your net payout is{' '}
-        <span style={{ color: '#10b981', fontWeight: 600, fontFamily: 'var(--font-jetbrains-mono)' }}>
-          {paise2Inr(data.netPayoutPaise)}
-        </span>.
-      </div>
+          borderRadius: 8,
+        }}>
+          <span style={{
+            fontSize: 13,
+            color: 'var(--adda-text-muted)',
+            fontFamily: 'var(--font-inter), system-ui, sans-serif',
+          }}>
+            No revenue to break down yet
+          </span>
+        </div>
+      ) : (
+        <>
+          <ResponsiveContainer width="100%" height={220}>
+            <BarChart data={rows} margin={{ top: 8, right: 8, bottom: 0, left: 8 }} barSize={56}>
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--adda-border-subtle)" vertical={false} />
+              <XAxis
+                dataKey="name"
+                tick={{ fontSize: 11, fill: 'var(--adda-text-muted)', fontFamily: 'var(--font-inter)' }}
+                axisLine={{ stroke: 'var(--adda-border-subtle)' }}
+                tickLine={false}
+              />
+              <YAxis
+                domain={[0, maxY * 1.05]}
+                tickFormatter={v => `₹${(v / 100000).toFixed(1)}L`}
+                tick={{ fontSize: 10, fill: 'var(--adda-text-muted)', fontFamily: 'var(--font-jetbrains-mono)' }}
+                axisLine={false}
+                tickLine={false}
+                width={48}
+              />
+              <Tooltip content={<ChartTooltip />} cursor={{ fill: 'rgba(255,255,255,0.03)' }} />
+
+              {/* Invisible offset bar to "float" deduction bars */}
+              <Bar dataKey="offset" stackId="wf" fill="transparent" isAnimationActive={false} />
+
+              {/* Visible value bar */}
+              <Bar dataKey="value" stackId="wf" radius={[4, 4, 0, 0]} isAnimationActive={false}>
+                {rows.map((row, idx) => (
+                  <Cell key={idx} fill={row.fill} fillOpacity={row.isDeduction ? 0.75 : 1} />
+                ))}
+                <LabelList dataKey="label" content={<CustomLabel />} />
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+
+          {/* Plain-language summary */}
+          <div
+            style={{
+              marginTop: 14,
+              padding: '8px 12px',
+              background: 'var(--adda-bg-elevated)',
+              borderRadius: 7,
+              fontSize: 12,
+              color: 'var(--adda-text-secondary)',
+              fontFamily: 'var(--font-inter)',
+              lineHeight: 1.5,
+            }}
+          >
+            WIMC keeps{' '}
+            <span style={{ color: '#ef4444', fontWeight: 600, fontFamily: 'var(--font-jetbrains-mono)' }}>
+              {paise2Inr(data.platformFeePaise + data.processingFeePaise)}
+            </span>{' '}
+            per period. Your net payout is{' '}
+            <span style={{ color: '#10b981', fontWeight: 600, fontFamily: 'var(--font-jetbrains-mono)' }}>
+              {paise2Inr(data.netPayoutPaise)}
+            </span>.
+          </div>
+        </>
+      )}
     </div>
   )
 }

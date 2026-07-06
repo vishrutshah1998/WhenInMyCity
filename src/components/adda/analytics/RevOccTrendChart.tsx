@@ -72,6 +72,8 @@ function ChartTooltip({ active, payload, label }: any) {
 export default function RevOccTrendChart({ data, compareData }: Props) {
   const [mode, setMode] = useState<ViewMode>('both')
 
+  const allZero = data.length === 0 || data.every(d => d.revenuePaise === 0 && d.occupancyPercent === 0)
+
   // Compute average occupancy for the reference line
   const avgOcc = data.length
     ? Math.round(data.reduce((s, d) => s + d.occupancyPercent, 0) / data.length)
@@ -139,145 +141,166 @@ export default function RevOccTrendChart({ data, compareData }: Props) {
         </div>
       </div>
 
-      <ResponsiveContainer width="100%" height={280}>
-        <ComposedChart data={chartData} margin={{ top: 10, right: 28, bottom: 0, left: 8 }}>
-          <CartesianGrid
-            strokeDasharray="3 3"
-            stroke="var(--adda-border-subtle)"
-            vertical={false}
-          />
-          <XAxis
-            dataKey="label"
-            tick={{ fontSize: 11, fill: 'var(--adda-text-muted)', fontFamily: 'var(--font-jetbrains-mono)' }}
-            axisLine={{ stroke: 'var(--adda-border-subtle)' }}
-            tickLine={false}
-            interval="preserveStartEnd"
-          />
-          {/* Left Y: Revenue (₹) */}
-          <YAxis
-            yAxisId="revenue"
-            orientation="left"
-            tickFormatter={v => `₹${(v / 10000).toFixed(0)}k`}
-            tick={{ fontSize: 10, fill: 'var(--adda-text-muted)', fontFamily: 'var(--font-jetbrains-mono)' }}
-            axisLine={false}
-            tickLine={false}
-            width={52}
-            hide={!showRevenue}
-          />
-          {/* Right Y: Occupancy (%) */}
-          <YAxis
-            yAxisId="occupancy"
-            orientation="right"
-            domain={[0, 100]}
-            tickFormatter={v => `${v}%`}
-            tick={{ fontSize: 10, fill: 'var(--adda-text-muted)', fontFamily: 'var(--font-jetbrains-mono)' }}
-            axisLine={false}
-            tickLine={false}
-            width={38}
-            hide={!showOccupancy}
-          />
-          <Tooltip content={<ChartTooltip />} />
+      {allZero ? (
+        <div style={{
+          height: 280,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          background: 'var(--adda-bg-elevated)',
+          borderRadius: 8,
+        }}>
+          <span style={{
+            fontSize: 13,
+            color: 'var(--adda-text-muted)',
+            fontFamily: 'var(--font-inter), system-ui, sans-serif',
+          }}>
+            No bookings with revenue in this range
+          </span>
+        </div>
+      ) : (
+        <>
+          <ResponsiveContainer width="100%" height={280}>
+            <ComposedChart data={chartData} margin={{ top: 10, right: 28, bottom: 0, left: 8 }}>
+              <CartesianGrid
+                strokeDasharray="3 3"
+                stroke="var(--adda-border-subtle)"
+                vertical={false}
+              />
+              <XAxis
+                dataKey="label"
+                tick={{ fontSize: 11, fill: 'var(--adda-text-muted)', fontFamily: 'var(--font-jetbrains-mono)' }}
+                axisLine={{ stroke: 'var(--adda-border-subtle)' }}
+                tickLine={false}
+                interval="preserveStartEnd"
+              />
+              {/* Left Y: Revenue (₹) */}
+              <YAxis
+                yAxisId="revenue"
+                orientation="left"
+                tickFormatter={v => `₹${(v / 10000).toFixed(0)}k`}
+                tick={{ fontSize: 10, fill: 'var(--adda-text-muted)', fontFamily: 'var(--font-jetbrains-mono)' }}
+                axisLine={false}
+                tickLine={false}
+                width={52}
+                hide={!showRevenue}
+              />
+              {/* Right Y: Occupancy (%) */}
+              <YAxis
+                yAxisId="occupancy"
+                orientation="right"
+                domain={[0, 100]}
+                tickFormatter={v => `${v}%`}
+                tick={{ fontSize: 10, fill: 'var(--adda-text-muted)', fontFamily: 'var(--font-jetbrains-mono)' }}
+                axisLine={false}
+                tickLine={false}
+                width={38}
+                hide={!showOccupancy}
+              />
+              <Tooltip content={<ChartTooltip />} />
 
-          {/* Revenue area */}
-          {showRevenue && (
-            <Area
-              yAxisId="revenue"
-              type="monotone"
-              dataKey="revenuePaise"
-              name="Revenue"
-              stroke="#f59e0b"
-              strokeWidth={2}
-              fill="rgba(245,158,11,0.08)"
-              dot={false}
-              isAnimationActive={false}
-            />
-          )}
-          {/* Revenue compare (dashed) */}
-          {showRevenue && compareData && (
-            <Line
-              yAxisId="revenue"
-              type="monotone"
-              dataKey="prevRevenuePaise"
-              name="Revenue (prev)"
-              stroke="#f59e0b"
-              strokeWidth={1.5}
-              strokeDasharray="5 4"
-              dot={false}
-              isAnimationActive={false}
-            />
-          )}
+              {/* Revenue area */}
+              {showRevenue && (
+                <Area
+                  yAxisId="revenue"
+                  type="monotone"
+                  dataKey="revenuePaise"
+                  name="Revenue"
+                  stroke="#f59e0b"
+                  strokeWidth={2}
+                  fill="rgba(245,158,11,0.08)"
+                  dot={false}
+                  isAnimationActive={false}
+                />
+              )}
+              {/* Revenue compare (dashed) */}
+              {showRevenue && compareData && (
+                <Line
+                  yAxisId="revenue"
+                  type="monotone"
+                  dataKey="prevRevenuePaise"
+                  name="Revenue (prev)"
+                  stroke="#f59e0b"
+                  strokeWidth={1.5}
+                  strokeDasharray="5 4"
+                  dot={false}
+                  isAnimationActive={false}
+                />
+              )}
 
-          {/* Occupancy line */}
-          {showOccupancy && (
-            <Line
-              yAxisId="occupancy"
-              type="monotone"
-              dataKey="occupancyPercent"
-              name="Occupancy"
-              stroke="#38bdf8"
-              strokeWidth={2}
-              dot={false}
-              isAnimationActive={false}
-            />
-          )}
-          {/* Occupancy compare (dashed) */}
-          {showOccupancy && compareData && (
-            <Line
-              yAxisId="occupancy"
-              type="monotone"
-              dataKey="prevOccupancyPercent"
-              name="Occupancy (prev)"
-              stroke="#38bdf8"
-              strokeWidth={1.5}
-              strokeDasharray="5 4"
-              dot={false}
-              isAnimationActive={false}
-            />
-          )}
+              {/* Occupancy line */}
+              {showOccupancy && (
+                <Line
+                  yAxisId="occupancy"
+                  type="monotone"
+                  dataKey="occupancyPercent"
+                  name="Occupancy"
+                  stroke="#38bdf8"
+                  strokeWidth={2}
+                  dot={false}
+                  isAnimationActive={false}
+                />
+              )}
+              {/* Occupancy compare (dashed) */}
+              {showOccupancy && compareData && (
+                <Line
+                  yAxisId="occupancy"
+                  type="monotone"
+                  dataKey="prevOccupancyPercent"
+                  name="Occupancy (prev)"
+                  stroke="#38bdf8"
+                  strokeWidth={1.5}
+                  strokeDasharray="5 4"
+                  dot={false}
+                  isAnimationActive={false}
+                />
+              )}
 
-          {/* Average occupancy reference line */}
-          {showOccupancy && avgOcc > 0 && (
-            <ReferenceLine
-              yAxisId="occupancy"
-              y={avgOcc}
-              stroke="rgba(56,189,248,0.4)"
-              strokeDasharray="4 3"
-              label={{
-                value: `Avg ${avgOcc}%`,
-                position: 'insideTopRight',
-                fontSize: 10,
-                fill: '#38bdf8',
-                fontFamily: 'var(--font-jetbrains-mono)',
-              }}
-            />
-          )}
-        </ComposedChart>
-      </ResponsiveContainer>
+              {/* Average occupancy reference line */}
+              {showOccupancy && avgOcc > 0 && (
+                <ReferenceLine
+                  yAxisId="occupancy"
+                  y={avgOcc}
+                  stroke="rgba(56,189,248,0.4)"
+                  strokeDasharray="4 3"
+                  label={{
+                    value: `Avg ${avgOcc}%`,
+                    position: 'insideTopRight',
+                    fontSize: 10,
+                    fill: '#38bdf8',
+                    fontFamily: 'var(--font-jetbrains-mono)',
+                  }}
+                />
+              )}
+            </ComposedChart>
+          </ResponsiveContainer>
 
-      {/* Legend */}
-      <div style={{ display: 'flex', gap: 16, marginTop: 10, paddingLeft: 4 }}>
-        {showRevenue && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: 'var(--adda-text-muted)' }}>
-            <span style={{ display: 'inline-block', width: 16, height: 2, background: '#f59e0b', borderRadius: 1 }} />
-            Revenue (₹)
+          {/* Legend */}
+          <div style={{ display: 'flex', gap: 16, marginTop: 10, paddingLeft: 4 }}>
+            {showRevenue && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: 'var(--adda-text-muted)' }}>
+                <span style={{ display: 'inline-block', width: 16, height: 2, background: '#f59e0b', borderRadius: 1 }} />
+                Revenue (₹)
+              </div>
+            )}
+            {showOccupancy && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: 'var(--adda-text-muted)' }}>
+                <span style={{ display: 'inline-block', width: 16, height: 2, background: '#38bdf8', borderRadius: 1 }} />
+                Occupancy (%)
+              </div>
+            )}
+            {compareData && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: 'var(--adda-text-muted)' }}>
+                <span style={{
+                  display: 'inline-block', width: 16, height: 2,
+                  background: 'repeating-linear-gradient(90deg, var(--adda-text-muted) 0 5px, transparent 5px 9px)',
+                }} />
+                Previous period
+              </div>
+            )}
           </div>
-        )}
-        {showOccupancy && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: 'var(--adda-text-muted)' }}>
-            <span style={{ display: 'inline-block', width: 16, height: 2, background: '#38bdf8', borderRadius: 1 }} />
-            Occupancy (%)
-          </div>
-        )}
-        {compareData && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: 'var(--adda-text-muted)' }}>
-            <span style={{
-              display: 'inline-block', width: 16, height: 2,
-              background: 'repeating-linear-gradient(90deg, var(--adda-text-muted) 0 5px, transparent 5px 9px)',
-            }} />
-            Previous period
-          </div>
-        )}
-      </div>
+        </>
+      )}
     </div>
   )
 }
