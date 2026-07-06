@@ -128,7 +128,7 @@ function SignInForm() {
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src="/stamp.png"
+              src="/logo-stamp.png"
               alt=""
               style={{ width: '70%', maxWidth: 420, transform: 'rotate(-8deg)', filter: 'grayscale(1)' }}
             />

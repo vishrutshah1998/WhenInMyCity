@@ -9,10 +9,6 @@
  */
 
 .adda-theme {
-  /* Sidebar width — overridden by AddaSidebarClient useEffect on mount.
-     The CSS default here prevents a margin-left flash on SSR before JS runs. */
-  --adda-sidebar-w: 64px;
-
   /* ── Surface stack ───────────────────────────────────────────────────────── */
   --adda-bg-base:     #0F172A;
   --adda-bg-surface:  #111114;
