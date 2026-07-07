@@ -1,14 +1,14 @@
 // =============================================================================
-// WIMC — Adda Tier Evaluation Cron
+// WIMC — Venue Tier Evaluation Cron
 //
 // Schedule: 0 21 * * 1  (every Monday at 21:00 UTC / 2:30 AM IST Tuesday)
 // Vercel automatically injects `Authorization: Bearer <CRON_SECRET>`.
 //
-// Trust axis:  evaluates every active Adda against Open/Verified/Beloved/Legendary
+// Trust axis:  evaluates every active Venue against Open/Verified/Beloved/Legendary
 // Velocity overlay: recomputes Trending status per city (final page only)
 //
 // Cursor pagination: pass ?cursor=<last_processed_id> to resume from a prior page.
-// Each invocation fetches PAGE_SIZE addas. When nextCursor is non-null, more pages remain.
+// Each invocation fetches PAGE_SIZE venues. When nextCursor is non-null, more pages remain.
 //
 // Returns: { evaluated, upgraded, downgraded, trendingGranted, trendingCleared, cities, nextCursor, done }
 // =============================================================================
@@ -26,7 +26,7 @@ import type { AddaTier } from '@/types/database'
 function isAuthorized(request: NextRequest): boolean {
   const cronSecret = process.env.CRON_SECRET
   if (!cronSecret) {
-    console.error('[evaluate-adda-tiers] CRON_SECRET env var not set — endpoint locked')
+    console.error('[evaluate-venue-tiers] CRON_SECRET env var not set — endpoint locked')
     return false
   }
   return request.headers.get('authorization') === `Bearer ${cronSecret}`
@@ -36,7 +36,7 @@ function isAuthorized(request: NextRequest): boolean {
 // Pagination constants
 // ---------------------------------------------------------------------------
 
-const PAGE_SIZE  = 500  // addas fetched per invocation
+const PAGE_SIZE  = 500  // venues fetched per invocation
 const BATCH_SIZE = 10   // concurrent evaluations within a page
 
 // ---------------------------------------------------------------------------
@@ -51,7 +51,7 @@ const TIER_ORDER: Record<AddaTier, number> = {
 }
 
 // ---------------------------------------------------------------------------
-// GET /api/cron/evaluate-adda-tiers
+// GET /api/cron/evaluate-venue-tiers
 // ---------------------------------------------------------------------------
 
 export async function GET(request: NextRequest): Promise<NextResponse> {
@@ -76,15 +76,15 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     query = query.gt('id', cursor)
   }
 
-  const { data: addas, error: fetchError } = await query
+  const { data: venues, error: fetchError } = await query
 
   if (fetchError) {
-    console.error('[evaluate-adda-tiers] failed to fetch addas', fetchError.message)
-    return NextResponse.json({ error: 'Failed to fetch addas' }, { status: 500 })
+    console.error('[evaluate-venue-tiers] failed to fetch venues', fetchError.message)
+    return NextResponse.json({ error: 'Failed to fetch venues' }, { status: 500 })
   }
 
-  if (!addas || addas.length === 0) {
-    console.info('[evaluate-adda-tiers] no addas to evaluate for cursor', cursor || 'start')
+  if (!venues || venues.length === 0) {
+    console.info('[evaluate-venue-tiers] no venues to evaluate for cursor', cursor || 'start')
     return NextResponse.json({
       evaluated: 0, upgraded: 0, downgraded: 0,
       trendingGranted: 0, trendingCleared: 0, cities: 0,
@@ -92,20 +92,20 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     })
   }
 
-  console.info(`[evaluate-adda-tiers] page: ${addas.length} addas, cursor: ${cursor || 'start'}`)
+  console.info(`[evaluate-venue-tiers] page: ${venues.length} venues, cursor: ${cursor || 'start'}`)
 
   let evaluated  = 0
   let upgraded   = 0
   let downgraded = 0
   const errors: string[] = []
 
-  for (let i = 0; i < addas.length; i += BATCH_SIZE) {
-    const batch = addas.slice(i, i + BATCH_SIZE)
+  for (let i = 0; i < venues.length; i += BATCH_SIZE) {
+    const batch = venues.slice(i, i + BATCH_SIZE)
 
     await Promise.all(
-      batch.map(async (adda) => {
+      batch.map(async (venue) => {
         try {
-          const result = await evaluateAddaTier(adda.id)
+          const result = await evaluateAddaTier(venue.id)
           evaluated++
 
           if (result.tierChanged) {
@@ -115,39 +115,39 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
             if (isUpgrade) {
               upgraded++
-              console.info('[evaluate-adda-tiers] UPGRADE', { addaId: adda.id, from: result.previousTier, to: result.newTier })
+              console.info('[evaluate-venue-tiers] UPGRADE', { venueId: venue.id, from: result.previousTier, to: result.newTier })
             } else {
               downgraded++
-              console.info('[evaluate-adda-tiers] DOWNGRADE', { addaId: adda.id, from: result.previousTier, to: result.newTier })
+              console.info('[evaluate-venue-tiers] DOWNGRADE', { venueId: venue.id, from: result.previousTier, to: result.newTier })
             }
 
-            // Notify the adda owner via WhatsApp
-            if (adda.auth_user_id) {
+            // Notify the venue owner via WhatsApp
+            if (venue.auth_user_id) {
               const { data: ownerProfile } = await admin
                 .from('user_profiles')
                 .select('phone')
-                .eq('id', adda.auth_user_id)
+                .eq('id', venue.auth_user_id)
                 .maybeSingle()
 
               if (ownerProfile?.phone) {
                 const msg = isUpgrade
-                  ? buildAddaUpgradeMessage(adda.name, result.newTier)
-                  : buildAddaDowngradeMessage(adda.name, result.newTier)
+                  ? buildVenueUpgradeMessage(venue.name, result.newTier)
+                  : buildVenueDowngradeMessage(venue.name, result.newTier)
                 await sendWhatsAppMessage(ownerProfile.phone, msg)
               }
             }
           }
         } catch (err) {
           const msg = err instanceof Error ? err.message : String(err)
-          console.error('[evaluate-adda-tiers] error', { addaId: adda.id, error: msg })
-          errors.push(`adda:${adda.id} — ${msg}`)
+          console.error('[evaluate-venue-tiers] error', { venueId: venue.id, error: msg })
+          errors.push(`venue:${venue.id} — ${msg}`)
         }
       }),
     )
   }
 
-  const lastAdda   = addas[addas.length - 1]
-  const nextCursor = addas.length === PAGE_SIZE ? lastAdda.id : null
+  const lastVenue  = venues[venues.length - 1]
+  const nextCursor = venues.length === PAGE_SIZE ? lastVenue.id : null
   const isLastPage = nextCursor === null
 
   // ── 2. Trending overlay — runs on the final page only ────────────────────
@@ -174,7 +174,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
         }
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err)
-        console.error('[evaluate-adda-tiers] trending error', { city, error: msg })
+        console.error('[evaluate-venue-tiers] trending error', { city, error: msg })
         errors.push(`city:${city} — ${msg}`)
       }
     }
@@ -192,31 +192,31 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     ...(errors.length ? { errors } : {}),
   }
 
-  console.info('[evaluate-adda-tiers] page complete', result)
+  console.info('[evaluate-venue-tiers] page complete', result)
   return NextResponse.json(result)
 }
 
 // ---------------------------------------------------------------------------
-// WhatsApp message builders for adda tier changes
+// WhatsApp message builders for venue tier changes
 // ---------------------------------------------------------------------------
 
-const ADDA_TIER_LABELS: Record<AddaTier, string> = {
+const VENUE_TIER_LABELS: Record<AddaTier, string> = {
   open:      'Open',
   verified:  'Verified',
   beloved:   'Beloved',
   legendary: 'Legendary',
 }
 
-function buildAddaUpgradeMessage(addaName: string, newTier: AddaTier): string {
+function buildVenueUpgradeMessage(venueName: string, newTier: AddaTier): string {
   return (
-    `🎉 *${addaName}* has been upgraded to *${ADDA_TIER_LABELS[newTier]} Adda* status on WIMC! ` +
-    `Your Adda's reputation is growing — keep hosting great events.`
+    `🎉 *${venueName}* has been upgraded to *${VENUE_TIER_LABELS[newTier]} Venue* status on WIMC! ` +
+    `Your Venue's reputation is growing — keep hosting great events.`
   )
 }
 
-function buildAddaDowngradeMessage(addaName: string, newTier: AddaTier): string {
+function buildVenueDowngradeMessage(venueName: string, newTier: AddaTier): string {
   return (
-    `Hi! *${addaName}* has been updated to *${ADDA_TIER_LABELS[newTier]} Adda* on WIMC. ` +
+    `Hi! *${venueName}* has been updated to *${VENUE_TIER_LABELS[newTier]} Venue* on WIMC. ` +
     `Host more quality events to climb back up — your community is counting on you! 🙌`
   )
 }

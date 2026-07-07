@@ -9,7 +9,7 @@
       "schedule": "0 2 * * *"
     },
     {
-      "path": "/api/cron/evaluate-adda-tiers",
+      "path": "/api/cron/evaluate-venue-tiers",
       "schedule": "0 21 * * 1"
     },
     {

@@ -7,7 +7,7 @@
 //   Trust axis (permanent):  Open → Verified → Beloved → Legendary
 //   Velocity overlay (monthly, time-bound): Trending
 //
-// Called by /api/cron/evaluate-adda-tiers on a monthly schedule.
+// Called by /api/cron/evaluate-venue-tiers on a monthly schedule.
 // =============================================================================
 
 import { createAdminClient } from '@/lib/supabase/admin'
