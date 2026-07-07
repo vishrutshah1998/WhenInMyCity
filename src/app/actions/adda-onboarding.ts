@@ -239,8 +239,8 @@ export async function saveAddaOnboardingStep(
  * Steps:
  *  1. Validates the complete payload with Zod.
  *  2. Checks that this auth account does not already have an Adda profile.
- *  3. Uploads the cover image to `adda-covers/{adda_id}/cover.{ext}`.
- *  4. Uploads up to 12 gallery images to `adda-covers/{adda_id}/gallery/{n}.{ext}`.
+ *  3. Uploads the cover image to `venue-covers/{adda_id}/cover.{ext}`.
+ *  4. Uploads up to 12 gallery images to `venue-covers/{adda_id}/gallery/{n}.{ext}`.
  *  5. Inserts the `adda_profiles` row.
  *  6. Seeds `adda_availability` for the next 30 days, restricted to the
  *     days the venue selected in V7 (available_days). If available_days is
@@ -431,7 +431,7 @@ async function generateUniqueSlug(
   return `adda-${Math.floor(100000 + Math.random() * 900000)}`
 }
 
-/** Uploads a single image to the `adda-covers` bucket and returns its public URL. */
+/** Uploads a single image to the `venue-covers` bucket and returns its public URL. */
 async function uploadImage(
   admin: ReturnType<typeof createAdminClient>,
   file: File,
@@ -448,7 +448,7 @@ async function uploadImage(
   const storagePath = `${slug}/${pathSegment}.${ext}`
 
   const { error: uploadError } = await admin.storage
-    .from('adda-covers')
+    .from('venue-covers')
     .upload(storagePath, file, { upsert: true, contentType: file.type })
 
   if (uploadError) {
@@ -456,7 +456,7 @@ async function uploadImage(
     return { url: '', error: 'Failed to upload image. Please try again.' }
   }
 
-  const { data: urlData } = admin.storage.from('adda-covers').getPublicUrl(storagePath)
+  const { data: urlData } = admin.storage.from('venue-covers').getPublicUrl(storagePath)
   return { url: urlData.publicUrl, error: null }
 }
 

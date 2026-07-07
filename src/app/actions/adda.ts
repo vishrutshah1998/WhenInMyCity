@@ -215,7 +215,7 @@ export async function uploadAddaCoverImage(
   const admin = createAdminClient()
 
   const { error: uploadError } = await admin.storage
-    .from('adda-covers')
+    .from('venue-covers')
     .upload(storagePath, file, { upsert: true, contentType: file.type })
 
   if (uploadError) {
@@ -223,7 +223,7 @@ export async function uploadAddaCoverImage(
     return { url: null, error: 'Failed to upload cover image. Please try again.' }
   }
 
-  const { data: urlData } = admin.storage.from('adda-covers').getPublicUrl(storagePath)
+  const { data: urlData } = admin.storage.from('venue-covers').getPublicUrl(storagePath)
 
   // Patch the adda profile row with the cover URL.
   await admin

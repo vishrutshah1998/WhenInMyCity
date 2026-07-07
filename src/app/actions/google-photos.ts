@@ -5,7 +5,7 @@ import { requireAuth } from '@/lib/auth/requireAuth'
 
 /**
  * Downloads up to 5 Google Places photos (by photo_reference) and stores them
- * in Supabase Storage under adda-covers/prefetch/{userId}/{n}.jpg.
+ * in Supabase Storage under venue-covers/prefetch/{userId}/{n}.jpg.
  *
  * Called immediately after the user confirms their venue address in V5.
  * The returned URLs are stored in session storage (SK.v_google_photos) and
@@ -40,12 +40,12 @@ export async function prefetchGooglePhotos(
         const storagePath = `prefetch/${user.id}/${i}.${ext}`
 
         const { error: uploadError } = await admin.storage
-          .from('adda-covers')
+          .from('venue-covers')
           .upload(storagePath, buffer, { upsert: true, contentType })
 
         if (uploadError) return
 
-        const { data } = admin.storage.from('adda-covers').getPublicUrl(storagePath)
+        const { data } = admin.storage.from('venue-covers').getPublicUrl(storagePath)
         urls[i] = data.publicUrl
       } catch {
         // non-fatal — partial results are fine
