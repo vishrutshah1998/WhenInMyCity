@@ -151,11 +151,11 @@ export default function ManageEventPage() {
 
       setEvent(ev as Event)
 
-      if (ev.venue_adda_id) {
+      if (ev.venue_id) {
         const { data: v } = await supabase
           .from('adda_profiles')
           .select('name, city, adda_type, slug')
-          .eq('id', ev.venue_adda_id)
+          .eq('id', ev.venue_id)
           .maybeSingle()
         if (v) setVenue(v as VenueInfo)
       }

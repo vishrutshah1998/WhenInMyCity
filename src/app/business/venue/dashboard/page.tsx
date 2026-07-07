@@ -227,7 +227,7 @@ export default async function AddaDashboardPage() {
   const { data: eventIds } = await admin
     .from('events')
     .select('id')
-    .eq('venue_adda_id', adda.id)
+    .eq('venue_id', adda.id)
     .in('status', ['published', 'completed'])
 
   const eventIdList = (eventIds ?? []).map((e) => e.id)

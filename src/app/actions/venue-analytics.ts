@@ -94,7 +94,7 @@ export async function getAddaAnalytics(addaId: string): Promise<AddaAnalyticsDat
       admin
         .from('events')
         .select('id, starts_at, ends_at, ticket_price, status')
-        .eq('venue_adda_id', addaId)
+        .eq('venue_id', addaId)
         .in('status', ['published', 'completed'])
         .lt('starts_at', new Date().toISOString())
         .order('starts_at', { ascending: true }),

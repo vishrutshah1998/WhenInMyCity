@@ -62,6 +62,7 @@ const InitiateRSVPSchema = z.object({
     .max(10, 'Maximum 10 tickets per booking'),
   ticketTierId:  z.string().optional(),
   referralCode:  z.string().max(20).optional(),
+  discoverySource: z.enum(['creator_link', 'platform_discovery', 'direct']).optional(),
 })
 
 const ConfirmRSVPSchema = z.object({
@@ -141,6 +142,7 @@ export async function initiateRSVP(params: {
   quantity: number
   ticketTierId?: string
   referralCode?: string
+  discoverySource?: 'creator_link' | 'platform_discovery' | 'direct'
 }): Promise<{
   orderId: string           // WIMC RSVP ID of the first ticket (anchor for confirm)
   qrToken: string | null    // real qr_code_token — set for free events, null for paid (set after confirmRSVPPayment)
@@ -160,7 +162,8 @@ export async function initiateRSVP(params: {
     return { ...EMPTY, error: parsed.error.errors[0].message }
   }
 
-  const { eventId, attendeeName, attendeePhone, quantity, ticketTierId, referralCode } = parsed.data
+  const { eventId, attendeeName, attendeePhone, quantity, ticketTierId, referralCode, discoverySource } = parsed.data
+  const resolvedDiscoverySource = discoverySource ?? 'direct'
 
   // ── 2. Resolve the authenticated user (optional — guests are allowed) ───
   // We attempt to get the session; if the user isn't logged in, that's fine.
@@ -173,7 +176,7 @@ export async function initiateRSVP(params: {
   // ── 3. Fetch and validate the event ─────────────────────────────────────
   const { data: event, error: eventError } = await admin
     .from('events')
-    .select('id, status, ticket_price, capacity, title, starts_at, creator_id, venue_adda_id, early_access_at, ticket_tiers')
+    .select('id, status, ticket_price, capacity, title, starts_at, creator_id, venue_id, early_access_at, ticket_tiers')
     .eq('id', eventId)
     .maybeSingle()
 
@@ -298,6 +301,7 @@ export async function initiateRSVP(params: {
       split_tier: null,
       ticket_tier_id:   resolvedTierId,
       ticket_tier_name: resolvedTierName,
+      discovery_source: resolvedDiscoverySource,
     }))
 
     const { data: inserted, error: insertError } = await admin
@@ -377,7 +381,7 @@ export async function initiateRSVP(params: {
     .maybeSingle()
 
   const creatorTier    = (creatorProfile?.user_tier ?? 'wanderer') as UserTier
-  const hasVenue       = event.venue_adda_id != null
+  const hasVenue       = event.venue_id != null
   const perTicket      = calculateRevenueSplit(resolvedTierPrice, 1, creatorTier, hasVenue)
 
   // S15-T3: First 90 days free for new Lanterns — platform takes no cut.
@@ -407,6 +411,7 @@ export async function initiateRSVP(params: {
     split_tier:         creatorTier,
     ticket_tier_id:     resolvedTierId,
     ticket_tier_name:   resolvedTierName,
+    discovery_source:   resolvedDiscoverySource,
     // amount_paid is set when payment is confirmed
   }))
 
@@ -956,6 +961,7 @@ export async function casualRSVP(params: {
         maker_payout_paise:  0,
         venue_fee_paise:     0,
         split_tier:          null,
+        discovery_source:    'direct' as const,
       })
 
     if (insertError) return { error: 'Failed to save your RSVP.' }

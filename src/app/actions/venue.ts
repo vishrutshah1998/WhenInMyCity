@@ -932,7 +932,7 @@ export async function withdrawProposal(
  *  1. Verifies the caller sent the proposal and its status is 'counter_offered'.
  *  2. Updates proposal status to 'accepted'.
  *  3. Upserts an `adda_availability` row with `status = 'confirmed'`.
- *  4. If an `event_id` is attached, updates `events.venue_adda_id`.
+ *  4. If an `event_id` is attached, updates `events.venue_id`.
  *  5. Sends a notification to the Adda (accepted response).
  *
  * @param proposalId  The proposal to accept.
@@ -994,7 +994,7 @@ export async function acceptCounterOffer(
   if (proposal.event_id) {
     admin
       .from('events')
-      .update({ venue_adda_id: proposal.adda_id })
+      .update({ venue_id: proposal.adda_id })
       .eq('id', proposal.event_id)
       .eq('creator_id', user.id)
       .then(
@@ -1115,7 +1115,7 @@ export async function getAddaPublicPage(slug: string): Promise<{
     supabase
       .from('events')
       .select('*')
-      .eq('venue_adda_id', adda.id)
+      .eq('venue_id', adda.id)
       .eq('status', 'published')
       .gte('starts_at', now)
       .lte('starts_at', in60Days)
@@ -1125,7 +1125,7 @@ export async function getAddaPublicPage(slug: string): Promise<{
     supabase
       .from('events')
       .select('id, title, starts_at, cover_image_url, creator_id')
-      .eq('venue_adda_id', adda.id)
+      .eq('venue_id', adda.id)
       .eq('status', 'completed')
       .order('starts_at', { ascending: false })
       .limit(6),

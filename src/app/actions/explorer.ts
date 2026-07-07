@@ -824,10 +824,10 @@ export async function submitEventRating(
     console.error('[submitEventRating] rating aggregate RPC failed', rpcError.message)
   }
 
-  // Fetch creator_id and venue_adda_id to re-evaluate tier and notify adda owner.
+  // Fetch creator_id and venue_id to re-evaluate tier and notify adda owner.
   const { data: event } = await admin
     .from('events')
-    .select('creator_id, venue_adda_id')
+    .select('creator_id, venue_id')
     .eq('id', eventId)
     .maybeSingle()
 
@@ -839,14 +839,14 @@ export async function submitEventRating(
   }
 
   // Notify adda owner of the new rating (fire-and-forget)
-  const venueAddaId = event?.venue_adda_id ?? null
-  if (venueAddaId) {
+  const venueId = event?.venue_id ?? null
+  if (venueId) {
     void (async () => {
       try {
         const { data: addaOwner } = await admin
           .from('adda_profiles')
           .select('auth_user_id, name')
-          .eq('id', venueAddaId)
+          .eq('id', venueId)
           .maybeSingle()
         if (addaOwner?.auth_user_id) {
           const { createNotification } = await import('@/app/actions/notifications')

@@ -568,8 +568,8 @@ export interface Database {
           whatsapp_group_url: string | null
           google_maps_url: string | null
           slug: string
-          /** Linked Adda venue (null for self-organised events). Added in migration 009. */
-          venue_adda_id: string | null
+          /** Linked venue (null for self-organised events). Added in migration 051. */
+          venue_id: string | null
           /** Rolling average of Explorer ratings (1–5). Added in migration 009. */
           average_rating: number
           /** Number of Explorer ratings submitted. Added in migration 009. */
@@ -600,7 +600,7 @@ export interface Database {
           whatsapp_group_url?: string | null
           google_maps_url?: string | null
           slug: string
-          venue_adda_id?: string | null
+          venue_id?: string | null
           average_rating?: number
           rating_count?: number
           early_access_at?: string | null
@@ -627,7 +627,7 @@ export interface Database {
           whatsapp_group_url?: string | null
           google_maps_url?: string | null
           slug?: string
-          venue_adda_id?: string | null
+          venue_id?: string | null
           average_rating?: number
           rating_count?: number
           early_access_at?: string | null
@@ -641,6 +641,13 @@ export interface Database {
             columns: ['creator_id']
             isOneToOne: false
             referencedRelation: 'user_profiles'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'events_venue_id_fkey'
+            columns: ['venue_id']
+            isOneToOne: false
+            referencedRelation: 'adda_profiles'
             referencedColumns: ['id']
           }
         ]
@@ -667,6 +674,8 @@ export interface Database {
           /** Fan tier ID from event.ticket_tiers. NULL for flat-price events. */
           ticket_tier_id: string | null
           ticket_tier_name: string | null
+          /** How the attendee arrived at this booking. See migration 050. */
+          discovery_source: 'creator_link' | 'platform_discovery' | 'direct'
           created_at: string
         }
         Insert: {
@@ -688,6 +697,7 @@ export interface Database {
           split_tier?: string | null
           ticket_tier_id?: string | null
           ticket_tier_name?: string | null
+          discovery_source?: 'creator_link' | 'platform_discovery' | 'direct'
           created_at?: string
         }
         Update: {
@@ -709,6 +719,7 @@ export interface Database {
           split_tier?: string | null
           ticket_tier_id?: string | null
           ticket_tier_name?: string | null
+          discovery_source?: 'creator_link' | 'platform_discovery' | 'direct'
           created_at?: string
         }
         Relationships: [
@@ -851,8 +862,9 @@ export interface Database {
       block_analytics: {
         Row: {
           id: string
-          block_id: string
-          profile_id: string
+          block_id: string | null
+          owner_id: string
+          owner_type: 'creator' | 'adda'
           event_type: 'view' | 'click' | 'expand' | 'subscribe' | 'tip_initiated'
           explorer_id: string | null
           referer: string | null
@@ -863,8 +875,9 @@ export interface Database {
         }
         Insert: {
           id?: string
-          block_id: string
-          profile_id: string
+          block_id?: string | null
+          owner_id: string
+          owner_type: 'creator' | 'adda'
           event_type: 'view' | 'click' | 'expand' | 'subscribe' | 'tip_initiated'
           explorer_id?: string | null
           referer?: string | null
@@ -875,8 +888,9 @@ export interface Database {
         }
         Update: {
           id?: string
-          block_id?: string
-          profile_id?: string
+          block_id?: string | null
+          owner_id?: string
+          owner_type?: 'creator' | 'adda'
           event_type?: 'view' | 'click' | 'expand' | 'subscribe' | 'tip_initiated'
           explorer_id?: string | null
           referer?: string | null
@@ -891,13 +905,6 @@ export interface Database {
             columns: ['block_id']
             isOneToOne: false
             referencedRelation: 'page_blocks'
-            referencedColumns: ['id']
-          },
-          {
-            foreignKeyName: 'block_analytics_profile_id_fkey'
-            columns: ['profile_id']
-            isOneToOne: false
-            referencedRelation: 'user_profiles'
             referencedColumns: ['id']
           }
         ]

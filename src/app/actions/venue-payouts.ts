@@ -106,7 +106,7 @@ export async function getAddaPayoutData(addaId: string): Promise<{
   const { data: pastEvents } = await admin
     .from('events')
     .select('id, title, starts_at, ticket_price')
-    .eq('venue_adda_id', addaId)
+    .eq('venue_id', addaId)
     .in('status', ['published', 'completed'])
     .lt('starts_at', new Date().toISOString())
     .order('starts_at', { ascending: false })
@@ -197,7 +197,7 @@ export async function requestVenuePayout(
     .from('events')
     .select('id, ticket_price')
     .in('id', bookingIds)
-    .eq('venue_adda_id', addaId)
+    .eq('venue_id', addaId)
     .in('status', ['published', 'completed'])
 
   if (!events?.length) return { success: false, error: 'No valid bookings found' }

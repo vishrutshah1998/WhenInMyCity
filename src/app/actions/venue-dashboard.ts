@@ -119,7 +119,7 @@ export async function getAddaDashboardData(addaId: string): Promise<{
     admin
       .from('events')
       .select('*')
-      .eq('venue_adda_id', addaId)
+      .eq('venue_id', addaId)
       .eq('status', 'published')
       .gte('starts_at', now)
       .lte('starts_at', endOfMonth)
@@ -139,7 +139,7 @@ export async function getAddaDashboardData(addaId: string): Promise<{
     admin
       .from('events')
       .select('id, title, starts_at, ticket_price')
-      .eq('venue_adda_id', addaId)
+      .eq('venue_id', addaId)
       .eq('status', 'completed')
       .order('starts_at', { ascending: false })
       .limit(10),
@@ -195,7 +195,7 @@ export async function getAddaDashboardData(addaId: string): Promise<{
   const { count: thisMonthCount } = await admin
     .from('events')
     .select('id', { count: 'exact', head: true })
-    .eq('venue_adda_id', addaId)
+    .eq('venue_id', addaId)
     .gte('starts_at', monthStart)
     .lte('starts_at', monthEnd)
 

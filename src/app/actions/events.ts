@@ -630,7 +630,7 @@ export async function duplicateEvent(
       capacity:           source.capacity,
       whatsapp_group_url: source.whatsapp_group_url,
       google_maps_url:    source.google_maps_url,
-      venue_adda_id:      source.venue_adda_id,
+      venue_id:      source.venue_id,
       starts_at:          source.starts_at,
       ends_at:            source.ends_at,
       status:             'draft',

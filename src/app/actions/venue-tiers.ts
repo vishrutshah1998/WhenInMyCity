@@ -95,9 +95,9 @@ export async function evaluateAddaTier(addaId: string): Promise<AddaTierEvaluati
   const d365 = new Date(now.getTime() - 365 * DAY_MS).toISOString()
 
   const [events180Result, events365Result, allEventsResult] = await Promise.all([
-    admin.from('events').select('id').eq('venue_adda_id', addaId).in('status', ['published', 'completed']).gte('starts_at', d180),
-    admin.from('events').select('id').eq('venue_adda_id', addaId).in('status', ['published', 'completed']).gte('starts_at', d365),
-    admin.from('events').select('id').eq('venue_adda_id', addaId).in('status', ['published', 'completed']),
+    admin.from('events').select('id').eq('venue_id', addaId).in('status', ['published', 'completed']).gte('starts_at', d180),
+    admin.from('events').select('id').eq('venue_id', addaId).in('status', ['published', 'completed']).gte('starts_at', d365),
+    admin.from('events').select('id').eq('venue_id', addaId).in('status', ['published', 'completed']),
   ])
 
   const ids180 = (events180Result.data ?? []).map((e) => e.id)
@@ -308,12 +308,12 @@ export async function computeTrendingAddas(cityId: string): Promise<TrendingResu
     const [curr30Result, prev30Result] = await Promise.all([
       admin.from('events')
         .select('id, capacity')
-        .eq('venue_adda_id', adda.id)
+        .eq('venue_id', adda.id)
         .in('status', ['published', 'completed'])
         .gte('starts_at', d30),
       admin.from('events')
         .select('id')
-        .eq('venue_adda_id', adda.id)
+        .eq('venue_id', adda.id)
         .in('status', ['published', 'completed'])
         .gte('starts_at', d60)
         .lt('starts_at', d30),

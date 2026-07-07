@@ -21,7 +21,7 @@ export interface PayableEvent {
   title:         string
   starts_at:     string
   ticket_price:  number
-  venue_adda_id: string | null
+  venue_id: string | null
   rsvp_count:    number
   gross_paise:   number   // sum of amount_paid on captured RSVPs
   maker_paise:   number   // creator's share after platform fee
@@ -52,7 +52,7 @@ export async function getPayableEvents(): Promise<{ data: PayableEvent[] | null;
   // 1. Events that are past (starts_at < now()) for this creator
   const { data: events, error: evErr } = await admin
     .from('events')
-    .select('id, title, starts_at, ticket_price, venue_adda_id')
+    .select('id, title, starts_at, ticket_price, venue_id')
     .eq('creator_id', profile.id)
     .in('status', ['published', 'completed'])
     .lt('starts_at', new Date().toISOString())
@@ -119,7 +119,7 @@ export async function getPayableEvents(): Promise<{ data: PayableEvent[] | null;
         platformPaise = agg.platformStored
       } else {
         // Legacy rows: recalculate using current tier.
-        const split = calculateRevenueSplit(e.ticket_price, agg.count, makerTier, e.venue_adda_id !== null)
+        const split = calculateRevenueSplit(e.ticket_price, agg.count, makerTier, e.venue_id !== null)
         makerPaise    = split.makerPaise
         platformPaise = split.platformPaise
       }
@@ -129,7 +129,7 @@ export async function getPayableEvents(): Promise<{ data: PayableEvent[] | null;
         title:          e.title,
         starts_at:      e.starts_at,
         ticket_price:   e.ticket_price,
-        venue_adda_id:  e.venue_adda_id,
+        venue_id:  e.venue_id,
         rsvp_count:     agg.count,
         gross_paise:    agg.gross,
         maker_paise:    makerPaise,

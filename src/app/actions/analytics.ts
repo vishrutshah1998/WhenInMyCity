@@ -1,85 +1,22 @@
 'use server'
 
 // =============================================================================
-// WIMC — Link-click analytics
+// WIMC — Creator link-click analytics
 //
-// trackLinkClick is called client-side (fire-and-forget) every time a visitor
-// taps a link or embed block on a creator's public profile page.
+// Click events are recorded by `trackBlockAnalytics` (src/app/actions/blocks.ts)
+// into `block_analytics` (owner_type='creator', event_type='click'), called
+// fire-and-forget from the ClickTracker client component wrapping each block
+// on a creator's public profile page. getLinkClickStats below reads that same
+// table back out for the creator analytics dashboard.
 //
-// Design:
-//   - Uses the admin client so the INSERT works for anonymous visitors without
-//     requiring them to hold a Supabase session.
-//   - User-Agent and Referer are read from request headers server-side so they
-//     are never sent as client-supplied POST body fields (prevents spoofing).
-//   - Validation is lightweight — block_id and creator_id must be valid UUIDs;
-//     everything else is inferred or capped server-side.
-//   - Failures are silently swallowed: analytics must never break the UI.
+// block_analytics superseded the older `link_clicks` table as of migration
+// 049 — link_clicks is retained for historical audit only and is no longer
+// written to.
 // =============================================================================
 
 import { z } from 'zod'
-import { headers } from 'next/headers'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { requireAuth } from '@/lib/auth/requireAuth'
-import { checkAnalyticsRateLimit } from '@/lib/ratelimit'
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-function detectDevice(ua: string): 'mobile' | 'tablet' | 'desktop' {
-  if (/tablet|ipad|playbook|silk/i.test(ua)) return 'tablet'
-  if (/mobile|iphone|ipod|android|blackberry|windows phone/i.test(ua)) return 'mobile'
-  return 'desktop'
-}
-
-// ---------------------------------------------------------------------------
-// trackLinkClick
-// ---------------------------------------------------------------------------
-
-const TrackSchema = z.object({
-  blockId:   z.string().uuid(),
-  creatorId: z.string().uuid(),
-})
-
-/**
- * Records a single link-tap event in `link_clicks`.
- *
- * Called fire-and-forget from the ClickTracker client component; the caller
- * does not await the result and the function swallows all errors so analytics
- * failures are invisible to the visitor.
- *
- * Device class and referrer are inferred server-side from request headers —
- * the client only supplies the block + creator identifiers.
- */
-export async function trackLinkClick(
-  blockId: string,
-  creatorId: string,
-): Promise<void> {
-  try {
-    const rl = await checkAnalyticsRateLimit()
-    if (!rl.success) return  // silently drop — analytics must never break the UI
-
-    const parsed = TrackSchema.safeParse({ blockId, creatorId })
-    if (!parsed.success) return
-
-    const headersList = await headers()
-    const ua       = headersList.get('user-agent') ?? ''
-    const referer  = headersList.get('referer') ?? null
-
-    const device   = detectDevice(ua)
-    const referrer = referer ? referer.slice(0, 500) : null
-
-    const admin = createAdminClient()
-    await admin.from('link_clicks').insert({
-      block_id:   parsed.data.blockId,
-      creator_id: parsed.data.creatorId,
-      device,
-      referrer,
-    })
-  } catch {
-    // Never surface analytics errors to the user
-  }
-}
 
 // ---------------------------------------------------------------------------
 // getLinkClickStats
@@ -140,11 +77,13 @@ export async function getLinkClickStats(
 
   const admin = createAdminClient()
   const { data, error } = await admin
-    .from('link_clicks')
-    .select('block_id, clicked_at, device')
-    .eq('creator_id', creatorId)
-    .gte('clicked_at', since)
-    .order('clicked_at', { ascending: false })
+    .from('block_analytics')
+    .select('block_id, occurred_at, device_type')
+    .eq('owner_type', 'creator')
+    .eq('owner_id', creatorId)
+    .eq('event_type', 'click')
+    .gte('occurred_at', since)
+    .order('occurred_at', { ascending: false })
 
   if (error || !data) return empty
 
@@ -153,18 +92,19 @@ export async function getLinkClickStats(
   const deviceBreakdown: ClickDeviceBreakdown = { mobile: 0, tablet: 0, desktop: 0 }
 
   for (const row of data) {
+    const blockId = row.block_id ?? 'unknown'
     // Per-block count
-    if (!blockMap[row.block_id]) {
-      blockMap[row.block_id] = { count: 0, lastClicked: row.clicked_at }
+    if (!blockMap[blockId]) {
+      blockMap[blockId] = { count: 0, lastClicked: row.occurred_at }
     }
-    blockMap[row.block_id].count++
-    // clicked_at is ordered DESC so first seen = most recent
-    if (row.clicked_at > blockMap[row.block_id].lastClicked) {
-      blockMap[row.block_id].lastClicked = row.clicked_at
+    blockMap[blockId].count++
+    // occurred_at is ordered DESC so first seen = most recent
+    if (row.occurred_at > blockMap[blockId].lastClicked) {
+      blockMap[blockId].lastClicked = row.occurred_at
     }
 
     // Device breakdown
-    const d = row.device as keyof ClickDeviceBreakdown | null
+    const d = row.device_type as keyof ClickDeviceBreakdown | null
     if (d && d in deviceBreakdown) deviceBreakdown[d]++
   }
 
@@ -175,7 +115,7 @@ export async function getLinkClickStats(
   // Build dense day-by-day series (oldest → newest), filling gaps with 0
   const dayMap: Record<string, number> = {}
   for (const row of data) {
-    const day = row.clicked_at.slice(0, 10)
+    const day = row.occurred_at.slice(0, 10)
     dayMap[day] = (dayMap[day] ?? 0) + 1
   }
   const byDay: DayClickStat[] = []
@@ -364,7 +304,7 @@ export async function getCityMasteryMap(profileId: string): Promise<MasteryNeigh
     .select(`
       event:events (
         venue_name,
-        venue_adda_id,
+        venue_id,
         adda:adda_profiles ( neighbourhood, city )
       )
     `)
@@ -379,7 +319,7 @@ export async function getCityMasteryMap(profileId: string): Promise<MasteryNeigh
   for (const row of rows) {
     const event = (row.event as unknown) as {
       venue_name: string
-      venue_adda_id: string | null
+      venue_id: string | null
       adda: { neighbourhood: string | null; city: string } | { neighbourhood: string | null; city: string }[] | null
     } | null
     if (!event) continue
