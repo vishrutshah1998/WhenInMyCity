@@ -10,7 +10,7 @@ import type { Event } from '@/types/database'
 interface VenueInfo {
   name: string
   city: string
-  adda_type: string[]
+  venue_type: string[]
   slug: string
 }
 
@@ -153,8 +153,8 @@ export default function ManageEventPage() {
 
       if (ev.venue_id) {
         const { data: v } = await supabase
-          .from('adda_profiles')
-          .select('name, city, adda_type, slug')
+          .from('venue_profiles')
+          .select('name, city, venue_type, slug')
           .eq('id', ev.venue_id)
           .maybeSingle()
         if (v) setVenue(v as VenueInfo)
@@ -325,7 +325,7 @@ export default function ManageEventPage() {
                 {
                   icon: 'edit_note',
                   title: 'ADD DESCRIPTION',
-                  desc: 'Write the lineup, story, adda rules',
+                  desc: 'Write the lineup, story, venue rules',
                   onClick: () => {},
                 },
                 {

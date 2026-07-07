@@ -1,8 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import type { MakerAddaProposal, AddaProfile } from '@/types/database'
-import type { AddaDashboardStats } from '@/app/actions/venue-dashboard'
+import type { MakerVenueProposal, VenueProfile } from '@/types/database'
+import type { VenueDashboardStats } from '@/app/actions/venue-dashboard'
 
 interface ActionChip {
   id: string
@@ -16,9 +16,9 @@ interface ActionChip {
 // Chips with a static id (e.g. "no-photos") are permanently dismissible.
 // Chips derived from live counts (e.g. proposal requests) reappear when data changes.
 function buildChips(
-  pendingProposals: MakerAddaProposal[],
-  adda?: AddaProfile | null,
-  stats?: AddaDashboardStats | null,
+  pendingProposals: MakerVenueProposal[],
+  venue?: VenueProfile | null,
+  stats?: VenueDashboardStats | null,
 ): ActionChip[] {
   const chips: ActionChip[] = []
 
@@ -42,12 +42,12 @@ function buildChips(
     })
   }
 
-  if (adda && stats) {
+  if (venue && stats) {
     const isNew = stats.total_events_hosted === 0 &&
-      (Date.now() - new Date(adda.created_at).getTime()) < 30 * 24 * 60 * 60 * 1000
+      (Date.now() - new Date(venue.created_at).getTime()) < 30 * 24 * 60 * 60 * 1000
 
     if (isNew) {
-      if (!adda.cover_image_url) {
+      if (!venue.cover_image_url) {
         chips.push({
           id: 'no-cover',
           icon: 'add_photo_alternate',
@@ -56,7 +56,7 @@ function buildChips(
           urgency: 'high',
         })
       }
-      if (!adda.description) {
+      if (!venue.description) {
         chips.push({
           id: 'no-description',
           icon: 'edit_note',
@@ -72,14 +72,14 @@ function buildChips(
 }
 
 interface Props {
-  pendingProposals: MakerAddaProposal[]
-  adda?: AddaProfile | null
-  stats?: AddaDashboardStats | null
+  pendingProposals: MakerVenueProposal[]
+  venue?: VenueProfile | null
+  stats?: VenueDashboardStats | null
 }
 
-const DISMISSED_KEY = 'adda-dismissed-chips'
+const DISMISSED_KEY = 'venue-dismissed-chips'
 
-export default function PriorityActions({ pendingProposals, adda, stats }: Props) {
+export default function PriorityActions({ pendingProposals, venue, stats }: Props) {
   const [dismissed, setDismissed] = useState<Set<string>>(new Set())
   const [mounted, setMounted] = useState(false)
 
@@ -101,7 +101,7 @@ export default function PriorityActions({ pendingProposals, adda, stats }: Props
     })
   }
 
-  const chips = buildChips(pendingProposals, adda, stats)
+  const chips = buildChips(pendingProposals, venue, stats)
   // Live-data chips (proposals) are never permanently dismissed — only static advice chips are.
   // For proposal chips, we only dismiss until the count changes (id includes count).
   const visible = chips.filter(c => !dismissed.has(c.id))

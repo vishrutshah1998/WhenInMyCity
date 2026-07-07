@@ -46,7 +46,7 @@ const M = now.getMonth() + 1  // 1-based
 
 // ---------------------------------------------------------------------------
 // Venue config
-// TODO: replace with actual venue settings from Supabase adda_profiles
+// TODO: replace with actual venue settings from Supabase venue_profiles
 // ---------------------------------------------------------------------------
 
 export const MOCK_VENUE_CONFIG: VenueConfig = {

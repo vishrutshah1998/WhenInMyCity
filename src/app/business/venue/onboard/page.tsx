@@ -1,2 +1,2 @@
 import { redirect } from 'next/navigation'
-export default function AddaOnboardPage() { redirect('/onboarding?mode=add&persona=venue') }
+export default function VenueOnboardPage() { redirect('/onboarding?mode=add&persona=venue') }

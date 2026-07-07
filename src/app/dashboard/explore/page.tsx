@@ -41,8 +41,8 @@ export default async function DashboardExplorePage({
       .limit(8),
 
     admin
-      .from('adda_profiles')
-      .select('id, name, slug, neighbourhood, city, adda_type, capacity_max, is_verified')
+      .from('venue_profiles')
+      .select('id, name, slug, neighbourhood, city, venue_type, capacity_max, is_verified')
       .eq('city', city)
       .eq('is_active', true)
       .limit(6),
@@ -54,7 +54,7 @@ export default async function DashboardExplorePage({
     creator: { display_name: string; username: string; creator_type: string; city: string } | null
   }
   type RawCreator = { id: string; display_name: string; username: string; creator_type: string; sub_types: string[]; city: string }
-  type RawVenue   = { id: string; name: string; slug: string; neighbourhood: string | null; city: string; adda_type: string[]; capacity_max: number | null; is_verified: boolean }
+  type RawVenue   = { id: string; name: string; slug: string; neighbourhood: string | null; city: string; venue_type: string[]; capacity_max: number | null; is_verified: boolean }
 
   const rawEvents = ((eventsRes.data ?? []) as unknown as RawEvent[])
     .filter(e => !city || e.creator?.city?.toLowerCase() === city.toLowerCase())
@@ -73,7 +73,7 @@ export default async function DashboardExplorePage({
 
   const venues: ExploreVenue[] = ((venuesRes.data ?? []) as unknown as RawVenue[]).map(v => ({
     id: v.id, name: v.name, slug: v.slug, neighbourhood: v.neighbourhood, city: v.city,
-    adda_type: v.adda_type ?? [], capacity_max: v.capacity_max, is_verified: v.is_verified,
+    venue_type: v.venue_type ?? [], capacity_max: v.capacity_max, is_verified: v.is_verified,
   }))
 
   let subscribedPosts: SubscribedPost[] = []

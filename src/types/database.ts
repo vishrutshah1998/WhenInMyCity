@@ -23,7 +23,7 @@ export type PayoutStatus = 'pending' | 'approved' | 'paid' | 'rejected'
 export type UserTier = 'wanderer' | 'local' | 'lantern' | 'beacon'
 /** @deprecated Use UserTier */
 export type MakerTier = UserTier
-export type AddaTier  = 'open' | 'verified' | 'beloved' | 'legendary'
+export type VenueTier  = 'open' | 'verified' | 'beloved' | 'legendary'
 
 export type PricingModel = 'fixed_rental' | 'door_split' | 'hybrid' | 'f_and_b_minimum'
 
@@ -647,7 +647,7 @@ export interface Database {
             foreignKeyName: 'events_venue_id_fkey'
             columns: ['venue_id']
             isOneToOne: false
-            referencedRelation: 'adda_profiles'
+            referencedRelation: 'venue_profiles'
             referencedColumns: ['id']
           }
         ]
@@ -864,7 +864,7 @@ export interface Database {
           id: string
           block_id: string | null
           owner_id: string
-          owner_type: 'creator' | 'adda'
+          owner_type: 'creator' | 'venue'
           event_type: 'view' | 'click' | 'expand' | 'subscribe' | 'tip_initiated'
           explorer_id: string | null
           referer: string | null
@@ -877,7 +877,7 @@ export interface Database {
           id?: string
           block_id?: string | null
           owner_id: string
-          owner_type: 'creator' | 'adda'
+          owner_type: 'creator' | 'venue'
           event_type: 'view' | 'click' | 'expand' | 'subscribe' | 'tip_initiated'
           explorer_id?: string | null
           referer?: string | null
@@ -890,7 +890,7 @@ export interface Database {
           id?: string
           block_id?: string | null
           owner_id?: string
-          owner_type?: 'creator' | 'adda'
+          owner_type?: 'creator' | 'venue'
           event_type?: 'view' | 'click' | 'expand' | 'subscribe' | 'tip_initiated'
           explorer_id?: string | null
           referer?: string | null
@@ -970,14 +970,14 @@ export interface Database {
 
       // ----- Three-sided marketplace tables (migration 007) -----
 
-      adda_profiles: {
+      venue_profiles: {
         Row: {
           id: string
           auth_user_id: string
           name: string
           slug: string
           description: string | null
-          adda_type: string[]
+          venue_type: string[]
           city: string
           neighbourhood: string | null
           address: string
@@ -999,7 +999,7 @@ export interface Database {
           total_events_hosted: number
           total_revenue_earned_paise: number
           average_maker_rating: number
-          adda_tier: AddaTier
+          venue_tier: VenueTier
           trending_until: string | null
           on_time_rate: number
           complaint_rate: number
@@ -1022,7 +1022,7 @@ export interface Database {
           name: string
           slug: string
           description?: string | null
-          adda_type?: string[]
+          venue_type?: string[]
           city?: string
           neighbourhood?: string | null
           address: string
@@ -1044,7 +1044,7 @@ export interface Database {
           total_events_hosted?: number
           total_revenue_earned_paise?: number
           average_maker_rating?: number
-          adda_tier?: AddaTier
+          venue_tier?: VenueTier
           trending_until?: string | null
           on_time_rate?: number
           complaint_rate?: number
@@ -1066,7 +1066,7 @@ export interface Database {
           name?: string
           slug?: string
           description?: string | null
-          adda_type?: string[]
+          venue_type?: string[]
           city?: string
           neighbourhood?: string | null
           address?: string
@@ -1088,7 +1088,7 @@ export interface Database {
           total_events_hosted?: number
           total_revenue_earned_paise?: number
           average_maker_rating?: number
-          adda_tier?: AddaTier
+          venue_tier?: VenueTier
           trending_until?: string | null
           on_time_rate?: number
           complaint_rate?: number
@@ -1106,7 +1106,7 @@ export interface Database {
         }
         Relationships: [
           {
-            foreignKeyName: 'adda_profiles_auth_user_id_fkey'
+            foreignKeyName: 'venue_profiles_auth_user_id_fkey'
             columns: ['auth_user_id']
             isOneToOne: true
             referencedRelation: 'users'
@@ -1181,10 +1181,10 @@ export interface Database {
         ]
       }
 
-      adda_availability: {
+      venue_availability: {
         Row: {
           id: string
-          adda_id: string
+          venue_id: string
           date: string
           slot_type: AvailabilitySlotType
           status: AvailabilityStatus
@@ -1194,7 +1194,7 @@ export interface Database {
         }
         Insert: {
           id?: string
-          adda_id: string
+          venue_id: string
           date: string
           slot_type?: AvailabilitySlotType
           status?: AvailabilityStatus
@@ -1204,7 +1204,7 @@ export interface Database {
         }
         Update: {
           id?: string
-          adda_id?: string
+          venue_id?: string
           date?: string
           slot_type?: AvailabilitySlotType
           status?: AvailabilityStatus
@@ -1214,14 +1214,14 @@ export interface Database {
         }
         Relationships: [
           {
-            foreignKeyName: 'adda_availability_adda_id_fkey'
-            columns: ['adda_id']
+            foreignKeyName: 'venue_availability_venue_id_fkey'
+            columns: ['venue_id']
             isOneToOne: false
-            referencedRelation: 'adda_profiles'
+            referencedRelation: 'venue_profiles'
             referencedColumns: ['id']
           },
           {
-            foreignKeyName: 'adda_availability_event_id_fkey'
+            foreignKeyName: 'venue_availability_event_id_fkey'
             columns: ['event_id']
             isOneToOne: false
             referencedRelation: 'events'
@@ -1230,10 +1230,10 @@ export interface Database {
         ]
       }
 
-      adda_availability_rules: {
+      venue_availability_rules: {
         Row: {
           id: string
-          adda_id: string
+          venue_id: string
           rule_type: 'recurring_closed' | 'holiday_block' | 'booking_window'
           day_of_week: number[] | null
           time_start: string | null
@@ -1248,7 +1248,7 @@ export interface Database {
         }
         Insert: {
           id?: string
-          adda_id: string
+          venue_id: string
           rule_type: 'recurring_closed' | 'holiday_block' | 'booking_window'
           day_of_week?: number[] | null
           time_start?: string | null
@@ -1263,7 +1263,7 @@ export interface Database {
         }
         Update: {
           id?: string
-          adda_id?: string
+          venue_id?: string
           rule_type?: 'recurring_closed' | 'holiday_block' | 'booking_window'
           day_of_week?: number[] | null
           time_start?: string | null
@@ -1278,20 +1278,20 @@ export interface Database {
         }
         Relationships: [
           {
-            foreignKeyName: 'adda_availability_rules_adda_id_fkey'
-            columns: ['adda_id']
+            foreignKeyName: 'venue_availability_rules_venue_id_fkey'
+            columns: ['venue_id']
             isOneToOne: false
-            referencedRelation: 'adda_profiles'
+            referencedRelation: 'venue_profiles'
             referencedColumns: ['id']
           }
         ]
       }
 
-      maker_adda_proposals: {
+      maker_venue_proposals: {
         Row: {
           id: string
           maker_id: string
-          adda_id: string
+          venue_id: string
           event_id: string | null
           proposed_date: string
           proposed_slot: string
@@ -1303,7 +1303,7 @@ export interface Database {
           message: string | null
           status: ProposalStatus
           counter_offer: Json
-          adda_response_note: string | null
+          venue_response_note: string | null
           expires_at: string
           created_at: string
           updated_at: string
@@ -1311,7 +1311,7 @@ export interface Database {
         Insert: {
           id?: string
           maker_id: string
-          adda_id: string
+          venue_id: string
           event_id?: string | null
           proposed_date: string
           proposed_slot: string
@@ -1323,7 +1323,7 @@ export interface Database {
           message?: string | null
           status?: ProposalStatus
           counter_offer?: Json
-          adda_response_note?: string | null
+          venue_response_note?: string | null
           expires_at?: string
           created_at?: string
           updated_at?: string
@@ -1331,7 +1331,7 @@ export interface Database {
         Update: {
           id?: string
           maker_id?: string
-          adda_id?: string
+          venue_id?: string
           event_id?: string | null
           proposed_date?: string
           proposed_slot?: string
@@ -1343,28 +1343,28 @@ export interface Database {
           message?: string | null
           status?: ProposalStatus
           counter_offer?: Json
-          adda_response_note?: string | null
+          venue_response_note?: string | null
           expires_at?: string
           created_at?: string
           updated_at?: string
         }
         Relationships: [
           {
-            foreignKeyName: 'maker_adda_proposals_maker_id_fkey'
+            foreignKeyName: 'maker_venue_proposals_maker_id_fkey'
             columns: ['maker_id']
             isOneToOne: false
             referencedRelation: 'user_profiles'
             referencedColumns: ['id']
           },
           {
-            foreignKeyName: 'maker_adda_proposals_adda_id_fkey'
-            columns: ['adda_id']
+            foreignKeyName: 'maker_venue_proposals_venue_id_fkey'
+            columns: ['venue_id']
             isOneToOne: false
-            referencedRelation: 'adda_profiles'
+            referencedRelation: 'venue_profiles'
             referencedColumns: ['id']
           },
           {
-            foreignKeyName: 'maker_adda_proposals_event_id_fkey'
+            foreignKeyName: 'maker_venue_proposals_event_id_fkey'
             columns: ['event_id']
             isOneToOne: false
             referencedRelation: 'events'
@@ -1509,72 +1509,6 @@ export interface Database {
             columns: ['recipient_id']
             isOneToOne: false
             referencedRelation: 'users'
-            referencedColumns: ['id']
-          }
-        ]
-      }
-
-      // ----- Revenue tracking per event × adda (migration 009) -----
-
-      adda_event_revenue: {
-        Row: {
-          id: string
-          adda_id: string
-          event_id: string
-          total_revenue_paise: number
-          adda_share_paise: number
-          maker_share_paise: number
-          platform_share_paise: number
-          razorpay_fee_paise: number
-          gst_on_platform_paise: number
-          split_config: Json   // RevenueSplitConfig
-          status: 'pending' | 'paid'
-          settled_at: string | null
-          created_at: string
-        }
-        Insert: {
-          id?: string
-          adda_id: string
-          event_id: string
-          total_revenue_paise?: number
-          adda_share_paise?: number
-          maker_share_paise?: number
-          platform_share_paise?: number
-          razorpay_fee_paise?: number
-          gst_on_platform_paise?: number
-          split_config?: Json
-          status?: 'pending' | 'paid'
-          settled_at?: string | null
-          created_at?: string
-        }
-        Update: {
-          id?: string
-          adda_id?: string
-          event_id?: string
-          total_revenue_paise?: number
-          adda_share_paise?: number
-          maker_share_paise?: number
-          platform_share_paise?: number
-          razorpay_fee_paise?: number
-          gst_on_platform_paise?: number
-          split_config?: Json
-          status?: 'pending' | 'paid'
-          settled_at?: string | null
-          created_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: 'adda_event_revenue_adda_id_fkey'
-            columns: ['adda_id']
-            isOneToOne: false
-            referencedRelation: 'adda_profiles'
-            referencedColumns: ['id']
-          },
-          {
-            foreignKeyName: 'adda_event_revenue_event_id_fkey'
-            columns: ['event_id']
-            isOneToOne: true
-            referencedRelation: 'events'
             referencedColumns: ['id']
           }
         ]
@@ -1884,14 +1818,14 @@ export interface Database {
         ]
       }
 
-      adda_payout_requests: {
+      venue_payout_requests: {
         Row: {
           id: string
-          adda_id: string
+          venue_id: string
           booking_ids: string[]
           gross_paise: number
           platform_fee_paise: number
-          adda_share_paise: number
+          venue_share_paise: number
           payment_method: 'bank' | 'upi'
           bank_account_name: string | null
           bank_account_number: string | null
@@ -1904,11 +1838,11 @@ export interface Database {
         }
         Insert: {
           id?: string
-          adda_id: string
+          venue_id: string
           booking_ids?: string[]
           gross_paise?: number
           platform_fee_paise?: number
-          adda_share_paise?: number
+          venue_share_paise?: number
           payment_method: 'bank' | 'upi'
           bank_account_name?: string | null
           bank_account_number?: string | null
@@ -1921,11 +1855,11 @@ export interface Database {
         }
         Update: {
           id?: string
-          adda_id?: string
+          venue_id?: string
           booking_ids?: string[]
           gross_paise?: number
           platform_fee_paise?: number
-          adda_share_paise?: number
+          venue_share_paise?: number
           payment_method?: 'bank' | 'upi'
           bank_account_name?: string | null
           bank_account_number?: string | null
@@ -1938,10 +1872,10 @@ export interface Database {
         }
         Relationships: [
           {
-            foreignKeyName: 'adda_payout_requests_adda_id_fkey'
-            columns: ['adda_id']
+            foreignKeyName: 'venue_payout_requests_venue_id_fkey'
+            columns: ['venue_id']
             isOneToOne: false
-            referencedRelation: 'adda_profiles'
+            referencedRelation: 'venue_profiles'
             referencedColumns: ['id']
           }
         ]
@@ -1987,7 +1921,7 @@ export interface Database {
       payment_status: PaymentStatus
       user_role: UserRole
       user_tier: UserTier
-      adda_tier: AddaTier
+      venue_tier: VenueTier
       pricing_model: PricingModel
       proposal_status: ProposalStatus
     }
@@ -2021,10 +1955,10 @@ export type Event              = Tables<'events'>
 export type Rsvp               = Tables<'rsvps'>
 export type LinkClick          = Tables<'link_clicks'>
 export type VenueDirectory     = Tables<'venue_directory'>
-export type AddaProfile          = Tables<'adda_profiles'>
+export type VenueProfile         = Tables<'venue_profiles'>
 export type ExplorerProfile      = Tables<'explorer_profiles'>
-export type AddaAvailability     = Tables<'adda_availability'>
-export type MakerAddaProposal    = Tables<'maker_adda_proposals'>
+export type VenueAvailability    = Tables<'venue_availability'>
+export type MakerVenueProposal   = Tables<'maker_venue_proposals'>
 export type UserTierHistory       = Tables<'user_tier_history'>
 /** @deprecated Use UserTierHistory */
 export type MakerTierHistory      = UserTierHistory
@@ -2032,7 +1966,6 @@ export type ExplorerEventHistory = Tables<'explorer_event_history'>
 export type BlockAnalytic        = Tables<'block_analytics'>
 export type MakerSubscriber      = Tables<'maker_subscribers'>
 export type SubstackCache        = Tables<'substack_cache'>
-export type AddaEventRevenue     = Tables<'adda_event_revenue'>
 export type Notification         = Tables<'notifications'>
 export type PayoutRequest        = Tables<'payout_requests'>
 export type BookingInquiry       = Tables<'booking_inquiries'>

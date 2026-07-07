@@ -3,7 +3,7 @@
 import { z } from 'zod'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { requireAuth } from '@/lib/auth/requireAuth'
-import type { MakerAddaProposal, ProposalStatus, UserTier, CreatorType } from '@/types/database'
+import type { MakerVenueProposal, ProposalStatus, UserTier, CreatorType } from '@/types/database'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -21,7 +21,7 @@ export interface MakerInfo {
   is_founding_maker: boolean
 }
 
-export interface ProposalWithMaker extends MakerAddaProposal {
+export interface ProposalWithMaker extends MakerVenueProposal {
   maker: MakerInfo
 }
 
@@ -29,12 +29,12 @@ export interface ProposalWithMaker extends MakerAddaProposal {
 // Ownership helper
 // ---------------------------------------------------------------------------
 
-async function resolveOwnedAddaId(
+async function resolveOwnedVenueId(
   userId: string,
   admin: ReturnType<typeof createAdminClient>,
 ): Promise<string | null> {
   const { data } = await admin
-    .from('adda_profiles')
+    .from('venue_profiles')
     .select('id')
     .eq('auth_user_id', userId)
     .maybeSingle()
@@ -42,40 +42,40 @@ async function resolveOwnedAddaId(
 }
 
 // ---------------------------------------------------------------------------
-// getAddaBookings
+// getVenueBookings
 // ---------------------------------------------------------------------------
 
 /**
- * Fetches all proposals for the caller's adda matching the given statuses,
+ * Fetches all proposals for the caller's venue matching the given statuses,
  * joined with the maker's public profile info.
  */
-export async function getAddaBookings(
-  addaId: string,
+export async function getVenueBookings(
+  venueId: string,
   statuses: ProposalStatus[],
 ): Promise<{ proposals: ProposalWithMaker[]; error: string | null }> {
   const { user } = await requireAuth('/business/venue/bookings')
 
-  if (!z.string().uuid().safeParse(addaId).success) {
-    return { proposals: [], error: 'Invalid Adda ID.' }
+  if (!z.string().uuid().safeParse(venueId).success) {
+    return { proposals: [], error: 'Invalid Venue ID.' }
   }
 
   const admin = createAdminClient()
 
-  const ownedId = await resolveOwnedAddaId(user.id, admin)
-  if (!ownedId || ownedId !== addaId) {
-    return { proposals: [], error: 'Adda not found or you do not own this profile.' }
+  const ownedId = await resolveOwnedVenueId(user.id, admin)
+  if (!ownedId || ownedId !== venueId) {
+    return { proposals: [], error: 'Venue not found or you do not own this profile.' }
   }
 
   const { data: proposals, error } = await admin
-    .from('maker_adda_proposals')
+    .from('maker_venue_proposals')
     .select('*')
-    .eq('adda_id', addaId)
+    .eq('venue_id', venueId)
     .in('status', statuses)
     .order('created_at', { ascending: false })
     .limit(200)
 
   if (error) {
-    console.error('[getAddaBookings]', error.message)
+    console.error('[getVenueBookings]', error.message)
     return { proposals: [], error: 'Failed to load bookings.' }
   }
 
@@ -115,7 +115,7 @@ export async function getAddaBookings(
 // ---------------------------------------------------------------------------
 
 /**
- * Accepts or declines a pending proposal. Only the owning adda may call this.
+ * Accepts or declines a pending proposal. Only the owning venue may call this.
  */
 export async function respondToProposal(
   proposalId: string,
@@ -131,8 +131,8 @@ export async function respondToProposal(
   const admin = createAdminClient()
 
   const { data: proposal } = await admin
-    .from('maker_adda_proposals')
-    .select('id, adda_id, status')
+    .from('maker_venue_proposals')
+    .select('id, venue_id, status')
     .eq('id', proposalId)
     .maybeSingle()
 
@@ -141,16 +141,16 @@ export async function respondToProposal(
     return { error: 'This proposal can no longer be modified.' }
   }
 
-  const ownedId = await resolveOwnedAddaId(user.id, admin)
-  if (!ownedId || ownedId !== proposal.adda_id) {
+  const ownedId = await resolveOwnedVenueId(user.id, admin)
+  if (!ownedId || ownedId !== proposal.venue_id) {
     return { error: 'You do not own this booking.' }
   }
 
   const { error } = await admin
-    .from('maker_adda_proposals')
+    .from('maker_venue_proposals')
     .update({
       status:             action === 'accept' ? 'accepted' : 'declined',
-      adda_response_note: note ?? null,
+      venue_response_note: note ?? null,
       updated_at:         new Date().toISOString(),
     })
     .eq('id', proposalId)

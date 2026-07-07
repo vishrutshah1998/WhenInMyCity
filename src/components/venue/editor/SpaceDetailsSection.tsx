@@ -6,7 +6,7 @@ import type { VenueFormState } from './types'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const ADDA_TYPES = [
+const VENUE_TYPES = [
   { slug: 'cafe',           label: 'Café',            icon: 'local_cafe' },
   { slug: 'coworking',      label: 'Coworking',       icon: 'laptop_mac' },
   { slug: 'gallery',        label: 'Gallery',         icon: 'museum' },
@@ -123,8 +123,8 @@ function NumberInput({
 // ─── Props ────────────────────────────────────────────────────────────────────
 
 interface Props {
-  state: Pick<VenueFormState, 'name' | 'adda_type' | 'description' | 'capacity_min' | 'capacity_max' | 'parking_details' | 'accessibility_notes'>
-  onChange: <K extends 'name' | 'adda_type' | 'description' | 'capacity_min' | 'capacity_max' | 'parking_details' | 'accessibility_notes'>(
+  state: Pick<VenueFormState, 'name' | 'venue_type' | 'description' | 'capacity_min' | 'capacity_max' | 'parking_details' | 'accessibility_notes'>
+  onChange: <K extends 'name' | 'venue_type' | 'description' | 'capacity_min' | 'capacity_max' | 'parking_details' | 'accessibility_notes'>(
     key: K, value: Props['state'][K]
   ) => void
   isEditing: boolean
@@ -136,11 +136,11 @@ export default function SpaceDetailsSection({ state, onChange, isEditing }: Prop
   const [collapsed, setCollapsed] = useState(false)
 
   function toggleType(slug: string) {
-    const current = state.adda_type
+    const current = state.venue_type
     const next = current.includes(slug)
       ? current.filter(t => t !== slug)
       : [...current, slug]
-    onChange('adda_type', next)
+    onChange('venue_type', next)
   }
 
   return (
@@ -204,8 +204,8 @@ export default function SpaceDetailsSection({ state, onChange, isEditing }: Prop
               <div>
                 <FieldLabel>Venue Type</FieldLabel>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                  {ADDA_TYPES.map(t => {
-                    const on = state.adda_type.includes(t.slug)
+                  {VENUE_TYPES.map(t => {
+                    const on = state.venue_type.includes(t.slug)
                     return (
                       <button
                         key={t.slug}

@@ -1,4 +1,4 @@
-import { getLegendaryAddas } from '@/app/actions/mapOfLegends'
+import { getLegendaryVenues } from '@/app/actions/mapOfLegends'
 import MapClient from './MapClient'
 
 export const metadata = {
@@ -7,6 +7,6 @@ export const metadata = {
 }
 
 export default async function MapOfLegendsPage() {
-  const addas = await getLegendaryAddas()
-  return <MapClient addas={addas} />
+  const venues = await getLegendaryVenues()
+  return <MapClient venues={venues} />
 }

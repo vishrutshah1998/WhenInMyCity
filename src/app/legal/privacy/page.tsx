@@ -101,7 +101,8 @@ export default function PrivacyPage() {
             ['Location coordinates — civic reports (optional)', 'If you choose to attach your location to a civic report, the coordinates are stored on our servers solely to identify the site of the issue and forward the report to the relevant government channel. Stored until the report is forwarded and confirmed, or until you request account deletion. You are asked for separate consent at the time of each report submission.'],
             ['Event booking records (RSVP, amount paid, check-in status)', 'Required to issue and verify your event tickets. Retained for the lifetime of your account.'],
             ['Event attendance history and ratings', 'Used to personalise your feed and to help creators improve their events. Stored on your profile.'],
-            ['Payment transaction records', 'We store the Razorpay order ID and capture status. Card numbers, UPI handles, and bank details are processed exclusively by Razorpay and are never accessible to WIMC.'],
+            ['Payment transaction records (ticket purchases)', 'We store the Razorpay order ID and capture status for your ticket purchases. Card numbers, UPI handles, and net-banking details used to pay for tickets are processed exclusively by Razorpay and are never accessible to WIMC.'],
+            ['Payout bank/UPI details (creators & venue partners only)', 'If you request a payout as a creator or venue (Venue) partner, we collect and store your bank account number, IFSC code, and/or UPI ID in our own systems in order to process that payout. Access is restricted to the account owner and authorised WIMC admins.'],
           ].map(([data, purpose], i, arr) => (
             <tr key={data} style={i < arr.length - 1 ? tableRow : {}}>
               <td style={tdL}>{data}</td>

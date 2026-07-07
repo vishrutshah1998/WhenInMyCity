@@ -298,14 +298,14 @@ export interface MasteryNeighbourhood {
 export async function getCityMasteryMap(profileId: string): Promise<MasteryNeighbourhood[]> {
   const admin = createAdminClient()
 
-  // Fetch all confirmed RSVPs for this user, joined to events + adda_profiles
+  // Fetch all confirmed RSVPs for this user, joined to events + venue_profiles
   const { data: rows } = await admin
     .from('rsvps')
     .select(`
       event:events (
         venue_name,
         venue_id,
-        adda:adda_profiles ( neighbourhood, city )
+        venue:venue_profiles ( neighbourhood, city )
       )
     `)
     .eq('attendee_user_id', profileId)
@@ -320,15 +320,15 @@ export async function getCityMasteryMap(profileId: string): Promise<MasteryNeigh
     const event = (row.event as unknown) as {
       venue_name: string
       venue_id: string | null
-      adda: { neighbourhood: string | null; city: string } | { neighbourhood: string | null; city: string }[] | null
+      venue: { neighbourhood: string | null; city: string } | { neighbourhood: string | null; city: string }[] | null
     } | null
     if (!event) continue
 
-    const addaRaw = event.adda
-    const adda = Array.isArray(addaRaw) ? addaRaw[0] ?? null : addaRaw
-    const neighbourhood = adda?.neighbourhood ?? null
+    const venueRaw = event.venue
+    const venue = Array.isArray(venueRaw) ? venueRaw[0] ?? null : venueRaw
+    const neighbourhood = venue?.neighbourhood ?? null
     const label = neighbourhood ?? event.venue_name
-    const city  = adda?.city ?? 'Other'
+    const city  = venue?.city ?? 'Other'
 
     const existing = counts.get(label)
     if (existing) {

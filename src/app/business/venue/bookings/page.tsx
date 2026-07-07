@@ -1,23 +1,23 @@
 import { redirect } from 'next/navigation'
 import { requireAuth } from '@/lib/auth/requireAuth'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { getAddaBookings } from '@/app/actions/venue-bookings'
+import { getVenueBookings } from '@/app/actions/venue-bookings'
 import BookingsPageClient from '@/components/venue/bookings/BookingsPageClient'
 
-export default async function AddaBookingsPage() {
+export default async function VenueBookingsPage() {
   const { user } = await requireAuth('/business/venue/bookings')
 
   const admin = createAdminClient()
 
-  const { data: adda } = await admin
-    .from('adda_profiles')
+  const { data: venue } = await admin
+    .from('venue_profiles')
     .select('id, name, slug')
     .eq('auth_user_id', user.id)
     .maybeSingle()
 
-  if (!adda) redirect('/business/venue/onboard')
+  if (!venue) redirect('/business/venue/onboard')
 
-  const { proposals, error } = await getAddaBookings(adda.id, [
+  const { proposals, error } = await getVenueBookings(venue.id, [
     'pending',
     'counter_offered',
     'accepted',
@@ -28,7 +28,7 @@ export default async function AddaBookingsPage() {
 
   return (
     <BookingsPageClient
-      addaId={adda.id}
+      venueId={venue.id}
       initialProposals={proposals}
       fetchError={error}
     />

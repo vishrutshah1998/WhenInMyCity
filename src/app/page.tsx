@@ -80,12 +80,12 @@ const EVENT_TAGS = [
   { label: 'Music Gigs',    color: '#F5A800' },
 ]
 const MAKER_FEATURES = ['Ticketed events with UPI checkout','Link-in-bio page at /{username}','Keep 75–90% of every rupee earned']
-const ADDA_FEATURES  = ['Verified listing in creator search','Booking calendar & Adda proposals','Revenue from idle evening slots']
+const VENUE_FEATURES  = ['Verified listing in creator search','Booking calendar & Venue proposals','Revenue from idle evening slots']
 
 const TICKET_META = [
   { serial: 'WIMC·001', type: 'ENTRY PASS',   accent: '#E8705A', stub: 'GENERAL ADMISSION · INDIA · 2025',          bg: '#0B0807' },
   { serial: 'WIMC·002', type: 'CREATOR PASS', accent: '#F5A800', stub: 'CLAIM YOUR PAGE · WIMCITY.IN · FREE',        bg: '#0B0A06' },
-  { serial: 'WIMC·003', type: 'ROLE SELECT',  accent: '#5DD9D0', stub: 'CHOOSE YOUR PATH · MAKERS & ADDAS · 2025',  bg: '#060B0B' },
+  { serial: 'WIMC·003', type: 'ROLE SELECT',  accent: '#5DD9D0', stub: 'CHOOSE YOUR PATH · MAKERS & VENUES · 2025',  bg: '#060B0B' },
 ]
 
 // ── Shared sub-components ─────────────────────────────────────
@@ -508,7 +508,7 @@ function HeroFace({ revealDelay, fast, badgeX, badgeY, pmX, pmY, onMouseMove }: 
             initial={{ opacity: 0, y: fast ? 14 : 24 }} animate={{ opacity: 1, y: 0 }}
             transition={{ duration: fast ? 0.35 : 0.78, ease: E, delay: d0 + (fast ? 0.28 : 0.65) }}>
             <p className="text-base md:text-[17px] leading-relaxed text-[#9896B0] max-w-md">
-              WIMC is where India&apos;s Tier-2 cities build their offline culture — connecting creators who perform, Addas (local spaces) that host, and communities who show up.
+              WIMC is where India&apos;s Tier-2 cities build their offline culture — connecting creators who perform, Venues (local spaces) that host, and communities who show up.
             </p>
             <div className="flex flex-col gap-3 shrink-0">
               <Link href="/signin?next=/onboarding" className="inline-flex items-center gap-2 px-6 py-3 text-sm font-bold tracking-wide text-[#07070A] bg-white hover:bg-[#E8E7F0] transition-colors" style={{ borderRadius: 0 }}>
@@ -701,7 +701,7 @@ function RolesFace({ revealDelay, fast }: { revealDelay: number; fast: boolean }
                     <div style={{ fontFamily: 'var(--font-syne)', fontSize: 26, fontWeight: 900, color: '#07070A', lineHeight: 1 }}>₹02</div>
                   </div>
                   <div className="relative flex items-center justify-between mb-4">
-                    <span className="font-mono text-[10px] font-bold uppercase tracking-[0.24em] text-[#07070A]/50">For Addas</span>
+                    <span className="font-mono text-[10px] font-bold uppercase tracking-[0.24em] text-[#07070A]/50">For Venues</span>
                     <div className="w-7 h-7 border border-[#07070A]/20 flex items-center justify-center">
                       <span className="material-symbols-outlined text-[#07070A]" style={{ fontSize: '14px' }}>arrow_forward</span>
                     </div>
@@ -711,14 +711,14 @@ function RolesFace({ revealDelay, fast }: { revealDelay: number; fast: boolean }
                 <div className="px-7 py-4 md:px-9 flex flex-col gap-3" style={{ background: '#07100F' }}>
                   <p className="text-[13px] leading-relaxed" style={{ color: '#9896B0' }}>List your café, rooftop, studio, or gallery. Let creators come to you with real bookings.</p>
                   <ul className="space-y-1.5">
-                    {ADDA_FEATURES.map((f) => (
+                    {VENUE_FEATURES.map((f) => (
                       <li key={f} className="flex items-center gap-3 text-[12px]" style={{ color: '#9896B0' }}>
                         <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: '#5DD9D0' }} />{f}
                       </li>
                     ))}
                   </ul>
                   <div className="inline-flex items-center gap-2 px-4 py-2 text-sm font-bold" style={{ background: '#5DD9D0', color: '#07070A', borderRadius: 0, alignSelf: 'flex-start' }}>
-                    List your Adda <span className="material-symbols-outlined" style={{ fontSize: '15px' }}>arrow_forward</span>
+                    List your Venue <span className="material-symbols-outlined" style={{ fontSize: '15px' }}>arrow_forward</span>
                   </div>
                 </div>
               </Link>
@@ -737,7 +737,7 @@ function RolesFace({ revealDelay, fast }: { revealDelay: number; fast: boolean }
           <div className="flex items-center gap-x-4" style={{ color: '#5C5A72' }}>
             <Link href="/explore" className="font-mono text-[9px] tracking-[0.14em] uppercase hover:text-[#9896B0] transition-colors">Explore</Link>
             <Link href="/signin?next=/onboarding" className="font-mono text-[9px] tracking-[0.14em] uppercase hover:text-[#9896B0] transition-colors hidden sm:block">Creators</Link>
-            <Link href="/signin?next=%2Fonboarding%3Fpersona%3Dvenue" className="font-mono text-[9px] tracking-[0.14em] uppercase hover:text-[#9896B0] transition-colors hidden sm:block">Addas</Link>
+            <Link href="/signin?next=%2Fonboarding%3Fpersona%3Dvenue" className="font-mono text-[9px] tracking-[0.14em] uppercase hover:text-[#9896B0] transition-colors hidden sm:block">Venues</Link>
             <Link href="/signin" className="font-mono text-[9px] tracking-[0.14em] uppercase hover:text-[#9896B0] transition-colors">Sign in</Link>
             <span className="font-mono text-[9px] tracking-[0.14em] uppercase">© 2025</span>
           </div>

@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { SK, clearNewOnboardingKeys } from '@/lib/onboarding/session-keys'
 import { updatePersonas } from '@/lib/onboarding/update-personas'
-import { completeAddaOnboarding, type CompleteAddaInput } from '@/app/actions/venue-onboarding'
+import { completeVenueOnboarding, type CompleteVenueInput } from '@/app/actions/venue-onboarding'
 import { createClient } from '@/lib/supabase/client'
 
 const ACCENT  = '#5DD9D0'
@@ -16,8 +16,8 @@ const ABRIL   = "var(--font-abril), 'Abril Fatface', serif"
 const DM      = "'DM Sans', sans-serif"
 const OUTFIT  = "'Outfit', sans-serif"
 
-// Maps V4 UI tile IDs → server-valid adda_type enum values (mirrors V4/page.tsx)
-const TYPE_TO_VALID: Record<string, CompleteAddaInput['adda_type'][number]> = {
+// Maps V4 UI tile IDs → server-valid venue_type enum values (mirrors V4/page.tsx)
+const TYPE_TO_VALID: Record<string, CompleteVenueInput['venue_type'][number]> = {
   cafe:       'cafe',       coworking:  'coworking', studio:     'studio',
   rooftop:    'rooftop',   gallery:    'gallery',   theatre:    'community_hall',
   event_hall: 'community_hall', retail: 'restaurant', bar:      'restaurant',
@@ -26,13 +26,13 @@ const TYPE_TO_VALID: Record<string, CompleteAddaInput['adda_type'][number]> = {
   workshop:   'coworking', restaurant: 'restaurant',
 }
 
-function toValidAddaTypes(raw: string[]): CompleteAddaInput['adda_type'] {
-  const seen = new Set<CompleteAddaInput['adda_type'][number]>()
+function toValidVenueTypes(raw: string[]): CompleteVenueInput['venue_type'] {
+  const seen = new Set<CompleteVenueInput['venue_type'][number]>()
   raw.forEach(t => { const v = TYPE_TO_VALID[t]; if (v) seen.add(v) })
-  return Array.from(seen) as CompleteAddaInput['adda_type']
+  return Array.from(seen) as CompleteVenueInput['venue_type']
 }
 
-const PRICING_MAP: Record<string, CompleteAddaInput['pricing_model']> = {
+const PRICING_MAP: Record<string, CompleteVenueInput['pricing_model']> = {
   hourly:          'fixed_rental',
   split:           'door_split',
   hybrid:          'hybrid',
@@ -202,7 +202,7 @@ export default function V8Page() {
       const city      = sessionStorage.getItem(SK.b_city)    || ''
       const address   = sessionStorage.getItem(SK.v_address) || ''
       const rawTypes  = JSON.parse(sessionStorage.getItem(SK.v_types) || '[]') as string[]
-      const adda_type = toValidAddaTypes(rawTypes)
+      const venue_type = toValidVenueTypes(rawTypes)
 
       const capRaw = sessionStorage.getItem(SK.v_capacity)
       const cap    = capRaw
@@ -218,12 +218,12 @@ export default function V8Page() {
 
       const amenitiesRaw  = sessionStorage.getItem(SK.v_amenities)
       const amenities     = ((amenitiesRaw ? JSON.parse(amenitiesRaw) : []) as string[])
-        .filter(a => VALID_AMENITIES.has(a)) as CompleteAddaInput['amenities']
+        .filter(a => VALID_AMENITIES.has(a)) as CompleteVenueInput['amenities']
       const rawPricing       = sessionStorage.getItem(SK.v_pricing) || ''
       const rawPricingAmount = sessionStorage.getItem(SK.v_pricing_amount) || ''
       const pricing_model    = PRICING_MAP[rawPricing] ?? 'fixed_rental'
       const available_days   = (JSON.parse(sessionStorage.getItem(SK.v_days) || '[]') as string[])
-        .map(d => DAY_TO_FULL[d]).filter(Boolean) as CompleteAddaInput['available_days']
+        .map(d => DAY_TO_FULL[d]).filter(Boolean) as CompleteVenueInput['available_days']
 
       let preferred_times: ('morning' | 'afternoon' | 'evening' | 'late_night')[] = []
       try { preferred_times = JSON.parse(sessionStorage.getItem(SK.v_times) || '[]') } catch {}
@@ -252,12 +252,12 @@ export default function V8Page() {
       const website       = sessionStorage.getItem(SK.v_website)         || undefined
       const ratingRaw     = sessionStorage.getItem(SK.v_google_rating)
       const googleRating  = ratingRaw ? parseFloat(ratingRaw) : undefined
-      let googleReviews: NonNullable<CompleteAddaInput['google_reviews']> = []
+      let googleReviews: NonNullable<CompleteVenueInput['google_reviews']> = []
       let googlePhotoUrls: string[] = []
       try { googleReviews   = JSON.parse(sessionStorage.getItem(SK.v_google_reviews) || '[]') } catch {}
       try { googlePhotoUrls = JSON.parse(sessionStorage.getItem(SK.v_google_photos)  || '[]') } catch {}
 
-      const result = await completeAddaOnboarding({
+      const result = await completeVenueOnboarding({
         name,
         description:             bio || undefined,
         city,
@@ -265,7 +265,7 @@ export default function V8Page() {
         address,
         lat:                     isNaN(lat as number) ? undefined : lat,
         lng:                     isNaN(lng as number) ? undefined : lng,
-        adda_type,
+        venue_type,
         capacity_min:            capMin,
         capacity_max:            capMax,
         capacity_configurations: capacityConfigurations,

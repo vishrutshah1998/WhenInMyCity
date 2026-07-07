@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { requireAuth } from '@/lib/auth/requireAuth'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { getAddaDashboardData } from '@/app/actions/venue-dashboard'
+import { getVenueDashboardData } from '@/app/actions/venue-dashboard'
 import PersonaSwitcherPills from '@/components/PersonaSwitcherPills'
 import DashPageLink from '@/components/DashPageLink'
 import PriorityActions from '@/components/venue/dashboard/PriorityActions'
@@ -13,7 +13,7 @@ import WeekStrip from '@/components/venue/dashboard/WeekStrip'
 import PendingRequests from '@/components/venue/dashboard/PendingRequests'
 import RevenueTrend from '@/components/venue/dashboard/RevenueTrend'
 import type { MonthlyRevenue } from '@/components/venue/dashboard/charts/RevenueTrendChart'
-import type { AddaProfile, AddaTier } from '@/types/database'
+import type { VenueProfile, VenueTier } from '@/types/database'
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -36,18 +36,18 @@ function buildRevenueTrend(): MonthlyRevenue[] {
 // Tier progress card
 // ---------------------------------------------------------------------------
 
-const TIER_COLORS: Record<AddaTier, { bg: string; border: string; color: string; icon: string }> = {
+const TIER_COLORS: Record<VenueTier, { bg: string; border: string; color: string; icon: string }> = {
   open:      { bg: 'rgba(255,255,255,0.04)', border: 'var(--venue-border-subtle)', color: 'var(--venue-text-muted)',  icon: 'storefront' },
   verified:  { bg: 'rgba(77,210,177,0.08)',  border: 'rgba(77,210,177,0.3)',      color: '#4dd2b1',               icon: 'verified' },
   beloved:   { bg: 'rgba(245,168,0,0.08)',   border: 'rgba(245,168,0,0.3)',       color: '#f5a800',               icon: 'favorite' },
   legendary: { bg: 'rgba(168,85,247,0.08)',  border: 'rgba(168,85,247,0.3)',      color: '#a855f7',               icon: 'workspace_premium' },
 }
 
-const TIER_LABELS: Record<AddaTier, string> = {
+const TIER_LABELS: Record<VenueTier, string> = {
   open: 'Open', verified: 'Verified', beloved: 'Beloved', legendary: 'Legendary',
 }
 
-const TIER_ORDER: AddaTier[] = ['open', 'verified', 'beloved', 'legendary']
+const TIER_ORDER: VenueTier[] = ['open', 'verified', 'beloved', 'legendary']
 
 function Gate({ met, label, detail }: { met: boolean; label: string; detail: string }) {
   return (
@@ -66,39 +66,39 @@ function Gate({ met, label, detail }: { met: boolean; label: string; detail: str
   )
 }
 
-function TierProgressCard({ adda, reviewCount }: { adda: AddaProfile; reviewCount: number }) {
-  const currentTier = adda.adda_tier as AddaTier
+function TierProgressCard({ venue, reviewCount }: { venue: VenueProfile; reviewCount: number }) {
+  const currentTier = venue.venue_tier as VenueTier
   const currentIndex = TIER_ORDER.indexOf(currentTier)
-  const nextTier = TIER_ORDER[currentIndex + 1] as AddaTier | undefined
+  const nextTier = TIER_ORDER[currentIndex + 1] as VenueTier | undefined
   const c = TIER_COLORS[currentTier]
-  const isTrending = adda.trending_until ? new Date(adda.trending_until) > new Date() : false
+  const isTrending = venue.trending_until ? new Date(venue.trending_until) > new Date() : false
 
-  const belovedYears = adda.beloved_since
-    ? (Date.now() - new Date(adda.beloved_since).getTime()) / (365 * 24 * 60 * 60 * 1000)
+  const belovedYears = venue.beloved_since
+    ? (Date.now() - new Date(venue.beloved_since).getTime()) / (365 * 24 * 60 * 60 * 1000)
     : 0
 
   let gates: Array<{ met: boolean; label: string; detail: string }> = []
   if (nextTier === 'verified') {
     gates = [
-      { met: adda.total_events_hosted >= 3,   label: '3+ events hosted (lifetime)',    detail: `You have ${adda.total_events_hosted}` },
+      { met: venue.total_events_hosted >= 3,   label: '3+ events hosted (lifetime)',    detail: `You have ${venue.total_events_hosted}` },
       { met: reviewCount >= 10,                label: '10+ reviews',                   detail: `You have ${reviewCount}` },
-      { met: adda.average_maker_rating >= 4.0, label: '4.0★ average rating',          detail: `Your rating: ${adda.average_maker_rating.toFixed(1)}★` },
-      { met: adda.is_verified,                 label: 'Claimed & profile complete',    detail: adda.is_verified ? 'Profile verified' : 'Awaiting admin verification' },
+      { met: venue.average_maker_rating >= 4.0, label: '4.0★ average rating',          detail: `Your rating: ${venue.average_maker_rating.toFixed(1)}★` },
+      { met: venue.is_verified,                 label: 'Claimed & profile complete',    detail: venue.is_verified ? 'Profile verified' : 'Awaiting admin verification' },
     ]
   } else if (nextTier === 'beloved') {
     gates = [
       { met: reviewCount >= 100,                              label: '100+ reviews',                      detail: `You have ${reviewCount}` },
-      { met: adda.average_maker_rating >= 4.6,               label: '4.6★ average rating',              detail: `Your rating: ${adda.average_maker_rating.toFixed(1)}★` },
-      { met: adda.unique_lantern_beacon_hosts >= 3,          label: '3+ Lantern/Beacon hosts',          detail: `You have ${adda.unique_lantern_beacon_hosts}` },
-      { met: adda.complaint_rate <= 0.02,                    label: '<2% complaint rate',               detail: `Yours: ${(adda.complaint_rate * 100).toFixed(1)}%` },
-      { met: adda.on_time_rate >= 0.90,                      label: '≥90% on-time rate',               detail: `Yours: ${(adda.on_time_rate * 100).toFixed(0)}%` },
+      { met: venue.average_maker_rating >= 4.6,               label: '4.6★ average rating',              detail: `Your rating: ${venue.average_maker_rating.toFixed(1)}★` },
+      { met: venue.unique_lantern_beacon_hosts >= 3,          label: '3+ Lantern/Beacon hosts',          detail: `You have ${venue.unique_lantern_beacon_hosts}` },
+      { met: venue.complaint_rate <= 0.02,                    label: '<2% complaint rate',               detail: `Yours: ${(venue.complaint_rate * 100).toFixed(1)}%` },
+      { met: venue.on_time_rate >= 0.90,                      label: '≥90% on-time rate',               detail: `Yours: ${(venue.on_time_rate * 100).toFixed(0)}%` },
     ]
   } else if (nextTier === 'legendary') {
     gates = [
       { met: reviewCount >= 500,                              label: '500+ reviews',                     detail: `You have ${reviewCount}` },
-      { met: adda.average_maker_rating >= 4.7,               label: '4.7★ average rating',             detail: `Your rating: ${adda.average_maker_rating.toFixed(1)}★` },
-      { met: adda.unique_lantern_beacon_hosts >= 10,         label: '10+ Beacon hosts',                 detail: `You have ${adda.unique_lantern_beacon_hosts}` },
-      { met: adda.repeat_attendee_rate >= 0.40,              label: '≥40% repeat attendee rate',       detail: `Yours: ${(adda.repeat_attendee_rate * 100).toFixed(0)}%` },
+      { met: venue.average_maker_rating >= 4.7,               label: '4.7★ average rating',             detail: `Your rating: ${venue.average_maker_rating.toFixed(1)}★` },
+      { met: venue.unique_lantern_beacon_hosts >= 10,         label: '10+ Beacon hosts',                 detail: `You have ${venue.unique_lantern_beacon_hosts}` },
+      { met: venue.repeat_attendee_rate >= 0.40,              label: '≥40% repeat attendee rate',       detail: `Yours: ${(venue.repeat_attendee_rate * 100).toFixed(0)}%` },
       { met: belovedYears >= 2,                              label: '2+ years at Beloved tier',        detail: belovedYears >= 2 ? `${belovedYears.toFixed(1)} years` : `${(belovedYears * 12).toFixed(0)} months in` },
     ]
   }
@@ -148,7 +148,7 @@ function TierProgressCard({ adda, reviewCount }: { adda: AddaProfile; reviewCoun
         </>
       ) : (
         <div style={{ fontSize: 13, color: 'var(--venue-text-secondary)', textAlign: 'center', padding: '8px 0' }}>
-          You have reached the highest Adda tier. Keep the flame alive!
+          You have reached the highest Venue tier. Keep the flame alive!
         </div>
       )}
     </div>
@@ -173,12 +173,12 @@ function KpiRow({ mtdRevenuePaise, occupancyPercent, avgBookingPaise, pendingCou
     : undefined
 
   return (
-    <div className="adda-kpi-grid" style={{
+    <div className="venue-kpi-grid" style={{
       display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 24,
     }}>
       <KpiCard label="Net Revenue MTD" prefix="₹" value={formatInr(mtdRevenuePaise)} delta={0} deltaDirection="neutral" tooltip="Your share of ticket revenue for confirmed events this month. Excludes pending payouts." />
       <KpiCard label="Occupancy Rate" suffix="%" value={occupancyPercent} delta={0} deltaDirection="neutral" arcPercent={occupancyPercent} tooltip="Confirmed booking days ÷ total available days this month." />
-      <KpiCard label="Avg Booking Value" prefix="₹" value={formatInr(avgBookingPaise)} delta={0} deltaDirection="neutral" tooltip="Average adda share per confirmed event." />
+      <KpiCard label="Avg Booking Value" prefix="₹" value={formatInr(avgBookingPaise)} delta={0} deltaDirection="neutral" tooltip="Average venue share per confirmed event." />
       <KpiCard label="Pending Requests" value={pendingCount} delta={0} deltaDirection="neutral" subtext={pendingCount > 0 ? subtextForPending : undefined} tooltip="Booking requests awaiting your response. Unanswered requests expire in 48h." />
     </div>
   )
@@ -188,21 +188,21 @@ function KpiRow({ mtdRevenuePaise, occupancyPercent, avgBookingPaise, pendingCou
 // Page
 // ---------------------------------------------------------------------------
 
-export default async function AddaDashboardPage() {
+export default async function VenueDashboardPage() {
   const { user } = await requireAuth('/business/venue/dashboard')
 
   const admin = createAdminClient()
 
-  const { data: adda } = await admin
-    .from('adda_profiles')
+  const { data: venue } = await admin
+    .from('venue_profiles')
     .select('id, name, slug')
     .eq('auth_user_id', user.id)
     .maybeSingle()
 
-  if (!adda) redirect('/business/venue/onboard')
+  if (!venue) redirect('/business/venue/onboard')
 
   const [result, { data: userProfile }] = await Promise.all([
-    getAddaDashboardData(adda.id),
+    getVenueDashboardData(venue.id),
     admin.from('user_profiles').select('personas').eq('id', user.id).maybeSingle(),
   ])
 
@@ -221,13 +221,13 @@ export default async function AddaDashboardPage() {
     )
   }
 
-  const { adda: addaProfile, pendingProposals, recentRevenue, availabilityThisMonth } = result
+  const { venue: venueProfile, pendingProposals, recentRevenue, availabilityThisMonth } = result
 
   // Review count for tier progress card
   const { data: eventIds } = await admin
     .from('events')
     .select('id')
-    .eq('venue_id', adda.id)
+    .eq('venue_id', venue.id)
     .in('status', ['published', 'completed'])
 
   const eventIdList = (eventIds ?? []).map((e) => e.id)
@@ -245,7 +245,7 @@ export default async function AddaDashboardPage() {
   const monthPrefix = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
   const mtdRevenuePaise = recentRevenue
     .filter(e => e.event_date.startsWith(monthPrefix))
-    .reduce((s, e) => s + e.adda_share_paise, 0)
+    .reduce((s, e) => s + e.venue_share_paise, 0)
 
   const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate()
   const confirmedDays = new Set(
@@ -253,9 +253,9 @@ export default async function AddaDashboardPage() {
   ).size
   const occupancyPercent = daysInMonth > 0 ? Math.round((confirmedDays / daysInMonth) * 100) : 0
 
-  const completedRevenue = recentRevenue.filter(e => e.adda_share_paise > 0)
+  const completedRevenue = recentRevenue.filter(e => e.venue_share_paise > 0)
   const avgBookingPaise = completedRevenue.length
-    ? Math.round(completedRevenue.reduce((s, e) => s + e.adda_share_paise, 0) / completedRevenue.length)
+    ? Math.round(completedRevenue.reduce((s, e) => s + e.venue_share_paise, 0) / completedRevenue.length)
     : 0
 
   const soonestExpiry = pendingProposals.length
@@ -268,9 +268,9 @@ export default async function AddaDashboardPage() {
     <>
       <style>{`
         @media (max-width: 767px) {
-          .adda-page-main  { padding: 14px !important; }
-          .adda-kpi-grid   { grid-template-columns: repeat(2, 1fr) !important; gap: 10px !important; }
-          .adda-row3-grid  { grid-template-columns: 1fr !important; gap: 16px !important; }
+          .venue-page-main  { padding: 14px !important; }
+          .venue-kpi-grid   { grid-template-columns: repeat(2, 1fr) !important; gap: 10px !important; }
+          .venue-row3-grid  { grid-template-columns: 1fr !important; gap: 16px !important; }
         }
         @keyframes dash-enter {
           from { opacity: 0; transform: translateY(10px); }
@@ -281,11 +281,11 @@ export default async function AddaDashboardPage() {
 
       <PersonaSwitcherPills personas={personas} currentPersona="venue" variant="dark" />
       <DashPageLink
-        url={`${process.env.NEXT_PUBLIC_APP_URL ?? 'https://wheninmycity.com'}/adda/${adda.slug}`}
+        url={`${process.env.NEXT_PUBLIC_APP_URL ?? 'https://wheninmycity.com'}/venue/${venue.slug}`}
         variant="dark"
       />
 
-      <div className="adda-page-main dash-enter" style={{ padding: 24, maxWidth: 1400, margin: '0 auto' }}>
+      <div className="venue-page-main dash-enter" style={{ padding: 24, maxWidth: 1400, margin: '0 auto' }}>
 
         {/* Pending proposals hero */}
         {pendingProposals.length > 0 && (
@@ -347,7 +347,7 @@ export default async function AddaDashboardPage() {
           />
         </Suspense>
 
-        <div className="adda-row3-grid" style={{
+        <div className="venue-row3-grid" style={{
           display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 24, marginBottom: 24,
         }}>
           <WeekStrip availability={availabilityThisMonth} />
@@ -356,7 +356,7 @@ export default async function AddaDashboardPage() {
 
         <RevenueTrend data={revenueTrendData} />
 
-        <TierProgressCard adda={addaProfile} reviewCount={reviewCount} />
+        <TierProgressCard venue={venueProfile} reviewCount={reviewCount} />
       </div>
     </>
   )

@@ -35,7 +35,7 @@ function CustomTooltip({ active, payload, label }: {
         <div key={p.name} style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: 12 }}>
           <span style={{ color: 'var(--venue-text-secondary)', textTransform: 'capitalize' }}>{p.name}</span>
           <span
-            className="font-adda-nums"
+            className="font-venue-nums"
             style={{ fontWeight: 700, color: 'var(--venue-text-primary)', fontFamily: 'var(--font-jetbrains-mono), monospace' }}
           >
             {formatInr(p.value)}
@@ -56,11 +56,11 @@ export default function RevenueTrendChart({ data, averagePaise }: Props) {
     <ResponsiveContainer width="100%" height={240}>
       <AreaChart data={data} margin={{ top: 16, right: 16, bottom: 0, left: 8 }}>
         <defs>
-          <linearGradient id="addaAmberGradient" x1="0" y1="0" x2="0" y2="1">
+          <linearGradient id="venueAmberGradient" x1="0" y1="0" x2="0" y2="1">
             <stop offset="5%"  stopColor="var(--venue-amber)" stopOpacity={0.20} />
             <stop offset="95%" stopColor="var(--venue-amber)" stopOpacity={0} />
           </linearGradient>
-          <linearGradient id="addaNetGradient" x1="0" y1="0" x2="0" y2="1">
+          <linearGradient id="venueNetGradient" x1="0" y1="0" x2="0" y2="1">
             <stop offset="5%"  stopColor="var(--venue-success)" stopOpacity={0.12} />
             <stop offset="95%" stopColor="var(--venue-success)" stopOpacity={0} />
           </linearGradient>
@@ -104,18 +104,18 @@ export default function RevenueTrendChart({ data, averagePaise }: Props) {
           name="gross"
           stroke="var(--venue-amber)"
           strokeWidth={2}
-          fill="url(#addaAmberGradient)"
+          fill="url(#venueAmberGradient)"
           dot={false}
           isAnimationActive={false}
         />
-        {/* Net (adda share) — success green */}
+        {/* Net (venue share) — success green */}
         <Area
           type="monotone"
           dataKey="net_paise"
           name="net"
           stroke="var(--venue-success)"
           strokeWidth={1.5}
-          fill="url(#addaNetGradient)"
+          fill="url(#venueNetGradient)"
           dot={false}
           isAnimationActive={false}
         />

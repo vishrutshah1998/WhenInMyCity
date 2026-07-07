@@ -1,6 +1,6 @@
 // =============================================================================
 // WIMC — Three-Sided Marketplace Types
-// Makers (creators), Addas (venues), Explorers (audience members)
+// Makers (creators), Venues, Explorers (audience members)
 // =============================================================================
 
 import { z } from 'zod'
@@ -14,7 +14,7 @@ export type UserRole = 'maker' | 'explorer'
 
 export type UserTier = 'wanderer' | 'local' | 'lantern' | 'beacon'
 
-export type AddaType =
+export type VenueType =
   | 'cafe'
   | 'coworking'
   | 'gallery'
@@ -97,7 +97,7 @@ export interface TierEvaluationResult {
 }
 
 // ---------------------------------------------------------------------------
-// Adda pricing config shapes
+// Venue pricing config shapes
 // ---------------------------------------------------------------------------
 
 export interface PricingConfig {
@@ -136,7 +136,7 @@ export interface ProposalCounterOffer {
 }
 
 // ---------------------------------------------------------------------------
-// Availability update (input to updateAddaAvailability)
+// Availability update (input to updateVenueAvailability)
 // ---------------------------------------------------------------------------
 
 export interface AvailabilityUpdate {
@@ -147,12 +147,12 @@ export interface AvailabilityUpdate {
 }
 
 // ---------------------------------------------------------------------------
-// Adda search params
+// Venue search params
 // ---------------------------------------------------------------------------
 
-export interface AddaSearchParams {
+export interface VenueSearchParams {
   city: string
-  adda_type?: AddaType
+  venue_type?: VenueType
   capacity_min?: number
   capacity_max?: number
   date?: string             // ISO date string
@@ -164,7 +164,7 @@ export interface AddaSearchParams {
 // Zod schemas — validated in Server Actions
 // ---------------------------------------------------------------------------
 
-const VALID_ADDA_TYPES: AddaType[] = [
+const VALID_VENUE_TYPES: VenueType[] = [
   'cafe', 'coworking', 'gallery', 'community_hall',
   'rooftop', 'garden', 'studio', 'library', 'restaurant',
 ]
@@ -178,12 +178,12 @@ const VALID_FORMATS = [
   'small_group', 'workshop', 'performance', 'networking', 'outdoor', 'dining',
 ] as const
 
-export const CreateAddaSchema = z.object({
+export const CreateVenueSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters').max(100),
   description: z.string().max(1000).optional(),
-  adda_type: z
-    .array(z.enum(VALID_ADDA_TYPES as [AddaType, ...AddaType[]]))
-    .min(1, 'Select at least one Adda type'),
+  venue_type: z
+    .array(z.enum(VALID_VENUE_TYPES as [VenueType, ...VenueType[]]))
+    .min(1, 'Select at least one Venue type'),
   city: z.string().min(1, 'City is required'),
   neighbourhood: z.string().max(100).optional(),
   address: z.string().min(5, 'Address is required').max(500),
@@ -225,7 +225,7 @@ export const CreateAddaSchema = z.object({
     { message: 'Maximum capacity must be ≥ minimum capacity', path: ['capacity_max'] },
   )
 
-export type CreateAddaInput = z.infer<typeof CreateAddaSchema>
+export type CreateVenueInput = z.infer<typeof CreateVenueSchema>
 
 export const CreateExplorerSchema = z.object({
   display_name: z.string().min(1, 'Display name is required').max(80),

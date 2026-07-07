@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import { useState } from 'react'
-import type { AddaProfile, Event, UserProfile } from '@/types/database'
+import type { VenueProfile, Event, UserProfile } from '@/types/database'
 import { WimcWordmark } from '@/components/WimcWordmark'
 import type { PricingConfig } from '@/types/marketplace'
 import { BottomNav } from '@/components/ui/BottomNav'
@@ -22,7 +22,7 @@ interface PastEvent {
 }
 
 interface Props {
-  adda: AddaProfile
+  venue: VenueProfile
   upcomingEvents: UpcomingEvent[]
   pastEvents: PastEvent[]
   stats: { total_events: number; average_rating: number }
@@ -203,7 +203,7 @@ const THEMES: Record<string, VenueTheme> = {
     glowColor: 'rgba(220,38,38,0.12)',
   },
   default: {
-    label: 'ADDA',
+    label: 'VENUE',
     bg: '#07070A',
     bgCard: '#111117',
     bgPanel: '#1A2744',
@@ -241,7 +241,7 @@ function getTheme(types: string[]): VenueTheme {
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 type GoogleReview = { author_name: string; rating: number; text: string; time: number }
-type VenueExtended = AddaProfile & {
+type VenueExtended = VenueProfile & {
   google_reviews?: GoogleReview[]
   google_rating?: number
   google_photo_urls?: string[]
@@ -252,21 +252,21 @@ type VenueExtended = AddaProfile & {
   capacity_configurations?: Array<{ type: string; capacity: number }>
 }
 
-function getHourlyRate(adda: AddaProfile): number | null {
-  if (adda.pricing_model !== 'fixed_rental') return null
-  const cfg = adda.pricing_config as PricingConfig | null
+function getHourlyRate(venue: VenueProfile): number | null {
+  if (venue.pricing_model !== 'fixed_rental') return null
+  const cfg = venue.pricing_config as PricingConfig | null
   return cfg?.fixed_rental_paise != null ? Math.round(cfg.fixed_rental_paise / 100) : null
 }
 
-function pricingLabel(adda: AddaProfile): string {
-  const hourlyRate = getHourlyRate(adda)
+function pricingLabel(venue: VenueProfile): string {
+  const hourlyRate = getHourlyRate(venue)
   if (hourlyRate != null) return `₹${hourlyRate.toLocaleString('en-IN')} / hr`
-  const cfg = adda.pricing_config as Record<string, number> | null
-  if (adda.pricing_model === 'door_split' && cfg?.door_split_percent)
+  const cfg = venue.pricing_config as Record<string, number> | null
+  if (venue.pricing_model === 'door_split' && cfg?.door_split_percent)
     return `${cfg.door_split_percent}% DOOR SPLIT`
-  if (adda.pricing_model === 'f_and_b_minimum' && cfg?.f_and_b_minimum_paise)
+  if (venue.pricing_model === 'f_and_b_minimum' && cfg?.f_and_b_minimum_paise)
     return `₹${Math.round(cfg.f_and_b_minimum_paise / 100).toLocaleString('en-IN')} MIN SPEND`
-  return adda.pricing_model?.replace(/_/g, ' ').toUpperCase() ?? 'ENQUIRE'
+  return venue.pricing_model?.replace(/_/g, ' ').toUpperCase() ?? 'ENQUIRE'
 }
 
 function amenityIcon(a: string): string {
@@ -301,9 +301,9 @@ function waLink(num: string | null): string {
   return `https://wa.me/${num.replace(/\D/g, '').replace(/^(?!91)/, '91')}`
 }
 
-function gmapsLink(adda: AddaProfile): string {
-  if (adda.lat && adda.lng) return `https://maps.google.com/?q=${adda.lat},${adda.lng}`
-  return `https://maps.google.com/?q=${encodeURIComponent(adda.address + ', ' + adda.city)}`
+function gmapsLink(venue: VenueProfile): string {
+  if (venue.lat && venue.lng) return `https://maps.google.com/?q=${venue.lat},${venue.lng}`
+  return `https://maps.google.com/?q=${encodeURIComponent(venue.address + ', ' + venue.city)}`
 }
 
 const MOB_DAYS = [
@@ -416,24 +416,24 @@ function Gallery({ images, primary }: { images: string[]; primary: string }) {
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
-export default function VenueCityPage({ adda, stats }: Props) {
-  const ext = adda as unknown as VenueExtended
-  const theme = getTheme(adda.adda_type)
-  const hourlyRate = getHourlyRate(adda)
-  const pricing = pricingLabel(adda)
+export default function VenueCityPage({ venue, stats }: Props) {
+  const ext = venue as unknown as VenueExtended
+  const theme = getTheme(venue.venue_type)
+  const hourlyRate = getHourlyRate(venue)
+  const pricing = pricingLabel(venue)
   const googleReviews = (ext.google_reviews ?? []).filter(r => r.text)
   const galleryImages = [
-    ...adda.gallery_images,
+    ...venue.gallery_images,
     ...(ext.google_photo_urls ?? []),
   ].filter(Boolean).slice(0, 12)
   const capacityConfigs = (ext.capacity_configurations ?? []) as Array<{ type: string; capacity: number }>
   const { monthLabel, dayHeaders, dateRows } = getCalendarData()
-  const waUrl = waLink(adda.contact_whatsapp)
-  const mapsUrl = gmapsLink(adda)
-  const cityPath = adda.city.toLowerCase().replace(/\s+/g, '-')
+  const waUrl = waLink(venue.contact_whatsapp)
+  const mapsUrl = gmapsLink(venue)
+  const cityPath = venue.city.toLowerCase().replace(/\s+/g, '-')
   const exploreHref = `/explore?city=${cityPath}&tab=venues`
 
-  const typeLabels = adda.adda_type.map(t => t.replace(/_/g, ' ').toUpperCase()).join(' · ')
+  const typeLabels = venue.venue_type.map(t => t.replace(/_/g, ' ').toUpperCase()).join(' · ')
 
   return (
     <>
@@ -479,7 +479,7 @@ export default function VenueCityPage({ adda, stats }: Props) {
               className="font-mono text-[11px] uppercase tracking-wider transition-colors no-underline"
               style={{ color: theme.primary }}
             >
-              ← {adda.city.toUpperCase()}
+              ← {venue.city.toUpperCase()}
             </Link>
             <Link
               href="/explore"
@@ -511,10 +511,10 @@ export default function VenueCityPage({ adda, stats }: Props) {
 
         {/* Hero — full-bleed cover image or themed gradient */}
         <div className="relative h-[55vh] overflow-hidden">
-          {adda.cover_image_url ? (
+          {venue.cover_image_url ? (
             <Image
-              src={adda.cover_image_url}
-              alt={adda.name}
+              src={venue.cover_image_url}
+              alt={venue.name}
               fill
               className="object-cover"
               priority
@@ -546,7 +546,7 @@ export default function VenueCityPage({ adda, stats }: Props) {
             >
               {theme.label}
             </span>
-            {adda.is_verified && (
+            {venue.is_verified && (
               <span
                 className="font-mono text-[10px] px-3 py-1.5 uppercase tracking-wider border flex items-center gap-1"
                 style={{ color: theme.primary, borderColor: theme.border, background: `${theme.bg}cc` }}
@@ -557,7 +557,7 @@ export default function VenueCityPage({ adda, stats }: Props) {
                 VERIFIED
               </span>
             )}
-            {adda.trending_until && new Date(adda.trending_until) > new Date() && (
+            {venue.trending_until && new Date(venue.trending_until) > new Date() && (
               <span
                 className="font-mono text-[10px] px-3 py-1.5 uppercase tracking-wider border"
                 style={{ color: theme.primary, borderColor: theme.primaryDim, background: `${theme.bg}cc` }}
@@ -573,7 +573,7 @@ export default function VenueCityPage({ adda, stats }: Props) {
               className="font-mono text-[10px] uppercase tracking-widest"
               style={{ color: `${theme.text}60` }}
             >
-              WHENINMYCITY.COM / {adda.city.toUpperCase()} / {adda.slug.toUpperCase()}
+              WHENINMYCITY.COM / {venue.city.toUpperCase()} / {venue.slug.toUpperCase()}
             </span>
           </div>
 
@@ -587,7 +587,7 @@ export default function VenueCityPage({ adda, stats }: Props) {
                 textShadow: '0 4px 24px rgba(0,0,0,0.6)',
               }}
             >
-              {adda.name}
+              {venue.name}
             </h1>
             <div className="flex items-center gap-3 flex-wrap">
               <a
@@ -599,7 +599,7 @@ export default function VenueCityPage({ adda, stats }: Props) {
               >
                 <span className="material-symbols-outlined" style={{ fontSize: 14 }}>location_on</span>
                 <span className="font-mono text-[11px] uppercase tracking-wide">
-                  {adda.neighbourhood ? `${adda.neighbourhood}, ` : ''}{adda.city}
+                  {venue.neighbourhood ? `${venue.neighbourhood}, ` : ''}{venue.city}
                 </span>
               </a>
               {typeLabels && (
@@ -640,8 +640,8 @@ export default function VenueCityPage({ adda, stats }: Props) {
                 </p>
                 {[
                   { label: 'TYPE', value: typeLabels || '—' },
-                  { label: 'CAPACITY', value: adda.capacity_max ? `${adda.capacity_min ?? 1}–${adda.capacity_max} PEOPLE` : '—' },
-                  { label: 'LEAD TIME', value: adda.lead_time_weeks ? `${adda.lead_time_weeks} WEEKS` : '—' },
+                  { label: 'CAPACITY', value: venue.capacity_max ? `${venue.capacity_min ?? 1}–${venue.capacity_max} PEOPLE` : '—' },
+                  { label: 'LEAD TIME', value: venue.lead_time_weeks ? `${venue.lead_time_weeks} WEEKS` : '—' },
                   { label: 'PRICING', value: pricing },
                   ...(ext.alcohol_license ? [{ label: 'BAR', value: 'LICENSED' }] : []),
                   ...(ext.sound_curfew_time ? [{ label: 'SOUND CURFEW', value: ext.sound_curfew_time }] : []),
@@ -725,7 +725,7 @@ export default function VenueCityPage({ adda, stats }: Props) {
                   <div key={ri} className="grid grid-cols-7 gap-1 mb-1">
                     {row.map((date, ci) => {
                       if (date === null) return <div key={`e-${ri}-${ci}`} className="py-2" />
-                      const active = isDateAvailable(date, adda.available_days)
+                      const active = isDateAvailable(date, venue.available_days)
                       const isToday = date === new Date().getDate()
                       return (
                         <div
@@ -761,7 +761,7 @@ export default function VenueCityPage({ adda, stats }: Props) {
                   GET IN TOUCH
                 </p>
                 <div className="flex flex-col gap-3">
-                  {adda.contact_whatsapp && (
+                  {venue.contact_whatsapp && (
                     <a
                       href={waUrl}
                       target="_blank"
@@ -785,21 +785,21 @@ export default function VenueCityPage({ adda, stats }: Props) {
                       <span className="font-mono text-[12px] uppercase" style={{ color: theme.text }}>{ext.phone}</span>
                     </a>
                   )}
-                  {adda.contact_email && (
+                  {venue.contact_email && (
                     <a
-                      href={`mailto:${adda.contact_email}`}
+                      href={`mailto:${venue.contact_email}`}
                       className="flex items-center gap-3 px-4 py-3 border no-underline transition-opacity hover:opacity-80"
                       style={{ borderColor: theme.border, background: theme.bgCard }}
                     >
                       <span className="material-symbols-outlined" style={{ fontSize: 20, color: theme.primary }}>mail</span>
                       <span className="font-mono text-[12px] uppercase" style={{ color: theme.text }}>
-                        {adda.contact_email}
+                        {venue.contact_email}
                       </span>
                     </a>
                   )}
-                  {adda.instagram_handle && (
+                  {venue.instagram_handle && (
                     <a
-                      href={adda.instagram_handle.startsWith('http') ? adda.instagram_handle : `https://instagram.com/${adda.instagram_handle}`}
+                      href={venue.instagram_handle.startsWith('http') ? venue.instagram_handle : `https://instagram.com/${venue.instagram_handle}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="flex items-center gap-3 px-4 py-3 border no-underline transition-opacity hover:opacity-80"
@@ -807,7 +807,7 @@ export default function VenueCityPage({ adda, stats }: Props) {
                     >
                       <span className="material-symbols-outlined" style={{ fontSize: 20, color: theme.primary }}>photo_camera</span>
                       <span className="font-mono text-[12px] uppercase" style={{ color: theme.text }}>
-                        @{adda.instagram_handle}
+                        @{venue.instagram_handle}
                       </span>
                     </a>
                   )}
@@ -834,7 +834,7 @@ export default function VenueCityPage({ adda, stats }: Props) {
                   >
                     <span className="material-symbols-outlined" style={{ fontSize: 20, color: theme.primary }}>location_on</span>
                     <span className="font-mono text-[11px] uppercase leading-snug" style={{ color: theme.textMuted }}>
-                      {adda.address}
+                      {venue.address}
                     </span>
                   </a>
                 </div>
@@ -856,11 +856,11 @@ export default function VenueCityPage({ adda, stats }: Props) {
                 style={{ borderColor: theme.border }}
               >
                 {[
-                  { label: 'EVENTS HOSTED', value: adda.total_events_hosted.toString() },
-                  { label: 'CAPACITY', value: adda.capacity_max ? adda.capacity_max.toString() : '—' },
+                  { label: 'EVENTS HOSTED', value: venue.total_events_hosted.toString() },
+                  { label: 'CAPACITY', value: venue.capacity_max ? venue.capacity_max.toString() : '—' },
                   { label: 'GOOGLE RATING',
-                    value: ext.google_rating ? `${ext.google_rating.toFixed(1)} ★` : adda.average_maker_rating > 0 ? `${adda.average_maker_rating.toFixed(1)} ★` : '—' },
-                  { label: 'LEAD TIME', value: adda.lead_time_weeks ? `${adda.lead_time_weeks}w` : '—' },
+                    value: ext.google_rating ? `${ext.google_rating.toFixed(1)} ★` : venue.average_maker_rating > 0 ? `${venue.average_maker_rating.toFixed(1)} ★` : '—' },
+                  { label: 'LEAD TIME', value: venue.lead_time_weeks ? `${venue.lead_time_weeks}w` : '—' },
                 ].map((s, i) => (
                   <div
                     key={i}
@@ -881,7 +881,7 @@ export default function VenueCityPage({ adda, stats }: Props) {
               </div>
 
               {/* About */}
-              {adda.description && (
+              {venue.description && (
                 <div>
                   <h2
                     className="font-display font-extrabold text-[28px] uppercase mb-5"
@@ -890,7 +890,7 @@ export default function VenueCityPage({ adda, stats }: Props) {
                     About This Space
                   </h2>
                   <p className="text-[16px] leading-relaxed max-w-2xl" style={{ color: theme.textMuted, fontFamily: 'var(--font-dm-sans, sans-serif)' }}>
-                    {adda.description}
+                    {venue.description}
                   </p>
                 </div>
               )}
@@ -909,7 +909,7 @@ export default function VenueCityPage({ adda, stats }: Props) {
               )}
 
               {/* Amenities */}
-              {adda.amenities.length > 0 && (
+              {venue.amenities.length > 0 && (
                 <div>
                   <h2
                     className="font-display font-extrabold text-[24px] uppercase mb-5"
@@ -918,7 +918,7 @@ export default function VenueCityPage({ adda, stats }: Props) {
                     What We Offer
                   </h2>
                   <div className="grid grid-cols-3 gap-3">
-                    {adda.amenities.map(a => (
+                    {venue.amenities.map(a => (
                       <div
                         key={a}
                         className="flex items-center gap-3 px-4 py-3 border transition-all hover:opacity-80 group"
@@ -943,7 +943,7 @@ export default function VenueCityPage({ adda, stats }: Props) {
               )}
 
               {/* What We Host */}
-              {adda.event_preferences.length > 0 && (
+              {venue.event_preferences.length > 0 && (
                 <div>
                   <h2
                     className="font-display font-extrabold text-[24px] uppercase mb-5"
@@ -952,7 +952,7 @@ export default function VenueCityPage({ adda, stats }: Props) {
                     Perfect For
                   </h2>
                   <div className="flex flex-wrap gap-3">
-                    {adda.event_preferences.map(p => (
+                    {venue.event_preferences.map(p => (
                       <span
                         key={p}
                         className="font-mono text-[11px] uppercase px-4 py-2 border transition-all hover:opacity-80 cursor-default"
@@ -975,7 +975,7 @@ export default function VenueCityPage({ adda, stats }: Props) {
                 </h2>
                 <div className="flex gap-3 flex-wrap">
                   {['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'].map(day => {
-                    const active = isDayAvail(day, adda.available_days)
+                    const active = isDayAvail(day, venue.available_days)
                     return (
                       <div
                         key={day}
@@ -991,9 +991,9 @@ export default function VenueCityPage({ adda, stats }: Props) {
                     )
                   })}
                 </div>
-                {adda.preferred_times?.length > 0 && (
+                {venue.preferred_times?.length > 0 && (
                   <div className="flex gap-2 flex-wrap mt-3">
-                    {adda.preferred_times.map(t => (
+                    {venue.preferred_times.map(t => (
                       <span
                         key={t}
                         className="font-mono text-[10px] uppercase px-3 py-1"
@@ -1074,16 +1074,16 @@ export default function VenueCityPage({ adda, stats }: Props) {
                   {[0, 1].map(i => (
                     <span key={i} className="font-mono text-[10px] uppercase tracking-widest px-2" style={{ color: `${theme.primary}40` }}>
                       {'WHENINMYCITY · '}
-                      {adda.name?.toUpperCase()}
+                      {venue.name?.toUpperCase()}
                       {' · '}
-                      {adda.city?.toUpperCase()}
+                      {venue.city?.toUpperCase()}
                       {' · '}
                       {theme.label}
                       {' · BOOK THIS SPACE · '}
                       {'WHENINMYCITY · '}
-                      {adda.name?.toUpperCase()}
+                      {venue.name?.toUpperCase()}
                       {' · '}
-                      {adda.city?.toUpperCase()}
+                      {venue.city?.toUpperCase()}
                       {' · '}
                       {theme.label}
                       {' · BOOK THIS SPACE · '}
@@ -1151,7 +1151,7 @@ export default function VenueCityPage({ adda, stats }: Props) {
               className="font-mono text-[10px] uppercase tracking-widest"
               style={{ color: theme.primary }}
             >
-              {adda.city}
+              {venue.city}
             </span>
             <button style={{ color: theme.primary }} aria-label="Share">
               <span className="material-symbols-outlined" style={{ fontSize: 22 }}>share</span>
@@ -1169,16 +1169,16 @@ export default function VenueCityPage({ adda, stats }: Props) {
             className="font-mono text-[10px] uppercase tracking-widest no-underline transition-opacity hover:opacity-70"
             style={{ color: theme.primary }}
           >
-            ← {adda.city.toUpperCase()} / VENUES
+            ← {venue.city.toUpperCase()} / VENUES
           </Link>
         </div>
 
         {/* Hero */}
         <div className="mt-[90px] relative h-[280px] overflow-hidden">
-          {adda.cover_image_url ? (
+          {venue.cover_image_url ? (
             <Image
-              src={adda.cover_image_url}
-              alt={adda.name}
+              src={venue.cover_image_url}
+              alt={venue.name}
               fill
               className="object-cover"
               priority
@@ -1208,12 +1208,12 @@ export default function VenueCityPage({ adda, stats }: Props) {
               className="font-display font-extrabold uppercase leading-none mb-1"
               style={{ fontSize: 'clamp(28px, 8vw, 44px)', color: theme.text }}
             >
-              {adda.name}
+              {venue.name}
             </h1>
             <div className="flex items-center gap-2 flex-wrap">
               <span className="material-symbols-outlined" style={{ fontSize: 12, color: theme.textMuted }}>location_on</span>
               <span className="font-mono text-[10px] uppercase" style={{ color: theme.textMuted }}>
-                {adda.neighbourhood ? `${adda.neighbourhood}, ` : ''}{adda.city}
+                {venue.neighbourhood ? `${venue.neighbourhood}, ` : ''}{venue.city}
               </span>
               {ext.google_rating && (
                 <span className="font-mono text-[10px]" style={{ color: '#F59E0B' }}>
@@ -1230,9 +1230,9 @@ export default function VenueCityPage({ adda, stats }: Props) {
           style={{ borderColor: theme.border, background: theme.bgPanel }}
         >
           {[
-            { label: 'CAPACITY', value: adda.capacity_max?.toString() ?? '—' },
-            { label: 'EVENTS', value: adda.total_events_hosted.toString() },
-            { label: 'PRICING', value: adda.pricing_model?.replace(/_/g, ' ').toUpperCase() ?? '—' },
+            { label: 'CAPACITY', value: venue.capacity_max?.toString() ?? '—' },
+            { label: 'EVENTS', value: venue.total_events_hosted.toString() },
+            { label: 'PRICING', value: venue.pricing_model?.replace(/_/g, ' ').toUpperCase() ?? '—' },
           ].map(s => (
             <div key={s.label} className="flex flex-col items-center">
               <span className="font-display font-extrabold text-[20px] leading-none" style={{ color: theme.primary }}>
@@ -1275,7 +1275,7 @@ export default function VenueCityPage({ adda, stats }: Props) {
         <div className="px-4 pb-36 flex flex-col gap-8 mt-5">
 
           {/* About */}
-          {adda.description && (
+          {venue.description && (
             <div>
               <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-widest mb-3" style={{ color: theme.primary }}>
                 <span className="w-2 h-2 inline-block shrink-0" style={{ background: theme.primary }} />
@@ -1283,7 +1283,7 @@ export default function VenueCityPage({ adda, stats }: Props) {
               </div>
               <div className="pl-4 py-1" style={{ borderLeft: `2px dashed ${theme.primaryDim}` }}>
                 <p className="text-[15px] leading-relaxed" style={{ color: `${theme.text}90` }}>
-                  {adda.description}
+                  {venue.description}
                 </p>
               </div>
             </div>
@@ -1314,10 +1314,10 @@ export default function VenueCityPage({ adda, stats }: Props) {
                 className="absolute top-0 right-0 font-mono text-[10px] px-2 py-1 font-bold"
                 style={{ background: theme.primary, color: theme.badgeText }}
               >
-                {adda.lead_time_weeks || 1}w LEAD
+                {venue.lead_time_weeks || 1}w LEAD
               </div>
               <p className="text-[18px] mt-2" style={{ color: theme.text, fontFamily: 'var(--font-barlow)' }}>
-                {adda.pricing_model?.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}
+                {venue.pricing_model?.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}
               </p>
               <p className="font-display font-extrabold text-[28px] leading-none mt-1" style={{ color: theme.primary }}>
                 {pricing}
@@ -1352,14 +1352,14 @@ export default function VenueCityPage({ adda, stats }: Props) {
           )}
 
           {/* Amenities */}
-          {adda.amenities.length > 0 && (
+          {venue.amenities.length > 0 && (
             <div>
               <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-widest mb-3" style={{ color: theme.primary }}>
                 <span className="w-2 h-2 inline-block shrink-0" style={{ background: theme.primary }} />
                 AMENITIES
               </div>
               <div className="grid grid-cols-2 gap-2">
-                {adda.amenities.map(a => (
+                {venue.amenities.map(a => (
                   <div
                     key={a}
                     className="flex items-center gap-2 p-3 border"
@@ -1378,14 +1378,14 @@ export default function VenueCityPage({ adda, stats }: Props) {
           )}
 
           {/* Perfect For */}
-          {adda.event_preferences.length > 0 && (
+          {venue.event_preferences.length > 0 && (
             <div>
               <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-widest mb-3" style={{ color: theme.primary }}>
                 <span className="w-2 h-2 inline-block shrink-0" style={{ background: theme.primary }} />
                 PERFECT FOR
               </div>
               <div className="flex flex-wrap gap-2">
-                {adda.event_preferences.map(p => (
+                {venue.event_preferences.map(p => (
                   <span
                     key={p}
                     className="font-mono text-[10px] uppercase px-3 py-1.5 border"
@@ -1406,7 +1406,7 @@ export default function VenueCityPage({ adda, stats }: Props) {
             </div>
             <div className="flex justify-between">
               {MOB_DAYS.map((d, i) => {
-                const active = isDayAvail(d.full, adda.available_days)
+                const active = isDayAvail(d.full, venue.available_days)
                 return (
                   <div
                     key={i}
@@ -1454,14 +1454,14 @@ export default function VenueCityPage({ adda, stats }: Props) {
           )}
 
           {/* Contact */}
-          {(adda.contact_whatsapp || adda.contact_email || adda.instagram_handle) && (
+          {(venue.contact_whatsapp || venue.contact_email || venue.instagram_handle) && (
             <div>
               <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-widest mb-3" style={{ color: theme.primary }}>
                 <span className="w-2 h-2 inline-block shrink-0" style={{ background: theme.primary }} />
                 GET IN TOUCH
               </div>
               <div className="flex flex-col gap-2">
-                {adda.contact_whatsapp && (
+                {venue.contact_whatsapp && (
                   <a
                     href={waUrl}
                     target="_blank"
@@ -1475,19 +1475,19 @@ export default function VenueCityPage({ adda, stats }: Props) {
                     </span>
                   </a>
                 )}
-                {adda.contact_email && (
+                {venue.contact_email && (
                   <a
-                    href={`mailto:${adda.contact_email}`}
+                    href={`mailto:${venue.contact_email}`}
                     className="flex items-center gap-3 p-4 border no-underline"
                     style={{ borderColor: theme.border, background: theme.bgCard }}
                   >
                     <span className="material-symbols-outlined" style={{ fontSize: 22, color: theme.primary }}>mail</span>
-                    <span className="font-mono text-[12px] uppercase" style={{ color: theme.text }}>{adda.contact_email}</span>
+                    <span className="font-mono text-[12px] uppercase" style={{ color: theme.text }}>{venue.contact_email}</span>
                   </a>
                 )}
-                {adda.instagram_handle && (
+                {venue.instagram_handle && (
                   <a
-                    href={adda.instagram_handle.startsWith('http') ? adda.instagram_handle : `https://instagram.com/${adda.instagram_handle}`}
+                    href={venue.instagram_handle.startsWith('http') ? venue.instagram_handle : `https://instagram.com/${venue.instagram_handle}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex items-center gap-3 p-4 border no-underline"
@@ -1495,7 +1495,7 @@ export default function VenueCityPage({ adda, stats }: Props) {
                   >
                     <span className="material-symbols-outlined" style={{ fontSize: 22, color: theme.primary }}>photo_camera</span>
                     <span className="font-mono text-[12px] uppercase" style={{ color: theme.text }}>
-                      @{adda.instagram_handle}
+                      @{venue.instagram_handle}
                     </span>
                   </a>
                 )}
@@ -1517,7 +1517,7 @@ export default function VenueCityPage({ adda, stats }: Props) {
                 FIND US
               </p>
               <p className="font-mono text-[11px] leading-relaxed" style={{ color: theme.textMuted }}>
-                {adda.address}
+                {venue.address}
               </p>
             </div>
           </a>

@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import Image from 'next/image'
-import type { AddaProfile, Event, UserProfile } from '@/types/database'
+import type { VenueProfile, Event, UserProfile } from '@/types/database'
 import { WimcWordmark } from '@/components/WimcWordmark'
 import type { PricingConfig } from '@/types/marketplace'
 import { BottomNav } from '@/components/ui/BottomNav'
@@ -21,7 +21,7 @@ interface PastEvent {
 }
 
 interface Props {
-  adda:           AddaProfile
+  venue:           VenueProfile
   upcomingEvents: UpcomingEvent[]
   pastEvents:     PastEvent[]
   stats:          { total_events: number; average_rating: number }
@@ -101,9 +101,9 @@ function resolveLayoutId(theme?: ProfileTheme): LayoutId {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function getHourlyRate(adda: AddaProfile): number | null {
-  if (adda.pricing_model !== 'fixed_rental') return null
-  const cfg = adda.pricing_config as PricingConfig | null
+function getHourlyRate(venue: VenueProfile): number | null {
+  if (venue.pricing_model !== 'fixed_rental') return null
+  const cfg = venue.pricing_config as PricingConfig | null
   return cfg?.fixed_rental_paise != null ? Math.round(cfg.fixed_rental_paise / 100) : null
 }
 
@@ -240,24 +240,24 @@ const GRID_BG_STYLE: React.CSSProperties = {
 
 type GoogleReview = { author_name: string; rating: number; text: string; time: number }
 
-export default function VenuePublicPage({ adda, upcomingEvents, stats, theme, isPreview = false }: Props) {
-  const hourlyRate = getHourlyRate(adda)
-  const googleReviews = ((adda as unknown as { google_reviews?: GoogleReview[] }).google_reviews ?? []).filter(r => r.text)
-  const types = adda.adda_type
-  const bio = adda.description
-  const capacity = adda.capacity_max
+export default function VenuePublicPage({ venue, upcomingEvents, stats, theme, isPreview = false }: Props) {
+  const hourlyRate = getHourlyRate(venue)
+  const googleReviews = ((venue as unknown as { google_reviews?: GoogleReview[] }).google_reviews ?? []).filter(r => r.text)
+  const types = venue.venue_type
+  const bio = venue.description
+  const capacity = venue.capacity_max
 
   const layout = resolveLayoutId(theme)
   const C = LAYOUT_COLORS[layout]
 
   const pricingDisplay = hourlyRate
     ? `₹${hourlyRate.toLocaleString('en-IN')}`
-    : adda.pricing_model
-        ? adda.pricing_model.replace(/_/g, ' ').toUpperCase()
+    : venue.pricing_model
+        ? venue.pricing_model.replace(/_/g, ' ').toUpperCase()
         : 'ENQUIRE'
 
-  const waLink = adda.contact_whatsapp
-    ? `https://wa.me/${adda.contact_whatsapp.replace(/\D/g, '').replace(/^(?!91)/, '91')}`
+  const waLink = venue.contact_whatsapp
+    ? `https://wa.me/${venue.contact_whatsapp.replace(/\D/g, '').replace(/^(?!91)/, '91')}`
     : '#'
 
   // Dynamic calendar — computed once at render, never stale
@@ -268,7 +268,7 @@ export default function VenuePublicPage({ adda, upcomingEvents, stats, theme, is
 
   return (
     <>
-      {!isPreview && <VenueViewTracker addaId={adda.id} />}
+      {!isPreview && <VenueViewTracker venueId={venue.id} />}
       <style>{`
         @keyframes thump {
           0%   { transform: scaleY(1); }
@@ -277,19 +277,19 @@ export default function VenuePublicPage({ adda, upcomingEvents, stats, theme, is
           100% { transform: scaleY(1); }
         }
         .stamp-thump:active { animation: thump 350ms cubic-bezier(0.22,1,0.36,1); }
-        @keyframes adda-marquee {
+        @keyframes venue-marquee {
           0%   { transform: translateX(0); }
           100% { transform: translateX(-50%); }
         }
-        .adda-marquee { animation: adda-marquee 20s linear infinite; }
-        .adda-grain {
+        .venue-marquee { animation: venue-marquee 20s linear infinite; }
+        .venue-grain {
           background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n' x='0' y='0'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
         }
       `}</style>
 
       {/* Grain overlay */}
       <div
-        className={`adda-grain pointer-events-none z-[999] ${isPreview ? 'absolute' : 'fixed'} inset-0`}
+        className={`venue-grain pointer-events-none z-[999] ${isPreview ? 'absolute' : 'fixed'} inset-0`}
         style={{ opacity: 0.028 }}
         aria-hidden="true"
       />
@@ -306,13 +306,13 @@ export default function VenuePublicPage({ adda, upcomingEvents, stats, theme, is
             {([
               { label: 'CITIES',  href: '/explore' },
               { label: 'CULTURE', href: '/explore' },
-              { label: 'ADDAS',  href: '/explore?tab=venues' },
+              { label: 'VENUES',  href: '/explore?tab=venues' },
             ] as const).map(({ label, href }) => (
               <Link
                 key={label}
                 href={href}
                 className="font-mono text-[11px] uppercase tracking-wider transition-colors no-underline"
-                style={{ color: label === 'ADDAS' ? C.primary : C.textMuted }}
+                style={{ color: label === 'VENUES' ? C.primary : C.textMuted }}
               >
                 {label}
               </Link>
@@ -343,8 +343,8 @@ export default function VenuePublicPage({ adda, upcomingEvents, stats, theme, is
               {layout === 'poster' && (
                 <div style={{ position: 'relative', overflow: 'hidden', border: `1px solid ${C.border}`, boxShadow: `8px 8px 0 0 ${C.primaryDim}` }}>
                   <div style={{ height: 260, position: 'relative', background: C.cardBg }}>
-                    {adda.cover_image_url ? (
-                      <Image src={adda.cover_image_url} alt={adda.name} fill style={{ objectFit: 'cover', opacity: 0.7 }} unoptimized />
+                    {venue.cover_image_url ? (
+                      <Image src={venue.cover_image_url} alt={venue.name} fill style={{ objectFit: 'cover', opacity: 0.7 }} unoptimized />
                     ) : (
                       <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                         <span className="material-symbols-outlined" style={{ fontSize: 64, color: C.border }}>photo_camera</span>
@@ -354,8 +354,8 @@ export default function VenuePublicPage({ adda, upcomingEvents, stats, theme, is
                     <div style={{ position: 'absolute', top: 12, left: 12, background: C.primary, color: '#fff', padding: '4px 10px', fontSize: 10, fontFamily: C.mono, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em' }}>{typeLabel(types)}</div>
                   </div>
                   <div style={{ padding: '20px 24px 24px', background: C.cardBg }}>
-                    <div style={{ fontSize: 'clamp(28px,3vw,44px)', fontWeight: 900, color: C.text, textTransform: 'uppercase', lineHeight: 0.9, marginBottom: 12 }}>{adda.name}</div>
-                    <div style={{ fontSize: 12, fontFamily: C.mono, color: C.textMuted, marginBottom: 16, textTransform: 'uppercase', letterSpacing: '0.12em' }}>{adda.city} · UP TO {capacity ?? '—'} PEOPLE</div>
+                    <div style={{ fontSize: 'clamp(28px,3vw,44px)', fontWeight: 900, color: C.text, textTransform: 'uppercase', lineHeight: 0.9, marginBottom: 12 }}>{venue.name}</div>
+                    <div style={{ fontSize: 12, fontFamily: C.mono, color: C.textMuted, marginBottom: 16, textTransform: 'uppercase', letterSpacing: '0.12em' }}>{venue.city} · UP TO {capacity ?? '—'} PEOPLE</div>
                     {hourlyRate != null && (
                       <div style={{ fontSize: 28, fontWeight: 900, color: C.primary }}>FROM ₹{hourlyRate.toLocaleString('en-IN')} / HR</div>
                     )}
@@ -368,10 +368,10 @@ export default function VenuePublicPage({ adda, upcomingEvents, stats, theme, is
                 <div>
                   <div style={{ background: C.cardBg, border: `1px solid ${C.border}`, padding: '24px', marginBottom: 20 }}>
                     <div style={{ fontSize: 10, fontFamily: C.mono, color: C.primary, textTransform: 'uppercase', letterSpacing: '0.15em', marginBottom: 8 }}>{typeLabel(types)}</div>
-                    <div style={{ fontSize: 'clamp(24px,3vw,40px)', fontWeight: 700, color: C.text, lineHeight: 1, marginBottom: 10 }}>{adda.name}</div>
-                    <div style={{ fontSize: 12, fontFamily: C.mono, color: C.textMuted, marginBottom: 16, textTransform: 'uppercase' }}>{adda.city}</div>
+                    <div style={{ fontSize: 'clamp(24px,3vw,40px)', fontWeight: 700, color: C.text, lineHeight: 1, marginBottom: 10 }}>{venue.name}</div>
+                    <div style={{ fontSize: 12, fontFamily: C.mono, color: C.textMuted, marginBottom: 16, textTransform: 'uppercase' }}>{venue.city}</div>
                     <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 14, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                      {[{ l: 'CAPACITY', v: capacity ? `${capacity} MAX` : '—' }, { l: 'LEAD TIME', v: adda.lead_time_weeks ? `${adda.lead_time_weeks}W` : '—' }, { l: 'PRICING', v: adda.pricing_model?.replace(/_/g, ' ').toUpperCase() || '—' }, { l: 'CITY', v: adda.city }].map(r => (
+                      {[{ l: 'CAPACITY', v: capacity ? `${capacity} MAX` : '—' }, { l: 'LEAD TIME', v: venue.lead_time_weeks ? `${venue.lead_time_weeks}W` : '—' }, { l: 'PRICING', v: venue.pricing_model?.replace(/_/g, ' ').toUpperCase() || '—' }, { l: 'CITY', v: venue.city }].map(r => (
                         <div key={r.l}>
                           <div style={{ fontSize: 9, fontFamily: C.mono, color: C.textFaint, textTransform: 'uppercase', marginBottom: 2 }}>{r.l}</div>
                           <div style={{ fontSize: 14, color: C.primary, fontWeight: 600 }}>{r.v}</div>
@@ -385,18 +385,18 @@ export default function VenuePublicPage({ adda, upcomingEvents, stats, theme, is
                 </div>
               )}
 
-              {/* COMMUNITY ADDA (boarding-pass): Ticket-stub card — original design */}
+              {/* COMMUNITY VENUE (boarding-pass): Ticket-stub card — original design */}
               {layout === 'boarding-pass' && (
                 <div
                   className="w-full flex flex-col group relative overflow-hidden hover:-translate-x-[2px] hover:-translate-y-[2px] transition-all"
                   style={{ background: C.cardBg, border: `1px solid ${C.primaryDim}`, boxShadow: `8px 8px 0px 0px ${C.primaryDim}` }}
                 >
-                  <div className="adda-grain absolute inset-0 z-0 pointer-events-none" style={{ opacity: 0.08 }} aria-hidden="true" />
+                  <div className="venue-grain absolute inset-0 z-0 pointer-events-none" style={{ opacity: 0.08 }} aria-hidden="true" />
                   <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 6, background: C.primary, zIndex: 10 }} />
                   <div className="p-8 pl-10 z-10 flex-grow flex flex-col relative">
                     <p className="font-mono text-[8px] tracking-[0.3em] uppercase mb-4" style={{ color: `${C.primary}60` }}>WHEN IN MY CITY PRESENTS</p>
                     <h2 className="font-display font-extrabold uppercase leading-[0.88] mb-4" style={{ fontSize: 'clamp(28px, 4vw, 48px)', color: C.text, textShadow: '0 2px 4px rgba(0,0,0,0.5)' }}>
-                      {adda.name || '— — —'}
+                      {venue.name || '— — —'}
                     </h2>
                     <div className="flex gap-2 flex-wrap mb-4">
                       {types.length > 0 ? types.map(t => (
@@ -406,13 +406,13 @@ export default function VenuePublicPage({ adda, upcomingEvents, stats, theme, is
                       )}
                     </div>
                     <div className="mb-6">
-                      <p className="font-mono text-[12px] tracking-[0.25em] uppercase" style={{ color: `${C.text}60` }}>[ {adda.city?.toUpperCase() || '———'} ]</p>
+                      <p className="font-mono text-[12px] tracking-[0.25em] uppercase" style={{ color: `${C.text}60` }}>[ {venue.city?.toUpperCase() || '———'} ]</p>
                       <p className="font-mono text-[10px] mt-1" style={{ color: `${C.primary}70` }}>UP TO {capacity ?? '—'} PEOPLE</p>
                     </div>
                     <div className="border-t border-dashed mb-6" style={{ borderColor: `${C.primary}20` }} />
                     <div className="grid grid-cols-2 gap-2 mb-8">
                       {Array.from({ length: 4 }).map((_, i) => {
-                        const a = adda.amenities[i]
+                        const a = venue.amenities[i]
                         return <div key={i} className="font-mono text-[9px] uppercase px-2 py-1" style={{ border: `1px solid rgba(255,255,255,0.05)`, background: 'rgba(255,255,255,0.05)', color: `${C.text}50` }}>{a ? amenityLabel(a) : '— — — —'}</div>
                       })}
                     </div>
@@ -420,8 +420,8 @@ export default function VenuePublicPage({ adda, upcomingEvents, stats, theme, is
                       <div>
                         {hourlyRate != null ? (
                           <span className="font-display font-extrabold text-[28px]" style={{ color: C.primary }}>FROM ₹{hourlyRate.toLocaleString('en-IN')} / HR</span>
-                        ) : adda.pricing_model ? (
-                          <span className="font-display font-extrabold text-[28px]" style={{ color: C.primary }}>{adda.pricing_model.replace(/_/g, ' ').toUpperCase()}</span>
+                        ) : venue.pricing_model ? (
+                          <span className="font-display font-extrabold text-[28px]" style={{ color: C.primary }}>{venue.pricing_model.replace(/_/g, ' ').toUpperCase()}</span>
                         ) : (
                           <span className="font-display font-extrabold text-[28px]" style={{ color: `${C.primary}30` }}>FROM ₹ — — — / HR</span>
                         )}
@@ -432,7 +432,7 @@ export default function VenuePublicPage({ adda, upcomingEvents, stats, theme, is
                     </div>
                   </div>
                   <div className="py-2 px-8 pl-10 relative z-10 overflow-hidden" style={{ background: `${C.primary}05`, borderTop: `1px solid ${C.primary}20` }}>
-                    <p className="font-mono text-[7px] tracking-widest uppercase" style={{ color: `${C.primary}40` }}>WHENINMYCITY.COM/{adda.city?.toLowerCase().replace(/\s+/g, '-')}/{adda.slug}</p>
+                    <p className="font-mono text-[7px] tracking-widest uppercase" style={{ color: `${C.primary}40` }}>WHENINMYCITY.COM/{venue.city?.toLowerCase().replace(/\s+/g, '-')}/{venue.slug}</p>
                   </div>
                 </div>
               )}
@@ -440,19 +440,19 @@ export default function VenuePublicPage({ adda, upcomingEvents, stats, theme, is
               {/* OPEN STUDIO (minimal): Clean white info card */}
               {layout === 'minimal' && (
                 <div style={{ border: `1px solid ${C.border}`, padding: '28px', background: C.cardBg }}>
-                  {adda.cover_image_url && (
+                  {venue.cover_image_url && (
                     <div style={{ height: 180, position: 'relative', marginBottom: 20, overflow: 'hidden' }}>
-                      <Image src={adda.cover_image_url} alt={adda.name} fill style={{ objectFit: 'cover', filter: 'grayscale(20%)' }} unoptimized />
+                      <Image src={venue.cover_image_url} alt={venue.name} fill style={{ objectFit: 'cover', filter: 'grayscale(20%)' }} unoptimized />
                     </div>
                   )}
                   <div style={{ fontSize: 9, fontFamily: C.mono, color: C.textMuted, textTransform: 'uppercase', letterSpacing: '0.2em', marginBottom: 8 }}>{typeLabel(types)}</div>
-                  <div style={{ fontSize: 'clamp(24px,3vw,40px)', fontWeight: 300, color: C.text, lineHeight: 1.05, marginBottom: 12, letterSpacing: '-0.5px' }}>{adda.name}</div>
+                  <div style={{ fontSize: 'clamp(24px,3vw,40px)', fontWeight: 300, color: C.text, lineHeight: 1.05, marginBottom: 12, letterSpacing: '-0.5px' }}>{venue.name}</div>
                   <div style={{ width: 32, height: 2, background: C.primary, marginBottom: 16 }} />
-                  <div style={{ fontSize: 12, color: C.textMuted, marginBottom: 20 }}>{adda.city}{capacity ? ` · Up to ${capacity} people` : ''}</div>
+                  <div style={{ fontSize: 12, color: C.textMuted, marginBottom: 20 }}>{venue.city}{capacity ? ` · Up to ${capacity} people` : ''}</div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                     {[
-                      { l: 'Pricing', v: adda.pricing_model?.replace(/_/g, ' ') || '—' },
-                      { l: 'Lead Time', v: adda.lead_time_weeks ? `${adda.lead_time_weeks} weeks` : '—' },
+                      { l: 'Pricing', v: venue.pricing_model?.replace(/_/g, ' ') || '—' },
+                      { l: 'Lead Time', v: venue.lead_time_weeks ? `${venue.lead_time_weeks} weeks` : '—' },
                     ].map(r => (
                       <div key={r.l} style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: 8, borderBottom: `1px solid ${C.border}` }}>
                         <span style={{ fontSize: 11, fontFamily: C.mono, color: C.textMuted, textTransform: 'uppercase', letterSpacing: '0.08em' }}>{r.l}</span>
@@ -470,14 +470,14 @@ export default function VenuePublicPage({ adda, upcomingEvents, stats, theme, is
               {layout === 'reel' && (
                 <div style={{ position: 'relative', overflow: 'hidden' }}>
                   <div style={{ position: 'relative', height: 260, background: `linear-gradient(160deg, ${C.cardBg} 0%, ${C.leftBg} 100%)`, overflow: 'hidden', border: `1px solid ${C.border}` }}>
-                    {adda.cover_image_url && (
-                      <Image src={adda.cover_image_url} alt={adda.name} fill style={{ objectFit: 'cover', opacity: 0.2, mixBlendMode: 'luminosity' }} unoptimized />
+                    {venue.cover_image_url && (
+                      <Image src={venue.cover_image_url} alt={venue.name} fill style={{ objectFit: 'cover', opacity: 0.2, mixBlendMode: 'luminosity' }} unoptimized />
                     )}
                     <div style={{ position: 'absolute', top: -40, right: -40, width: 200, height: 200, background: `radial-gradient(circle, ${C.primary}20 0%, transparent 70%)`, pointerEvents: 'none' }} />
                     <div style={{ position: 'absolute', bottom: 16, left: 16, right: 16 }}>
                       <div style={{ fontSize: 9, fontFamily: C.mono, color: C.primary, textTransform: 'uppercase', letterSpacing: '0.15em', marginBottom: 6 }}>{typeLabel(types)}</div>
-                      <div style={{ fontSize: 'clamp(32px,4vw,52px)', fontWeight: 700, color: C.primary, lineHeight: 0.9, textShadow: `0 0 40px ${C.primary}50, 0 0 80px ${C.primary}20`, textTransform: 'uppercase' }}>{adda.name}</div>
-                      <div style={{ fontSize: 11, fontFamily: C.mono, color: C.textMuted, marginTop: 8, textTransform: 'uppercase' }}>{adda.city}</div>
+                      <div style={{ fontSize: 'clamp(32px,4vw,52px)', fontWeight: 700, color: C.primary, lineHeight: 0.9, textShadow: `0 0 40px ${C.primary}50, 0 0 80px ${C.primary}20`, textTransform: 'uppercase' }}>{venue.name}</div>
+                      <div style={{ fontSize: 11, fontFamily: C.mono, color: C.textMuted, marginTop: 8, textTransform: 'uppercase' }}>{venue.city}</div>
                     </div>
                   </div>
                   <div style={{ background: C.cardBg, border: `1px solid ${C.border}`, borderTop: 'none', padding: '16px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -485,11 +485,11 @@ export default function VenuePublicPage({ adda, upcomingEvents, stats, theme, is
                       {hourlyRate != null ? (
                         <div style={{ fontSize: 28, fontWeight: 700, color: C.primary, textShadow: `0 0 20px ${C.primary}40` }}>₹{hourlyRate.toLocaleString('en-IN')}<span style={{ fontSize: 14, fontWeight: 400, color: C.textMuted }}> / hr</span></div>
                       ) : (
-                        <div style={{ fontSize: 14, fontFamily: C.mono, color: C.textMuted, textTransform: 'uppercase' }}>{adda.pricing_model?.replace(/_/g, ' ') || 'ENQUIRE'}</div>
+                        <div style={{ fontSize: 14, fontFamily: C.mono, color: C.textMuted, textTransform: 'uppercase' }}>{venue.pricing_model?.replace(/_/g, ' ') || 'ENQUIRE'}</div>
                       )}
                       <div style={{ fontSize: 9, fontFamily: C.mono, color: C.textFaint, marginTop: 4 }}>UP TO {capacity ?? '—'} PEOPLE</div>
                     </div>
-                    {adda.contact_whatsapp && (
+                    {venue.contact_whatsapp && (
                       <a href={waLink} target="_blank" rel="noopener noreferrer" style={{ padding: '10px 20px', border: `1px solid ${C.primary}`, color: C.primary, fontFamily: C.mono, fontSize: 11, textTransform: 'uppercase', textDecoration: 'none', boxShadow: `0 0 14px ${C.primary}25` }}>BOOK →</a>
                     )}
                   </div>
@@ -499,9 +499,9 @@ export default function VenuePublicPage({ adda, upcomingEvents, stats, theme, is
               {/* HERITAGE HALL (stage): Theatrical centered design */}
               {layout === 'stage' && (
                 <div style={{ border: `1px solid ${C.border}`, padding: '32px 24px', background: C.cardBg, textAlign: 'center' }}>
-                  {adda.cover_image_url && (
+                  {venue.cover_image_url && (
                     <div style={{ height: 160, position: 'relative', marginBottom: 24, overflow: 'hidden', border: `1px solid ${C.border}` }}>
-                      <Image src={adda.cover_image_url} alt={adda.name} fill style={{ objectFit: 'cover', opacity: 0.4 }} unoptimized />
+                      <Image src={venue.cover_image_url} alt={venue.name} fill style={{ objectFit: 'cover', opacity: 0.4 }} unoptimized />
                       <div style={{ position: 'absolute', inset: 0, background: `linear-gradient(to top, ${C.cardBg} 0%, transparent 60%)` }} />
                     </div>
                   )}
@@ -510,8 +510,8 @@ export default function VenuePublicPage({ adda, upcomingEvents, stats, theme, is
                     <span style={{ fontSize: 9, fontFamily: C.mono, color: C.primary, textTransform: 'uppercase', letterSpacing: '0.2em' }}>✦ {typeLabel(types)} ✦</span>
                     <div style={{ flex: 1, height: 1, background: `linear-gradient(to left, transparent, ${C.primary}50)` }} />
                   </div>
-                  <div style={{ fontSize: 'clamp(28px,3vw,44px)', color: C.text, fontStyle: 'italic', lineHeight: 1, marginBottom: 8 }}>{adda.name}</div>
-                  <div style={{ fontSize: 12, fontFamily: C.mono, color: C.textMuted, textTransform: 'uppercase', letterSpacing: '0.15em', marginBottom: 20 }}>{adda.city}</div>
+                  <div style={{ fontSize: 'clamp(28px,3vw,44px)', color: C.text, fontStyle: 'italic', lineHeight: 1, marginBottom: 8 }}>{venue.name}</div>
+                  <div style={{ fontSize: 12, fontFamily: C.mono, color: C.textMuted, textTransform: 'uppercase', letterSpacing: '0.15em', marginBottom: 20 }}>{venue.city}</div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'center', marginBottom: 20 }}>
                     <div style={{ flex: 1, height: 1, background: C.border }} />
                     <span style={{ fontSize: 9, fontFamily: C.mono, color: C.textFaint }}>CAPACITY: {capacity ?? '—'}</span>
@@ -533,8 +533,8 @@ export default function VenuePublicPage({ adda, upcomingEvents, stats, theme, is
                 </p>
                 {[
                   { label: 'CAPACITY',      value: capacity != null ? `${capacity} MAX` : '—',                isLink: false },
-                  { label: 'LEAD TIME',     value: adda.lead_time_weeks ? `${adda.lead_time_weeks} WEEKS` : '—', isLink: false },
-                  { label: 'PRICING MODEL', value: adda.pricing_model?.replace(/_/g, ' ').toUpperCase() || '—', isLink: false },
+                  { label: 'LEAD TIME',     value: venue.lead_time_weeks ? `${venue.lead_time_weeks} WEEKS` : '—', isLink: false },
+                  { label: 'PRICING MODEL', value: venue.pricing_model?.replace(/_/g, ' ').toUpperCase() || '—', isLink: false },
                   { label: 'CONTACT',       value: 'REQUEST INTRO',                                            isLink: true },
                 ].map(row => (
                   <div
@@ -545,10 +545,10 @@ export default function VenuePublicPage({ adda, upcomingEvents, stats, theme, is
                     <span className="font-mono text-[10px] uppercase" style={{ color: C.textFaint }}>{row.label}</span>
                     {row.isLink ? (
                       <a
-                        href={adda.contact_whatsapp ? waLink : '#'}
+                        href={venue.contact_whatsapp ? waLink : '#'}
                         className="underline cursor-pointer"
                         style={{ color: C.primary, fontFamily: C.font, fontSize: 18 }}
-                        target={adda.contact_whatsapp ? '_blank' : undefined}
+                        target={venue.contact_whatsapp ? '_blank' : undefined}
                         rel="noopener noreferrer"
                       >
                         {row.value}
@@ -585,7 +585,7 @@ export default function VenuePublicPage({ adda, upcomingEvents, stats, theme, is
                       if (date === null) {
                         return <div key={`empty-${ri}-${ci}`} className="py-2" />
                       }
-                      const active = isDateAvailable(date, adda.available_days)
+                      const active = isDateAvailable(date, venue.available_days)
                       const isToday = date === new Date().getDate()
 
                       if (active) {
@@ -627,16 +627,16 @@ export default function VenuePublicPage({ adda, upcomingEvents, stats, theme, is
               <div className="mb-12 flex items-end justify-between pb-8" style={{ borderBottom: `2px dashed ${C.border}` }}>
                 <div>
                   <span className="px-3 py-1 font-mono text-[10px] font-bold uppercase tracking-wider inline-block mb-4" style={{ background: C.primary, color: C.pageBg }}>
-                    VERIFIED ADDA
+                    VERIFIED VENUE
                   </span>
                   <h1
                     className="font-display font-extrabold leading-none uppercase"
                     style={{ fontSize: 'clamp(48px, 5vw, 80px)', color: C.text }}
                   >
-                    {adda.name || 'THE ADDA'}
+                    {venue.name || 'THE VENUE'}
                   </h1>
                   <p className="font-mono text-[12px] uppercase tracking-[0.2em] mt-3" style={{ color: `${C.primary}60` }}>
-                    {adda.city}
+                    {venue.city}
                     {types.length > 0 ? ` • ${types.map(t => t.replace(/_/g, ' ')).join(' / ').toUpperCase()}` : ''}
                   </p>
                 </div>
@@ -673,8 +673,8 @@ export default function VenuePublicPage({ adda, upcomingEvents, stats, theme, is
                   What We Host
                 </h2>
                 <div className="flex flex-wrap gap-3">
-                  {(adda.event_preferences.length > 0
-                    ? adda.event_preferences
+                  {(venue.event_preferences.length > 0
+                    ? venue.event_preferences
                     : ['GIGS', 'WORKSHOPS', 'STAND-UP', 'LIVE ART']
                   ).map(pref => (
                     <span
@@ -694,8 +694,8 @@ export default function VenuePublicPage({ adda, upcomingEvents, stats, theme, is
                   Amenities
                 </h2>
                 <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
-                  {(adda.amenities.length > 0
-                    ? adda.amenities
+                  {(venue.amenities.length > 0
+                    ? venue.amenities
                     : ['wifi', 'pa_system', 'projector', 'parking']
                   ).map(a => (
                     <div
@@ -807,15 +807,15 @@ export default function VenuePublicPage({ adda, upcomingEvents, stats, theme, is
 
               {/* Marquee strip */}
               <div className="-mx-12 py-3 overflow-hidden mt-12 border-y" style={{ background: C.leftBg, borderColor: `${C.text}05` }}>
-                <div className="flex whitespace-nowrap adda-marquee">
+                <div className="flex whitespace-nowrap venue-marquee">
                   {[0, 1].map(i => (
                     <span key={i} className="font-mono text-[10px] uppercase tracking-widest px-2" style={{ color: `${C.primary}40` }}>
                       {'WHENINMYCITY · '}
-                      {adda.name?.toUpperCase()}
-                      {' · VERIFIED ADDA · OPEN FOR BOOKINGS · '}
+                      {venue.name?.toUpperCase()}
+                      {' · VERIFIED VENUE · OPEN FOR BOOKINGS · '}
                       {'WHENINMYCITY · '}
-                      {adda.name?.toUpperCase()}
-                      {' · VERIFIED ADDA · OPEN FOR BOOKINGS · '}
+                      {venue.name?.toUpperCase()}
+                      {' · VERIFIED VENUE · OPEN FOR BOOKINGS · '}
                     </span>
                   ))}
                 </div>
@@ -878,8 +878,8 @@ export default function VenuePublicPage({ adda, upcomingEvents, stats, theme, is
 
         {/* Hero */}
         <div className="mt-16 relative h-[260px] overflow-hidden" style={{ background: `linear-gradient(135deg, ${C.leftBg} 0%, ${C.pageBg} 100%)` }}>
-          {adda.cover_image_url ? (
-            <Image src={adda.cover_image_url} alt={adda.name} fill style={{ objectFit: 'cover', opacity: layout === 'minimal' ? 0.5 : 0.3, mixBlendMode: layout === 'reel' ? 'luminosity' : 'normal' }} unoptimized />
+          {venue.cover_image_url ? (
+            <Image src={venue.cover_image_url} alt={venue.name} fill style={{ objectFit: 'cover', opacity: layout === 'minimal' ? 0.5 : 0.3, mixBlendMode: layout === 'reel' ? 'luminosity' : 'normal' }} unoptimized />
           ) : (
             <div className="absolute inset-0 flex items-center justify-center text-[80px] opacity-10 select-none pointer-events-none" aria-hidden="true">{typeEmoji(types)}</div>
           )}
@@ -893,11 +893,11 @@ export default function VenuePublicPage({ adda, upcomingEvents, stats, theme, is
 
           <div className="absolute bottom-6 left-4 right-4 z-10">
             <h1 className="text-[36px] leading-none mb-1" style={{ fontFamily: layout === 'stage' ? C.font : 'var(--font-abril)', color: C.text, fontStyle: layout === 'stage' ? 'italic' : 'normal', textShadow: layout === 'reel' ? `0 0 30px ${C.primary}50` : 'none' }}>
-              {adda.name}
+              {venue.name}
             </h1>
             <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-widest" style={{ color: `${C.primary}80` }}>
               <span className="material-symbols-outlined" style={{ fontSize: 14 }}>location_on</span>
-              {adda.city}
+              {venue.city}
               {types[0] && ` · ${types[0].replace(/_/g, ' ').toUpperCase()}`}
             </div>
           </div>
@@ -907,8 +907,8 @@ export default function VenuePublicPage({ adda, upcomingEvents, stats, theme, is
         <div className="px-4 py-5 flex justify-between border-b-2 border-dashed" style={{ borderColor: `${C.primary}20` }}>
           {[
             { label: 'CAPACITY', value: capacity != null ? capacity.toString() : '—' },
-            { label: 'EVENTS',   value: adda.total_events_hosted.toString() },
-            { label: 'RATING',   value: adda.average_maker_rating > 0 ? adda.average_maker_rating.toFixed(1) : '4.9' },
+            { label: 'EVENTS',   value: venue.total_events_hosted.toString() },
+            { label: 'RATING',   value: venue.average_maker_rating > 0 ? venue.average_maker_rating.toFixed(1) : '4.9' },
           ].map(stat => (
             <div key={stat.label} className="flex flex-col items-center">
               <span className="font-display font-extrabold text-[22px] leading-none" style={{ color: C.primary }}>{stat.value}</span>
@@ -952,13 +952,13 @@ export default function VenuePublicPage({ adda, upcomingEvents, stats, theme, is
             </h2>
             <div className="p-4 relative overflow-hidden" style={{ background: C.leftBg, border: `1px solid ${C.primary}` }}>
               <div className="absolute top-0 right-0 font-mono text-[10px] px-2 py-1 font-bold" style={{ background: C.primary, color: C.pageBg }}>
-                {adda.lead_time_weeks || 1} WEEK LEAD TIME
+                {venue.lead_time_weeks || 1} WEEK LEAD TIME
               </div>
               <p className="text-[22px] mt-2" style={{ fontFamily: 'var(--font-barlow)', color: C.text }}>
-                {adda.pricing_model.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}
+                {venue.pricing_model.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}
               </p>
               <p className="font-display font-extrabold text-[32px] mt-1 leading-none" style={{ color: C.primary }}>
-                {hourlyRate != null ? `₹${hourlyRate.toLocaleString('en-IN')} / hr` : adda.pricing_model.replace(/_/g, ' ').toUpperCase()}
+                {hourlyRate != null ? `₹${hourlyRate.toLocaleString('en-IN')} / hr` : venue.pricing_model.replace(/_/g, ' ').toUpperCase()}
               </p>
             </div>
           </div>
@@ -969,7 +969,7 @@ export default function VenuePublicPage({ adda, upcomingEvents, stats, theme, is
               Amenities
             </h2>
             <div className="grid grid-cols-2 gap-2">
-              {(adda.amenities.length > 0 ? adda.amenities : ['wifi', 'pa_system', 'projector', 'parking']).map(a => (
+              {(venue.amenities.length > 0 ? venue.amenities : ['wifi', 'pa_system', 'projector', 'parking']).map(a => (
                 <div key={a} className="p-3 flex flex-col gap-2" style={{ background: C.leftBg, border: `1px solid ${C.border}` }}>
                   <span className="material-symbols-outlined" style={{ fontSize: 20, color: C.primary }}>{amenityIcon(a)}</span>
                   <span className="font-mono text-[10px] uppercase" style={{ color: C.text }}>{amenityLabel(a)}</span>
@@ -984,7 +984,7 @@ export default function VenuePublicPage({ adda, upcomingEvents, stats, theme, is
               What We Host
             </h2>
             <div className="flex flex-wrap gap-2">
-              {(adda.event_preferences.length > 0 ? adda.event_preferences : ['GIGS', 'WORKSHOPS', 'STAND-UP', 'LIVE ART']).map(pref => (
+              {(venue.event_preferences.length > 0 ? venue.event_preferences : ['GIGS', 'WORKSHOPS', 'STAND-UP', 'LIVE ART']).map(pref => (
                 <span key={pref} className="px-3 py-1 font-mono text-[10px] uppercase" style={{ background: `${C.primary}10`, border: `1px solid ${C.primary}30`, color: C.primary }}>
                   {pref.toUpperCase()}
                 </span>
@@ -1000,7 +1000,7 @@ export default function VenuePublicPage({ adda, upcomingEvents, stats, theme, is
             </div>
             <div className="flex justify-between items-center">
               {MOB_DAYS.map((d, i) => {
-                const active = isDayAvail(d.full, adda.available_days)
+                const active = isDayAvail(d.full, venue.available_days)
                 return active ? (
                   <div key={i} className="w-8 h-8 rounded-full font-mono text-[10px] font-bold flex items-center justify-center" style={{ background: C.primary, color: C.pageBg }}>{d.label}</div>
                 ) : (
@@ -1098,22 +1098,22 @@ export default function VenuePublicPage({ adda, upcomingEvents, stats, theme, is
           )}
 
           {/* Contact */}
-          {(adda.contact_whatsapp || adda.contact_email) && (
+          {(venue.contact_whatsapp || venue.contact_email) && (
             <div>
               <h2 className="mb-3" style={{ fontFamily: layout === 'stage' ? C.font : 'var(--font-abril)', fontSize: 22, color: C.text, fontWeight: layout === 'stage' ? 900 : 400 }}>
                 Get in Touch
               </h2>
               <div className="flex flex-col gap-3">
-                {adda.contact_whatsapp && (
+                {venue.contact_whatsapp && (
                   <a href={waLink} target="_blank" rel="noopener noreferrer" className="p-4 flex items-center gap-4 no-underline" style={{ background: C.leftBg, border: `1px solid ${C.border}` }}>
                     <span className="material-symbols-outlined" style={{ fontSize: 24, color: C.primary }}>chat</span>
                     <span className="font-sans text-[14px]" style={{ color: C.text }}>Chat with Host</span>
                   </a>
                 )}
-                {adda.contact_email && (
-                  <a href={`mailto:${adda.contact_email}`} className="p-4 flex items-center gap-4 no-underline" style={{ background: C.leftBg, border: `1px solid ${C.border}` }}>
+                {venue.contact_email && (
+                  <a href={`mailto:${venue.contact_email}`} className="p-4 flex items-center gap-4 no-underline" style={{ background: C.leftBg, border: `1px solid ${C.border}` }}>
                     <span className="material-symbols-outlined" style={{ fontSize: 24, color: C.primary }}>mail</span>
-                    <span className="font-sans text-[14px]" style={{ color: C.text }}>{adda.contact_email}</span>
+                    <span className="font-sans text-[14px]" style={{ color: C.text }}>{venue.contact_email}</span>
                   </a>
                 )}
               </div>
@@ -1122,12 +1122,12 @@ export default function VenuePublicPage({ adda, upcomingEvents, stats, theme, is
 
           {/* Marquee strip */}
           <div className="-mx-4 py-[4px] overflow-hidden" style={{ background: C.primary }}>
-            <div className="flex whitespace-nowrap adda-marquee">
+            <div className="flex whitespace-nowrap venue-marquee">
               {[0, 1].map(i => (
                 <span key={i} className="font-mono text-[10px] uppercase tracking-widest px-8" style={{ color: C.pageBg }}>
                   {'WHENINMYCITY · '}
-                  {adda.name?.toUpperCase()}
-                  {' · VERIFIED ADDA · OPEN FOR BOOKINGS · '}
+                  {venue.name?.toUpperCase()}
+                  {' · VERIFIED VENUE · OPEN FOR BOOKINGS · '}
                 </span>
               ))}
             </div>
@@ -1139,10 +1139,10 @@ export default function VenuePublicPage({ adda, upcomingEvents, stats, theme, is
               <div className="w-20 h-20 rounded-full mx-auto flex flex-col items-center justify-center" style={{ border: `2px dashed ${C.primary}`, transform: 'rotate(-12deg)' }}>
                 <span className="font-mono text-[12px] font-bold" style={{ color: C.primary }}>WIMC</span>
                 <span className="font-display font-extrabold text-[18px] uppercase leading-tight" style={{ color: C.primary }}>
-                  {(types[0] ?? 'ADDA').slice(0, 6).toUpperCase()}
+                  {(types[0] ?? 'VENUE').slice(0, 6).toUpperCase()}
                 </span>
               </div>
-              <p className="font-mono text-[9px] mt-4 uppercase" style={{ color: C.textFaint }}>WIMC-V-{adda.slug?.slice(0, 8).toUpperCase()}</p>
+              <p className="font-mono text-[9px] mt-4 uppercase" style={{ color: C.textFaint }}>WIMC-V-{venue.slug?.slice(0, 8).toUpperCase()}</p>
             </div>
           </div>
 
@@ -1163,7 +1163,7 @@ export default function VenuePublicPage({ adda, upcomingEvents, stats, theme, is
         {/* Back breadcrumb strip */}
         <div className="fixed top-16 left-0 right-0 px-4 py-1.5 z-[90] lg:hidden" style={{ background: `${C.pageBg}CC`, borderBottom: `1px solid ${C.border}` }}>
           <Link href="/explore?tab=venues" className="font-mono text-[10px] uppercase tracking-widest transition-colors" style={{ color: `${C.primary}70` }}>
-            ← ADDAS
+            ← VENUES
           </Link>
         </div>
 

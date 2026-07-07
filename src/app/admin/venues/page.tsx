@@ -1,8 +1,8 @@
-import { getAdminAddas } from '@/app/actions/admin'
+import { getAdminVenues } from '@/app/actions/admin'
 import VenuesClient from './VenuesClient'
 
-export default async function AdminAddasPage() {
-  const { data: addas, error } = await getAdminAddas()
+export default async function AdminVenuesPage() {
+  const { data: venues, error } = await getAdminVenues()
 
   if (error) {
     return (
@@ -12,5 +12,5 @@ export default async function AdminAddasPage() {
     )
   }
 
-  return <VenuesClient addas={addas ?? []} />
+  return <VenuesClient venues={venues ?? []} />
 }

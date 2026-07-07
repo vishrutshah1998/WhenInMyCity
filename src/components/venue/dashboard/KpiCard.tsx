@@ -28,7 +28,7 @@ function DeltaBadge({
 
   return (
     <span
-      className="font-adda-nums"
+      className="font-venue-nums"
       style={{
         fontSize: 11,
         fontWeight: 600,
@@ -140,7 +140,7 @@ export default function KpiCard({
       {/* Value row */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
         <span
-          className="font-adda-nums"
+          className="font-venue-nums"
           style={{
             fontSize: 28,
             fontWeight: 700,

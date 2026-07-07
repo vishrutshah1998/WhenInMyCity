@@ -36,7 +36,7 @@ export interface ExploreVenue {
   slug: string
   neighbourhood: string | null
   city: string
-  adda_type: string[]
+  venue_type: string[]
   capacity_max: number | null
   is_verified: boolean
   events_count?: number | null
@@ -154,7 +154,7 @@ function ImgPlaceholder({ className, dotColor = '#9B8FFF', opacity = 0.1 }: {
 function EventTicketCard({ event, index = 0 }: { event: ExploreEvent; index?: number }) {
   const d = fmtDate(event.starts_at)
   return (
-    <Link href={`/events/${event.slug}`} className="block">
+    <Link href={`/events/${event.slug}?src=platform_discovery`} className="block">
     <div
       className="group bg-[#1A2744] text-white relative flex flex-col overflow-hidden cursor-pointer border-2 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[10px_10px_0px_0px_rgba(232,112,90,1)] transition-all duration-300"
       style={{ animationDelay: `${index * 80}ms` }}
@@ -233,7 +233,7 @@ function EventTicketCard({ event, index = 0 }: { event: ExploreEvent; index?: nu
 function EventsTabCard({ event, featured = false }: { event: ExploreEvent; featured?: boolean }) {
   const d = fmtDate(event.starts_at)
   return (
-    <Link href={`/events/${event.slug}`} className="block">
+    <Link href={`/events/${event.slug}?src=platform_discovery`} className="block">
     <div className="group bg-[#1A2744] border-2 border-black relative flex flex-col overflow-hidden cursor-pointer shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:shadow-[10px_10px_0px_0px_rgba(232,112,90,1)] hover:-translate-x-0.5 hover:-translate-y-0.5 transition-all duration-300">
       <div className="absolute inset-0 opacity-[0.03] pointer-events-none" aria-hidden>
         <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
@@ -369,7 +369,7 @@ function CreatorPassCard({ creator }: { creator: ExploreCreator }) {
 function VenuePassCard({ venue }: { venue: ExploreVenue }) {
   return (
     <Link
-      href={`/adda/${venue.slug}`}
+      href={`/venue/${venue.slug}`}
       className="bg-[#FAF7F0] border-2 border-[#1A2744] flex relative overflow-hidden cursor-pointer shadow-[12px_12px_0px_0px_#5DD9D0] hover:shadow-[16px_16px_0px_0px_#5DD9D0] transition-all group"
     >
       {/* Left punch strip */}
@@ -401,7 +401,7 @@ function VenuePassCard({ venue }: { venue: ExploreVenue }) {
           <div className="h-16 bg-[#1A2744]/10 border border-[#57423e]/20" />
           <div className="h-16 bg-[#1A2744]/10 border border-[#57423e]/20" />
           <div className="h-16 border-2 border-dashed border-[#1A2744]/10 flex items-center justify-center font-mono text-[10px] text-[#1A2744]/40">
-            {venue.adda_type?.[0]?.toUpperCase().slice(0, 6) ?? 'ADDA'}
+            {venue.venue_type?.[0]?.toUpperCase().slice(0, 6) ?? 'VENUE'}
           </div>
         </div>
       </div>
@@ -424,7 +424,7 @@ function VenuePassCard({ venue }: { venue: ExploreVenue }) {
 function FeaturedEventCard({ event }: { event?: ExploreEvent }) {
   return (
     <div className="group cursor-pointer">
-      <Link href={event ? `/events/${event.slug}` : '#'}>
+      <Link href={event ? `/events/${event.slug}?src=platform_discovery` : '#'}>
         <div className="bg-[#1A2744] text-white overflow-hidden relative shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-1 hover:shadow-[12px_12px_0px_0px_rgba(232,112,90,1)] transition-all duration-300">
           <div className="absolute inset-0 opacity-[0.03] pointer-events-none" aria-hidden>
             <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
@@ -573,7 +573,7 @@ function FilterRail() {
       <div className="border-2 border-dashed border-[#E8705A]/30 p-4 space-y-2">
         <div className="font-mono text-[9px] text-[#1A2744]/50 uppercase">WIMC PARTNER PROGRAM</div>
         <div className="font-sans text-[13px] italic text-[#1A2744]">
-          &ldquo;Host your own adda. Get the community stamp.&rdquo;
+          &ldquo;Host your own venue. Get the community stamp.&rdquo;
         </div>
         <button className="w-full bg-[#E8705A] text-white font-mono text-[10px] py-1 uppercase hover:opacity-90 transition-opacity">
           APPLY NOW
@@ -735,7 +735,7 @@ function AllTabContent({
                 Map of Legends
               </div>
               <div style={{ fontFamily: 'var(--font-jetbrains-mono), JetBrains Mono, monospace', fontSize: 10, color: 'rgba(255,255,255,0.45)', letterSpacing: '0.05em' }}>
-                The Addas that made it
+                The Venues that made it
               </div>
             </div>
           </Link>
@@ -796,10 +796,10 @@ function AllTabContent({
             <FeaturedEventCard event={featuredEvent} />
           </section>
 
-          {/* The Addas */}
+          {/* The Venues */}
           <section>
             <SectionHeader
-              label="THE ADDAS"
+              label="THE VENUES"
               color="#5DD9D0"
               linkLabel="ALL VENUES"
               linkHref="/explore?tab=venues"
@@ -863,7 +863,7 @@ function AllTabContent({
         {/* Venues section */}
         <section>
           <div className="font-mono text-[10px] text-[#5DD9D0] uppercase tracking-[0.3em] mb-4">
-            ADDAS IN YOUR CITY
+            VENUES IN YOUR CITY
           </div>
           <div className="flex gap-3 overflow-x-auto no-scrollbar pb-2 -mx-4 px-4">
             {venues.slice(0, 3).map(v => (
@@ -896,7 +896,7 @@ function MobileEventCard({ event, index = 0 }: { event: ExploreEvent; index?: nu
   }, [index])
 
   return (
-    <Link href={`/events/${event.slug}`} className="block">
+    <Link href={`/events/${event.slug}?src=platform_discovery`} className="block">
     <div
       ref={ref}
       className="relative bg-[#1A2744] border-2 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] flex flex-col overflow-hidden active:scale-[0.98] transition-transform cursor-pointer"
@@ -964,7 +964,7 @@ function MobileCreatorCard({ creator }: { creator: ExploreCreator }) {
 function MobileVenueCard({ venue }: { venue: ExploreVenue }) {
   return (
     <Link
-      href={`/adda/${venue.slug}`}
+      href={`/venue/${venue.slug}`}
       className="min-w-[220px] bg-[#FAF7F0] flex flex-col border-l-[6px] border-[#5DD9D0] border-2 border-black shadow-[4px_4px_0px_0px_rgba(93,217,208,0.4)] shrink-0"
     >
       <div className="p-4 flex flex-col gap-1">
@@ -975,9 +975,9 @@ function MobileVenueCard({ venue }: { venue: ExploreVenue }) {
         <div className="font-mono text-[11px] text-[#1A2744]/60 uppercase">
           {venue.neighbourhood ?? venue.city}
         </div>
-        {venue.adda_type[0] && (
+        {venue.venue_type[0] && (
           <span className="inline-block bg-[#5DD9D0]/20 text-[#5DD9D0] font-mono text-[9px] px-2 py-[2px] border border-[#5DD9D0]/30 uppercase mt-1">
-            {venue.adda_type[0].replace(/_/g, ' ')}
+            {venue.venue_type[0].replace(/_/g, ' ')}
           </span>
         )}
       </div>
@@ -995,7 +995,7 @@ function MobileVenueCard({ venue }: { venue: ExploreVenue }) {
 
 function MobileFeaturedCard({ event }: { event: ExploreEvent }) {
   return (
-    <Link href={`/events/${event.slug}`} className="block bg-[#FAF7F0] border-2 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] flex flex-col overflow-hidden relative group">
+    <Link href={`/events/${event.slug}?src=platform_discovery`} className="block bg-[#FAF7F0] border-2 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] flex flex-col overflow-hidden relative group">
       <div className="absolute left-0 top-0 bottom-0 w-[3px] bg-[#E8705A]" />
       <div className="p-6 flex flex-col gap-3">
         <div className="flex justify-between items-center">
@@ -1225,7 +1225,7 @@ function VenueBarcode({ vertical = false, light = false }: { vertical?: boolean;
 
 function VenuePosterCard({ venue }: { venue: ExploreVenue }) {
   return (
-    <Link href={`/adda/${venue.slug}`} className="break-inside-avoid inline-block w-full mb-6">
+    <Link href={`/venue/${venue.slug}`} className="break-inside-avoid inline-block w-full mb-6">
       <div
         className="bg-[#1A2744] text-white relative overflow-hidden transition-transform duration-300 [transform:rotate(-0.5deg)] hover:[transform:rotate(0deg)] cursor-pointer"
         style={{ boxShadow: '6px 8px 20px 0px rgba(0,0,0,0.25)' }}
@@ -1246,8 +1246,8 @@ function VenuePosterCard({ venue }: { venue: ExploreVenue }) {
         <div className="p-6 flex flex-col gap-3">
           {/* Top strip */}
           <div className="flex justify-between items-start">
-            <span className="font-mono text-[9px] text-white/40 uppercase tracking-[0.3em]">ADDA</span>
-            <RubberStamp text={"VERIFIED\nADDA"} color="#5DD9D0" rotate={-12} size={56} />
+            <span className="font-mono text-[9px] text-white/40 uppercase tracking-[0.3em]">VENUE</span>
+            <RubberStamp text={"VERIFIED\nVENUE"} color="#5DD9D0" rotate={-12} size={56} />
           </div>
 
           {/* Venue name */}
@@ -1263,7 +1263,7 @@ function VenuePosterCard({ venue }: { venue: ExploreVenue }) {
 
           {/* Type chips */}
           <div className="flex gap-2 mt-3 flex-wrap">
-            {(venue.adda_type ?? []).map(t => (
+            {(venue.venue_type ?? []).map(t => (
               <span key={t} className="bg-white/10 text-white/70 px-2 py-[2px] font-mono text-[9px] uppercase border border-white/20">
                 {t.replace(/_/g, ' ')}
               </span>
@@ -1278,7 +1278,7 @@ function VenuePosterCard({ venue }: { venue: ExploreVenue }) {
               opacity: 0.08,
             }} />
             <span className="absolute bottom-3 right-3 font-mono text-[10px] text-white/20 uppercase">
-              {venue.city.toUpperCase()} · {venue.adda_type?.[0]?.toUpperCase().replace(/_/g, ' ') ?? 'ADDA'}
+              {venue.city.toUpperCase()} · {venue.venue_type?.[0]?.toUpperCase().replace(/_/g, ' ') ?? 'VENUE'}
             </span>
           </div>
 
@@ -1304,7 +1304,7 @@ function VenuePosterCard({ venue }: { venue: ExploreVenue }) {
           className="h-10 border-t border-dashed border-[#5DD9D0]/30 flex items-center justify-between px-6"
           style={{ backgroundColor: 'rgba(93,217,208,0.10)' }}
         >
-          <span className="font-mono text-[10px] text-[#5DD9D0] font-bold uppercase">VIEW ADDA →</span>
+          <span className="font-mono text-[10px] text-[#5DD9D0] font-bold uppercase">VIEW VENUE →</span>
           <VenueBarcode light />
         </div>
       </div>
@@ -1316,7 +1316,7 @@ function VenuePosterCard({ venue }: { venue: ExploreVenue }) {
 
 function VenueDesktopBusinessCard({ venue }: { venue: ExploreVenue }) {
   return (
-    <Link href={`/adda/${venue.slug}`} className="break-inside-avoid inline-block w-full mb-6">
+    <Link href={`/venue/${venue.slug}`} className="break-inside-avoid inline-block w-full mb-6">
       <div
         className="bg-[#FAF7F0] text-[#1A2744] relative overflow-hidden transition-transform duration-300 [transform:rotate(1deg)] hover:[transform:rotate(0deg)] cursor-pointer border border-[#1A2744]/10"
         style={{ boxShadow: '4px 6px 16px 0px rgba(0,0,0,0.15)', minHeight: 140 }}
@@ -1332,9 +1332,9 @@ function VenueDesktopBusinessCard({ venue }: { venue: ExploreVenue }) {
           <div>
             <div className="flex justify-between items-start">
               <span className="font-mono text-[8px] text-[#1A2744]/40 uppercase tracking-[0.3em]">VENUE PASS</span>
-              {venue.adda_type?.[0] && (
+              {venue.venue_type?.[0] && (
                 <span className="bg-[#5DD9D0]/20 text-[#5DD9D0] border border-[#5DD9D0]/40 font-mono text-[8px] px-2 py-[2px] uppercase">
-                  {venue.adda_type[0].replace(/_/g, ' ')}
+                  {venue.venue_type[0].replace(/_/g, ' ')}
                 </span>
               )}
             </div>
@@ -1377,7 +1377,7 @@ function VenueDesktopBusinessCard({ venue }: { venue: ExploreVenue }) {
 
 function VenueFlyerCard({ venue }: { venue: ExploreVenue }) {
   return (
-    <Link href={`/adda/${venue.slug}`} className="break-inside-avoid inline-block w-full mb-6">
+    <Link href={`/venue/${venue.slug}`} className="break-inside-avoid inline-block w-full mb-6">
       <div
         className="bg-[#F5ECD7] text-[#1A2744] relative transition-transform duration-300 [transform:rotate(0.5deg)] hover:[transform:rotate(-0.5deg)] cursor-pointer"
         style={{ boxShadow: '3px 5px 12px 0px rgba(0,0,0,0.12)' }}
@@ -1404,13 +1404,13 @@ function VenueFlyerCard({ venue }: { venue: ExploreVenue }) {
             {venue.neighbourhood ?? venue.city}
           </p>
           <div className="flex gap-2 flex-wrap mt-1">
-            {(venue.adda_type ?? []).map(t => (
+            {(venue.venue_type ?? []).map(t => (
               <span key={t} className="bg-[#1A2744]/5 text-[#1A2744]/60 font-mono text-[8px] px-2 py-[2px] uppercase border border-[#1A2744]/10">
                 {t.replace(/_/g, ' ')}
               </span>
             ))}
           </div>
-          <div className="font-mono text-[8px] text-[#9B8FFF] uppercase font-bold">NEW ADDA</div>
+          <div className="font-mono text-[8px] text-[#9B8FFF] uppercase font-bold">NEW VENUE</div>
           <div className="font-mono text-[9px] text-[#1A2744]/40 uppercase">
             CAP: {venue.capacity_max ?? '—'}
           </div>
@@ -1424,7 +1424,7 @@ function VenueFlyerCard({ venue }: { venue: ExploreVenue }) {
 
 function VenueMobileCard({ venue }: { venue: ExploreVenue }) {
   return (
-    <Link href={`/adda/${venue.slug}`} className="block">
+    <Link href={`/venue/${venue.slug}`} className="block">
       <div
         className="bg-[#FAF7F0] relative w-full overflow-hidden border border-[#1A2744]/10 flex active:scale-[0.98] transition-transform cursor-pointer"
         style={{ minHeight: 130, boxShadow: '4px 5px 0px 0px rgba(93,217,208,0.35)' }}
@@ -1446,13 +1446,13 @@ function VenueMobileCard({ venue }: { venue: ExploreVenue }) {
                 {venue.neighbourhood ?? venue.city}
               </p>
             </div>
-            <RubberStamp text={"ADDA\nVERIFIED"} color="#5DD9D0" rotate={-10} size={48} />
+            <RubberStamp text={"VENUE\nVERIFIED"} color="#5DD9D0" rotate={-10} size={48} />
           </div>
 
           {/* Bottom row */}
           <div className="flex justify-between items-end mt-auto pt-3 border-t border-dashed border-[#1A2744]/10">
             <div className="flex gap-1 flex-wrap">
-              {(venue.adda_type ?? []).slice(0, 2).map(t => (
+              {(venue.venue_type ?? []).slice(0, 2).map(t => (
                 <span key={t} className="bg-[#5DD9D0]/15 text-[#5DD9D0] border border-[#5DD9D0]/30 font-mono text-[8px] px-2 py-[2px] uppercase">
                   {t.replace(/_/g, ' ')}
                 </span>
@@ -1500,10 +1500,10 @@ function VenueMapTeaser({ count, city, desktop = false }: { count: number; city:
         <div className="relative z-10">
           <h2 className="font-display font-black text-[40px] text-white uppercase leading-none"
               style={{ fontFamily: 'var(--font-barlow)' }}>
-            SEE ALL ADDAS<br />ON MAP
+            SEE ALL VENUES<br />ON MAP
           </h2>
           <p className="font-mono text-[11px] text-[#5DD9D0] mt-2 uppercase">
-            {count} Addas in {city.toUpperCase()}
+            {count} Venues in {city.toUpperCase()}
           </p>
         </div>
         <Link
@@ -1522,7 +1522,7 @@ function VenueMapTeaser({ count, city, desktop = false }: { count: number; city:
       <div>
         <h2 className="font-display font-black text-[20px] text-white uppercase leading-tight"
             style={{ fontFamily: 'var(--font-barlow)' }}>
-          SEE ALL<br />ADDAS
+          SEE ALL<br />VENUES
         </h2>
         <p className="font-mono text-[9px] text-[#5DD9D0] mt-1 uppercase">
           {count} in {city.toUpperCase().slice(0, 3)}
@@ -1564,7 +1564,7 @@ function VenuesTabContent({ venues, city }: { venues: ExploreVenue[]; city: stri
           ))}
           <div className="ml-auto flex gap-3 items-center">
             <span className="font-mono text-[10px] text-[#1A2744]/40 uppercase">
-              SHOWING {venues.length} ADDAS
+              SHOWING {venues.length} VENUES
             </span>
             <button className="px-4 py-2 bg-[#5DD9D0] text-[#1A2744] border-2 border-[#5DD9D0] font-mono text-[10px] uppercase font-bold">
               MOST EVENTS
@@ -1602,7 +1602,7 @@ function VenuesTabContent({ venues, city }: { venues: ExploreVenue[]; city: stri
         <div className="flex justify-between items-end">
           <div>
             <div className="font-mono text-[10px] text-[#1A2744]/50 uppercase tracking-widest">
-              ADDAS IN {city.toUpperCase()}
+              VENUES IN {city.toUpperCase()}
             </div>
             <div className="font-mono text-[9px] text-[#5DD9D0] font-bold mt-1 uppercase">
               {venues.length} venues found
@@ -1657,7 +1657,7 @@ const TICKER_ITEMS = [
   'NEW EVENT IN GANDHINAGAR — THE UNDERGROUND HIP-HOP BATTLE',
   'ONLY 12 TICKETS LEFT FOR MIDNIGHT TECHNO',
   'CREATOR @wavemkr JUST WENT LIVE',
-  '3 NEW ADDAS VERIFIED IN AHMEDABAD',
+  '3 NEW VENUES VERIFIED IN AHMEDABAD',
   'WEEKEND OPEN MIC — SIGN UP NOW',
 ]
 
@@ -1685,7 +1685,7 @@ const NAV_ITEMS = [
   { tab: 'all',      icon: 'explore',           label: 'EXPLORE'  },
   { tab: 'events',   icon: 'confirmation_number', label: 'EVENTS'   },
   { tab: 'creators', icon: 'person_search',      label: 'CREATORS' },
-  { tab: 'venues',   icon: 'location_on',        label: 'ADDAS'    },
+  { tab: 'venues',   icon: 'location_on',        label: 'VENUES'    },
 ] as const
 
 function MobileBottomNav({ tab, city }: { tab: string; city: string }) {
@@ -1732,7 +1732,7 @@ const TABS = [
   { id: 'all',      label: 'ALL',      icon: 'grid_view',           activeColor: 'bg-[#1A2744] text-white'                 },
   { id: 'events',   label: 'EVENTS',   icon: 'confirmation_number', activeColor: 'bg-[#E8705A] text-white'                 },
   { id: 'creators', label: 'CREATORS', icon: 'person',              activeColor: 'bg-[#9B8FFF] text-white'                 },
-  { id: 'venues',   label: 'ADDAS',    icon: 'location_on',         activeColor: 'bg-[#5DD9D0] text-[#1A2744] font-bold'  },
+  { id: 'venues',   label: 'VENUES',    icon: 'location_on',         activeColor: 'bg-[#5DD9D0] text-[#1A2744] font-bold'  },
 ] as const
 
 function TabBar({ activeTab, city, basePath = '/explore', stickyTop = 'top-[64px]' }: { activeTab: string; city: string; basePath?: string; stickyTop?: string }) {

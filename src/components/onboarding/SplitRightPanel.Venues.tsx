@@ -85,7 +85,7 @@ export function B3RightPanel({ snap }: { snap: Snap }) {
 
       {/* Two identity tiles */}
       {([
-        { id: 'venue', accent: TEAL,  icon: '🏛️', label: 'VENUE',  sub: 'Spaces & addas' },
+        { id: 'venue', accent: TEAL,  icon: '🏛️', label: 'VENUE',  sub: 'Spaces & venues' },
         { id: 'brand', accent: AMBER, icon: '🏷️', label: 'BRAND',  sub: 'Businesses & D2C' },
       ] as const).map(p => {
         const isActive = active === p.id
@@ -147,7 +147,7 @@ export function B2RightPanel({ snap }: { snap: Snap }) {
         lineHeight: 1, letterSpacing: '-0.04em',
         pointerEvents: 'none', userSelect: 'none',
       }}>
-        {snap.b_subpath === 'brand' ? 'BRAND' : 'ADDA'}
+        {snap.b_subpath === 'brand' ? 'BRAND' : 'VENUE'}
       </div>
 
       {/* Header label */}
@@ -246,7 +246,7 @@ export function V4RightPanel({ snap }: { snap: Snap }) {
       {/* Header */}
       <div style={{ position: 'absolute', top: 18, left: 24, right: 24, display: 'flex', justifyContent: 'space-between' }}>
         <span style={{ fontFamily: MONO, fontSize: 8, letterSpacing: '0.22em', color: `${TEAL}55`, textTransform: 'uppercase' }}>
-          WIMC // ADDA LISTING
+          WIMC // VENUE LISTING
         </span>
         <span style={{ fontFamily: MONO, fontSize: 7, color: `${TEAL}33` }}>STEP 03</span>
       </div>
@@ -266,7 +266,7 @@ export function V4RightPanel({ snap }: { snap: Snap }) {
         <div style={{ padding: '12px 16px 10px', borderBottom: `1px dashed ${TEAL}22` }}>
           <BarcodeStrip accent={TEAL} />
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 }}>
-            <span style={{ fontFamily: MONO, fontSize: 7, color: `${TEAL}66`, letterSpacing: '0.18em' }}>ADDA TYPE</span>
+            <span style={{ fontFamily: MONO, fontSize: 7, color: `${TEAL}66`, letterSpacing: '0.18em' }}>VENUE TYPE</span>
             {types.length > 0 && (
               <span style={{ fontFamily: MONO, fontSize: 7, color: `${TEAL}88` }}>{types.length} SELECTED</span>
             )}
@@ -757,7 +757,7 @@ export function V9RightPanel({ snap }: { snap: Snap }) {
       {/* Header */}
       <div style={{ position: 'absolute', top: 18, left: 24, right: 24, display: 'flex', justifyContent: 'space-between' }}>
         <span style={{ fontFamily: MONO, fontSize: 8, letterSpacing: '0.22em', color: `${TEAL}55`, textTransform: 'uppercase' }}>
-          WIMC // ADDA CONFIRMED
+          WIMC // VENUE CONFIRMED
         </span>
         <span style={{ fontFamily: MONO, fontSize: 7, color: `${TEAL}88` }}>● LIVE</span>
       </div>
@@ -792,7 +792,7 @@ export function V9RightPanel({ snap }: { snap: Snap }) {
         {/* Venue name */}
         <div style={{ padding: '16px 16px 8px', textAlign: 'center' }}>
           <div style={{ fontFamily: MONO, fontSize: 7, letterSpacing: '0.22em', color: `${TEAL}66`, textTransform: 'uppercase', marginBottom: 6 }}>
-            — YOUR ADDA IS —
+            — YOUR VENUE IS —
           </div>
           <div style={{
             fontFamily: ABRIL, fontSize: 28, color: DARK.text,

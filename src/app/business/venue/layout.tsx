@@ -1,7 +1,7 @@
 import { requireAuth } from '@/lib/auth/requireAuth'
 import { redirect } from 'next/navigation'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { getAddaNotifications } from '@/app/actions/venue-notifications'
+import { getVenueNotifications } from '@/app/actions/venue-notifications'
 import VenueSidebar from '@/components/venue/VenueSidebar'
 import MobileBottomNav from '@/components/ui/MobileBottomNav'
 import { venueBottomNavConfig, resolveWorkspaces } from '@/lib/constants/bottomNavConfigs'
@@ -17,14 +17,14 @@ export default async function VenueLayout({ children }: { children: React.ReactN
   const { user } = await requireAuth('/business/venue/dashboard')
   const admin = createAdminClient()
 
-  const [{ data: adda }, { data: userProfile }] = await Promise.all([
-    admin.from('adda_profiles').select('id, name, slug').eq('auth_user_id', user.id).maybeSingle(),
+  const [{ data: venue }, { data: userProfile }] = await Promise.all([
+    admin.from('venue_profiles').select('id, name, slug').eq('auth_user_id', user.id).maybeSingle(),
     admin.from('user_profiles').select('personas').eq('id', user.id).maybeSingle(),
   ])
 
-  if (!adda) redirect('/business/venue/onboard')
+  if (!venue) redirect('/business/venue/onboard')
 
-  const { notifications, unreadCount, totalUnreadCount } = await getAddaNotifications(adda.id, 10)
+  const { notifications, unreadCount, totalUnreadCount } = await getVenueNotifications(venue.id, 10)
   const venuePersonas = (userProfile?.personas ?? []) as string[]
   const mobileWorkspaces = resolveWorkspaces(venuePersonas, 'venue')
 
@@ -42,8 +42,8 @@ export default async function VenueLayout({ children }: { children: React.ReactN
 
       <div className="hidden md:block">
         <VenueSidebar
-          addaId={adda.id}
-          venueName={adda.name}
+          venueId={venue.id}
+          venueName={venue.name}
           ownerName={ownerName}
           initials={getInitials(ownerName)}
         />
@@ -60,7 +60,7 @@ export default async function VenueLayout({ children }: { children: React.ReactN
       >
         {/* Sticky topbar */}
         <header
-          className="adda-page-topbar"
+          className="venue-page-topbar"
           style={{
             position: 'sticky', top: 0, height: 48, zIndex: 40,
             background: 'rgba(6,13,17,0.92)', backdropFilter: 'blur(12px)',
@@ -77,7 +77,7 @@ export default async function VenueLayout({ children }: { children: React.ReactN
             <WimcWordmark color="white" height={26} />
           </Link>
           <VenueNotificationBell
-            addaId={adda.id}
+            venueId={venue.id}
             initialNotifications={notifications}
             initialUnreadCount={unreadCount}
           />

@@ -25,17 +25,17 @@ export const NOTIFICATION_META: Record<string, { icon: string; color: string; la
   // Ratings
   rating_prompt:              { icon: 'star',                color: '#F5A800', label: 'Rate Event'        },
   new_rating:                 { icon: 'reviews',             color: '#F5A800', label: 'New Review'        },
-  // Adda-specific
-  adda_new_proposal:          { icon: 'handshake',           color: '#5DD9D0', label: 'New Proposal'      },
-  adda_proposal_accepted:     { icon: 'check_circle',        color: '#4ADE80', label: 'Booking Confirmed' },
-  adda_proposal_counter:      { icon: 'sync_alt',            color: '#F5A800', label: 'Counter Offer'     },
-  adda_event_confirmed:       { icon: 'event_available',     color: '#4ADE80', label: 'Event Confirmed'   },
-  adda_new_rating:            { icon: 'star',                color: '#F5A800', label: 'New Rating'        },
-  adda_new_review:            { icon: 'reviews',             color: '#F5A800', label: 'New Review'        },
-  adda_booking_reminder:      { icon: 'alarm',               color: '#9B8FFF', label: 'Upcoming Booking'  },
-  adda_payout_processed:      { icon: 'payments',            color: '#4ADE80', label: 'Payout Processed'  },
-  adda_new_inquiry:           { icon: 'mail',                color: '#E8705A', label: 'New Inquiry'       },
-  adda_space_trending:        { icon: 'trending_up',         color: '#5DD9D0', label: 'Space Trending'    },
+  // Venue-specific
+  venue_new_proposal:          { icon: 'handshake',           color: '#5DD9D0', label: 'New Proposal'      },
+  venue_proposal_accepted:     { icon: 'check_circle',        color: '#4ADE80', label: 'Booking Confirmed' },
+  venue_proposal_counter:      { icon: 'sync_alt',            color: '#F5A800', label: 'Counter Offer'     },
+  venue_event_confirmed:       { icon: 'event_available',     color: '#4ADE80', label: 'Event Confirmed'   },
+  venue_new_rating:            { icon: 'star',                color: '#F5A800', label: 'New Rating'        },
+  venue_new_review:            { icon: 'reviews',             color: '#F5A800', label: 'New Review'        },
+  venue_booking_reminder:      { icon: 'alarm',               color: '#9B8FFF', label: 'Upcoming Booking'  },
+  venue_payout_processed:      { icon: 'payments',            color: '#4ADE80', label: 'Payout Processed'  },
+  venue_new_inquiry:           { icon: 'mail',                color: '#E8705A', label: 'New Inquiry'       },
+  venue_space_trending:        { icon: 'trending_up',         color: '#5DD9D0', label: 'Space Trending'    },
   // Hub / Connections
   connection_request:         { icon: 'person_add',          color: '#5DD9D0', label: 'Connection Request' },
   connection_accepted:        { icon: 'handshake',           color: '#4ADE80', label: 'Connection Accepted' },

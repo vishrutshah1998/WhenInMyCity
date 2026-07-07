@@ -72,6 +72,8 @@ interface EventPageProps {
   reviews?:        EventReview[]
   myRSVP?:         MyRSVP | null
   isAuthenticated: boolean
+  /** How the visitor arrived at this booking page (?src= query param). Undefined = 'direct'. */
+  discoverySource?: 'creator_link' | 'platform_discovery'
 }
 
 type Sheet = 'none' | 'step1' | 'step2' | 'confirmed'
@@ -149,7 +151,7 @@ declare global {
   }
 }
 
-export default function EventPage({ event, rsvpCount, spotsLeft, creator, reviews = [], myRSVP = null, isAuthenticated }: EventPageProps) {
+export default function EventPage({ event, rsvpCount, spotsLeft, creator, reviews = [], myRSVP = null, isAuthenticated, discoverySource }: EventPageProps) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const isCasual = (event as any).rsvp_style === 'casual' || event.ticket_price === 0
@@ -212,7 +214,9 @@ export default function EventPage({ event, rsvpCount, spotsLeft, creator, review
   // ── Share ─────────────────────────────────────────────────────────────────
 
   const handleShare = useCallback(async () => {
-    const shareUrl = `${window.location.origin}/events/${event.slug}`
+    // Forward the incoming discovery source when resharing (e.g. a platform-
+    // discovery visitor reshares the link) rather than fabricating attribution.
+    const shareUrl = `${window.location.origin}/events/${event.slug}${discoverySource ? `?src=${discoverySource}` : ''}`
     const shareData = { title: event.title, text: `Check out ${event.title} on When In My City!`, url: shareUrl }
     if (navigator.share && navigator.canShare?.(shareData)) {
       try { await navigator.share(shareData) } catch (err) {
@@ -224,7 +228,7 @@ export default function EventPage({ event, rsvpCount, spotsLeft, creator, review
       await navigator.clipboard.writeText(shareUrl)
       setCopied(true); setTimeout(() => setCopied(false), 2000)
     }
-  }, [event.slug, event.title])
+  }, [event.slug, event.title, discoverySource])
 
   // ── Casual RSVP ────────────────────────────────────────────────────────────
 
@@ -269,6 +273,7 @@ export default function EventPage({ event, rsvpCount, spotsLeft, creator, review
         quantity,
         ...(refApplied ? { referralCode: refApplied } : {}),
         ...(hasFanTiers && selectedTier ? { ticketTierId: selectedTier.id } : {}),
+        ...(discoverySource ? { discoverySource } : {}),
       })
 
       if (result.error) { setStep1Error(result.error); return }
@@ -609,7 +614,7 @@ export default function EventPage({ event, rsvpCount, spotsLeft, creator, review
                 className="bg-surface-container-low rounded-xl p-4 min-w-[140px] flex flex-col gap-2 snap-start shrink-0 hover:bg-surface-container transition-colors"
               >
                 <span className="material-symbols-outlined text-primary" style={{ fontSize: 20, fontVariationSettings: "'FILL' 1" }}>location_on</span>
-                <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-on-surface-variant">Adda</span>
+                <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-on-surface-variant">Venue</span>
                 <span className="font-sans font-semibold text-sm text-on-surface leading-snug">{event.venue_name}</span>
                 {event.venue_address && (
                   <span className="font-mono text-[10px] text-on-surface-variant leading-snug">
@@ -758,7 +763,7 @@ export default function EventPage({ event, rsvpCount, spotsLeft, creator, review
               <h3
                 className="font-display font-black text-on-surface uppercase"
                 style={{ fontSize: 'clamp(20px, 3vw, 32px)', letterSpacing: '-0.03em' }}
-              >Adda</h3>
+              >Venue</h3>
               <div className="flex items-start gap-3">
                 <span className="material-symbols-outlined text-primary text-2xl shrink-0 mt-0.5" style={{ fontVariationSettings: "'FILL' 1" }}>location_on</span>
                 <div>
@@ -878,7 +883,7 @@ export default function EventPage({ event, rsvpCount, spotsLeft, creator, review
 
                   {/* Venue */}
                   <div className="flex flex-col gap-1">
-                    <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-[#57423e]">Adda</span>
+                    <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-[#57423e]">Venue</span>
                     <div className="flex items-start gap-2">
                       <span className="material-symbols-outlined text-[#07070A] text-base shrink-0 mt-0.5" style={{ fontVariationSettings: "'FILL' 1" }}>location_on</span>
                       <span className="font-sans font-semibold text-sm text-[#07070A] leading-tight">{event.venue_name}</span>

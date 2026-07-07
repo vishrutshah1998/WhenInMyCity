@@ -3,8 +3,8 @@
 import { useState, useTransition, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { respondToProposal } from '@/app/actions/venue'
-import type { AddaProfile, AddaAvailability, MakerAddaProposal, Event } from '@/types/database'
-import type { AddaDashboardStats, RevenueEntry } from '@/app/actions/venue-dashboard'
+import type { VenueProfile, VenueAvailability, MakerVenueProposal, Event } from '@/types/database'
+import type { VenueDashboardStats, RevenueEntry } from '@/app/actions/venue-dashboard'
 import PriorityActions from '@/components/venue/dashboard/PriorityActions'
 
 // ---------------------------------------------------------------------------
@@ -55,10 +55,10 @@ const DAY_LABELS = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa']
 
 function CalendarSection({
   availability,
-  addaId,
+  venueId,
 }: {
-  availability: AddaAvailability[]
-  addaId: string
+  availability: VenueAvailability[]
+  venueId: string
 }) {
   const now = new Date()
   const year = now.getFullYear()
@@ -158,7 +158,7 @@ function CalendarSection({
 // Proposal card
 // ---------------------------------------------------------------------------
 
-function ProposalCard({ proposal, onRespond }: { proposal: MakerAddaProposal; onRespond: (id: string, response: 'accept' | 'decline') => void }) {
+function ProposalCard({ proposal, onRespond }: { proposal: MakerVenueProposal; onRespond: (id: string, response: 'accept' | 'decline') => void }) {
   const [isPending, startTransition] = useTransition()
 
   function handle(response: 'accept' | 'decline') {
@@ -220,42 +220,42 @@ function ProposalCard({ proposal, onRespond }: { proposal: MakerAddaProposal; on
 // ---------------------------------------------------------------------------
 
 interface SetupChecklistProps {
-  adda: AddaProfile
-  stats: AddaDashboardStats
+  venue: VenueProfile
+  stats: VenueDashboardStats
 }
 
-function SetupChecklist({ adda, stats }: SetupChecklistProps) {
+function SetupChecklist({ venue, stats }: SetupChecklistProps) {
   const isNew =
     stats.total_events_hosted === 0 &&
-    Date.now() - new Date(adda.created_at).getTime() < 30 * 24 * 60 * 60 * 1000
+    Date.now() - new Date(venue.created_at).getTime() < 30 * 24 * 60 * 60 * 1000
 
   if (!isNew) return null
 
   const items = [
     {
       label: 'Add a cover photo',
-      done: adda.cover_image_url !== null,
+      done: venue.cover_image_url !== null,
       href: '/business/venue/venue',
     },
     {
       label: 'Write a description',
-      done: adda.description !== null && adda.description.length > 20,
+      done: venue.description !== null && venue.description.length > 20,
       href: '/business/venue/venue',
     },
     {
       label: 'Add your WhatsApp number',
-      done: adda.contact_whatsapp !== null,
+      done: venue.contact_whatsapp !== null,
       href: '/business/venue/venue',
     },
     {
       label: 'List your amenities',
-      done: adda.amenities.length >= 2,
+      done: venue.amenities.length >= 2,
       href: '/business/venue/venue',
     },
     {
       label: 'Get your first booking',
       done: stats.total_events_hosted > 0,
-      href: `/venue/${adda.slug}`,
+      href: `/venue/${venue.slug}`,
     },
   ]
 
@@ -276,10 +276,10 @@ function SetupChecklist({ adda, stats }: SetupChecklistProps) {
         gap: 12,
       }}>
         <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--wimc-teal)' }}>
-          ✦ Your adda is fully set up — share your page to get your first booking
+          ✦ Your venue is fully set up — share your page to get your first booking
         </span>
         <a
-          href={`/venue/${adda.slug}`}
+          href={`/venue/${venue.slug}`}
           style={{
             fontSize: 12,
             fontWeight: 600,
@@ -359,18 +359,18 @@ function SetupChecklist({ adda, stats }: SetupChecklistProps) {
 // ---------------------------------------------------------------------------
 
 interface Props {
-  addaId:              string
-  adda:                AddaProfile
+  venueId:              string
+  venue:                VenueProfile
   upcomingEvents:      Event[]
-  pendingProposals:    MakerAddaProposal[]
+  pendingProposals:    MakerVenueProposal[]
   recentRevenue:       RevenueEntry[]
-  availabilityThisMonth: AddaAvailability[]
-  stats:               AddaDashboardStats
+  availabilityThisMonth: VenueAvailability[]
+  stats:               VenueDashboardStats
 }
 
 export default function VenueDashboardClient({
-  addaId,
-  adda,
+  venueId,
+  venue,
   upcomingEvents,
   pendingProposals: initialProposals,
   recentRevenue,
@@ -397,7 +397,7 @@ export default function VenueDashboardClient({
     minWidth: 0,
   }
 
-  const totalRevenuePaise = recentRevenue.reduce((sum, e) => sum + e.adda_share_paise, 0)
+  const totalRevenuePaise = recentRevenue.reduce((sum, e) => sum + e.venue_share_paise, 0)
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--wimc-bg-base)', color: 'var(--wimc-text-primary)', fontFamily: 'var(--font-dm-sans), sans-serif' }}>
@@ -406,18 +406,18 @@ export default function VenueDashboardClient({
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
           <span className="material-symbols-outlined" style={{ color: 'var(--wimc-coral)', fontSize: 22, flexShrink: 0 }}>storefront</span>
           <div style={{ minWidth: 0 }}>
-            <div style={{ fontFamily: 'var(--font-syne)', fontSize: 16, fontWeight: 700, lineHeight: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{adda.name}</div>
+            <div style={{ fontFamily: 'var(--font-syne)', fontSize: 16, fontWeight: 700, lineHeight: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{venue.name}</div>
             <div style={{ fontSize: 11, color: 'var(--wimc-text-secondary)', fontFamily: 'var(--font-jetbrains-mono)' }}>Venue Dashboard</div>
           </div>
         </div>
         <div className="venue-topbar-actions" style={{ display: 'flex', gap: 10, alignItems: 'center', flexShrink: 0 }}>
-          {adda.is_verified && (
+          {venue.is_verified && (
             <span className="venue-topbar-hide-mobile" style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, fontWeight: 600, color: 'var(--wimc-teal)', fontFamily: 'var(--font-jetbrains-mono)' }}>
               <span className="material-symbols-outlined" style={{ fontSize: 14 }}>verified</span>
               Verified
             </span>
           )}
-          <a href={`/venue/${adda.slug}`} target="_blank" rel="noopener noreferrer"
+          <a href={`/venue/${venue.slug}`} target="_blank" rel="noopener noreferrer"
             className="venue-topbar-hide-mobile"
             style={{
               fontFamily: 'var(--font-jetbrains-mono)', fontSize: 12,
@@ -425,9 +425,9 @@ export default function VenueDashboardClient({
               padding: '4px 10px', borderRadius: 9999,
               border: '1px solid rgba(93,217,208,0.2)', textDecoration: 'none',
             }}>
-            wheninmycity.com/adda/{adda.slug} ↗
+            wheninmycity.com/venue/{venue.slug} ↗
           </a>
-          {/* TODO: hide once we track the adda→brand link; harmless to show now since R1 will detect existing data */}
+          {/* TODO: hide once we track the venue→brand link; harmless to show now since R1 will detect existing data */}
           <a href="/onboarding/business/R1"
             className="venue-topbar-hide-mobile"
             style={{
@@ -445,23 +445,23 @@ export default function VenueDashboardClient({
         </div>
       </header>
 
-      <div className="adda-content-pad" style={{ padding: 32, display: 'flex', flexDirection: 'column', gap: 24, maxWidth: 1200, margin: '0 auto' }}>
+      <div className="venue-content-pad" style={{ padding: 32, display: 'flex', flexDirection: 'column', gap: 24, maxWidth: 1200, margin: '0 auto' }}>
 
         {/* Setup checklist — visible for new venues only */}
-        <SetupChecklist adda={adda} stats={stats} />
+        <SetupChecklist venue={venue} stats={stats} />
 
         {/* Priority action chips */}
-        <PriorityActions pendingProposals={proposals} adda={adda} stats={stats} />
+        <PriorityActions pendingProposals={proposals} venue={venue} stats={stats} />
 
         {/* Stats row */}
-        <div className="adda-stats-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}>
+        <div className="venue-stats-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}>
           {[
             { label: 'Events Hosted', value: stats.total_events_hosted, color: 'var(--wimc-coral)',          icon: 'event' },
             { label: 'This Month',    value: stats.this_month_events,   color: 'var(--wimc-teal)',           icon: 'calendar_today' },
             { label: 'Total Earned',  value: formatInr(stats.total_revenue_paise), color: 'var(--wimc-amber)', icon: 'payments' },
             { label: 'Avg Rating',    value: stats.average_maker_rating > 0 ? stats.average_maker_rating.toFixed(1) + ' ★' : '—', color: 'var(--wimc-text-primary)', icon: 'star' },
           ].map(({ label, value, color, icon }) => (
-            <div key={label} className="adda-stat-card" style={{ background: 'var(--wimc-bg-elevated)', border: '1px solid var(--wimc-border-default)', borderRadius: 16, padding: '20px 24px', display: 'flex', gap: 14, alignItems: 'center' }}>
+            <div key={label} className="venue-stat-card" style={{ background: 'var(--wimc-bg-elevated)', border: '1px solid var(--wimc-border-default)', borderRadius: 16, padding: '20px 24px', display: 'flex', gap: 14, alignItems: 'center' }}>
               <div style={{ width: 44, height: 44, borderRadius: 12, background: `${color}22`, display: 'grid', placeItems: 'center', color, flexShrink: 0 }}>
                 <span className="material-symbols-outlined" style={{ fontSize: 22 }}>{icon}</span>
               </div>
@@ -474,7 +474,7 @@ export default function VenueDashboardClient({
         </div>
 
         {/* Main grid: proposals + calendar */}
-        <div className="adda-main-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24 }}>
+        <div className="venue-main-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24 }}>
 
           {/* Booking requests */}
           <div style={{ background: 'var(--wimc-bg-elevated)', border: '1px solid var(--wimc-border-default)', borderRadius: 18, overflow: 'hidden' }}>
@@ -503,7 +503,7 @@ export default function VenueDashboardClient({
           </div>
 
           {/* Calendar */}
-          <CalendarSection availability={availabilityThisMonth} addaId={addaId} />
+          <CalendarSection availability={availabilityThisMonth} venueId={venueId} />
         </div>
 
         {/* Upcoming events */}
@@ -563,7 +563,7 @@ export default function VenueDashboardClient({
                       <td style={{ padding: '12px 20px', fontFamily: 'var(--font-jetbrains-mono)', fontSize: 12, color: 'var(--wimc-text-secondary)', whiteSpace: 'nowrap' }}>{formatShortDate(e.event_date)}</td>
                       <td style={{ padding: '12px 20px', textAlign: 'right', fontFamily: 'var(--font-jetbrains-mono)' }}>{e.attendee_count}</td>
                       <td style={{ padding: '12px 20px', textAlign: 'right', fontFamily: 'var(--font-jetbrains-mono)', color: 'var(--wimc-text-secondary)' }}>{formatInr(e.ticket_revenue_paise)}</td>
-                      <td style={{ padding: '12px 20px', textAlign: 'right', fontFamily: 'var(--font-jetbrains-mono)', fontWeight: 700, color: 'var(--wimc-coral)' }}>{formatInr(e.adda_share_paise)}</td>
+                      <td style={{ padding: '12px 20px', textAlign: 'right', fontFamily: 'var(--font-jetbrains-mono)', fontWeight: 700, color: 'var(--wimc-coral)' }}>{formatInr(e.venue_share_paise)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -577,15 +577,15 @@ export default function VenueDashboardClient({
           <div style={{ fontFamily: 'var(--font-syne)', fontWeight: 700, fontSize: 15, marginBottom: 20 }}>Listing Details</div>
           <div className="venue-listing-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 20 }}>
             {[
-              { label: 'Venue Name',    value: adda.name },
-              { label: 'City',         value: adda.city.replace(/_/g, ' ') },
-              { label: 'Neighbourhood', value: adda.neighbourhood ?? '—' },
-              { label: 'Venue Types',   value: adda.adda_type.map((t) => t.replace(/_/g, ' ')).join(', ') || '—' },
-              { label: 'Capacity',     value: adda.capacity_min && adda.capacity_max ? `${adda.capacity_min}–${adda.capacity_max} pax` : adda.capacity_max ? `Up to ${adda.capacity_max} pax` : '—' },
-              { label: 'Pricing Model', value: adda.pricing_model.replace(/_/g, ' ') },
-              { label: 'WhatsApp',     value: adda.contact_whatsapp ?? '—' },
-              { label: 'Email',        value: adda.contact_email ?? '—' },
-              { label: 'Instagram',    value: adda.instagram_handle ? `@${adda.instagram_handle}` : '—' },
+              { label: 'Venue Name',    value: venue.name },
+              { label: 'City',         value: venue.city.replace(/_/g, ' ') },
+              { label: 'Neighbourhood', value: venue.neighbourhood ?? '—' },
+              { label: 'Venue Types',   value: venue.venue_type.map((t) => t.replace(/_/g, ' ')).join(', ') || '—' },
+              { label: 'Capacity',     value: venue.capacity_min && venue.capacity_max ? `${venue.capacity_min}–${venue.capacity_max} pax` : venue.capacity_max ? `Up to ${venue.capacity_max} pax` : '—' },
+              { label: 'Pricing Model', value: venue.pricing_model.replace(/_/g, ' ') },
+              { label: 'WhatsApp',     value: venue.contact_whatsapp ?? '—' },
+              { label: 'Email',        value: venue.contact_email ?? '—' },
+              { label: 'Instagram',    value: venue.instagram_handle ? `@${venue.instagram_handle}` : '—' },
             ].map(({ label, value }) => (
               <div key={label}>
                 <div style={{ fontSize: 11, color: 'var(--wimc-text-secondary)', fontFamily: 'var(--font-jetbrains-mono)', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: 4 }}>{label}</div>
@@ -593,16 +593,16 @@ export default function VenueDashboardClient({
               </div>
             ))}
           </div>
-          {adda.description && (
+          {venue.description && (
             <div style={{ marginTop: 20, paddingTop: 20, borderTop: '1px solid var(--wimc-border-subtle)' }}>
               <div style={{ fontSize: 11, color: 'var(--wimc-text-secondary)', fontFamily: 'var(--font-jetbrains-mono)', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: 6 }}>Description</div>
-              <div style={{ fontSize: 13, lineHeight: 1.6, color: 'var(--wimc-text-secondary)' }}>{adda.description}</div>
+              <div style={{ fontSize: 13, lineHeight: 1.6, color: 'var(--wimc-text-secondary)' }}>{venue.description}</div>
             </div>
           )}
           <div style={{ marginTop: 20, paddingTop: 20, borderTop: '1px solid var(--wimc-border-subtle)' }}>
             <div style={{ fontSize: 11, color: 'var(--wimc-text-secondary)', fontFamily: 'var(--font-jetbrains-mono)', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: 6 }}>Amenities</div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-              {adda.amenities.length > 0 ? adda.amenities.map((a) => (
+              {venue.amenities.length > 0 ? venue.amenities.map((a) => (
                 <span key={a} style={{ padding: '4px 12px', borderRadius: 9999, fontSize: 12, fontWeight: 500, background: 'var(--wimc-bg-overlay)', border: '1px solid var(--wimc-border-default)', textTransform: 'capitalize' }}>
                   {a.replace(/_/g, ' ')}
                 </span>
@@ -619,10 +619,10 @@ export default function VenueDashboardClient({
         @media (max-width: 767px) {
           .venue-topbar { padding: 0 16px !important; }
           .venue-topbar-hide-mobile { display: none !important; }
-          .adda-content-pad { padding: 16px !important; gap: 16px !important; }
-          .adda-stats-grid { grid-template-columns: repeat(2, 1fr) !important; gap: 10px !important; }
-          .adda-stat-card { padding: 14px 16px !important; gap: 10px !important; }
-          .adda-main-grid { grid-template-columns: 1fr !important; }
+          .venue-content-pad { padding: 16px !important; gap: 16px !important; }
+          .venue-stats-grid { grid-template-columns: repeat(2, 1fr) !important; gap: 10px !important; }
+          .venue-stat-card { padding: 14px 16px !important; gap: 10px !important; }
+          .venue-main-grid { grid-template-columns: 1fr !important; }
           .venue-listing-grid { grid-template-columns: repeat(2, 1fr) !important; }
         }
       `}</style>

@@ -7,7 +7,7 @@ import { calculateRevenueSplit } from '@/lib/revenue'
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 
-export interface AddaPayoutSummary {
+export interface VenuePayoutSummary {
   availablePaise: number
   pendingPaise: number
   totalPaidPaise: number
@@ -15,11 +15,11 @@ export interface AddaPayoutSummary {
 
 export interface PayoutRequest {
   id: string
-  adda_id: string
+  venue_id: string
   booking_ids: string[]
   gross_paise: number
   platform_fee_paise: number
-  adda_share_paise: number
+  venue_share_paise: number
   payment_method: 'bank' | 'upi'
   bank_account_name: string | null
   bank_account_number: string | null
@@ -31,14 +31,14 @@ export interface PayoutRequest {
   processed_at: string | null
 }
 
-// "Bookings" are completed events at the adda with captured RSVPs
+// "Bookings" are completed events at the venue with captured RSVPs
 // that haven't been locked into a non-rejected payout request yet.
 export interface PayableBooking {
   id: string           // event ID
   event_name: string
   event_date: string
   total_revenue_paise: number
-  adda_share_paise: number
+  venue_share_paise: number
 }
 
 const RequestPayoutSchema = z.object({
@@ -51,12 +51,12 @@ const RequestPayoutSchema = z.object({
 })
 
 // ---------------------------------------------------------------------------
-// getAddaPayoutData
-// Returns the payout summary, payable bookings, and history for an adda.
+// getVenuePayoutData
+// Returns the payout summary, payable bookings, and history for an venue.
 // ---------------------------------------------------------------------------
 
-export async function getAddaPayoutData(addaId: string): Promise<{
-  summary: AddaPayoutSummary
+export async function getVenuePayoutData(venueId: string): Promise<{
+  summary: VenuePayoutSummary
   payableBookings: PayableBooking[]
   payoutHistory: PayoutRequest[]
   error: string | null
@@ -72,28 +72,28 @@ export async function getAddaPayoutData(addaId: string): Promise<{
   const supabase = await createClient()
   const admin = createAdminClient()
 
-  // Verify adda ownership via RLS-scoped client
-  const { data: adda } = await supabase
-    .from('adda_profiles')
+  // Verify venue ownership via RLS-scoped client
+  const { data: venue } = await supabase
+    .from('venue_profiles')
     .select('id')
-    .eq('id', addaId)
+    .eq('id', venueId)
     .eq('auth_user_id', user.id)
     .maybeSingle()
 
-  if (!adda) return { ...EMPTY, error: 'Access denied' }
+  if (!venue) return { ...EMPTY, error: 'Access denied' }
 
-  // Payout history — RLS ensures only this adda's rows are returned
+  // Payout history — RLS ensures only this venue's rows are returned
   const { data: history, error: histErr } = await supabase
-    .from('adda_payout_requests')
+    .from('venue_payout_requests')
     .select('*')
-    .eq('adda_id', addaId)
+    .eq('venue_id', venueId)
     .order('requested_at', { ascending: false })
 
   if (histErr) return { ...EMPTY, error: histErr.message }
 
   const payoutHistory = (history ?? []) as PayoutRequest[]
-  const pendingPaise   = payoutHistory.filter(p => p.status === 'pending').reduce((s, p) => s + p.adda_share_paise, 0)
-  const totalPaidPaise = payoutHistory.filter(p => p.status === 'paid').reduce((s, p) => s + p.adda_share_paise, 0)
+  const pendingPaise   = payoutHistory.filter(p => p.status === 'pending').reduce((s, p) => s + p.venue_share_paise, 0)
+  const totalPaidPaise = payoutHistory.filter(p => p.status === 'paid').reduce((s, p) => s + p.venue_share_paise, 0)
 
   // Event IDs already locked in a non-rejected payout request
   const lockedEventIds = new Set<string>(
@@ -102,11 +102,11 @@ export async function getAddaPayoutData(addaId: string): Promise<{
       .flatMap(p => p.booking_ids),
   )
 
-  // Past completed/published events at this adda (need admin client — events are creator-owned)
+  // Past completed/published events at this venue (need admin client — events are creator-owned)
   const { data: pastEvents } = await admin
     .from('events')
     .select('id, title, starts_at, ticket_price')
-    .eq('venue_id', addaId)
+    .eq('venue_id', venueId)
     .in('status', ['published', 'completed'])
     .lt('starts_at', new Date().toISOString())
     .order('starts_at', { ascending: false })
@@ -143,7 +143,7 @@ export async function getAddaPayoutData(addaId: string): Promise<{
         event_name:          ev.title,
         event_date:          ev.starts_at,
         total_revenue_paise: agg.gross,
-        adda_share_paise:    split.venuePaise,
+        venue_share_paise:    split.venuePaise,
       })
       availablePaise += split.venuePaise
     }
@@ -163,7 +163,7 @@ export async function getAddaPayoutData(addaId: string): Promise<{
 // ---------------------------------------------------------------------------
 
 export async function requestVenuePayout(
-  addaId: string,
+  venueId: string,
   payload: z.infer<typeof RequestPayoutSchema>,
 ): Promise<{ success: boolean; error: string | null }> {
   const { user } = await requireAuth()
@@ -175,15 +175,15 @@ export async function requestVenuePayout(
 
   const { bookingIds, paymentMethod, bankName, bankNumber, bankIfsc, upiId } = parsed.data
 
-  // Verify adda ownership
-  const { data: adda } = await supabase
-    .from('adda_profiles')
+  // Verify venue ownership
+  const { data: venue } = await supabase
+    .from('venue_profiles')
     .select('id')
-    .eq('id', addaId)
+    .eq('id', venueId)
     .eq('auth_user_id', user.id)
     .maybeSingle()
 
-  if (!adda) return { success: false, error: 'Access denied' }
+  if (!venue) return { success: false, error: 'Access denied' }
 
   if (paymentMethod === 'bank' && (!bankName || !bankNumber || !bankIfsc)) {
     return { success: false, error: 'Bank account details are required' }
@@ -197,7 +197,7 @@ export async function requestVenuePayout(
     .from('events')
     .select('id, ticket_price')
     .in('id', bookingIds)
-    .eq('venue_id', addaId)
+    .eq('venue_id', venueId)
     .in('status', ['published', 'completed'])
 
   if (!events?.length) return { success: false, error: 'No valid bookings found' }
@@ -216,7 +216,7 @@ export async function requestVenuePayout(
   }
 
   let totalGross    = 0
-  let totalAdda     = 0
+  let totalVenue     = 0
   let totalPlatform = 0
 
   for (const ev of events) {
@@ -224,18 +224,18 @@ export async function requestVenuePayout(
     if (!agg || agg.count === 0) continue
     const split = calculateRevenueSplit(ev.ticket_price, agg.count, 'wanderer', true)
     totalGross    += agg.gross
-    totalAdda     += split.venuePaise
+    totalVenue     += split.venuePaise
     totalPlatform += split.platformPaise
   }
 
   const { error } = await supabase
-    .from('adda_payout_requests')
+    .from('venue_payout_requests')
     .insert({
-      adda_id:             addaId,
+      venue_id:             venueId,
       booking_ids:         bookingIds,
       gross_paise:         totalGross,
       platform_fee_paise:  totalPlatform,
-      adda_share_paise:    totalAdda,
+      venue_share_paise:    totalVenue,
       payment_method:      paymentMethod,
       bank_account_name:   bankName   ?? null,
       bank_account_number: bankNumber ?? null,

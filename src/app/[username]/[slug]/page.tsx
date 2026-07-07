@@ -1,6 +1,6 @@
 import { notFound, redirect } from 'next/navigation'
 import type { Metadata } from 'next'
-import { getAddaPublicPage } from '@/app/actions/venue'
+import { getVenuePublicPage } from '@/app/actions/venue'
 import { getBrandPublicPage } from '@/app/actions/persona-complete'
 import { getCreatorPosts, type CreatorPostWithReactions } from '@/app/actions/posts'
 import { createClient } from '@/lib/supabase/server'
@@ -25,19 +25,19 @@ export async function generateMetadata({
   const { slug, username: city } = await params
 
   // Try venue first
-  const addaResult = await getAddaPublicPage(slug)
-  if (!('error' in addaResult) && normalizeCity(addaResult.adda.city) === normalizeCity(city)) {
-    const { adda } = addaResult
-    const typeLabel = adda.adda_type[0]?.replace(/_/g, ' ') ?? 'venue'
+  const venueResult = await getVenuePublicPage(slug)
+  if (!('error' in venueResult) && normalizeCity(venueResult.venue.city) === normalizeCity(city)) {
+    const { venue } = venueResult
+    const typeLabel = venue.venue_type[0]?.replace(/_/g, ' ') ?? 'venue'
     return {
-      title: `${adda.name} — ${adda.city} ${typeLabel} | When In My City`,
+      title: `${venue.name} — ${venue.city} ${typeLabel} | When In My City`,
       description:
-        adda.description ??
-        `${adda.name} is a ${typeLabel} in ${adda.neighbourhood ?? adda.city}. Book this space on When In My City.`,
+        venue.description ??
+        `${venue.name} is a ${typeLabel} in ${venue.neighbourhood ?? venue.city}. Book this space on When In My City.`,
       openGraph: {
-        title: `${adda.name} — ${adda.city}`,
-        description: adda.description ?? `${typeLabel} in ${adda.city}`,
-        images: adda.cover_image_url ? [{ url: adda.cover_image_url }] : [],
+        title: `${venue.name} — ${venue.city}`,
+        description: venue.description ?? `${typeLabel} in ${venue.city}`,
+        images: venue.cover_image_url ? [{ url: venue.cover_image_url }] : [],
       },
     }
   }
@@ -97,15 +97,15 @@ export default async function CitySlugPage({
   const { src } = await searchParams
   const discoverySource = src === 'platform_discovery' ? 'platform_discovery' as const : 'creator_link' as const
 
-  // 1. Try venue/adda
-  const addaResult = await getAddaPublicPage(slug)
-  if (!('error' in addaResult) && normalizeCity(addaResult.adda.city) === normalizeCity(city)) {
+  // 1. Try venue/venue
+  const venueResult = await getVenuePublicPage(slug)
+  if (!('error' in venueResult) && normalizeCity(venueResult.venue.city) === normalizeCity(city)) {
     return (
       <VenueCityPage
-        adda={addaResult.adda}
-        upcomingEvents={addaResult.upcomingEvents}
-        pastEvents={addaResult.pastEvents}
-        stats={addaResult.stats}
+        venue={venueResult.venue}
+        upcomingEvents={venueResult.upcomingEvents}
+        pastEvents={venueResult.pastEvents}
+        stats={venueResult.stats}
       />
     )
   }

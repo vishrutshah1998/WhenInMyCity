@@ -9,10 +9,10 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from 'recharts'
-import type { AddaTrafficStats } from '@/app/actions/venue-analytics'
+import type { VenueTrafficStats } from '@/app/actions/venue-analytics'
 
 interface Props {
-  trafficStats: AddaTrafficStats
+  trafficStats: VenueTrafficStats
   venueSlug: string
 }
 
@@ -101,7 +101,7 @@ export default function PageViewsChart({ trafficStats, venueSlug }: Props) {
           }}>
             No visits to{' '}
             <span style={{ color: 'var(--venue-amber)', fontFamily: 'var(--font-jetbrains-mono), monospace', fontSize: 11 }}>
-              wheninmycity.com/adda/{venueSlug}
+              wheninmycity.com/venue/{venueSlug}
             </span>{' '}
             recorded in this window yet.
           </div>

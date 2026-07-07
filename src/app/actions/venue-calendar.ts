@@ -11,7 +11,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 
 /**
  * Builds a Google OAuth2 URL requesting read-only calendar scope and
- * redirects the user there. A CSRF state token (adda_id:uuid) is stored
+ * redirects the user there. A CSRF state token (venue_id:uuid) is stored
  * in a short-lived httpOnly cookie so the callback can validate it.
  *
  * Requires GOOGLE_CLIENT_ID env var. Falls back with an error redirect
@@ -25,15 +25,15 @@ export async function initiateCalendarSync(): Promise<void> {
   const { user } = await requireAuth('/business/venue/calendar')
   const admin = createAdminClient()
 
-  const { data: adda } = await admin
-    .from('adda_profiles')
+  const { data: venue } = await admin
+    .from('venue_profiles')
     .select('id')
     .eq('auth_user_id', user.id)
     .maybeSingle()
 
-  if (!adda) redirect('/business/venue/onboard')
+  if (!venue) redirect('/business/venue/onboard')
 
-  const state = `${adda.id}:${crypto.randomUUID()}`
+  const state = `${venue.id}:${crypto.randomUUID()}`
 
   const cookieStore = await cookies()
   cookieStore.set('gcal_oauth_state', state, {
@@ -62,7 +62,7 @@ export async function initiateCalendarSync(): Promise<void> {
 // ---------------------------------------------------------------------------
 
 /**
- * Clears the stored refresh token and marks the adda as disconnected.
+ * Clears the stored refresh token and marks the venue as disconnected.
  * Returns { error } on failure so the caller can surface it in the UI.
  */
 export async function disconnectCalendarSync(): Promise<{ error: string | null }> {
@@ -70,7 +70,7 @@ export async function disconnectCalendarSync(): Promise<{ error: string | null }
   const admin = createAdminClient()
 
   const { error } = await admin
-    .from('adda_profiles')
+    .from('venue_profiles')
     .update({
       google_calendar_connected:     false,
       google_calendar_refresh_token: null,

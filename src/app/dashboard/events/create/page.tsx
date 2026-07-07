@@ -7,7 +7,7 @@ export default async function DashboardCreateEventPage() {
   const supabase = await createClient()
 
   const { data: venueRows } = await supabase
-    .from('adda_profiles')
+    .from('venue_profiles')
     .select('id, name, city, address, lat, lng, capacity_max')
     .ilike('city', `%${profile.city ?? ''}%`)
     .eq('is_active', true)

@@ -1,27 +1,27 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { searchAddas, getAddaPublicPage, sendProposal } from '@/app/actions/venue'
+import { searchVenues, getVenuePublicPage, sendProposal } from '@/app/actions/venue'
 import { CITIES } from '@/lib/constants/interests'
-import type { AddaProfile, AddaTier, MakerAddaProposal } from '@/types/database'
+import type { VenueProfile, VenueTier, MakerVenueProposal } from '@/types/database'
 import type { UserTier } from '@/types/database'
 
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
 
-type ProposalWithAdda = MakerAddaProposal & {
-  adda: Pick<AddaProfile, 'id' | 'name' | 'slug' | 'city' | 'cover_image_url' | 'pricing_model'> | null
+type ProposalWithVenue = MakerVenueProposal & {
+  venue: Pick<VenueProfile, 'id' | 'name' | 'slug' | 'city' | 'cover_image_url' | 'pricing_model'> | null
 }
 
 interface Props {
   profileId:   string
   defaultCity: string
   makerTier:   UserTier
-  proposals:   ProposalWithAdda[]
+  proposals:   ProposalWithVenue[]
 }
 
-const ADDA_TYPES = [
+const VENUE_TYPES = [
   { id: 'cafe', label: 'Café' }, { id: 'coworking', label: 'Coworking' },
   { id: 'gallery', label: 'Gallery' }, { id: 'community_hall', label: 'Community Hall' },
   { id: 'rooftop', label: 'Rooftop' }, { id: 'garden', label: 'Garden' },
@@ -63,13 +63,13 @@ function formatInr(paise: number) {
 // Tier badge
 // ---------------------------------------------------------------------------
 
-const TIER_META: Record<Exclude<AddaTier, 'open'>, { label: string; icon: string; color: string; border: string; bg: string }> = {
+const TIER_META: Record<Exclude<VenueTier, 'open'>, { label: string; icon: string; color: string; border: string; bg: string }> = {
   verified:  { label: 'Verified',  icon: 'verified',          color: 'var(--wimc-teal)',  border: 'rgba(77,210,177,0.35)',  bg: 'rgba(77,210,177,0.1)' },
   beloved:   { label: 'Beloved',   icon: 'favorite',          color: 'var(--wimc-amber)', border: 'rgba(245,168,0,0.35)',   bg: 'rgba(245,168,0,0.1)' },
   legendary: { label: 'Legendary', icon: 'workspace_premium', color: '#a855f7',           border: 'rgba(168,85,247,0.35)',  bg: 'rgba(168,85,247,0.1)' },
 }
 
-function AddaTierBadge({ tier, size = 'sm' }: { tier: AddaTier; size?: 'sm' | 'md' }) {
+function VenueTierBadge({ tier, size = 'sm' }: { tier: VenueTier; size?: 'sm' | 'md' }) {
   if (tier === 'open') return null
   const m = TIER_META[tier]
   return (
@@ -90,7 +90,7 @@ function AddaTierBadge({ tier, size = 'sm' }: { tier: AddaTier; size?: 'sm' | 'm
 // Venue card
 // ---------------------------------------------------------------------------
 
-function VenueCard({ adda, onSelect }: { adda: AddaProfile; onSelect: (a: AddaProfile) => void }) {
+function VenueCard({ venue, onSelect }: { venue: VenueProfile; onSelect: (a: VenueProfile) => void }) {
   const pricingLabel: Record<string, string> = {
     fixed_rental: 'Fixed Rental', door_split: 'Door Split',
     hybrid: 'Hybrid', f_and_b_minimum: 'F&B Minimum',
@@ -98,7 +98,7 @@ function VenueCard({ adda, onSelect }: { adda: AddaProfile; onSelect: (a: AddaPr
 
   return (
     <button
-      onClick={() => onSelect(adda)}
+      onClick={() => onSelect(venue)}
       style={{
         background: 'var(--wimc-bg-elevated)', border: '1px solid rgba(26,39,68,0.14)',
         borderRadius: 0, overflow: 'hidden', textAlign: 'left', cursor: 'pointer',
@@ -108,35 +108,35 @@ function VenueCard({ adda, onSelect }: { adda: AddaProfile; onSelect: (a: AddaPr
       onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'rgba(26,39,68,0.14)'; e.currentTarget.style.transform = 'none' }}
     >
       {/* Cover */}
-      <div style={{ height: 120, background: adda.cover_image_url ? `url(${adda.cover_image_url}) center/cover` : 'linear-gradient(135deg, rgba(232,112,90,0.2) 0%, rgba(77,210,177,0.1) 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        {!adda.cover_image_url && <span className="material-symbols-outlined" style={{ fontSize: 40, color: 'var(--wimc-coral)', opacity: 0.5 }}>storefront</span>}
+      <div style={{ height: 120, background: venue.cover_image_url ? `url(${venue.cover_image_url}) center/cover` : 'linear-gradient(135deg, rgba(232,112,90,0.2) 0%, rgba(77,210,177,0.1) 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        {!venue.cover_image_url && <span className="material-symbols-outlined" style={{ fontSize: 40, color: 'var(--wimc-coral)', opacity: 0.5 }}>storefront</span>}
       </div>
       <div style={{ padding: '14px 16px' }}>
-        <div style={{ fontFamily: 'var(--font-syne)', fontWeight: 700, fontSize: 14, marginBottom: 4 }}>{adda.name}</div>
+        <div style={{ fontFamily: 'var(--font-syne)', fontWeight: 700, fontSize: 14, marginBottom: 4 }}>{venue.name}</div>
         <div style={{ fontSize: 12, color: 'var(--wimc-text-secondary)', marginBottom: 8, fontFamily: 'var(--font-jetbrains-mono)' }}>
-          {adda.neighbourhood ? `${adda.neighbourhood}, ` : ''}{adda.city.replace(/_/g, ' ')}
+          {venue.neighbourhood ? `${venue.neighbourhood}, ` : ''}{venue.city.replace(/_/g, ' ')}
         </div>
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-          {adda.adda_type.slice(0, 2).map((t) => (
+          {venue.venue_type.slice(0, 2).map((t) => (
             <span key={t} style={{ fontSize: 10, padding: '2px 8px', borderRadius: 9999, background: 'var(--wimc-bg-overlay)', border: '1px solid var(--wimc-border-subtle)', color: 'var(--wimc-text-secondary)', textTransform: 'capitalize' }}>
               {t.replace(/_/g, ' ')}
             </span>
           ))}
-          {adda.capacity_max && (
+          {venue.capacity_max && (
             <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 9999, background: 'var(--wimc-bg-overlay)', border: '1px solid var(--wimc-border-subtle)', color: 'var(--wimc-text-secondary)' }}>
-              Up to {adda.capacity_max} pax
+              Up to {venue.capacity_max} pax
             </span>
           )}
         </div>
         <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
           <span style={{ fontSize: 11, color: 'var(--wimc-coral)', fontWeight: 600, fontFamily: 'var(--font-jetbrains-mono)' }}>
-            {pricingLabel[adda.pricing_model] ?? adda.pricing_model}
+            {pricingLabel[venue.pricing_model] ?? venue.pricing_model}
           </span>
           <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
-            {adda.trending_until && new Date(adda.trending_until) > new Date() && (
+            {venue.trending_until && new Date(venue.trending_until) > new Date() && (
               <span style={{ fontSize: 10, fontWeight: 700 }}>🔥</span>
             )}
-            <AddaTierBadge tier={adda.adda_tier} size="sm" />
+            <VenueTierBadge tier={venue.venue_tier} size="sm" />
           </div>
         </div>
       </div>
@@ -148,23 +148,23 @@ function VenueCard({ adda, onSelect }: { adda: AddaProfile; onSelect: (a: AddaPr
 // Detail drawer
 // ---------------------------------------------------------------------------
 
-type AddaPageData = Awaited<ReturnType<typeof getAddaPublicPage>>
+type VenuePageData = Awaited<ReturnType<typeof getVenuePublicPage>>
 
 function DetailDrawer({
-  adda,
+  venue,
   onClose,
   onPropose,
 }: {
-  adda: AddaProfile
+  venue: VenueProfile
   onClose: () => void
   onPropose: () => void
 }) {
-  const [pageData, setPageData] = useState<AddaPageData | null>(null)
+  const [pageData, setPageData] = useState<VenuePageData | null>(null)
   const [loading, setLoading] = useState(true)
 
   // Fetch detail on mount
   useState(() => {
-    getAddaPublicPage(adda.slug).then((d) => { setPageData(d); setLoading(false) })
+    getVenuePublicPage(venue.slug).then((d) => { setPageData(d); setLoading(false) })
   })
 
   const pricingLabel: Record<string, string> = {
@@ -183,11 +183,11 @@ function DetailDrawer({
         zIndex: 101, overflow: 'auto', display: 'flex', flexDirection: 'column',
       }}>
         {/* Cover */}
-        <div style={{ height: 180, background: adda.cover_image_url ? `url(${adda.cover_image_url}) center/cover` : 'linear-gradient(135deg, rgba(232,112,90,0.2) 0%, rgba(77,210,177,0.1) 100%)', position: 'relative', flexShrink: 0 }}>
+        <div style={{ height: 180, background: venue.cover_image_url ? `url(${venue.cover_image_url}) center/cover` : 'linear-gradient(135deg, rgba(232,112,90,0.2) 0%, rgba(77,210,177,0.1) 100%)', position: 'relative', flexShrink: 0 }}>
           <button onClick={onClose} style={{ position: 'absolute', top: 12, right: 12, width: 36, height: 36, borderRadius: '50%', background: 'rgba(10,10,11,0.7)', border: '1px solid var(--wimc-border-default)', cursor: 'pointer', display: 'grid', placeItems: 'center', color: 'var(--wimc-text-primary)' }}>
             <span className="material-symbols-outlined" style={{ fontSize: 18 }}>close</span>
           </button>
-          {adda.is_verified && (
+          {venue.is_verified && (
             <span style={{ position: 'absolute', top: 12, left: 12, display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, fontWeight: 700, color: 'var(--wimc-teal)', background: 'rgba(10,10,11,0.7)', padding: '4px 10px', borderRadius: 9999, fontFamily: 'var(--font-jetbrains-mono)' }}>
               <span className="material-symbols-outlined" style={{ fontSize: 13 }}>verified</span>Verified
             </span>
@@ -198,35 +198,35 @@ function DetailDrawer({
           {/* Name + city */}
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 4 }}>
-              <div style={{ fontFamily: 'var(--font-syne)', fontWeight: 800, fontSize: 22 }}>{adda.name}</div>
-              <AddaTierBadge tier={adda.adda_tier} size="md" />
-              {adda.trending_until && new Date(adda.trending_until) > new Date() && (
+              <div style={{ fontFamily: 'var(--font-syne)', fontWeight: 800, fontSize: 22 }}>{venue.name}</div>
+              <VenueTierBadge tier={venue.venue_tier} size="md" />
+              {venue.trending_until && new Date(venue.trending_until) > new Date() && (
                 <span style={{ fontSize: 12, fontWeight: 700 }}>🔥 Trending</span>
               )}
             </div>
             <div style={{ fontSize: 13, color: 'var(--wimc-text-secondary)', fontFamily: 'var(--font-jetbrains-mono)' }}>
-              {adda.neighbourhood ? `${adda.neighbourhood}, ` : ''}{adda.city.replace(/_/g, ' ')}
+              {venue.neighbourhood ? `${venue.neighbourhood}, ` : ''}{venue.city.replace(/_/g, ' ')}
             </div>
-            {adda.address && (
-              <div style={{ fontSize: 12, color: 'var(--wimc-text-secondary)', marginTop: 4 }}>{adda.address}</div>
+            {venue.address && (
+              <div style={{ fontSize: 12, color: 'var(--wimc-text-secondary)', marginTop: 4 }}>{venue.address}</div>
             )}
           </div>
 
           {/* Description */}
-          {adda.description && (
-            <div style={{ fontSize: 13, color: 'var(--wimc-text-secondary)', lineHeight: 1.6 }}>{adda.description}</div>
+          {venue.description && (
+            <div style={{ fontSize: 13, color: 'var(--wimc-text-secondary)', lineHeight: 1.6 }}>{venue.description}</div>
           )}
 
           {/* Type + capacity */}
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            {adda.adda_type.map((t) => (
+            {venue.venue_type.map((t) => (
               <span key={t} style={{ fontSize: 11, padding: '4px 10px', borderRadius: 9999, background: 'var(--wimc-bg-overlay)', border: '1px solid var(--wimc-border-subtle)', textTransform: 'capitalize' }}>
                 {t.replace(/_/g, ' ')}
               </span>
             ))}
-            {adda.capacity_max && (
+            {venue.capacity_max && (
               <span style={{ fontSize: 11, padding: '4px 10px', borderRadius: 9999, background: 'rgba(77,210,177,0.1)', border: '1px solid rgba(77,210,177,0.2)', color: 'var(--wimc-teal)' }}>
-                Up to {adda.capacity_max} pax
+                Up to {venue.capacity_max} pax
               </span>
             )}
           </div>
@@ -234,15 +234,15 @@ function DetailDrawer({
           {/* Pricing */}
           <div style={{ background: 'var(--wimc-bg-overlay)', borderRadius: 0, padding: '12px 16px' }}>
             <div style={{ fontSize: 11, color: 'var(--wimc-text-secondary)', fontFamily: 'var(--font-jetbrains-mono)', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: 4 }}>Pricing</div>
-            <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--wimc-coral)' }}>{pricingLabel[adda.pricing_model]}</div>
+            <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--wimc-coral)' }}>{pricingLabel[venue.pricing_model]}</div>
           </div>
 
           {/* Amenities */}
-          {adda.amenities.length > 0 && (
+          {venue.amenities.length > 0 && (
             <div>
               <div style={{ fontSize: 11, color: 'var(--wimc-text-secondary)', fontFamily: 'var(--font-jetbrains-mono)', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: 8 }}>Amenities</div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                {adda.amenities.map((a) => (
+                {venue.amenities.map((a) => (
                   <span key={a} style={{ fontSize: 11, padding: '3px 10px', borderRadius: 9999, background: 'var(--wimc-bg-overlay)', border: '1px solid var(--wimc-border-subtle)', textTransform: 'capitalize' }}>
                     {a.replace(/_/g, ' ')}
                   </span>
@@ -268,12 +268,12 @@ function DetailDrawer({
           )}
 
           {/* Contact */}
-          {(adda.contact_whatsapp || adda.contact_email || adda.instagram_handle) && (
+          {(venue.contact_whatsapp || venue.contact_email || venue.instagram_handle) && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
               <div style={{ fontSize: 11, color: 'var(--wimc-text-secondary)', fontFamily: 'var(--font-jetbrains-mono)', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: 2 }}>Contact</div>
-              {adda.contact_whatsapp && <div style={{ fontSize: 13 }}>📱 {adda.contact_whatsapp}</div>}
-              {adda.contact_email && <div style={{ fontSize: 13 }}>✉️ {adda.contact_email}</div>}
-              {adda.instagram_handle && <div style={{ fontSize: 13 }}>📷 @{adda.instagram_handle}</div>}
+              {venue.contact_whatsapp && <div style={{ fontSize: 13 }}>📱 {venue.contact_whatsapp}</div>}
+              {venue.contact_email && <div style={{ fontSize: 13 }}>✉️ {venue.contact_email}</div>}
+              {venue.instagram_handle && <div style={{ fontSize: 13 }}>📷 @{venue.instagram_handle}</div>}
             </div>
           )}
 
@@ -298,11 +298,11 @@ function DetailDrawer({
 // ---------------------------------------------------------------------------
 
 function ProposalModal({
-  adda,
+  venue,
   onClose,
   onSuccess,
 }: {
-  adda: AddaProfile
+  venue: VenueProfile
   onClose: () => void
   onSuccess: () => void
 }) {
@@ -322,7 +322,7 @@ function ProposalModal({
 
     startTransition(async () => {
       const result = await sendProposal({
-        adda_id:           adda.id,
+        venue_id:           venue.id,
         proposed_date:     proposedDate,
         proposed_slot:     proposedSlot,
         event_title:       eventTitle.trim(),
@@ -348,9 +348,9 @@ function ProposalModal({
           <div>
             <div style={{ fontFamily: 'var(--font-syne)', fontWeight: 700, fontSize: 18 }}>Propose a Booking</div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 2 }}>
-              <span style={{ fontSize: 12, color: 'var(--wimc-text-secondary)', fontFamily: 'var(--font-jetbrains-mono)' }}>{adda.name}</span>
-              {(adda.adda_tier === 'beloved' || adda.adda_tier === 'legendary') && (
-                <AddaTierBadge tier={adda.adda_tier} size="sm" />
+              <span style={{ fontSize: 12, color: 'var(--wimc-text-secondary)', fontFamily: 'var(--font-jetbrains-mono)' }}>{venue.name}</span>
+              {(venue.venue_tier === 'beloved' || venue.venue_tier === 'legendary') && (
+                <VenueTierBadge tier={venue.venue_tier} size="sm" />
               )}
             </div>
           </div>
@@ -414,15 +414,15 @@ function ProposalModal({
 
 export default function VenuesClient({ profileId, defaultCity, makerTier, proposals: initialProposals }: Props) {
   const [city, setCity] = useState(defaultCity)
-  const [addaType, setAddaType] = useState('')
+  const [venueType, setVenueType] = useState('')
   const [date, setDate] = useState('')
-  const [results, setResults] = useState<AddaProfile[]>([])
+  const [results, setResults] = useState<VenueProfile[]>([])
   const [searched, setSearched] = useState(false)
   const [searchError, setSearchError] = useState<string | null>(null)
   const [isSearching, startSearch] = useTransition()
 
-  const [selectedAdda, setSelectedAdda] = useState<AddaProfile | null>(null)
-  const [proposalTarget, setProposalTarget] = useState<AddaProfile | null>(null)
+  const [selectedVenue, setSelectedVenue] = useState<VenueProfile | null>(null)
+  const [proposalTarget, setProposalTarget] = useState<VenueProfile | null>(null)
   const [proposals, setProposals] = useState(initialProposals)
   const [proposalSuccess, setProposalSuccess] = useState(false)
   const [tierFilter, setTierFilter] = useState<string>('')
@@ -431,13 +431,13 @@ export default function VenuesClient({ profileId, defaultCity, makerTier, propos
   const [eventTypeFilter, setEventTypeFilter] = useState<string>('')
 
   const now = Date.now()
-  const trendingAddas = results.filter((a) => a.trending_until && new Date(a.trending_until).getTime() > now)
+  const trendingVenues = results.filter((a) => a.trending_until && new Date(a.trending_until).getTime() > now)
   const filteredResults = results.filter((a) => {
-    if (tierFilter && a.adda_tier !== tierFilter) return false
+    if (tierFilter && a.venue_tier !== tierFilter) return false
     if (minCapacity > 0 && (a.capacity_max == null || a.capacity_max < minCapacity)) return false
-    const pt = (a as AddaProfile & { preferred_times?: string[] }).preferred_times
+    const pt = (a as VenueProfile & { preferred_times?: string[] }).preferred_times
     if (timeSlotFilter && pt && pt.length > 0 && !pt.includes(timeSlotFilter)) return false
-    const ep = (a as AddaProfile & { event_preferences?: string[] }).event_preferences
+    const ep = (a as VenueProfile & { event_preferences?: string[] }).event_preferences
     if (eventTypeFilter && ep && ep.length > 0 && !ep.some(e => e.toLowerCase().includes(eventTypeFilter.toLowerCase()))) return false
     return true
   })
@@ -448,17 +448,17 @@ export default function VenuesClient({ profileId, defaultCity, makerTier, propos
     if (!city) { setSearchError('Please select a city.'); return }
     setSearchError(null)
     startSearch(async () => {
-      const res = await searchAddas({ city, adda_type: addaType as never || undefined, date: date || undefined })
+      const res = await searchVenues({ city, venue_type: venueType as never || undefined, date: date || undefined })
       setSearched(true)
       if (res.error) { setSearchError(res.error); return }
-      setResults(res.addas)
+      setResults(res.venues)
     })
   }
 
   function handleProposeSuccess() {
     setProposalSuccess(true)
     setProposalTarget(null)
-    setSelectedAdda(null)
+    setSelectedVenue(null)
   }
 
   const topbar: React.CSSProperties = {
@@ -471,7 +471,7 @@ export default function VenuesClient({ profileId, defaultCity, makerTier, propos
   return (
     <>
       <header style={topbar}>
-        <div style={{ fontFamily: 'var(--font-syne)', fontSize: 20, fontWeight: 700 }}>Find an Adda</div>
+        <div style={{ fontFamily: 'var(--font-syne)', fontSize: 20, fontWeight: 700 }}>Find an Venue</div>
         {isGated && (
           <span style={{ fontSize: 11, padding: '4px 12px', borderRadius: 9999, fontFamily: 'var(--font-jetbrains-mono)', fontWeight: 700, background: 'var(--wimc-amber-dim)', color: 'var(--wimc-amber)', border: '1px solid rgba(245,168,0,0.3)' }}>
             Local+ required
@@ -486,8 +486,8 @@ export default function VenuesClient({ profileId, defaultCity, makerTier, propos
           <div style={{ background: 'rgba(245,168,0,0.08)', border: '1px solid rgba(245,168,0,0.3)', borderRadius: 0, padding: '16px 20px', display: 'flex', gap: 12, alignItems: 'center' }}>
             <span className="material-symbols-outlined" style={{ color: 'var(--wimc-amber)', fontSize: 22 }}>lock</span>
             <div>
-              <div style={{ fontWeight: 600, fontSize: 13, color: 'var(--wimc-amber)', marginBottom: 2 }}>Adda search is a Local+ feature</div>
-              <div style={{ fontSize: 12, color: 'var(--wimc-text-secondary)' }}>Host more events to reach Local tier and unlock the Adda marketplace.</div>
+              <div style={{ fontWeight: 600, fontSize: 13, color: 'var(--wimc-amber)', marginBottom: 2 }}>Venue search is a Local+ feature</div>
+              <div style={{ fontSize: 12, color: 'var(--wimc-text-secondary)' }}>Host more events to reach Local tier and unlock the Venue marketplace.</div>
             </div>
           </div>
         )}
@@ -506,10 +506,10 @@ export default function VenuesClient({ profileId, defaultCity, makerTier, propos
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
               <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--wimc-text-secondary)', fontFamily: 'var(--font-jetbrains-mono)', textTransform: 'uppercase', letterSpacing: '0.6px' }}>Type</label>
-              <select value={addaType} onChange={(e) => setAddaType(e.target.value)} disabled={isGated}
+              <select value={venueType} onChange={(e) => setVenueType(e.target.value)} disabled={isGated}
                 style={{ padding: '10px 12px', borderRadius: 0, background: 'var(--wimc-bg-overlay)', border: '1px solid var(--wimc-border-default)', color: 'var(--wimc-text-primary)', fontSize: 13, outline: 'none' }}>
                 <option value="">Any type</option>
-                {ADDA_TYPES.map((t) => <option key={t.id} value={t.id}>{t.label}</option>)}
+                {VENUE_TYPES.map((t) => <option key={t.id} value={t.id}>{t.label}</option>)}
               </select>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
@@ -534,7 +534,7 @@ export default function VenuesClient({ profileId, defaultCity, makerTier, propos
           ) : (
             <>
               {/* Trending banner */}
-              {trendingAddas.length > 0 && (
+              {trendingVenues.length > 0 && (
                 <div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
                     <span style={{ fontSize: 16 }}>🔥</span>
@@ -543,10 +543,10 @@ export default function VenuesClient({ profileId, defaultCity, makerTier, propos
                     </span>
                   </div>
                   <div style={{ display: 'flex', gap: 12, overflowX: 'auto', paddingBottom: 8, scrollbarWidth: 'none' }}>
-                    {trendingAddas.map((a) => (
+                    {trendingVenues.map((a) => (
                       <button
                         key={a.id}
-                        onClick={() => setSelectedAdda(a)}
+                        onClick={() => setSelectedVenue(a)}
                         style={{
                           flexShrink: 0, width: 220, background: 'var(--wimc-bg-elevated)',
                           border: '1px solid rgba(232,87,42,0.45)', borderRadius: 0,
@@ -561,7 +561,7 @@ export default function VenuesClient({ profileId, defaultCity, makerTier, propos
                           </div>
                           <div style={{ marginTop: 6, display: 'flex', gap: 4, alignItems: 'center' }}>
                             <span style={{ fontSize: 11, fontWeight: 700 }}>🔥 Trending</span>
-                            <AddaTierBadge tier={a.adda_tier} size="sm" />
+                            <VenueTierBadge tier={a.venue_tier} size="sm" />
                           </div>
                         </div>
                       </button>
@@ -634,7 +634,7 @@ export default function VenuesClient({ profileId, defaultCity, makerTier, propos
               ) : (
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16 }}>
                   {filteredResults.map((a) => (
-                    <VenueCard key={a.id} adda={a} onSelect={setSelectedAdda} />
+                    <VenueCard key={a.id} venue={a} onSelect={setSelectedVenue} />
                   ))}
                 </div>
               )}
@@ -660,7 +660,7 @@ export default function VenuesClient({ profileId, defaultCity, makerTier, propos
                 <tbody>
                   {proposals.map((p, i) => (
                     <tr key={p.id} style={{ borderBottom: i < proposals.length - 1 ? '1px solid var(--wimc-border-subtle)' : 'none' }}>
-                      <td style={{ padding: '12px 20px', fontWeight: 600 }}>{p.adda?.name ?? '—'}</td>
+                      <td style={{ padding: '12px 20px', fontWeight: 600 }}>{p.venue?.name ?? '—'}</td>
                       <td style={{ padding: '12px 20px', color: 'var(--wimc-text-secondary)', maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.event_title}</td>
                       <td style={{ padding: '12px 20px', fontFamily: 'var(--font-jetbrains-mono)', fontSize: 12, whiteSpace: 'nowrap' }}>{formatDate(p.proposed_date)}</td>
                       <td style={{ padding: '12px 20px', fontFamily: 'var(--font-jetbrains-mono)', fontSize: 12, textTransform: 'capitalize' }}>{p.proposed_slot.replace('_', ' ')}</td>
@@ -685,18 +685,18 @@ export default function VenuesClient({ profileId, defaultCity, makerTier, propos
       </div>
 
       {/* Detail drawer */}
-      {selectedAdda && !proposalTarget && (
+      {selectedVenue && !proposalTarget && (
         <DetailDrawer
-          adda={selectedAdda}
-          onClose={() => setSelectedAdda(null)}
-          onPropose={() => setProposalTarget(selectedAdda)}
+          venue={selectedVenue}
+          onClose={() => setSelectedVenue(null)}
+          onPropose={() => setProposalTarget(selectedVenue)}
         />
       )}
 
       {/* Proposal modal */}
       {proposalTarget && (
         <ProposalModal
-          adda={proposalTarget}
+          venue={proposalTarget}
           onClose={() => setProposalTarget(null)}
           onSuccess={handleProposeSuccess}
         />

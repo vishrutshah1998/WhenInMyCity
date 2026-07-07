@@ -26,7 +26,7 @@ export interface IncludedItem {
 export interface VenueFormState {
   photos: PhotoItem[]
   name: string
-  adda_type: string[]
+  venue_type: string[]
   description: string
   capacity_min: number | null
   capacity_max: number | null

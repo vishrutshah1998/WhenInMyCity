@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react'
 import Link from 'next/link'
-import type { AddaAvailability } from '@/types/database'
+import type { VenueAvailability } from '@/types/database'
 
 const DAY_ABBR = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa']
 const SLOT_ABBR: Record<string, string> = {
@@ -26,7 +26,7 @@ function toDateKey(d: Date): string {
 }
 
 interface Props {
-  availability: AddaAvailability[]
+  availability: VenueAvailability[]
 }
 
 export default function WeekStrip({ availability }: Props) {
@@ -41,7 +41,7 @@ export default function WeekStrip({ availability }: Props) {
 
   // Build date → slot list map
   const slotMap = useMemo(() => {
-    const m = new Map<string, AddaAvailability[]>()
+    const m = new Map<string, VenueAvailability[]>()
     for (const slot of availability) {
       if (!m.has(slot.date)) m.set(slot.date, [])
       m.get(slot.date)!.push(slot)
@@ -162,7 +162,7 @@ export default function WeekStrip({ availability }: Props) {
 
               {/* Date number */}
               <span
-                className="font-adda-nums"
+                className="font-venue-nums"
                 style={{
                   fontSize: 15,
                   fontWeight: isToday ? 700 : 400,

@@ -25,7 +25,7 @@ const A = {
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 interface Props {
-  addaId: string
+  venueId: string
   initialRules: AvailabilityRule[]
 }
 
@@ -90,7 +90,7 @@ function RuleChip({ label, onDelete }: { label: string; onDelete: () => void }) 
 
 // ── Main Component ────────────────────────────────────────────────────────────
 
-export default function AvailabilityClient({ addaId, initialRules }: Props) {
+export default function AvailabilityClient({ venueId, initialRules }: Props) {
   const [rules, setRules] = useState<AvailabilityRule[]>(initialRules)
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
@@ -123,7 +123,7 @@ export default function AvailabilityClient({ addaId, initialRules }: Props) {
     if (selectedDays.length === 0) return
     setError(null)
     startTransition(async () => {
-      const { rule, error: err } = await createAvailabilityRule(addaId, {
+      const { rule, error: err } = await createAvailabilityRule(venueId, {
         rule_type: 'recurring_closed',
         day_of_week: selectedDays,
         time_start: timeStart || null,
@@ -143,7 +143,7 @@ export default function AvailabilityClient({ addaId, initialRules }: Props) {
     if (!holidayStart || !holidayEnd || !holidayLabel.trim()) return
     setError(null)
     startTransition(async () => {
-      const { rule, error: err } = await createAvailabilityRule(addaId, {
+      const { rule, error: err } = await createAvailabilityRule(venueId, {
         rule_type: 'holiday_block',
         day_of_week: null,
         time_start: null, time_end: null,
@@ -171,12 +171,12 @@ export default function AvailabilityClient({ addaId, initialRules }: Props) {
   async function saveBookingWindow() {
     setError(null)
     startTransition(async () => {
-      const { error: err } = await updateBookingWindow(addaId, minDays, maxDays)
+      const { error: err } = await updateBookingWindow(venueId, minDays, maxDays)
       if (err) { setError(err); return }
       setWindowSaved(true)
       setTimeout(() => setWindowSaved(false), 2500)
       // Refresh local rules to include the new window rule
-      const { rule } = await createAvailabilityRule(addaId, {
+      const { rule } = await createAvailabilityRule(venueId, {
         rule_type: 'booking_window',
         min_advance_days: minDays, max_advance_days: maxDays,
         day_of_week: null, time_start: null, time_end: null,

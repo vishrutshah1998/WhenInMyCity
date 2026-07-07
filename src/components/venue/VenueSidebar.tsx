@@ -1,10 +1,10 @@
 import { createClient } from '@/lib/supabase/server'
 import { requireAuth } from '@/lib/auth/requireAuth'
-import { getAddaNotifications } from '@/app/actions/venue-notifications'
+import { getVenueNotifications } from '@/app/actions/venue-notifications'
 import VenueSidebarClient from './VenueSidebarClient'
 
 interface Props {
-  addaId: string
+  venueId: string
   venueName: string
   ownerName: string
   initials: string
@@ -14,7 +14,7 @@ interface Props {
 
 // Server Component — fetches live badge counts, delegates interactivity to client.
 export default async function VenueSidebar({
-  addaId,
+  venueId,
   venueName,
   ownerName,
   initials,
@@ -26,11 +26,11 @@ export default async function VenueSidebar({
 
   const [{ count: pendingCount }, { totalUnreadCount }, { data: profile }] = await Promise.all([
     supabase
-      .from('maker_adda_proposals')
+      .from('maker_venue_proposals')
       .select('id', { count: 'exact', head: true })
-      .eq('adda_id', addaId)
+      .eq('venue_id', venueId)
       .eq('status', 'pending'),
-    getAddaNotifications(addaId, 1),
+    getVenueNotifications(venueId, 1),
     supabase
       .from('user_profiles')
       .select('personas, user_role')

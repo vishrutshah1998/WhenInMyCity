@@ -37,7 +37,7 @@ const nextConfig: NextConfig = {
     remotePatterns: [
       // YouTube video thumbnails used in youtube_embed blocks.
       { protocol: 'https', hostname: 'img.youtube.com' },
-      // Supabase Storage — avatars, gallery images, event covers, adda covers.
+      // Supabase Storage — avatars, gallery images, event covers, venue covers.
       { protocol: 'https', hostname: supabaseHost },
       // Instagram CDN — thumbnails in instagram_embed blocks.
       { protocol: 'https', hostname: '*.cdninstagram.com' },

@@ -434,7 +434,7 @@ export default function ProfileForm() {
   const isCreatorPersona = personas.includes('creator')
   // Only treat as business-only if they have brand persona but NOT creator persona
   const isBusiness     = !isExplorer && !isCreatorPersona && creatorType === 'business_brand'
-  const journeyLabel   = isExplorer ? 'Explorer' : isBusiness ? 'Adda / Brand' : 'Creator'
+  const journeyLabel   = isExplorer ? 'Explorer' : isBusiness ? 'Venue / Brand' : 'Creator'
   const journeyAccent  = isExplorer ? '#9B8FFF' : colors.primary
 
   // Explorer intent options (things they want to discover / attend)
@@ -474,7 +474,7 @@ export default function ProfileForm() {
             {isExplorer
               ? 'Showing explorer profile settings'
               : creatorType === 'business_brand'
-              ? 'Showing Adda & brand settings'
+              ? 'Showing Venue & brand settings'
               : 'Showing creator profile settings'}
           </span>
         </div>
@@ -668,7 +668,7 @@ export default function ProfileForm() {
       {!isExplorer && (
         <Section title="What makes you step out?">
           <p style={{ fontSize: 12, color: 'var(--wimc-text-secondary)', marginTop: -8, fontFamily: 'var(--font-dm-sans)' }}>
-            Pick all that apply — helps us match you with the right Addas and audiences.
+            Pick all that apply — helps us match you with the right Venues and audiences.
           </p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {(

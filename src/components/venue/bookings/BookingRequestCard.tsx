@@ -259,7 +259,7 @@ function BreakdownRow({
 
 interface Props {
   proposal: ProposalWithMaker
-  addaId: string
+  venueId: string
   onRespond: (proposalId: string, action: 'accept' | 'decline') => void
 }
 
@@ -267,7 +267,7 @@ interface Props {
 // Component
 // ---------------------------------------------------------------------------
 
-export default function BookingRequestCard({ proposal, addaId: _addaId, onRespond }: Props) {
+export default function BookingRequestCard({ proposal, venueId: _venueId, onRespond }: Props) {
   const { maker } = proposal
   const [messageExpanded, setMessageExpanded] = useState(false)
   const [breakdownExpanded, setBreakdownExpanded] = useState(true)
@@ -307,7 +307,7 @@ export default function BookingRequestCard({ proposal, addaId: _addaId, onRespon
   // ── Counter offer ─────────────────────────────────────────────────────────
 
   function handleCounterSubmit(payload: CounterOfferSubmitPayload) {
-    // TODO: send counter offer to Supabase via a server action (adda-bookings.ts)
+    // TODO: send counter offer to Supabase via a server action (venue-bookings.ts)
     // For now we log the payload and close the modal
     console.info('[mock] Counter offer payload:', payload)
     setShowCounterModal(false)

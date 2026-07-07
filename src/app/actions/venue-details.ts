@@ -6,7 +6,7 @@ import type { Json } from '@/types/database'
 import type { VenueFormState } from '@/components/venue/editor/types'
 
 export async function saveVenueDetails(
-  addaId: string,
+  venueId: string,
   state: VenueFormState,
 ): Promise<{ success: true } | { success: false; error: string }> {
   const { user } = await requireAuth()
@@ -27,11 +27,11 @@ export async function saveVenueDetails(
   }
 
   const { error } = await supabase
-    .from('adda_profiles')
+    .from('venue_profiles')
     .update({
       name: state.name.trim(),
       description: state.description.trim() || null,
-      adda_type: state.adda_type,
+      venue_type: state.venue_type,
       capacity_min: state.capacity_min,
       capacity_max: state.capacity_max,
       amenities: state.amenities,
@@ -41,7 +41,7 @@ export async function saveVenueDetails(
       cover_image_url: coverPhoto?.url ?? null,
       updated_at: new Date().toISOString(),
     })
-    .eq('id', addaId)
+    .eq('id', venueId)
     .eq('auth_user_id', user.id)
 
   if (error) return { success: false, error: error.message }

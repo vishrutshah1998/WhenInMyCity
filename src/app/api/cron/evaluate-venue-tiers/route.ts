@@ -15,9 +15,9 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { evaluateAddaTier, computeTrendingAddas } from '@/app/actions/venue-tiers'
+import { evaluateVenueTier, computeTrendingVenues } from '@/app/actions/venue-tiers'
 import { sendWhatsAppMessage } from '@/lib/whatsapp'
-import type { AddaTier } from '@/types/database'
+import type { VenueTier } from '@/types/database'
 
 // ---------------------------------------------------------------------------
 // Auth guard
@@ -43,7 +43,7 @@ const BATCH_SIZE = 10   // concurrent evaluations within a page
 // Tier ordering (trust axis only — Trending is an overlay)
 // ---------------------------------------------------------------------------
 
-const TIER_ORDER: Record<AddaTier, number> = {
+const TIER_ORDER: Record<VenueTier, number> = {
   open:      0,
   verified:  1,
   beloved:   2,
@@ -66,8 +66,8 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
   // ── 1. Trust-axis evaluation (paginated) ──────────────────────────────────
   let query = admin
-    .from('adda_profiles')
-    .select('id, adda_tier, name, auth_user_id')
+    .from('venue_profiles')
+    .select('id, venue_tier, name, auth_user_id')
     .eq('is_active', true)
     .order('id', { ascending: true })
     .limit(PAGE_SIZE)
@@ -105,7 +105,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     await Promise.all(
       batch.map(async (venue) => {
         try {
-          const result = await evaluateAddaTier(venue.id)
+          const result = await evaluateVenueTier(venue.id)
           evaluated++
 
           if (result.tierChanged) {
@@ -158,7 +158,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
   if (isLastPage) {
     const { data: cityRows } = await admin
-      .from('adda_profiles')
+      .from('venue_profiles')
       .select('city')
       .eq('is_active', true)
 
@@ -167,7 +167,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
     for (const city of distinctCities) {
       try {
-        const trendingResults = await computeTrendingAddas(city)
+        const trendingResults = await computeTrendingVenues(city)
         for (const r of trendingResults) {
           if (r.isTrending) trendingGranted++
           else trendingCleared++
@@ -200,21 +200,21 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 // WhatsApp message builders for venue tier changes
 // ---------------------------------------------------------------------------
 
-const VENUE_TIER_LABELS: Record<AddaTier, string> = {
+const VENUE_TIER_LABELS: Record<VenueTier, string> = {
   open:      'Open',
   verified:  'Verified',
   beloved:   'Beloved',
   legendary: 'Legendary',
 }
 
-function buildVenueUpgradeMessage(venueName: string, newTier: AddaTier): string {
+function buildVenueUpgradeMessage(venueName: string, newTier: VenueTier): string {
   return (
     `🎉 *${venueName}* has been upgraded to *${VENUE_TIER_LABELS[newTier]} Venue* status on WIMC! ` +
     `Your Venue's reputation is growing — keep hosting great events.`
   )
 }
 
-function buildVenueDowngradeMessage(venueName: string, newTier: AddaTier): string {
+function buildVenueDowngradeMessage(venueName: string, newTier: VenueTier): string {
   return (
     `Hi! *${venueName}* has been updated to *${VENUE_TIER_LABELS[newTier]} Venue* on WIMC. ` +
     `Host more quality events to climb back up — your community is counting on you! 🙌`

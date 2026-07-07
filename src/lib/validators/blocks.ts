@@ -365,7 +365,7 @@ export const CommunityStatsConfigSchema = z.object({
 export type CommunityStatsConfig = z.infer<typeof CommunityStatsConfigSchema>
 
 /**
- * venue_partnership — showcases Adda partners (up to 3).
+ * venue_partnership — showcases Venue partners (up to 3).
  */
 export const VenuePartnershipConfigSchema = z.object({
   venue_ids:     z

@@ -98,5 +98,5 @@ export function clearNewOnboardingKeys(): void {
 export const LEGACY_KEYS = [
   'wimc_s1', 'wimc_s2', 'wimc_role', 'wimc_persona',
   'wimc_city', 'wimc_subtypes', 'wimc_platforms', 'wimc_interests',
-  'adda_step1', 'adda_step2', 'adda_step3',
+  'venue_step1', 'venue_step2', 'venue_step3',
 ] as const

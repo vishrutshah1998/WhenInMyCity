@@ -85,7 +85,7 @@ function ExplorerPreviewContent(props: ExplorerPagePreviewProps) {
 
         {/* Stats row */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 1, borderTop: `1px solid ${T.border}`, paddingTop: 14 }}>
-          {([['0', 'EVENTS\nATTENDED'], ['0', 'ADDAS\nVISITED'], [interestTags.length.toString(), 'INTERESTS']] as const).map(([val, label]) => (
+          {([['0', 'EVENTS\nATTENDED'], ['0', 'VENUES\nVISITED'], [interestTags.length.toString(), 'INTERESTS']] as const).map(([val, label]) => (
             <div key={label} style={{ borderLeft: `2px solid ${T.lavender}`, paddingLeft: 8 }}>
               <div style={{ fontSize: 20, fontWeight: 900, lineHeight: 1, color: T.lavender, fontFamily: MONO }}>{val}</div>
               <div style={{ fontSize: 7, textTransform: 'uppercase', color: T.textMuted, fontFamily: MONO, marginTop: 2, whiteSpace: 'pre-line' }}>{label}</div>

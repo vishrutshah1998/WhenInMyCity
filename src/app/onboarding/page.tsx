@@ -34,7 +34,7 @@ const PERSONAS = [
     id:        'business' as const,
     num:       '02',
     emoji:     '🏢',
-    label:     'ADDA / VENUE',
+    label:     'VENUE / VENUE',
     subtitle:  'Cafés, rooftops, studios & creative spaces.',
     accent:    '#5DD9D0',
     next:      '/onboarding/business/B3',

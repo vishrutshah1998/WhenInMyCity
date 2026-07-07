@@ -1,24 +1,24 @@
 import { redirect } from 'next/navigation'
 import { requireAuth } from '@/lib/auth/requireAuth'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { getAddaNotifications } from '@/app/actions/venue-notifications'
+import { getVenueNotifications } from '@/app/actions/venue-notifications'
 import { VenueNotificationsClient } from '@/components/venue/VenueNotificationsClient'
 
-export const metadata = { title: 'Inbox — Adda' }
+export const metadata = { title: 'Inbox — Venue' }
 
-export default async function AddaNotificationsPage() {
+export default async function VenueNotificationsPage() {
   const { user } = await requireAuth('/business/venue/notifications')
   const admin = createAdminClient()
 
-  const { data: adda } = await admin
-    .from('adda_profiles')
+  const { data: venue } = await admin
+    .from('venue_profiles')
     .select('id, name')
     .eq('auth_user_id', user.id)
     .maybeSingle()
 
-  if (!adda) redirect('/business/venue/onboard')
+  if (!venue) redirect('/business/venue/onboard')
 
-  const { notifications, unreadCount } = await getAddaNotifications(adda.id, 100)
+  const { notifications, unreadCount } = await getVenueNotifications(venue.id, 100)
 
   return <VenueNotificationsClient notifications={notifications} unreadCount={unreadCount} />
 }

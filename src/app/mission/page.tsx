@@ -27,7 +27,7 @@ const PILLARS = [
     desc: 'Musicians, comedians, artists, pottery teachers — anyone who creates live experiences and wants an audience for them.',
   },
   {
-    num: '02', label: 'Addas', color: '#5DD9D0', bg: 'rgba(93,217,208,0.07)', icon: 'storefront',
+    num: '02', label: 'Venues', color: '#5DD9D0', bg: 'rgba(93,217,208,0.07)', icon: 'storefront',
     desc: 'Café backrooms, rooftops, studios, galleries — spaces with character that want to host culture, not just coffee.',
   },
   {
@@ -199,7 +199,7 @@ export default function MissionPage() {
           </div>
 
           <motion.p className="mt-10 text-[15px] leading-relaxed max-w-xl" style={{ color: '#9896B0' }} {...fu(0.5, 16)}>
-            Every creator, Adda, and explorer in{' '}
+            Every creator, Venue, and explorer in{' '}
             <span style={{ color: '#F5C842', fontWeight: 600 }}>OURCITY</span>
             {' '}is on their own unique path to becoming a City Zen™.
           </motion.p>
@@ -317,7 +317,7 @@ export default function MissionPage() {
             ))}
           </div>
           <motion.p className="mt-10 text-[13px] leading-relaxed max-w-2xl" style={{ color: '#9896B0' }} {...fu(0.1, 20)}>
-            When makers find addas and communities show up — that&apos;s when a city stops being a place you live in and starts being a place you belong to.
+            When makers find venues and communities show up — that&apos;s when a city stops being a place you live in and starts being a place you belong to.
           </motion.p>
         </div>
       </section>

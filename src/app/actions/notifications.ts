@@ -59,12 +59,12 @@ export async function createNotification({
  * Returns the 50 most recent notifications for the authenticated user,
  * ordered by created_at DESC.
  *
- * Works for all roles (Maker, Adda, Explorer) — notification types differ
+ * Works for all roles (Maker, Venue, Explorer) — notification types differ
  * but the query is identical.
  *
  * Notification types by role:
  *   Maker:    'new_follower' | 'event_rsvp' | 'tier_upgrade' | 'proposal_response' | 'new_rating'
- *   Adda:     'new_proposal' | 'event_confirmed' | 'payment_settled'
+ *   Venue:     'new_proposal' | 'event_confirmed' | 'payment_settled'
  *   Explorer: 'followed_maker_new_event' | 'event_reminder' | 'rating_prompt'
  */
 export async function getNotificationsForUser(): Promise<Notification[]> {

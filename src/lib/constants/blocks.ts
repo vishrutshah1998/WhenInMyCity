@@ -367,8 +367,8 @@ export const BLOCK_META: Record<BlockType, BlockMetaEntry> = {
     isPremium:    false,
   },
   venue_partnership: {
-    displayName:  'Adda Partnerships',
-    description:  'Showcase your Adda venue partners',
+    displayName:  'Venue Partnerships',
+    description:  'Showcase your Venue venue partners',
     icon:         'Building2',
     family:       'community',
     minimumTier:  'wanderer',
@@ -475,7 +475,7 @@ export const BLOCK_META: Record<BlockType, BlockMetaEntry> = {
 // Controls which block types appear in the picker for each persona.
 // ---------------------------------------------------------------------------
 
-export type PersonaKey = 'creator' | 'brand' | 'adda' | 'explorer'
+export type PersonaKey = 'creator' | 'brand' | 'venue' | 'explorer'
 
 export const PERSONA_BLOCK_SETS: Record<PersonaKey, BlockType[]> = {
   creator: [
@@ -495,7 +495,7 @@ export const PERSONA_BLOCK_SETS: Record<PersonaKey, BlockType[]> = {
     'white_label_event', 'community_stats', 'testimonial', 'quote_block', 'youtube_embed',
     'instagram_embed', 'newsletter_signup', 'whatsapp_community', 'awards_badges',
   ],
-  adda: [
+  venue: [
     'image_gallery', 'text_bio', 'announcement', 'booking_request', 'testimonial',
     'stats_grid', 'community_stats', 'event_listing', 'custom_link', 'whatsapp_community',
     'social_links_row', 'quote_block', 'marquee_text', 'rsvp_link', 'youtube_embed',

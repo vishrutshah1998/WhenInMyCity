@@ -326,7 +326,7 @@ export default function EventManageClient({ event: initial, rsvpCount, creatorTi
           <Section title={isPublished ? 'Edit Event Details' : 'Edit Draft'} icon="edit">
             {isPublished && (
               <div style={{ fontSize: 13, color: 'var(--wimc-text-secondary)', background: 'rgba(245,158,11,0.07)', border: '1px solid rgba(245,158,11,0.2)', borderRadius: 10, padding: '10px 14px', marginBottom: 18 }}>
-                You can edit title, description, cover image, and timing. Price and Adda cannot change after publishing — attendees have already booked based on those details.
+                You can edit title, description, cover image, and timing. Price and Venue cannot change after publishing — attendees have already booked based on those details.
               </div>
             )}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
@@ -361,11 +361,11 @@ export default function EventManageClient({ event: initial, rsvpCount, creatorTi
                 <>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                     <div>
-                      <label style={{ fontSize: 13, color: 'var(--wimc-text-secondary)', display: 'block', marginBottom: 6 }}>Adda name</label>
+                      <label style={{ fontSize: 13, color: 'var(--wimc-text-secondary)', display: 'block', marginBottom: 6 }}>Venue name</label>
                       <input type="text" value={venueName} onChange={(e) => setVenueName(e.target.value)} style={inputStyle} />
                     </div>
                     <div>
-                      <label style={{ fontSize: 13, color: 'var(--wimc-text-secondary)', display: 'block', marginBottom: 6 }}>Adda address</label>
+                      <label style={{ fontSize: 13, color: 'var(--wimc-text-secondary)', display: 'block', marginBottom: 6 }}>Venue address</label>
                       <input type="text" value={venueAddress} onChange={(e) => setVenueAddress(e.target.value)} style={inputStyle} />
                     </div>
                   </div>

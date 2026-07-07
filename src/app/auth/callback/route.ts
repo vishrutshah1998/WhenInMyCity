@@ -41,12 +41,12 @@ export async function GET(request: NextRequest) {
   // Check all profile tables in parallel so returning users of any
   // role are routed to the right home without re-entering onboarding.
   // Creator takes priority: a dual-persona user (creator + venue) lands on
-  // /dashboard where they can switch to the Adda dashboard.
-  const [{ data: creatorProfile }, { data: explorerProfile }, { data: addaProfile }] =
+  // /dashboard where they can switch to the Venue dashboard.
+  const [{ data: creatorProfile }, { data: explorerProfile }, { data: venueProfile }] =
     await Promise.all([
       supabase.from('user_profiles').select('id, contact_email').eq('id', userId).maybeSingle(),
       supabase.from('explorer_profiles').select('id').eq('auth_user_id', userId).maybeSingle(),
-      supabase.from('adda_profiles').select('id, contact_email').eq('auth_user_id', userId).maybeSingle(),
+      supabase.from('venue_profiles').select('id, contact_email').eq('auth_user_id', userId).maybeSingle(),
     ])
 
   // Backfill contact_email from Google OAuth for returning users who don't have one yet.
@@ -57,9 +57,9 @@ export async function GET(request: NextRequest) {
         .update({ contact_email: googleEmail })
         .eq('id', userId)
     }
-    if (addaProfile && !addaProfile.contact_email) {
+    if (venueProfile && !venueProfile.contact_email) {
       await supabase
-        .from('adda_profiles')
+        .from('venue_profiles')
         .update({ contact_email: googleEmail })
         .eq('auth_user_id', userId)
     }
@@ -73,7 +73,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(new URL('/explore', origin))
   }
 
-  if (addaProfile) {
+  if (venueProfile) {
     return NextResponse.redirect(new URL('/business/venue/dashboard', origin))
   }
 

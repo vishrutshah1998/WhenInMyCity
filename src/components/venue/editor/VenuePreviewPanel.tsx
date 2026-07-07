@@ -17,7 +17,7 @@ const C = {
   amber:         '#f5a623',
 }
 
-const ADDA_TYPE_LABELS: Record<string, string> = {
+const VENUE_TYPE_LABELS: Record<string, string> = {
   cafe: 'Café', coworking: 'Coworking', gallery: 'Gallery',
   community_hall: 'Community Hall', rooftop: 'Rooftop', garden: 'Garden',
   studio: 'Studio', library: 'Library', restaurant: 'Restaurant',
@@ -136,9 +136,9 @@ export default function VenuePreviewPanel({ state }: Props) {
         {/* Hero text */}
         <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '0 16px 16px' }}>
           {/* Type chips */}
-          {state.adda_type.length > 0 && (
+          {state.venue_type.length > 0 && (
             <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', marginBottom: 7 }}>
-              {state.adda_type.map(t => (
+              {state.venue_type.map(t => (
                 <span key={t} style={{
                   padding: '2px 8px', borderRadius: 9999,
                   background: 'rgba(232,87,42,0.15)', border: '1px solid rgba(232,87,42,0.3)',
@@ -146,7 +146,7 @@ export default function VenuePreviewPanel({ state }: Props) {
                   textTransform: 'uppercase', letterSpacing: '0.05em',
                   fontFamily: 'var(--font-jetbrains-mono), monospace',
                 }}>
-                  {ADDA_TYPE_LABELS[t] ?? t}
+                  {VENUE_TYPE_LABELS[t] ?? t}
                 </span>
               ))}
             </div>

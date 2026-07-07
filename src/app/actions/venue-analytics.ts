@@ -12,38 +12,38 @@ export interface ProposalFunnel {
   eventsCompleted: number
 }
 
-export interface AddaTrafficStats {
+export interface VenueTrafficStats {
   totalViews: number
   byDay:      { date: string; count: number }[]
   windowDays: number
 }
 
-export interface AddaAnalyticsData {
+export interface VenueAnalyticsData {
   dailyMetrics: DailyMetric[]
   proposalFunnel: ProposalFunnel
   demandGrid: HourDayCell[]
-  trafficStats: AddaTrafficStats
+  trafficStats: VenueTrafficStats
   hasData: boolean
 }
 
-function emptyTrafficStats(windowDays: number): AddaTrafficStats {
+function emptyTrafficStats(windowDays: number): VenueTrafficStats {
   return { totalViews: 0, byDay: [], windowDays }
 }
 
 /**
- * Returns page-view counts for an Adda's public page over the last
+ * Returns page-view counts for an Venue's public page over the last
  * `windowDays` days, sourced from `block_analytics`
- * (owner_type='adda', event_type='view'). See migration 049.
+ * (owner_type='venue', event_type='view'). See migration 049.
  */
-async function getAddaTrafficStats(addaId: string, windowDays = 30): Promise<AddaTrafficStats> {
+async function getVenueTrafficStats(venueId: string, windowDays = 30): Promise<VenueTrafficStats> {
   const admin = createAdminClient()
   const since = new Date(Date.now() - windowDays * 24 * 60 * 60 * 1000).toISOString()
 
   const { data, error } = await admin
     .from('block_analytics')
     .select('occurred_at')
-    .eq('owner_type', 'adda')
-    .eq('owner_id', addaId)
+    .eq('owner_type', 'venue')
+    .eq('owner_id', venueId)
     .eq('event_type', 'view')
     .gte('occurred_at', since)
 
@@ -74,35 +74,35 @@ function emptyDemandGrid(): HourDayCell[] {
   return grid
 }
 
-export async function getAddaAnalytics(addaId: string): Promise<AddaAnalyticsData | null> {
+export async function getVenueAnalytics(venueId: string): Promise<VenueAnalyticsData | null> {
   try {
     const { user } = await requireAuth()
     const supabase = await createClient()
     const admin = createAdminClient()
 
-    const { data: adda } = await supabase
-      .from('adda_profiles')
+    const { data: venue } = await supabase
+      .from('venue_profiles')
       .select('id')
-      .eq('id', addaId)
+      .eq('id', venueId)
       .eq('auth_user_id', user.id)
       .maybeSingle()
 
-    if (!adda) return null
+    if (!venue) return null
 
-    // Fetch all past events at this adda + proposal funnel + traffic stats in parallel
+    // Fetch all past events at this venue + proposal funnel + traffic stats in parallel
     const [eventsResult, proposalsResult, trafficStats] = await Promise.all([
       admin
         .from('events')
         .select('id, starts_at, ends_at, ticket_price, status')
-        .eq('venue_id', addaId)
+        .eq('venue_id', venueId)
         .in('status', ['published', 'completed'])
         .lt('starts_at', new Date().toISOString())
         .order('starts_at', { ascending: true }),
       supabase
-        .from('maker_adda_proposals')
+        .from('maker_venue_proposals')
         .select('status')
-        .eq('adda_id', addaId),
-      getAddaTrafficStats(addaId),
+        .eq('venue_id', venueId),
+      getVenueTrafficStats(venueId),
     ])
 
     const events = eventsResult.data ?? []

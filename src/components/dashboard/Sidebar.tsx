@@ -39,7 +39,7 @@ const GROWTH_NAV: NavItem[] = [
 ]
 
 const SPACES_NAV: NavItem[] = [
-  { href: '/dashboard/venues', icon: 'apartment',  label: 'Addas' },
+  { href: '/dashboard/venues', icon: 'apartment',  label: 'Venues' },
 ]
 
 const COMMUNITY_ITEM: NavItem = { href: '/dashboard/community', icon: 'diversity_3', label: 'My Circles' }
@@ -73,14 +73,14 @@ function personaEntryUrl(persona: PersonaKey): string {
 }
 
 function personaLabel(persona: PersonaKey): string {
-  if (persona === 'venue')    return 'List an Adda'
+  if (persona === 'venue')    return 'List an Venue'
   if (persona === 'explorer') return 'Become an Explorer'
   return `Become a ${persona.charAt(0).toUpperCase() + persona.slice(1)}`
 }
 
 const WORKSPACE_META: Record<string, { icon: string; label: string; color: string; href: string }> = {
   creator:  { icon: 'palette',    label: 'Creator',  color: '#E8705A', href: '/dashboard' },
-  venue:    { icon: 'storefront', label: 'Adda',     color: '#5DD9D0', href: '/business/venue/dashboard' },
+  venue:    { icon: 'storefront', label: 'Venue',     color: '#5DD9D0', href: '/business/venue/dashboard' },
   explorer: { icon: 'explore',    label: 'Explorer', color: '#9B8FFF', href: '/explore/dashboard' },
   brand:    { icon: 'campaign',   label: 'Brand',    color: '#F5A800', href: '/business/brand/dashboard' },
 }
@@ -116,7 +116,7 @@ export default function Sidebar({
   const SB_ACTIVE    = accentColor
   const SB_ACTIVE_BG = hexToRgba(accentColor, 0.14)
 
-  const hasAdda   = personas.includes('venue') || personas.includes('business')
+  const hasVenue   = personas.includes('venue') || personas.includes('business')
   const hasBrand  = personas.includes('brand')
   const otherWorkspaces = personas.filter(p => p !== 'creator' && p !== 'explorer')
   const missing = ALL_PERSONAS.filter(p => !personas.includes(p) && p !== 'creator')
@@ -235,7 +235,7 @@ export default function Sidebar({
         )}
 
         {/* Collapsed: workspace icon button */}
-        {c && (hasAdda || missing.length > 0) && (
+        {c && (hasVenue || missing.length > 0) && (
           <button
             onClick={() => { setIsExpanded(true); localStorage.setItem('wimc-sidebar-collapsed', 'false'); setWorkspaceOpen(true) }}
             title="Switch workspace"
@@ -247,7 +247,7 @@ export default function Sidebar({
             }}
           >
             <span className="material-symbols-outlined" style={{ fontSize: 18 }}>swap_horiz</span>
-            {hasAdda && (
+            {hasVenue && (
               <span style={{
                 position: 'absolute', top: 4, right: 4,
                 width: 6, height: 6, borderRadius: '50%',
@@ -281,8 +281,8 @@ export default function Sidebar({
             <span className="material-symbols-outlined" style={{ fontSize: 14, color: SB_ACTIVE }}>check</span>
           </div>
 
-          {/* Adda workspace — if user has venue persona */}
-          {hasAdda && (
+          {/* Venue workspace — if user has venue persona */}
+          {hasVenue && (
             <Link
               href="/business/venue/dashboard"
               style={{
@@ -295,7 +295,7 @@ export default function Sidebar({
               onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}
             >
               <span className="material-symbols-outlined" style={{ fontSize: 16, color: '#5DD9D0', flexShrink: 0 }}>storefront</span>
-              <span style={{ flex: 1, fontSize: 13, fontWeight: 500, color: '#5DD9D0' }}>Adda</span>
+              <span style={{ flex: 1, fontSize: 13, fontWeight: 500, color: '#5DD9D0' }}>Venue</span>
               <span className="material-symbols-outlined" style={{ fontSize: 14, color: SB_MUTED }}>arrow_forward</span>
             </Link>
           )}

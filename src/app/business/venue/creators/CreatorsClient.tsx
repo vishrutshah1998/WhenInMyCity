@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import { respondToProposal } from '@/app/actions/venue'
-import type { MakerAddaProposal } from '@/types/database'
+import type { MakerVenueProposal } from '@/types/database'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -18,7 +18,7 @@ export interface MakerInfo {
   cumulative_events_hosted: number
 }
 
-export interface ProposalWithMaker extends MakerAddaProposal {
+export interface ProposalWithMaker extends MakerVenueProposal {
   maker: MakerInfo | null
 }
 
@@ -341,7 +341,7 @@ export default function CreatorsClient({ initialProposals }: { initialProposals:
           <span className="material-symbols-outlined" style={{ fontSize: 40, color: 'var(--venue-text-muted)', display: 'block', marginBottom: 12, opacity: 0.4 }}>person_search</span>
           <p style={{ fontSize: 13, color: 'var(--venue-text-muted)', fontFamily: 'var(--font-jetbrains-mono)', margin: 0 }}>
             {activeTab === 'pending'
-              ? 'No pending requests — share your adda listing to attract creators'
+              ? 'No pending requests — share your venue listing to attract creators'
               : `No ${TAB_LABELS[activeTab].toLowerCase()} bookings yet`}
           </p>
         </div>

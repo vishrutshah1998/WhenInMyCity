@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { AnimatePresence, motion } from 'framer-motion'
-import type { AddaProfile } from '@/types/database'
+import type { VenueProfile } from '@/types/database'
 import type { VenueFormState, PhotoItem, PricingRule, IncludedItem } from './types'
 import { saveVenueDetails } from '@/app/actions/venue-details'
 import PhotoManagerSection from './PhotoManagerSection'
@@ -47,38 +47,38 @@ const DEFAULT_INCLUDED_ITEMS: IncludedItem[] = [
 
 // ─── State initializer ────────────────────────────────────────────────────────
 
-function initState(adda: AddaProfile): VenueFormState {
-  const config = (adda.pricing_config ?? {}) as Record<string, unknown>
+function initState(venue: VenueProfile): VenueFormState {
+  const config = (venue.pricing_config ?? {}) as Record<string, unknown>
 
   const photos: PhotoItem[] = []
-  if (adda.cover_image_url) {
+  if (venue.cover_image_url) {
     photos.push({
       id: 'cover-0',
-      url: adda.cover_image_url,
-      alt_text: adda.name,
+      url: venue.cover_image_url,
+      alt_text: venue.name,
       is_cover: true,
     })
   }
-  ;(adda.gallery_images ?? []).forEach((url, i) => {
+  ;(venue.gallery_images ?? []).forEach((url, i) => {
     photos.push({
       id: `gallery-${i}`,
       url,
-      alt_text: `${adda.name} photo ${i + 1}`,
+      alt_text: `${venue.name} photo ${i + 1}`,
       is_cover: false,
     })
   })
 
   return {
     photos,
-    name: adda.name,
-    adda_type: adda.adda_type ?? [],
-    description: adda.description ?? '',
-    capacity_min: adda.capacity_min ?? null,
-    capacity_max: adda.capacity_max ?? null,
+    name: venue.name,
+    venue_type: venue.venue_type ?? [],
+    description: venue.description ?? '',
+    capacity_min: venue.capacity_min ?? null,
+    capacity_max: venue.capacity_max ?? null,
     parking_details:      (config.parking_details      as string)  ?? '',
     accessibility_notes:  (config.accessibility_notes  as string)  ?? '',
-    amenities:            adda.amenities                            ?? [],
-    pricing_model:        adda.pricing_model,
+    amenities:            venue.amenities                            ?? [],
+    pricing_model:        venue.pricing_model,
     pricing_rules:       (config.pricing_rules         as PricingRule[]) ?? DEFAULT_PRICING_RULES,
     house_rules:         (config.house_rules            as string)  ?? '',
     included_items:      (config.included_items         as IncludedItem[]) ?? DEFAULT_INCLUDED_ITEMS,
@@ -93,14 +93,14 @@ type SaveStatus = 'idle' | 'saving' | 'saved' | 'error'
 // ─── Props ────────────────────────────────────────────────────────────────────
 
 interface Props {
-  adda: AddaProfile
+  venue: VenueProfile
   slug: string
 }
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
-export default function VenueEditorClient({ adda, slug }: Props) {
-  const [state, setState] = useState<VenueFormState>(() => initState(adda))
+export default function VenueEditorClient({ venue, slug }: Props) {
+  const [state, setState] = useState<VenueFormState>(() => initState(venue))
   const [isDirty, setIsDirty] = useState(false)
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle')
   const [savedAt, setSavedAt] = useState<Date | null>(null)
@@ -130,7 +130,7 @@ export default function VenueEditorClient({ adda, slug }: Props) {
 
     debounceRef.current = setTimeout(async () => {
       try {
-        const result = await saveVenueDetails(adda.id, state)
+        const result = await saveVenueDetails(venue.id, state)
         if (result.success) {
           setSaveStatus('saved')
           setSavedAt(new Date())
@@ -199,7 +199,7 @@ export default function VenueEditorClient({ adda, slug }: Props) {
             onClick={async () => {
               setSaveStatus('saving')
               try {
-                const result = await saveVenueDetails(adda.id, state)
+                const result = await saveVenueDetails(venue.id, state)
                 if (result.success) {
                   setSaveStatus('saved')
                   setSavedAt(new Date())
@@ -362,7 +362,7 @@ export default function VenueEditorClient({ adda, slug }: Props) {
           <SpaceDetailsSection
             state={{
               name:                 state.name,
-              adda_type:            state.adda_type,
+              venue_type:            state.venue_type,
               description:          state.description,
               capacity_min:         state.capacity_min,
               capacity_max:         state.capacity_max,

@@ -2,27 +2,27 @@ import { redirect } from 'next/navigation'
 import { requireAuth } from '@/lib/auth/requireAuth'
 import { createAdminClient } from '@/lib/supabase/admin'
 import VenuePayoutsClient from './VenuePayoutsClient'
-import { getAddaPayoutData } from '@/app/actions/venue-payouts'
+import { getVenuePayoutData } from '@/app/actions/venue-payouts'
 
-export const metadata = { title: 'Payouts — Adda' }
+export const metadata = { title: 'Payouts — Venue' }
 
 export default async function VenuePayoutsPage() {
   const { user } = await requireAuth('/business/venue/payouts')
   const admin = createAdminClient()
 
-  const { data: adda } = await admin
-    .from('adda_profiles')
+  const { data: venue } = await admin
+    .from('venue_profiles')
     .select('id, name')
     .eq('auth_user_id', user.id)
     .maybeSingle()
 
-  if (!adda) redirect('/business/venue/onboard')
+  if (!venue) redirect('/business/venue/onboard')
 
-  const { summary, payableBookings, payoutHistory, error } = await getAddaPayoutData(adda.id)
+  const { summary, payableBookings, payoutHistory, error } = await getVenuePayoutData(venue.id)
 
   return (
     <VenuePayoutsClient
-      addaId={adda.id}
+      venueId={venue.id}
       summary={summary}
       initialPayableBookings={payableBookings}
       initialPayoutHistory={payoutHistory}

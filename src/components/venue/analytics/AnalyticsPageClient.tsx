@@ -26,7 +26,7 @@ import {
   getHighestOccupancyDay,
 } from '@/lib/venue/mock/analyticsData'
 
-import type { AddaAnalyticsData, ProposalFunnel } from '@/app/actions/venue-analytics'
+import type { VenueAnalyticsData, ProposalFunnel } from '@/app/actions/venue-analytics'
 
 // ---------------------------------------------------------------------------
 // Section heading
@@ -248,7 +248,7 @@ function EmptyState({ venueSlug }: { venueSlug: string }) {
 interface Props {
   venueName: string
   venueSlug: string
-  realData: AddaAnalyticsData
+  realData: VenueAnalyticsData
 }
 
 export default function AnalyticsPageClient({ venueName: _venueName, venueSlug, realData }: Props) {
@@ -286,7 +286,7 @@ export default function AnalyticsPageClient({ venueName: _venueName, venueSlug, 
   const trend     = useMemo(() => computeTrend(currentDays), [currentDays])
   const prevTrend = useMemo(() => (compareOn ? computeTrend(prevDays) : undefined), [compareOn, prevDays])
 
-  // Waterfall (approximation — adda share ÷ 0.35 back-calculates gross)
+  // Waterfall (approximation — venue share ÷ 0.35 back-calculates gross)
   const waterfall = useMemo(() => computeWaterfall(currentDays), [currentDays])
 
   // Calendar insight labels (full history, not range-filtered)

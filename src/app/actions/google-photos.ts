@@ -9,7 +9,7 @@ import { requireAuth } from '@/lib/auth/requireAuth'
  *
  * Called immediately after the user confirms their venue address in V5.
  * The returned URLs are stored in session storage (SK.v_google_photos) and
- * passed to completeAddaOnboarding, which merges them into gallery_images.
+ * passed to completeVenueOnboarding, which merges them into gallery_images.
  */
 export async function prefetchGooglePhotos(
   photoRefs: string[],

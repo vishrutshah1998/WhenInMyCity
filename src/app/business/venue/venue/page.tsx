@@ -7,13 +7,13 @@ export default async function VenuePage() {
   const { user } = await requireAuth('/business/venue/venue')
   const admin = createAdminClient()
 
-  const { data: adda } = await admin
-    .from('adda_profiles')
+  const { data: venue } = await admin
+    .from('venue_profiles')
     .select('*')
     .eq('auth_user_id', user.id)
     .maybeSingle()
 
-  if (!adda) redirect('/business/venue/onboard')
+  if (!venue) redirect('/business/venue/onboard')
 
-  return <VenueEditorClient adda={adda} slug={adda.slug} />
+  return <VenueEditorClient venue={venue} slug={venue.slug} />
 }

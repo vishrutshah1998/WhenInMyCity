@@ -1401,7 +1401,7 @@ function VenuePartnershipForm({ initial, onSave, onCancel, isSaving }: SimpleFor
   return (
     <div className="space-y-4">
       <div>
-        <label className={labelCls}>Adda / venue IDs (one per line)</label>
+        <label className={labelCls}>Venue / venue IDs (one per line)</label>
         <textarea value={rawIds} onChange={e => setRawIds(e.target.value)} rows={3} placeholder="Paste venue IDs from your dashboard" className={`${inputCls} resize-none font-mono text-xs`} />
         <p className="text-xs text-on-surface-variant mt-1">Find venue IDs in your Venues dashboard</p>
       </div>

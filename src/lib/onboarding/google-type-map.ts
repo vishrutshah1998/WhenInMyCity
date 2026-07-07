@@ -3,7 +3,7 @@
  * Used by V4 (type pre-selection) and V6 (amenity pre-fill).
  */
 
-// WIMC adda_type enum values
+// WIMC venue_type enum values
 export type WimcVenueType =
   | 'cafe' | 'coworking' | 'gallery' | 'community_hall'
   | 'rooftop' | 'garden' | 'studio' | 'library' | 'restaurant'

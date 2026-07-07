@@ -389,8 +389,8 @@ function EventListingBlockRenderer({ config, accent }: { config: Record<string, 
   const m   = MONTHS[new Date().getMonth()]
   const d0  = new Date().getDate()
   const rows = [
-    { day: String(d0 + 2).padStart(2, '0'), label: 'Upcoming Event',  venue: 'Adda name' },
-    { day: String(d0 + 9).padStart(2, '0'), label: 'Next Event',      venue: 'Another adda' },
+    { day: String(d0 + 2).padStart(2, '0'), label: 'Upcoming Event',  venue: 'Venue name' },
+    { day: String(d0 + 9).padStart(2, '0'), label: 'Next Event',      venue: 'Another venue' },
   ]
   const title = (config.title as string | undefined) || 'Upcoming Events'
   return (
@@ -541,7 +541,7 @@ function VenuePartnershipRenderer({ config, accent }: { config: { venue_ids?: st
   const count = Math.min(config.venue_ids?.length ?? 2, 3)
   return (
     <div className="flex flex-col gap-3">
-      <p className="font-bold text-sm" style={{ color: 'var(--pp-text)' }}>Adda Partners</p>
+      <p className="font-bold text-sm" style={{ color: 'var(--pp-text)' }}>Venue Partners</p>
       {Array.from({ length: count }).map((_, i) => (
         <div key={i} className="flex items-center gap-3 p-3 rounded-xl" style={{ background: 'rgba(255,255,255,0.06)' }}>
           <div className="w-14 h-14 rounded-lg shrink-0" style={{ background: `${accent}20` }} />

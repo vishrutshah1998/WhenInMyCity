@@ -7,7 +7,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
  *
  * Handles the Google OAuth2 callback for Calendar access.
  * Validates the CSRF state cookie, exchanges the code for tokens,
- * stores the refresh_token in adda_profiles, and redirects back to
+ * stores the refresh_token in venue_profiles, and redirects back to
  * the calendar page.
  *
  * Required env vars: GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET
@@ -42,8 +42,8 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(calendarPage)
   }
 
-  const addaId = storedState.split(':')[0]
-  if (!addaId) {
+  const venueId = storedState.split(':')[0]
+  if (!venueId) {
     calendarPage.searchParams.set('error', 'gcal_invalid')
     return NextResponse.redirect(calendarPage)
   }
@@ -94,12 +94,12 @@ export async function GET(request: NextRequest) {
   const admin = createAdminClient()
 
   const { error: dbError } = await admin
-    .from('adda_profiles')
+    .from('venue_profiles')
     .update({
       google_calendar_connected:     true,
       google_calendar_refresh_token: refreshToken,
     })
-    .eq('id', addaId)
+    .eq('id', venueId)
 
   if (dbError) {
     console.error('[gcal/callback] db update failed', dbError.message)

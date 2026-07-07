@@ -44,7 +44,7 @@ export default function KpiSection({ kpis, prevKpis, totalBookings, prevTotalBoo
         delta={revDelta}
         deltaDirection={revDelta > 5 ? 'up' : revDelta < -5 ? 'down' : 'neutral'}
         sparklineData={kpis.sparklineRevenue}
-        tooltip="Your adda's net share of ticket revenue for the selected period."
+        tooltip="Your venue's net share of ticket revenue for the selected period."
       />
       <KpiCard
         label="Occupancy Rate"
@@ -62,7 +62,7 @@ export default function KpiSection({ kpis, prevKpis, totalBookings, prevTotalBoo
         delta={avgDelta}
         deltaDirection={avgDelta > 0 ? 'up' : avgDelta < 0 ? 'down' : 'neutral'}
         sparklineData={kpis.sparklineOccupancy}
-        tooltip="Average adda share per confirmed booking day."
+        tooltip="Average venue share per confirmed booking day."
       />
       <KpiCard
         label="Total Bookings"

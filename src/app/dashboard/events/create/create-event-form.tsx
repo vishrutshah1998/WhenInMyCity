@@ -662,7 +662,7 @@ export default function CreateEventForm({ venues, profile }: { venues: VenueRow[
                     <button key={mode} onClick={() => { setVenueMode(mode); setSelectedVenueId(null) }}
                             className={['flex-1 py-2 border-2 transition-colors text-center', venueMode === mode ? 'border-[#E8705A] bg-[#E8705A]/10 text-[#E8705A]' : 'border-dashed border-white/20 text-white/40 hover:border-white/30'].join(' ')}
                             style={{ fontFamily: 'var(--font-jetbrains-mono)', fontSize: 10, letterSpacing: '0.1em' }}>
-                      {mode === 'wimc' ? 'WIMC ADDAS' : 'CUSTOM VENUE'}
+                      {mode === 'wimc' ? 'WIMC VENUES' : 'CUSTOM VENUE'}
                     </button>
                   ))}
                 </div>
@@ -997,7 +997,7 @@ export default function CreateEventForm({ venues, profile }: { venues: VenueRow[
                           <div className="space-y-1.5">
                             {[
                               { label: 'DATE',  val: dateDay ? `${dateDay} ${dateMonth}${startTimeDisp ? ` · ${startTimeDisp}` : ''}` : 'TBD' },
-                              { label: 'ADDA',  val: activeVenueName || 'TO BE ANNOUNCED' },
+                              { label: 'VENUE',  val: activeVenueName || 'TO BE ANNOUNCED' },
                               { label: 'ADMIT', val: priceLabel },
                             ].map(row => (
                               <div key={row.label} className="flex items-baseline gap-3">

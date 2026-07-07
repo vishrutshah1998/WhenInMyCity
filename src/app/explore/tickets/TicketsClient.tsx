@@ -227,7 +227,7 @@ function TicketCard({ ticket }: { ticket: MyTicket }) {
             textAlign: 'center',
             fontSize: 13, color: 'var(--wimc-text-secondary)', lineHeight: 1.5,
           }}>
-            Show this QR code at the Adda entrance.
+            Show this QR code at the Venue entrance.
             {ticket.checkedIn && ticket.checkedInAt && (
               <div style={{ marginTop: 6, color: 'var(--wimc-teal)', fontWeight: 600 }}>
                 <span className="material-symbols-outlined" style={{ fontSize: 14, verticalAlign: 'middle', marginRight: 3 }}>

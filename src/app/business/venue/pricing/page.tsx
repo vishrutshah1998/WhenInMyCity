@@ -7,13 +7,13 @@ export default async function PricingPage() {
   const { user } = await requireAuth('/business/venue/pricing')
   const admin = createAdminClient()
 
-  const { data: adda } = await admin
-    .from('adda_profiles')
+  const { data: venue } = await admin
+    .from('venue_profiles')
     .select('*')
     .eq('auth_user_id', user.id)
     .maybeSingle()
 
-  if (!adda) redirect('/business/venue/onboard')
+  if (!venue) redirect('/business/venue/onboard')
 
-  return <PricingClient adda={adda} />
+  return <PricingClient venue={venue} />
 }

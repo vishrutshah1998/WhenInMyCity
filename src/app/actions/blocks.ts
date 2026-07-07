@@ -7,6 +7,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { requireAuth } from '@/lib/auth/requireAuth'
 import { BLOCK_TIER_GATES, BLOCK_FAMILIES, BLOCK_META, meetsMinimumTier, type BlockMetaEntry } from '@/lib/constants/blocks'
 import { validateBlockConfig, SupportTipConfigSchema, type SubstackPost } from '@/lib/validators/blocks'
+import { checkAnalyticsRateLimit } from '@/lib/ratelimit'
 import type { BlockType, UserTier, Json, PageBlock } from '@/types/database'
 
 // ---------------------------------------------------------------------------
@@ -75,14 +76,14 @@ const DEFAULT_CONFIGS: Record<BlockType, unknown> = {
 // seedPersonaDefaultBlocks
 // ---------------------------------------------------------------------------
 
-const PERSONA_DEFAULT_BLOCKS: Record<'brand' | 'adda' | 'explorer', BlockType[]> = {
+const PERSONA_DEFAULT_BLOCKS: Record<'brand' | 'venue' | 'explorer', BlockType[]> = {
   brand:    ['text_bio', 'collab_invite', 'social_links_row', 'announcement'],
-  adda:     ['text_bio', 'booking_request', 'image_gallery', 'whatsapp_community'],
+  venue:     ['text_bio', 'booking_request', 'image_gallery', 'whatsapp_community'],
   explorer: ['text_bio', 'social_links_row', 'instagram_embed'],
 }
 
 export async function seedPersonaDefaultBlocks(
-  persona: 'brand' | 'adda' | 'explorer',
+  persona: 'brand' | 'venue' | 'explorer',
   profileId: string,
 ): Promise<void> {
   const admin = createAdminClient()
@@ -528,7 +529,9 @@ export async function saveSupportTipBlock(
 // ---------------------------------------------------------------------------
 
 /**
- * Records a block interaction event in `block_analytics`.
+ * Records an analytics event in `block_analytics` for either a Creator
+ * (`ownerType: 'creator'`, `blockId` required) or an Venue (`ownerType: 'venue'`,
+ * `blockId` omitted — Venue pages have no page_blocks to attach to).
  *
  * Designed to be called fire-and-forget — the caller does not need to await
  * the result, and all errors are swallowed to prevent analytics from
@@ -536,18 +539,23 @@ export async function saveSupportTipBlock(
  *
  * Device type and referer are inferred from request headers server-side.
  *
- * @param blockId   - The page_blocks.id that was interacted with.
- * @param profileId - The creator's user_profiles.id (denormalised).
+ * @param ownerType - 'creator' (owner_id = user_profiles.id) | 'venue' (owner_id = venue_profiles.id)
+ * @param ownerId   - The creator's or Venue's profile id (denormalised).
  * @param eventType - 'view' | 'click' | 'expand' | 'subscribe' | 'tip_initiated'
+ * @param blockId   - The page_blocks.id that was interacted with. Required for 'creator', omitted for 'venue'.
  * @param metadata  - Optional extra context (referer override, device_type override).
  */
 export async function trackBlockAnalytics(
-  blockId: string,
-  profileId: string,
+  ownerType: 'creator' | 'venue',
+  ownerId: string,
   eventType: 'view' | 'click' | 'expand' | 'subscribe' | 'tip_initiated',
+  blockId?: string,
   metadata?: { referer?: string; device_type?: string },
 ): Promise<void> {
   try {
+    const rl = await checkAnalyticsRateLimit()
+    if (!rl.success) return  // silently drop — analytics must never break the UI
+
     const headersList = await headers()
     const ua          = headersList.get('user-agent') ?? ''
     const rawReferer  = metadata?.referer ?? headersList.get('referer') ?? null
@@ -560,8 +568,9 @@ export async function trackBlockAnalytics(
 
     const admin = createAdminClient()
     await admin.from('block_analytics').insert({
-      block_id:    blockId,
-      profile_id:  profileId,
+      block_id:    blockId ?? null,
+      owner_id:    ownerId,
+      owner_type:  ownerType,
       event_type:  eventType,
       referer,
       device_type: deviceType,

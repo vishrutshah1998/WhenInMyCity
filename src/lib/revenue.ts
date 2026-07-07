@@ -1,6 +1,6 @@
 // =============================================================================
 // WIMC — Revenue split calculation utilities
-// Three-way split: Maker / Adda / Platform, net of Razorpay processing fees.
+// Three-way split: Maker / Venue / Platform, net of Razorpay processing fees.
 // =============================================================================
 
 import type { UserTier } from '@/types/database'
@@ -12,7 +12,7 @@ import { REVENUE_SPLITS } from '@/lib/constants/interests'
 
 /**
  * The fractional split configuration applied to an event's revenue.
- * Stored in `adda_event_revenue.split_config` so historical events can always
+ * Stored in `venue_event_revenue.split_config` so historical events can always
  * be reconstructed without needing to know the maker's tier at event time.
  */
 export interface RevenueSplitConfig {
@@ -34,7 +34,7 @@ export interface RevenueSplitResult {
   totalPaise: number
   /** Amount the Maker receives. */
   makerPaise: number
-  /** Amount the Adda (venue) receives. Zero when `hasVenue` is false. */
+  /** Amount the Venue (venue) receives. Zero when `hasVenue` is false. */
   venuePaise: number
   /** Gross platform commission (before Razorpay fees are subtracted). */
   platformPaise: number
@@ -47,7 +47,7 @@ export interface RevenueSplitResult {
   gstOnPlatformFeePaise: number
   /** Net platform revenue after Razorpay fee but before GST is collected. */
   platformNetPaise: number
-  /** Summary config used — embed this in `adda_event_revenue.split_config`. */
+  /** Summary config used — embed this in `venue_event_revenue.split_config`. */
   config: RevenueSplitConfig
 }
 
@@ -72,7 +72,7 @@ export interface RevenueSplitResult {
  * @param ticketPricePaise  Per-ticket face value in paise.
  * @param quantity          Number of tickets sold.
  * @param makerTier         Maker's current tier (determines split fractions).
- * @param hasVenue          False for self-organised events without an Adda.
+ * @param hasVenue          False for self-organised events without an Venue.
  * @returns `RevenueSplitResult`
  *
  * @example
@@ -105,7 +105,7 @@ export function calculateRevenueSplit(
   // Platform takes the remainder to avoid rounding drift
   let platformPaise = totalPaise - makerPaise - venuePaise
 
-  // If no Adda is involved, venue share rolls up to maker
+  // If no Venue is involved, venue share rolls up to maker
   if (!hasVenue) {
     makerPaise += venuePaise
     venuePaise = 0

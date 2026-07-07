@@ -4,9 +4,9 @@ import { useState, useRef, useEffect, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import type { Notification } from '@/types/database'
 import {
-  getAddaNotifications,
-  markAddaNotificationRead,
-  markAllAddaNotificationsRead,
+  getVenueNotifications,
+  markVenueNotificationRead,
+  markAllVenueNotificationsRead,
 } from '@/app/actions/venue-notifications'
 import { NOTIFICATION_META } from '@/lib/notifications/types'
 
@@ -29,13 +29,13 @@ function timeAgo(iso: string): string {
 }
 
 interface Props {
-  addaId: string
+  venueId: string
   initialNotifications?: Notification[]
   initialUnreadCount?: number
 }
 
 export default function VenueNotificationBell({
-  addaId,
+  venueId,
   initialNotifications = [],
   initialUnreadCount = 0,
 }: Props) {
@@ -51,11 +51,11 @@ export default function VenueNotificationBell({
   // Refresh notifications on open
   useEffect(() => {
     if (!open) return
-    getAddaNotifications(addaId, 10).then(({ notifications: fresh, unreadCount: count }) => {
+    getVenueNotifications(venueId, 10).then(({ notifications: fresh, unreadCount: count }) => {
       setNotifications(fresh)
       setUnreadCount(count)
     }).catch(() => {})
-  }, [open, addaId])
+  }, [open, venueId])
 
   // Close on outside click
   useEffect(() => {
@@ -75,7 +75,7 @@ export default function VenueNotificationBell({
     if (!n.is_read) {
       setNotifications((prev) => prev.map((x) => x.id === n.id ? { ...x, is_read: true } : x))
       setUnreadCount((c) => Math.max(0, c - 1))
-      await markAddaNotificationRead(n.id)
+      await markVenueNotificationRead(n.id)
     }
     if (n.action_url) {
       setOpen(false)
@@ -86,7 +86,7 @@ export default function VenueNotificationBell({
   async function handleMarkAllRead() {
     setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })))
     setUnreadCount(0)
-    await markAllAddaNotificationsRead()
+    await markAllVenueNotificationsRead()
     startTransition(() => router.refresh())
   }
 

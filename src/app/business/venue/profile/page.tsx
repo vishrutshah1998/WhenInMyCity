@@ -7,7 +7,7 @@ function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })
 }
 
-const ADDA_TYPE_LABELS: Record<string, string> = {
+const VENUE_TYPE_LABELS: Record<string, string> = {
   cafe: 'Café', coworking: 'Coworking', gallery: 'Gallery',
   community_hall: 'Community Hall', rooftop: 'Rooftop', garden: 'Garden',
   studio: 'Studio', library: 'Library', restaurant: 'Restaurant',
@@ -27,32 +27,32 @@ const T = {
 const MONO  = "'JetBrains Mono', monospace"
 const INTER = "'Inter', system-ui, sans-serif"
 
-export default async function AddaProfilePage() {
+export default async function VenueProfilePage() {
   const { user } = await requireAuth('/business/venue/profile')
   const admin = createAdminClient()
 
-  const { data: adda } = await admin
-    .from('adda_profiles')
+  const { data: venue } = await admin
+    .from('venue_profiles')
     .select('*')
     .eq('auth_user_id', user.id)
     .maybeSingle()
 
-  if (!adda) redirect('/business/venue/onboard')
+  if (!venue) redirect('/business/venue/onboard')
 
-  const typeLabels = (adda.adda_type ?? [])
-    .map((t: string) => ADDA_TYPE_LABELS[t] ?? t)
+  const typeLabels = (venue.venue_type ?? [])
+    .map((t: string) => VENUE_TYPE_LABELS[t] ?? t)
     .join(' · ')
 
   return (
     <>
       <style>{`
         @media (max-width: 767px) {
-          .adda-profile-grid { grid-template-columns: 1fr !important; }
-          .adda-profile-main { padding: 16px !important; }
+          .venue-profile-grid { grid-template-columns: 1fr !important; }
+          .venue-profile-main { padding: 16px !important; }
         }
       `}</style>
 
-      <div className="adda-profile-main" style={{ padding: '28px 32px', maxWidth: 900 }}>
+      <div className="venue-profile-main" style={{ padding: '28px 32px', maxWidth: 900 }}>
 
         {/* Page heading */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 24 }}>
@@ -94,14 +94,14 @@ export default async function AddaProfilePage() {
             </span>
           </div>
 
-          <div className="adda-profile-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 0 }}>
+          <div className="venue-profile-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 0 }}>
             {[
-              { label: 'Venue Name',   value: adda.name,                   icon: 'storefront' },
-              { label: 'City',         value: adda.city,                   icon: 'location_city' },
-              { label: 'Address',      value: adda.address,                icon: 'pin_drop', full: true },
+              { label: 'Venue Name',   value: venue.name,                   icon: 'storefront' },
+              { label: 'City',         value: venue.city,                   icon: 'location_city' },
+              { label: 'Address',      value: venue.address,                icon: 'pin_drop', full: true },
               { label: 'Venue Type',   value: typeLabels || '—',           icon: 'category' },
-              { label: 'Adda ID',      value: adda.slug,                   icon: 'fingerprint' },
-              { label: 'Member Since', value: formatDate(adda.created_at), icon: 'calendar_today' },
+              { label: 'Venue ID',      value: venue.slug,                   icon: 'fingerprint' },
+              { label: 'Member Since', value: formatDate(venue.created_at), icon: 'calendar_today' },
             ].map((field, i) => (
               <div
                 key={field.label}
@@ -139,7 +139,7 @@ export default async function AddaProfilePage() {
         </div>
 
         {/* Editable details */}
-        <VenueProfileForm adda={adda} authEmail={user.email ?? null} />
+        <VenueProfileForm venue={venue} authEmail={user.email ?? null} />
       </div>
     </>
   )

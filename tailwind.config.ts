@@ -73,9 +73,9 @@ const config: Config = {
         'ds-md': '12px',
         'ds-lg': '18px',
         'ds-xl': '24px',
-        // Adda portal radius tokens
-        'adda-card': '12px',
-        'adda-sm':   '6px',
+        // Venue portal radius tokens
+        'venue-card': '12px',
+        'venue-sm':   '6px',
       },
       fontFamily: {
         // Profile themes
@@ -87,13 +87,13 @@ const config: Config = {
         display: ['var(--font-syne)', 'sans-serif'],
         sans: ['var(--font-dm-sans)', 'sans-serif'],
         mono: ['var(--font-jetbrains-mono)', 'monospace'],
-        // Adda portal — tabular numerals via font-adda-nums utility class
-        'adda': ['Inter', 'system-ui', 'sans-serif'],
-        'adda-mono': ["'JetBrains Mono'", "'Fira Code'", 'monospace'],
+        // Venue portal — tabular numerals via font-venue-nums utility class
+        'venue': ['Inter', 'system-ui', 'sans-serif'],
+        'venue-mono': ["'JetBrains Mono'", "'Fira Code'", 'monospace'],
       },
       width: {
         'ds-sidebar':    '220px',
-        'adda-sidebar':  '240px',
+        'venue-sidebar':  '240px',
       },
       transitionDuration: {
         'ds': '220ms',
@@ -101,10 +101,10 @@ const config: Config = {
     },
   },
   plugins: [
-    // font-adda-nums: enables Inter's tabular figures for aligned revenue/metric columns
+    // font-venue-nums: enables Inter's tabular figures for aligned revenue/metric columns
     plugin(({ addUtilities }) => {
       addUtilities({
-        '.font-adda-nums': { 'font-variant-numeric': 'tabular-nums' },
+        '.font-venue-nums': { 'font-variant-numeric': 'tabular-nums' },
       })
     }),
   ],

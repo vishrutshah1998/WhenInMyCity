@@ -4,7 +4,7 @@ import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { respondToProposal } from '@/app/actions/venue'
-import type { MakerAddaProposal } from '@/types/database'
+import type { MakerVenueProposal } from '@/types/database'
 import ProposalActionButtons from '@/components/venue/ProposalActionButtons'
 
 const SLOT_LABEL: Record<string, string> = {
@@ -60,7 +60,7 @@ function ProposalCard({
   proposal,
   onRespond,
 }: {
-  proposal: MakerAddaProposal
+  proposal: MakerVenueProposal
   onRespond: (id: string, response: 'accept' | 'decline') => void
 }) {
   const [isPending, startTransition] = useTransition()
@@ -141,7 +141,7 @@ function ProposalCard({
             display: 'flex',
             gap: 8,
           }}
-            className="font-adda-nums"
+            className="font-venue-nums"
           >
             <span>{formatDate(proposal.proposed_date)}</span>
             <span>·</span>
@@ -186,7 +186,7 @@ function ProposalCard({
 // ---------------------------------------------------------------------------
 
 interface Props {
-  proposals: MakerAddaProposal[]
+  proposals: MakerVenueProposal[]
 }
 
 export default function PendingRequests({ proposals: initialProposals }: Props) {
@@ -231,7 +231,7 @@ export default function PendingRequests({ proposals: initialProposals }: Props) 
         </span>
         {proposals.length > 0 && (
           <span
-            className="font-adda-nums"
+            className="font-venue-nums"
             style={{
               background: 'var(--venue-amber)',
               color: '#000',

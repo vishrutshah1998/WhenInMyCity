@@ -107,10 +107,10 @@ export interface VenueSidebarClientProps {
 // Design tokens
 // ---------------------------------------------------------------------------
 
-const ADDA_AMBER   = 'var(--venue-amber, #F5A800)'
-const ADDA_MUTED   = 'var(--venue-text-muted)'
-const ADDA_BORDER  = 'var(--venue-border-subtle)'
-const ADDA_HOVER   = 'var(--venue-bg-hover)'
+const VENUE_AMBER   = 'var(--venue-amber, #F5A800)'
+const VENUE_MUTED   = 'var(--venue-text-muted)'
+const VENUE_BORDER  = 'var(--venue-border-subtle)'
+const VENUE_HOVER   = 'var(--venue-bg-hover)'
 
 // ── Workspace / persona helpers (mirrors dashboard Sidebar.tsx) ──────────────
 
@@ -147,7 +147,7 @@ function SectionLabel({ label }: { label: string }) {
   return (
     <div style={{
       fontSize: 10, fontWeight: 500, letterSpacing: '1.2px', textTransform: 'uppercase',
-      color: ADDA_MUTED, padding: '14px 10px 5px',
+      color: VENUE_MUTED, padding: '14px 10px 5px',
       fontFamily: 'var(--font-jetbrains-mono), monospace', whiteSpace: 'nowrap',
     }}>
       {label}
@@ -170,18 +170,18 @@ function NavLink({ item, active, badge, collapsed }: { item: NavItem; active: bo
         borderRadius: 6, justifyContent: collapsed ? 'center' : undefined,
         cursor: 'pointer', textDecoration: 'none',
         transition: 'background 160ms ease',
-        background: active ? 'var(--venue-amber-tint)' : hovered && !active ? ADDA_HOVER : 'transparent',
+        background: active ? 'var(--venue-amber-tint)' : hovered && !active ? VENUE_HOVER : 'transparent',
         marginBottom: 1,
       }}
     >
       {active && !collapsed && (
-        <span style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 3, background: ADDA_AMBER, borderRadius: '0 3px 3px 0' }} />
+        <span style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 3, background: VENUE_AMBER, borderRadius: '0 3px 3px 0' }} />
       )}
       <span
         className="material-symbols-outlined"
         style={{
           fontSize: 20, flexShrink: 0,
-          color: active ? ADDA_AMBER : ADDA_MUTED,
+          color: active ? VENUE_AMBER : VENUE_MUTED,
           fontVariationSettings: active ? "'FILL' 1,'wght' 400,'GRAD' 0,'opsz' 24" : "'FILL' 0,'wght' 300,'GRAD' 0,'opsz' 24",
           transition: 'color 160ms ease',
         }}
@@ -190,7 +190,7 @@ function NavLink({ item, active, badge, collapsed }: { item: NavItem; active: bo
       </span>
 
       {collapsed && badge !== null && (
-        <span style={{ position: 'absolute', top: 7, right: 8, width: 7, height: 7, borderRadius: '50%', background: ADDA_AMBER, border: '1.5px solid var(--venue-bg-surface)' }} />
+        <span style={{ position: 'absolute', top: 7, right: 8, width: 7, height: 7, borderRadius: '50%', background: VENUE_AMBER, border: '1.5px solid var(--venue-bg-surface)' }} />
       )}
 
       {!collapsed && (
@@ -205,12 +205,12 @@ function NavLink({ item, active, badge, collapsed }: { item: NavItem; active: bo
             {item.label}
           </span>
           {badge !== null && (
-            <span style={{ background: ADDA_AMBER, color: '#000', fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 9999, flexShrink: 0, fontFamily: 'var(--font-inter), system-ui, sans-serif', lineHeight: '16px' }}>
+            <span style={{ background: VENUE_AMBER, color: '#000', fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 9999, flexShrink: 0, fontFamily: 'var(--font-inter), system-ui, sans-serif', lineHeight: '16px' }}>
               {badge}
             </span>
           )}
           {item.soon && (
-            <span style={{ fontSize: 9, border: '1px solid currentColor', padding: '1px 5px', color: ADDA_MUTED, fontFamily: 'var(--font-jetbrains-mono), monospace' }}>
+            <span style={{ fontSize: 9, border: '1px solid currentColor', padding: '1px 5px', color: VENUE_MUTED, fontFamily: 'var(--font-jetbrains-mono), monospace' }}>
               SOON
             </span>
           )}
@@ -288,7 +288,7 @@ export default function VenueSidebarClient({
   return (
     <aside className="dash-sidebar" style={{
       width: sidebarWidth, minHeight: '100vh',
-      background: 'var(--venue-bg-surface)', borderRight: `1px solid ${ADDA_BORDER}`,
+      background: 'var(--venue-bg-surface)', borderRight: `1px solid ${VENUE_BORDER}`,
       display: 'flex', flexDirection: 'column', padding: '20px 0 0',
       position: 'fixed', top: 0, left: 0, zIndex: 50,
       transition: 'width 220ms cubic-bezier(0.4, 0, 0.2, 1)', overflow: 'hidden',
@@ -299,7 +299,7 @@ export default function VenueSidebarClient({
         display: 'flex', alignItems: 'center',
         gap: collapsed ? 4 : 8,
         padding: collapsed ? '0 0 16px' : '0 12px 16px',
-        borderBottom: `1px solid ${ADDA_BORDER}`,
+        borderBottom: `1px solid ${VENUE_BORDER}`,
         justifyContent: 'center',
         flexDirection: collapsed ? 'column' : 'row',
         flexShrink: 0,
@@ -334,12 +334,12 @@ export default function VenueSidebarClient({
               transition: 'background 160ms ease, border-color 160ms ease',
             }}
           >
-            <span className="material-symbols-outlined" style={{ fontSize: 16, color: ADDA_AMBER, flexShrink: 0 }}>
+            <span className="material-symbols-outlined" style={{ fontSize: 16, color: VENUE_AMBER, flexShrink: 0 }}>
               {businessType === 'brand' ? 'campaign' : 'storefront'}
             </span>
             <div style={{ flex: 1, minWidth: 0, textAlign: 'left' }}>
               <div style={{
-                fontSize: 11, fontWeight: 700, color: ADDA_AMBER,
+                fontSize: 11, fontWeight: 700, color: VENUE_AMBER,
                 letterSpacing: '1.5px', textTransform: 'uppercase',
                 fontFamily: 'var(--font-jetbrains-mono), monospace',
                 overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
@@ -382,7 +382,7 @@ export default function VenueSidebarClient({
         <div style={{
           margin: '0 8px',
           background: 'rgba(0,0,0,0.2)',
-          border: `1px solid ${ADDA_BORDER}`,
+          border: `1px solid ${VENUE_BORDER}`,
           borderRadius: 10, overflow: 'hidden', flexShrink: 0,
         }}>
           {/* Current workspace — active with checkmark */}
@@ -393,12 +393,12 @@ export default function VenueSidebarClient({
                 display: 'flex', alignItems: 'center', gap: 10,
                 padding: '9px 12px',
                 background: `rgba(${currentPersona === 'brand' ? '245,168,0' : '93,217,208'},0.08)`,
-                borderBottom: `1px solid ${ADDA_BORDER}`,
+                borderBottom: `1px solid ${VENUE_BORDER}`,
               }}>
                 <span className="material-symbols-outlined" style={{ fontSize: 16, color: meta.color, flexShrink: 0 }}>{meta.icon}</span>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 13, fontWeight: 600, color: meta.color }}>{meta.label}</div>
-                  <div style={{ fontSize: 10, color: ADDA_MUTED, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{businessName}</div>
+                  <div style={{ fontSize: 10, color: VENUE_MUTED, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{businessName}</div>
                 </div>
                 <span className="material-symbols-outlined" style={{ fontSize: 14, color: meta.color }}>check</span>
               </div>
@@ -421,7 +421,7 @@ export default function VenueSidebarClient({
                 style={{
                   display: 'flex', alignItems: 'center', gap: 10,
                   padding: '9px 12px', textDecoration: 'none',
-                  borderBottom: `1px solid ${ADDA_BORDER}`,
+                  borderBottom: `1px solid ${VENUE_BORDER}`,
                   transition: 'background 150ms ease',
                 }}
                 onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = `rgba(255,255,255,0.04)`}
@@ -429,7 +429,7 @@ export default function VenueSidebarClient({
               >
                 <span className="material-symbols-outlined" style={{ fontSize: 16, color: meta.color, flexShrink: 0 }}>{meta.icon}</span>
                 <span style={{ flex: 1, fontSize: 13, fontWeight: 500, color: meta.color }}>{meta.label}</span>
-                <span className="material-symbols-outlined" style={{ fontSize: 14, color: ADDA_MUTED }}>arrow_forward</span>
+                <span className="material-symbols-outlined" style={{ fontSize: 14, color: VENUE_MUTED }}>arrow_forward</span>
               </Link>
             )
           })}
@@ -437,7 +437,7 @@ export default function VenueSidebarClient({
           {/* Add workspace — missing personas */}
           {missingPersonas.length > 0 && (
             <div>
-              <div style={{ padding: '6px 12px 4px', fontSize: 9, color: ADDA_MUTED, fontFamily: 'var(--font-jetbrains-mono), monospace', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+              <div style={{ padding: '6px 12px 4px', fontSize: 9, color: VENUE_MUTED, fontFamily: 'var(--font-jetbrains-mono), monospace', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
                 Add workspace
               </div>
               {missingPersonas.map(p => (
@@ -452,8 +452,8 @@ export default function VenueSidebarClient({
                   onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.04)'}
                   onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}
                 >
-                  <span className="material-symbols-outlined" style={{ fontSize: 15, color: ADDA_MUTED, flexShrink: 0 }}>add_circle</span>
-                  <span style={{ fontSize: 12, color: ADDA_MUTED }}>{personaLabel(p as PersonaKey)}</span>
+                  <span className="material-symbols-outlined" style={{ fontSize: 15, color: VENUE_MUTED, flexShrink: 0 }}>add_circle</span>
+                  <span style={{ fontSize: 12, color: VENUE_MUTED }}>{personaLabel(p as PersonaKey)}</span>
                 </Link>
               ))}
             </div>
@@ -465,7 +465,7 @@ export default function VenueSidebarClient({
       <nav style={{ flex: 1, padding: collapsed ? '8px 8px' : '8px 10px', display: 'flex', flexDirection: 'column', overflowY: 'auto', overflowX: 'hidden' }}>
         {NAV_SECTIONS.map((section, si) => (
           <div key={section.group}>
-            {collapsed && si > 0 && <div style={{ height: 1, background: ADDA_BORDER, margin: '6px 8px' }} />}
+            {collapsed && si > 0 && <div style={{ height: 1, background: VENUE_BORDER, margin: '6px 8px' }} />}
             {!collapsed && <SectionLabel label={section.group} />}
 
             {section.items.map(item => (
@@ -480,11 +480,11 @@ export default function VenueSidebarClient({
                     opacity: 0.35, cursor: 'not-allowed', marginBottom: 1,
                   }}
                 >
-                  <span className="material-symbols-outlined" style={{ fontSize: 20, flexShrink: 0, color: ADDA_MUTED }}>{item.icon}</span>
+                  <span className="material-symbols-outlined" style={{ fontSize: 20, flexShrink: 0, color: VENUE_MUTED }}>{item.icon}</span>
                   {!collapsed && (
                     <>
                       <span style={{ fontSize: 13.5, fontWeight: 500, fontFamily: 'var(--font-inter), system-ui, sans-serif', color: 'var(--venue-text-secondary)', flex: 1, whiteSpace: 'nowrap' }}>{item.label}</span>
-                      <span style={{ fontSize: 9, border: '1px solid currentColor', padding: '1px 5px', color: ADDA_MUTED, fontFamily: 'var(--font-jetbrains-mono), monospace' }}>SOON</span>
+                      <span style={{ fontSize: 9, border: '1px solid currentColor', padding: '1px 5px', color: VENUE_MUTED, fontFamily: 'var(--font-jetbrains-mono), monospace' }}>SOON</span>
                     </>
                   )}
                 </div>
@@ -497,7 +497,7 @@ export default function VenueSidebarClient({
       </nav>
 
       {/* ── Footer: owner info + collapse toggle ──────────────────────────────── */}
-      <div style={{ borderTop: `1px solid ${ADDA_BORDER}`, padding: collapsed ? '12px 8px 0' : '10px 10px 0' }}>
+      <div style={{ borderTop: `1px solid ${VENUE_BORDER}`, padding: collapsed ? '12px 8px 0' : '10px 10px 0' }}>
         <Link
           href={businessType === 'brand' ? '/business/brand/profile' : '/business/venue/profile'}
           title={collapsed ? `${ownerName} · Profile` : undefined}
@@ -508,7 +508,7 @@ export default function VenueSidebarClient({
             borderRadius: 6, textDecoration: 'none',
             transition: 'background 160ms ease',
           }}
-          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = ADDA_HOVER }}
+          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = VENUE_HOVER }}
           onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent' }}
         >
           <div style={{
@@ -529,9 +529,9 @@ export default function VenueSidebarClient({
             <>
               <div style={{ overflow: 'hidden', flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: 13, fontWeight: 600, fontFamily: 'var(--font-inter), system-ui, sans-serif', color: 'var(--venue-text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', lineHeight: 1.3 }}>{ownerName}</div>
-                <div style={{ fontSize: 11, color: ADDA_MUTED, fontFamily: 'var(--font-inter), system-ui, sans-serif', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{businessName}</div>
+                <div style={{ fontSize: 11, color: VENUE_MUTED, fontFamily: 'var(--font-inter), system-ui, sans-serif', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{businessName}</div>
               </div>
-              <span className="material-symbols-outlined" style={{ fontSize: 16, color: ADDA_MUTED, flexShrink: 0 }}>settings</span>
+              <span className="material-symbols-outlined" style={{ fontSize: 16, color: VENUE_MUTED, flexShrink: 0 }}>settings</span>
             </>
           )}
         </Link>

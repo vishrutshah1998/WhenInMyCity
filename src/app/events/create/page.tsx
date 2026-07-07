@@ -28,7 +28,7 @@ interface WimcVenue {
   lat: number | null
   lng: number | null
   google_maps_url: string | null
-  source: 'adda' | 'directory'
+  source: 'venue' | 'directory'
 }
 
 // ── Smart Palette System ─────────────────────────────────────────────────────
@@ -407,12 +407,12 @@ export default function CreateEventPage() {
       setIsLoadingVenues(true)
       setSelectedVenue(null)
       const supabase = createClient()
-      const [{ data: addas }, { data: dirs }] = await Promise.all([
-        supabase.from('adda_profiles').select('id, name, city, address, lat, lng').ilike('city', `%${city}%`).eq('is_active', true).limit(12),
+      const [{ data: venues }, { data: dirs }] = await Promise.all([
+        supabase.from('venue_profiles').select('id, name, city, address, lat, lng').ilike('city', `%${city}%`).eq('is_active', true).limit(12),
         supabase.from('venue_directory').select('id, name, city, address, lat, lng, google_maps_url').ilike('city', `%${city}%`).eq('is_active', true).limit(12),
       ])
       setWimcVenues([
-        ...(addas ?? []).map(a => ({ id: a.id, name: a.name, city: a.city, address: a.address, lat: a.lat, lng: a.lng, google_maps_url: null, source: 'adda' as const })),
+        ...(venues ?? []).map(a => ({ id: a.id, name: a.name, city: a.city, address: a.address, lat: a.lat, lng: a.lng, google_maps_url: null, source: 'venue' as const })),
         ...(dirs ?? []).map(d => ({ id: d.id, name: d.name, city: d.city, address: d.address, lat: d.lat, lng: d.lng, google_maps_url: d.google_maps_url, source: 'directory' as const })),
       ])
       setIsLoadingVenues(false)
@@ -643,14 +643,14 @@ export default function CreateEventPage() {
                           <button key={`${v.source}-${v.id}`} onClick={() => setSelectedVenue(selectedVenue?.id === v.id ? null : v)}
                                   className={['w-full flex items-start gap-3 py-3 px-4 border text-left transition-colors', selectedVenue?.id === v.id ? 'border-[#E8705A] bg-[#E8705A]/10' : 'border-dashed border-white/10 hover:bg-white/5'].join(' ')}>
                             <div className="w-8 h-8 flex items-center justify-center flex-shrink-0 mt-0.5"
-                                 style={{ backgroundColor: v.source === 'adda' ? '#5DD9D0' : '#E8705A', fontFamily: 'var(--font-syne)', fontWeight: 900, fontSize: 12, color: '#07070A' }}>
+                                 style={{ backgroundColor: v.source === 'venue' ? '#5DD9D0' : '#E8705A', fontFamily: 'var(--font-syne)', fontWeight: 900, fontSize: 12, color: '#07070A' }}>
                               {v.name.charAt(0).toUpperCase()}
                             </div>
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2">
                                 <span style={{ fontFamily: 'var(--font-barlow)' }} className="text-white text-[15px]">{v.name}</span>
-                                {v.source === 'adda' && (
-                                  <span style={{ fontFamily: 'var(--font-jetbrains-mono)' }} className="text-[8px] text-[#5DD9D0] border border-[#5DD9D0]/40 px-1 py-0.5 uppercase">ADDA</span>
+                                {v.source === 'venue' && (
+                                  <span style={{ fontFamily: 'var(--font-jetbrains-mono)' }} className="text-[8px] text-[#5DD9D0] border border-[#5DD9D0]/40 px-1 py-0.5 uppercase">VENUE</span>
                                 )}
                               </div>
                               <div style={{ fontFamily: 'var(--font-jetbrains-mono)' }} className="text-white/50 text-[10px] uppercase truncate">{v.address}</div>
@@ -943,7 +943,7 @@ export default function CreateEventPage() {
                           <div className="space-y-1.5">
                             {[
                               { label: 'DATE',  val: `${dateDay || '24'} ${dateMonth || 'OCT'} 2024${timeDisplay ? ` · ${timeDisplay}` : ''}` },
-                              { label: 'ADDA', val: activeVenueName || 'TO BE ANNOUNCED' },
+                              { label: 'VENUE', val: activeVenueName || 'TO BE ANNOUNCED' },
                               { label: 'ADMIT', val: priceLabel },
                             ].map(row => (
                               <div key={row.label} className="flex items-baseline gap-3">

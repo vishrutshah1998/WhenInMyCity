@@ -1,5 +1,5 @@
 // ---------------------------------------------------------------------------
-// Mock analytics data for the Adda Analytics page.
+// Mock analytics data for the Venue Analytics page.
 // All data is deterministically generated — no Math.random() — so it renders
 // identically on server and client.
 // TODO: replace every exported constant with real Supabase queries.
@@ -14,7 +14,7 @@ export interface DailyMetric {
   bookings: number         // confirmed bookings
   pendingCount: number     // unconfirmed requests that day
   hours: number            // total confirmed booked hours
-  revenuePaise: number     // adda's net share (paise)
+  revenuePaise: number     // venue's net share (paise)
   occupancyPercent: number // hours / 12 available hours × 100
   hasPendingRequest: boolean
 }
@@ -47,12 +47,12 @@ export interface BenchmarkMetric {
   sampleSize: number
 }
 
-// Adda tier hierarchy: chai_stall < nukkad < adda < mehfil
-export type AddaTier = 'chai_stall' | 'nukkad' | 'adda' | 'mehfil'
+// Venue tier hierarchy: chai_stall < nukkad < venue < mehfil
+export type VenueTier = 'chai_stall' | 'nukkad' | 'venue' | 'mehfil'
 
-export const TIER_ORDER: AddaTier[] = ['chai_stall', 'nukkad', 'adda', 'mehfil']
+export const TIER_ORDER: VenueTier[] = ['chai_stall', 'nukkad', 'venue', 'mehfil']
 
-export function tierAtLeast(venueTier: AddaTier, minTier: AddaTier): boolean {
+export function tierAtLeast(venueTier: VenueTier, minTier: VenueTier): boolean {
   return TIER_ORDER.indexOf(venueTier) >= TIER_ORDER.indexOf(minTier)
 }
 
@@ -116,7 +116,7 @@ function generateDailyMetrics(): DailyMetric[] {
     const hours       = hasBooking ? bookings * avgHrs : 0
     const occupancy   = Math.min(Math.round((hours / 12) * 100), 100)
 
-    // Adda share: 35% of ₹1,500/hr = ₹525/hr = 52 500 paise/hr
+    // Venue share: 35% of ₹1,500/hr = ₹525/hr = 52 500 paise/hr
     const revenuePaise = hours * 52500
 
     // Pending requests: separate chance, more likely on busy days
@@ -262,10 +262,10 @@ export interface WaterfallData {
 }
 
 export function computeWaterfall(days: DailyMetric[]): WaterfallData {
-  // Gross = adda share / 0.35 × 1.0 (back-calculate total ticket revenue)
-  // We treat revenuePaise as adda share (35% of gross ticket revenue)
-  const addaSharePaise      = days.reduce((s, d) => s + d.revenuePaise, 0)
-  const grossTicketRevPaise = Math.round(addaSharePaise / 0.35)
+  // Gross = venue share / 0.35 × 1.0 (back-calculate total ticket revenue)
+  // We treat revenuePaise as venue share (35% of gross ticket revenue)
+  const venueSharePaise      = days.reduce((s, d) => s + d.revenuePaise, 0)
+  const grossTicketRevPaise = Math.round(venueSharePaise / 0.35)
   const platformFeePaise    = Math.round(grossTicketRevPaise * 0.15)
   const processingFeePaise  = Math.round(grossTicketRevPaise * 0.025)
   const netPayoutPaise      = grossTicketRevPaise - platformFeePaise - processingFeePaise
@@ -423,7 +423,7 @@ export const MOCK_BENCHMARKS: BenchmarkMetric[] = [
 // ---------------------------------------------------------------------------
 
 export const MOCK_VENUE_PROFILE = {
-  tier: 'nukkad' as AddaTier,
+  tier: 'nukkad' as VenueTier,
   city: 'Indore',
   type: 'Art Studio',
 }

@@ -1,9 +1,9 @@
 'use server'
 
 // =============================================================================
-// WIMC — Adda onboarding server actions
+// WIMC — Venue onboarding server actions
 // Mirrors the Maker onboarding pattern: step data is persisted in Supabase
-// auth user_metadata until completeAddaOnboarding commits everything atomically.
+// auth user_metadata until completeVenueOnboarding commits everything atomically.
 // =============================================================================
 
 import { z } from 'zod'
@@ -37,14 +37,14 @@ const Step1Schema = z.object({
   google_photo_urls: z.array(z.string().url()).max(5).optional(),
 })
 
-const VALID_ADDA_TYPES = [
+const VALID_VENUE_TYPES = [
   'cafe', 'coworking', 'gallery', 'community_hall',
   'rooftop', 'garden', 'studio', 'library', 'restaurant',
 ] as const
 
 const Step2Schema = z.object({
-  adda_type: z
-    .array(z.enum(VALID_ADDA_TYPES))
+  venue_type: z
+    .array(z.enum(VALID_VENUE_TYPES))
     .min(1, 'Select at least one venue type'),
   capacity_min: z.number().int().min(1).optional(),
   capacity_max: z.number().int().min(1).optional(),
@@ -101,18 +101,18 @@ const Step4Schema = z.object({
     .or(z.literal('')),
 })
 
-/** Union of step payloads accepted by `saveAddaOnboardingStep`. */
-export type AddaOnboardingStepData =
+/** Union of step payloads accepted by `saveVenueOnboardingStep`. */
+export type VenueOnboardingStepData =
   | ({ step: 1 } & z.infer<typeof Step1Schema>)
   | ({ step: 2 } & z.infer<typeof Step2Schema>)
   | ({ step: 3 } & z.infer<typeof Step3Schema>)
   | ({ step: 4 } & z.infer<typeof Step4Schema>)
 
 // ---------------------------------------------------------------------------
-// Complete onboarding schema (validated in completeAddaOnboarding)
+// Complete onboarding schema (validated in completeVenueOnboarding)
 // ---------------------------------------------------------------------------
 
-const CompleteAddaSchema = z.object({
+const CompleteVenueSchema = z.object({
   // Step 1
   name:              z.string().min(2).max(100),
   description:       z.string().max(1000).optional(),
@@ -134,7 +134,7 @@ const CompleteAddaSchema = z.object({
   })).optional(),
   google_photo_urls: z.array(z.string().url()).max(5).optional(),
   // Step 2
-  adda_type:                z.array(z.enum(VALID_ADDA_TYPES)).min(1),
+  venue_type:                z.array(z.enum(VALID_VENUE_TYPES)).min(1),
   capacity_min:             z.number().int().min(1).optional(),
   capacity_max:             z.number().int().min(1).optional(),
   capacity_configurations:  z.array(z.object({ type: z.string(), capacity: z.number() })).default([]),
@@ -165,22 +165,22 @@ const CompleteAddaSchema = z.object({
   { message: 'Maximum capacity must be ≥ minimum capacity', path: ['capacity_max'] },
 )
 
-export type CompleteAddaInput = z.infer<typeof CompleteAddaSchema>
+export type CompleteVenueInput = z.infer<typeof CompleteVenueSchema>
 
 // ---------------------------------------------------------------------------
-// saveAddaOnboardingStep
+// saveVenueOnboardingStep
 // ---------------------------------------------------------------------------
 
 /**
- * Persists one step's worth of Adda onboarding data to the authenticated
- * user's Supabase auth `user_metadata` under the key `adda_onboarding`.
+ * Persists one step's worth of Venue onboarding data to the authenticated
+ * user's Supabase auth `user_metadata` under the key `venue_onboarding`.
  *
  * Each call merges (not replaces) the existing metadata so partial progress
  * from earlier steps is preserved.
  *
  * Steps:
  *  1. basicInfo  — name, description, city, neighbourhood, address, lat/lng
- *  2. venueType  — adda_type, capacity_min/max, capacity_configurations
+ *  2. venueType  — venue_type, capacity_min/max, capacity_configurations
  *  3. amenities  — amenities, pricing_model, pricing_config, available_days
  *  4. contact    — contact_whatsapp, contact_email, instagram_handle
  *
@@ -188,9 +188,9 @@ export type CompleteAddaInput = z.infer<typeof CompleteAddaSchema>
  * @param data  The step payload (validated with the appropriate Zod schema).
  * @returns `{ error: string | null }`
  */
-export async function saveAddaOnboardingStep(
+export async function saveVenueOnboardingStep(
   step: number,
-  data: AddaOnboardingStepData,
+  data: VenueOnboardingStepData,
 ): Promise<{ error: string | null }> {
   const { user } = await requireAuth('/onboarding/venue')
 
@@ -210,19 +210,19 @@ export async function saveAddaOnboardingStep(
 
   const admin = createAdminClient()
 
-  // Merge with existing adda_onboarding metadata
+  // Merge with existing venue_onboarding metadata
   const { data: existing } = await admin.auth.admin.getUserById(user.id)
-  const current = (existing?.user?.user_metadata?.adda_onboarding ?? {}) as Record<string, unknown>
+  const current = (existing?.user?.user_metadata?.venue_onboarding ?? {}) as Record<string, unknown>
 
   const { error } = await admin.auth.admin.updateUserById(user.id, {
     user_metadata: {
       ...existing?.user?.user_metadata,
-      adda_onboarding: { ...current, ...(parsed.data as Record<string, unknown>), last_step: step },
+      venue_onboarding: { ...current, ...(parsed.data as Record<string, unknown>), last_step: step },
     },
   })
 
   if (error) {
-    console.error('[saveAddaOnboardingStep]', error.message)
+    console.error('[saveVenueOnboardingStep]', error.message)
     return { error: 'Failed to save your progress. Please try again.' }
   }
 
@@ -230,30 +230,30 @@ export async function saveAddaOnboardingStep(
 }
 
 // ---------------------------------------------------------------------------
-// completeAddaOnboarding
+// completeVenueOnboarding
 // ---------------------------------------------------------------------------
 
 /**
- * Finalises Adda onboarding by committing the profile and default availability.
+ * Finalises Venue onboarding by committing the profile and default availability.
  *
  * Steps:
  *  1. Validates the complete payload with Zod.
- *  2. Checks that this auth account does not already have an Adda profile.
- *  3. Uploads the cover image to `venue-covers/{adda_id}/cover.{ext}`.
- *  4. Uploads up to 12 gallery images to `venue-covers/{adda_id}/gallery/{n}.{ext}`.
- *  5. Inserts the `adda_profiles` row.
- *  6. Seeds `adda_availability` for the next 30 days, restricted to the
+ *  2. Checks that this auth account does not already have an Venue profile.
+ *  3. Uploads the cover image to `venue-covers/{venue_id}/cover.{ext}`.
+ *  4. Uploads up to 12 gallery images to `venue-covers/{venue_id}/gallery/{n}.{ext}`.
+ *  5. Inserts the `venue_profiles` row.
+ *  6. Seeds `venue_availability` for the next 30 days, restricted to the
  *     days the venue selected in V7 (available_days). If available_days is
  *     empty, seeds all 7 days as a safe fallback.
- *  7. Clears the `adda_onboarding` key from `user_metadata`.
+ *  7. Clears the `venue_onboarding` key from `user_metadata`.
  *
  * @param data            Validated onboarding payload (all four steps merged).
  * @param coverImageFile  Optional cover image `File` to upload.
  * @param galleryFiles    Optional array of up to 12 gallery `File` objects.
  * @returns `{ slug, error: null }` on success, `{ slug: '', error }` on failure.
  */
-export async function completeAddaOnboarding(
-  data: CompleteAddaInput,
+export async function completeVenueOnboarding(
+  data: CompleteVenueInput,
   coverImageFile?: File,
   galleryFiles?: File[],
 ): Promise<{ slug: string; error: string | null }> {
@@ -264,7 +264,7 @@ export async function completeAddaOnboarding(
     return { slug: '', error: 'City is required to complete onboarding.' }
   }
 
-  const parsed = CompleteAddaSchema.safeParse(data)
+  const parsed = CompleteVenueSchema.safeParse(data)
   if (!parsed.success) {
     return { slug: '', error: parsed.error.errors[0].message }
   }
@@ -273,9 +273,9 @@ export async function completeAddaOnboarding(
 
   const admin = createAdminClient()
 
-  // Idempotency guard: one Adda per auth account
+  // Idempotency guard: one Venue per auth account
   const { data: existing } = await admin
-    .from('adda_profiles')
+    .from('venue_profiles')
     .select('slug')
     .eq('auth_user_id', user.id)
     .maybeSingle()
@@ -310,13 +310,13 @@ export async function completeAddaOnboarding(
   // user-uploaded gallery files, capped at the 12-image DB constraint.
   const allGallery = [...(d.google_photo_urls ?? []), ...galleryUrls].slice(0, 12)
 
-  // Insert adda_profiles row
-  const { error: insertError } = await admin.from('adda_profiles').insert({
+  // Insert venue_profiles row
+  const { error: insertError } = await admin.from('venue_profiles').insert({
     auth_user_id:            user.id,
     slug,
     name:                    d.name,
     description:             d.description ?? null,
-    adda_type:               d.adda_type,
+    venue_type:               d.venue_type,
     city:                    d.city,
     neighbourhood:           d.neighbourhood ?? null,
     address:                 d.address,
@@ -348,32 +348,32 @@ export async function completeAddaOnboarding(
   })
 
   if (insertError) {
-    console.error('[completeAddaOnboarding] insert', insertError.message)
-    return { slug: '', error: 'Failed to create your Adda profile. Please try again.' }
+    console.error('[completeVenueOnboarding] insert', insertError.message)
+    return { slug: '', error: 'Failed to create your Venue profile. Please try again.' }
   }
 
-  // Fetch the newly created adda_id for availability seeding
-  const { data: newAdda } = await admin
-    .from('adda_profiles')
+  // Fetch the newly created venue_id for availability seeding
+  const { data: newVenue } = await admin
+    .from('venue_profiles')
     .select('id')
     .eq('slug', slug)
     .maybeSingle()
 
   // Seed availability: next 30 days, restricted to the days the venue selected.
   // Falls back to all 7 days if available_days is empty (safe default).
-  if (newAdda) {
-    const availabilityRows = buildDefaultAvailability(newAdda.id, d.available_days)
+  if (newVenue) {
+    const availabilityRows = buildDefaultAvailability(newVenue.id, d.available_days)
     const chunkSize = 50
     for (let i = 0; i < availabilityRows.length; i += chunkSize) {
       await admin
-        .from('adda_availability')
-        .upsert(availabilityRows.slice(i, i + chunkSize), { onConflict: 'adda_id,date,slot_type' })
+        .from('venue_availability')
+        .upsert(availabilityRows.slice(i, i + chunkSize), { onConflict: 'venue_id,date,slot_type' })
     }
   }
 
   // Clear onboarding metadata
   await admin.auth.admin.updateUserById(user.id, {
-    user_metadata: { adda_onboarding: null },
+    user_metadata: { venue_onboarding: null },
   }).catch(() => { /* non-fatal */ })
 
   // Ensure 'venue' is in the personas array on user_profiles so business layout
@@ -412,7 +412,7 @@ async function generateUniqueSlug(
     .replace(/[^a-z0-9-]/g, '')
     .replace(/-+/g, '-')
     .replace(/^-+|-+$/g, '')
-    .slice(0, 48) || 'adda'
+    .slice(0, 48) || 'venue'
 
   const candidates = [
     base,
@@ -420,7 +420,7 @@ async function generateUniqueSlug(
   ].filter((c) => c.length >= 3)
 
   const { data: taken } = await admin
-    .from('adda_profiles')
+    .from('venue_profiles')
     .select('slug')
     .in('slug', candidates)
 
@@ -428,7 +428,7 @@ async function generateUniqueSlug(
   const free = candidates.find((c) => !takenSet.has(c))
   if (free) return free
 
-  return `adda-${Math.floor(100000 + Math.random() * 900000)}`
+  return `venue-${Math.floor(100000 + Math.random() * 900000)}`
 }
 
 /** Uploads a single image to the `venue-covers` bucket and returns its public URL. */
@@ -452,7 +452,7 @@ async function uploadImage(
     .upload(storagePath, file, { upsert: true, contentType: file.type })
 
   if (uploadError) {
-    console.error('[completeAddaOnboarding] image upload', uploadError.message)
+    console.error('[completeVenueOnboarding] image upload', uploadError.message)
     return { url: '', error: 'Failed to upload image. Please try again.' }
   }
 
@@ -467,19 +467,19 @@ const DAY_INDICES: Record<string, number> = {
 }
 
 /**
- * Builds `adda_availability` rows for the next 30 days.
+ * Builds `venue_availability` rows for the next 30 days.
  *
  * Only days that appear in `availableDays` are included. If `availableDays`
  * is empty (venue skipped V7 or it wasn't collected), all 7 days are seeded
  * as a safe fallback — matching the old behaviour.
  *
- * @param addaId       The newly inserted adda_profiles.id
+ * @param venueId       The newly inserted venue_profiles.id
  * @param availableDays  Array of day names from V7 (e.g. ['monday','friday'])
  */
 function buildDefaultAvailability(
-  addaId: string,
+  venueId: string,
   availableDays: string[],
-): Array<{ adda_id: string; date: string; slot_type: AvailabilitySlotType; status: 'available' }> {
+): Array<{ venue_id: string; date: string; slot_type: AvailabilitySlotType; status: 'available' }> {
   // Normalise to lowercase for safe comparison
   const allowedIndices = availableDays.length > 0
     ? new Set(availableDays.map(d => DAY_INDICES[d.toLowerCase()]).filter(i => i !== undefined))
@@ -497,7 +497,7 @@ function buildDefaultAvailability(
     if (allowedIndices !== null && !allowedIndices.has(d.getDay())) continue
 
     rows.push({
-      adda_id:   addaId,
+      venue_id:   venueId,
       date:      d.toISOString().split('T')[0],
       slot_type: 'full_day',
       status:    'available',

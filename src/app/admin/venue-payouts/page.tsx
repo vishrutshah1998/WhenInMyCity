@@ -1,13 +1,13 @@
-import { getAdminAddaPayouts } from '@/app/actions/admin'
+import { getAdminVenuePayouts } from '@/app/actions/admin'
 import VenuePayoutsAdminClient from './VenuePayoutsAdminClient'
 
 interface Props {
   searchParams: Promise<{ status?: string }>
 }
 
-export default async function AdminAddaPayoutsPage({ searchParams }: Props) {
+export default async function AdminVenuePayoutsPage({ searchParams }: Props) {
   const { status = 'pending' } = await searchParams
-  const { data: payouts, error } = await getAdminAddaPayouts(status)
+  const { data: payouts, error } = await getAdminVenuePayouts(status)
 
   if (error) {
     return (

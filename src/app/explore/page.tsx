@@ -41,8 +41,8 @@ export default async function ExplorePage({
       .limit(8),
 
     admin
-      .from('adda_profiles')
-      .select('id, name, slug, neighbourhood, city, adda_type, capacity_max, is_verified')
+      .from('venue_profiles')
+      .select('id, name, slug, neighbourhood, city, venue_type, capacity_max, is_verified')
       .eq('city', city)
       .eq('is_active', true)
       .limit(6),
@@ -75,7 +75,7 @@ export default async function ExplorePage({
     slug: string
     neighbourhood: string | null
     city: string
-    adda_type: string[]
+    venue_type: string[]
     capacity_max: number | null
     is_verified: boolean
   }
@@ -115,7 +115,7 @@ export default async function ExplorePage({
     slug:         v.slug,
     neighbourhood: v.neighbourhood,
     city:         v.city,
-    adda_type:    v.adda_type ?? [],
+    venue_type:    v.venue_type ?? [],
     capacity_max: v.capacity_max,
     is_verified:  v.is_verified,
   }))

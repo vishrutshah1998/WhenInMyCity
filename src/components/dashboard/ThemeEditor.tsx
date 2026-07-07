@@ -149,7 +149,7 @@ const BRAND_LAYOUT_PRESETS: LayoutPreset[] = [
   },
 ]
 
-const ADDA_LAYOUT_PRESETS: LayoutPreset[] = [
+const VENUE_LAYOUT_PRESETS: LayoutPreset[] = [
   {
     name: 'Showcase',
     tagline: 'Photo-forward',
@@ -165,7 +165,7 @@ const ADDA_LAYOUT_PRESETS: LayoutPreset[] = [
     previewBg: '#071724', previewPrimary: '#22D3EE', previewText: '#D0EEFF', light: false,
   },
   {
-    name: 'Community Adda',
+    name: 'Community Venue',
     tagline: 'Warm & local',
     description: 'Ticket-stub energy, culture pass identity',
     preset: { layoutPreset: 'boarding-pass', colorScheme: 'default', fontFamily: 'archivo-black', backgroundStyle: 'solid', noiseBg: true, heavyBorders: true },
@@ -235,7 +235,7 @@ const EXPLORER_LAYOUT_PRESETS: LayoutPreset[] = [
 const PERSONA_PRESETS: Record<PersonaKey, LayoutPreset[]> = {
   creator:  LAYOUT_PRESETS,
   brand:    BRAND_LAYOUT_PRESETS,
-  adda:     ADDA_LAYOUT_PRESETS,
+  venue:     VENUE_LAYOUT_PRESETS,
   explorer: EXPLORER_LAYOUT_PRESETS,
 }
 

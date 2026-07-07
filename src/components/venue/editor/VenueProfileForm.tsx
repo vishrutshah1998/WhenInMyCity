@@ -1,8 +1,8 @@
 'use client'
 
 import { useState } from 'react'
-import { updateAddaContactInfo, type UpdateAddaContactInput } from '@/app/actions/venue'
-import type { AddaProfile } from '@/types/database'
+import { updateVenueContactInfo, type UpdateVenueContactInput } from '@/app/actions/venue'
+import type { VenueProfile } from '@/types/database'
 
 // ── Design tokens ─────────────────────────────────────────────────────────────
 const T = {
@@ -30,7 +30,7 @@ const DAY_OPTIONS = [
 ]
 
 interface Props {
-  adda: AddaProfile
+  venue: VenueProfile
   authEmail?: string | null
 }
 
@@ -52,11 +52,11 @@ const inputStyle: React.CSSProperties = {
   outline: 'none', transition: 'border-color 160ms ease',
 }
 
-export default function VenueProfileForm({ adda, authEmail }: Props) {
-  const [contactEmail,  setContactEmail]  = useState(adda.contact_email ?? authEmail ?? '')
-  const [capacityMin,   setCapacityMin]   = useState(String(adda.capacity_min ?? ''))
-  const [capacityMax,   setCapacityMax]   = useState(String(adda.capacity_max ?? ''))
-  const [availableDays, setAvailableDays] = useState<string[]>(adda.available_days ?? [])
+export default function VenueProfileForm({ venue, authEmail }: Props) {
+  const [contactEmail,  setContactEmail]  = useState(venue.contact_email ?? authEmail ?? '')
+  const [capacityMin,   setCapacityMin]   = useState(String(venue.capacity_min ?? ''))
+  const [capacityMax,   setCapacityMax]   = useState(String(venue.capacity_max ?? ''))
+  const [availableDays, setAvailableDays] = useState<string[]>(venue.available_days ?? [])
 
   const [saving,  setSaving]  = useState(false)
   const [success, setSuccess] = useState(false)
@@ -71,13 +71,13 @@ export default function VenueProfileForm({ adda, authEmail }: Props) {
     setError(null)
     setSuccess(false)
 
-    const payload: UpdateAddaContactInput = {
+    const payload: UpdateVenueContactInput = {
       contact_email:  contactEmail,
       capacity_min:   capacityMin ? parseInt(capacityMin, 10) : undefined,
       capacity_max:   capacityMax ? parseInt(capacityMax, 10) : undefined,
       available_days: availableDays,
     }
-    const result = await updateAddaContactInfo(adda.id, payload)
+    const result = await updateVenueContactInfo(venue.id, payload)
 
     setSaving(false)
     if (result.error) {

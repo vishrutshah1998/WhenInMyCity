@@ -7,7 +7,7 @@ import { initiateCalendarSync, disconnectCalendarSync } from '@/app/actions/venu
 interface Props {
   open: boolean
   onClose: () => void
-  addaId: string
+  venueId: string
   initiallyConnected: boolean
 }
 

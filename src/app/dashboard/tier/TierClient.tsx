@@ -51,7 +51,7 @@ const BENEFITS: {
   },
   {
     label: 'Local-Only Ticket Prices',
-    desc: 'Participating Addas offer Local members a modest but real discount — cash savings as you keep showing up.',
+    desc: 'Participating Venues offer Local members a modest but real discount — cash savings as you keep showing up.',
     tier: 'local', dotColor: '#F5A800', tierColor: '#F5A800', tierBg: 'rgba(245,168,0,0.12)',
   },
   {

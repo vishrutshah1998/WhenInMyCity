@@ -1,7 +1,7 @@
 'use server'
 
 // =============================================================================
-// WIMC — Adda Tier Evaluation
+// WIMC — Venue Tier Evaluation
 //
 // Two-axis tier system:
 //   Trust axis (permanent):  Open → Verified → Beloved → Legendary
@@ -11,7 +11,7 @@
 // =============================================================================
 
 import { createAdminClient } from '@/lib/supabase/admin'
-import type { AddaTier } from '@/types/database'
+import type { VenueTier } from '@/types/database'
 
 const DAY_MS = 24 * 60 * 60 * 1000
 
@@ -51,13 +51,13 @@ const THRESHOLDS = {
 } as const
 
 // ---------------------------------------------------------------------------
-// evaluateAddaTier
+// evaluateVenueTier
 // ---------------------------------------------------------------------------
 
-export interface AddaTierEvaluationResult {
-  addaId: string
-  previousTier: AddaTier
-  newTier: AddaTier
+export interface VenueTierEvaluationResult {
+  venueId: string
+  previousTier: VenueTier
+  newTier: VenueTier
   tierChanged: boolean
   metrics: {
     totalEventsHosted: number
@@ -73,31 +73,31 @@ export interface AddaTierEvaluationResult {
   }
 }
 
-export async function evaluateAddaTier(addaId: string): Promise<AddaTierEvaluationResult> {
+export async function evaluateVenueTier(venueId: string): Promise<VenueTierEvaluationResult> {
   const admin = createAdminClient()
   const now   = new Date()
 
-  // ── 1. Fetch adda profile ──────────────────────────────────────────────────
-  const { data: adda, error: addaError } = await admin
-    .from('adda_profiles')
-    .select('id, is_verified, is_active, name, address, city, total_events_hosted, average_maker_rating, adda_tier, on_time_rate, complaint_rate, beloved_since')
-    .eq('id', addaId)
+  // ── 1. Fetch venue profile ──────────────────────────────────────────────────
+  const { data: venue, error: venueError } = await admin
+    .from('venue_profiles')
+    .select('id, is_verified, is_active, name, address, city, total_events_hosted, average_maker_rating, venue_tier, on_time_rate, complaint_rate, beloved_since')
+    .eq('id', venueId)
     .maybeSingle()
 
-  if (addaError || !adda) {
-    throw new Error(`[evaluateAddaTier] adda not found: ${addaId}`)
+  if (venueError || !venue) {
+    throw new Error(`[evaluateVenueTier] venue not found: ${venueId}`)
   }
 
-  const previousTier = adda.adda_tier as AddaTier
+  const previousTier = venue.venue_tier as VenueTier
 
-  // ── 2. Fetch event IDs at this adda in rolling windows ────────────────────
+  // ── 2. Fetch event IDs at this venue in rolling windows ────────────────────
   const d180 = new Date(now.getTime() - 180 * DAY_MS).toISOString()
   const d365 = new Date(now.getTime() - 365 * DAY_MS).toISOString()
 
   const [events180Result, events365Result, allEventsResult] = await Promise.all([
-    admin.from('events').select('id').eq('venue_id', addaId).in('status', ['published', 'completed']).gte('starts_at', d180),
-    admin.from('events').select('id').eq('venue_id', addaId).in('status', ['published', 'completed']).gte('starts_at', d365),
-    admin.from('events').select('id').eq('venue_id', addaId).in('status', ['published', 'completed']),
+    admin.from('events').select('id').eq('venue_id', venueId).in('status', ['published', 'completed']).gte('starts_at', d180),
+    admin.from('events').select('id').eq('venue_id', venueId).in('status', ['published', 'completed']).gte('starts_at', d365),
+    admin.from('events').select('id').eq('venue_id', venueId).in('status', ['published', 'completed']),
   ])
 
   const ids180 = (events180Result.data ?? []).map((e) => e.id)
@@ -126,9 +126,9 @@ export async function evaluateAddaTier(addaId: string): Promise<AddaTierEvaluati
   let uniqueLanternBeaconHosts = 0
 
   const { data: acceptedProposals } = await admin
-    .from('maker_adda_proposals')
+    .from('maker_venue_proposals')
     .select('maker_id')
-    .eq('adda_id', addaId)
+    .eq('venue_id', venueId)
     .eq('status', 'accepted')
 
   const uniqueMakerIds = [...new Set((acceptedProposals ?? []).map((p) => p.maker_id))]
@@ -144,7 +144,7 @@ export async function evaluateAddaTier(addaId: string): Promise<AddaTierEvaluati
   }
 
   // ── 5. Repeat attendee rate ───────────────────────────────────────────────
-  let repeatAttendeeRate = adda.beloved_since ? (adda as unknown as { repeat_attendee_rate: number }).repeat_attendee_rate : 0
+  let repeatAttendeeRate = venue.beloved_since ? (venue as unknown as { repeat_attendee_rate: number }).repeat_attendee_rate : 0
 
   if (allIds.length > 0) {
     const { data: rsvpRows } = await admin
@@ -170,17 +170,17 @@ export async function evaluateAddaTier(addaId: string): Promise<AddaTierEvaluati
   }
 
   // ── 6. On-time rate (reuse stored value — updated separately by check-in flow) ──
-  const onTimeRate    = adda.on_time_rate
-  const complaintRate = adda.complaint_rate
+  const onTimeRate    = venue.on_time_rate
+  const complaintRate = venue.complaint_rate
 
   // ── 7. Determine new tier (gates applied top-down) ────────────────────────
-  const profileComplete = adda.is_verified && !!adda.name && !!adda.address && !!adda.city
+  const profileComplete = venue.is_verified && !!venue.name && !!venue.address && !!venue.city
 
-  let newTier: AddaTier = 'open'
+  let newTier: VenueTier = 'open'
 
   if (
     profileComplete &&
-    adda.total_events_hosted >= THRESHOLDS.verified.minEventsLifetime &&
+    venue.total_events_hosted >= THRESHOLDS.verified.minEventsLifetime &&
     reviewCount   >= THRESHOLDS.verified.minReviews &&
     averageRating >= THRESHOLDS.verified.minRating
   ) {
@@ -200,7 +200,7 @@ export async function evaluateAddaTier(addaId: string): Promise<AddaTierEvaluati
   }
 
   // Legendary requires Beloved tenure of ≥ 2 consecutive years
-  const belovedSince      = adda.beloved_since ? new Date(adda.beloved_since) : null
+  const belovedSince      = venue.beloved_since ? new Date(venue.beloved_since) : null
   const belovedYears      = belovedSince ? (now.getTime() - belovedSince.getTime()) / (365 * DAY_MS) : 0
   const hasBelovedTenure  = belovedYears >= THRESHOLDS.legendary.minBelovedYears
 
@@ -221,30 +221,30 @@ export async function evaluateAddaTier(addaId: string): Promise<AddaTierEvaluati
   const belovedSinceUpdate =
     newTier === 'beloved' && previousTier !== 'beloved' && previousTier !== 'legendary'
       ? now.toISOString()
-      : adda.beloved_since
+      : venue.beloved_since
 
   const { error: updateError } = await admin
-    .from('adda_profiles')
+    .from('venue_profiles')
     .update({
-      adda_tier:                  newTier,
+      venue_tier:                  newTier,
       unique_lantern_beacon_hosts: uniqueLanternBeaconHosts,
       repeat_attendee_rate:       repeatAttendeeRate,
       beloved_since:              belovedSinceUpdate,
       updated_at:                 now.toISOString(),
     })
-    .eq('id', addaId)
+    .eq('id', venueId)
 
   if (updateError) {
-    console.error('[evaluateAddaTier] update failed', { addaId, error: updateError.message })
+    console.error('[evaluateVenueTier] update failed', { venueId, error: updateError.message })
   }
 
   return {
-    addaId,
+    venueId,
     previousTier,
     newTier,
     tierChanged,
     metrics: {
-      totalEventsHosted:       adda.total_events_hosted,
+      totalEventsHosted:       venue.total_events_hosted,
       eventsIn180d:            ids180.length,
       eventsIn365d:            ids365.length,
       reviewCount,
@@ -253,17 +253,17 @@ export async function evaluateAddaTier(addaId: string): Promise<AddaTierEvaluati
       repeatAttendeeRate,
       onTimeRate,
       complaintRate,
-      beloved_since:           adda.beloved_since,
+      beloved_since:           venue.beloved_since,
     },
   }
 }
 
 // ---------------------------------------------------------------------------
-// computeTrendingAddas
+// computeTrendingVenues
 // ---------------------------------------------------------------------------
 
 export interface TrendingResult {
-  addaId: string
+  venueId: string
   isTrending: boolean
   metrics: {
     eventsIn30d: number
@@ -275,8 +275,8 @@ export interface TrendingResult {
 }
 
 /**
- * Recomputes Trending status for all active addas in a given city.
- * Sets `trending_until = now + 30 days` for qualifying addas,
+ * Recomputes Trending status for all active venues in a given city.
+ * Sets `trending_until = now + 30 days` for qualifying venues,
  * clears it for those that no longer qualify.
  *
  * Criteria:
@@ -285,35 +285,35 @@ export interface TrendingResult {
  *   ≥4.5★ average rating in last 30 d
  *   ≥70 % capacity utilisation in last 30 d
  */
-export async function computeTrendingAddas(cityId: string): Promise<TrendingResult[]> {
+export async function computeTrendingVenues(cityId: string): Promise<TrendingResult[]> {
   const admin = createAdminClient()
   const now   = new Date()
 
   const d30  = new Date(now.getTime() -  30 * DAY_MS).toISOString()
   const d60  = new Date(now.getTime() -  60 * DAY_MS).toISOString()
 
-  // Fetch all active addas in this city
-  const { data: addas, error: addaError } = await admin
-    .from('adda_profiles')
+  // Fetch all active venues in this city
+  const { data: venues, error: venueError } = await admin
+    .from('venue_profiles')
     .select('id, trending_until')
     .eq('city', cityId)
     .eq('is_active', true)
 
-  if (addaError || !addas?.length) return []
+  if (venueError || !venues?.length) return []
 
   const results: TrendingResult[] = []
 
-  for (const adda of addas) {
+  for (const venue of venues) {
     // ── Events in last 30 d ──────────────────────────────────────────────────
     const [curr30Result, prev30Result] = await Promise.all([
       admin.from('events')
         .select('id, capacity')
-        .eq('venue_id', adda.id)
+        .eq('venue_id', venue.id)
         .in('status', ['published', 'completed'])
         .gte('starts_at', d30),
       admin.from('events')
         .select('id')
-        .eq('venue_id', adda.id)
+        .eq('venue_id', venue.id)
         .in('status', ['published', 'completed'])
         .gte('starts_at', d60)
         .lt('starts_at', d30),
@@ -325,10 +325,10 @@ export async function computeTrendingAddas(cityId: string): Promise<TrendingResu
 
     if (eventsIn30d < THRESHOLDS.trending.minEventsIn30d) {
       // Clear trending if below minimum
-      if (adda.trending_until) {
-        await admin.from('adda_profiles').update({ trending_until: null }).eq('id', adda.id)
+      if (venue.trending_until) {
+        await admin.from('venue_profiles').update({ trending_until: null }).eq('id', venue.id)
       }
-      results.push({ addaId: adda.id, isTrending: false, metrics: { eventsIn30d, eventsInPrev30d, attendanceGrowth: 0, avgRatingIn30d: 0, capacityUtilization: 0 } })
+      results.push({ venueId: venue.id, isTrending: false, metrics: { eventsIn30d, eventsInPrev30d, attendanceGrowth: 0, avgRatingIn30d: 0, capacityUtilization: 0 } })
       continue
     }
 
@@ -383,12 +383,12 @@ export async function computeTrendingAddas(cityId: string): Promise<TrendingResu
       : null
 
     await admin
-      .from('adda_profiles')
+      .from('venue_profiles')
       .update({ trending_until: trendingUntil })
-      .eq('id', adda.id)
+      .eq('id', venue.id)
 
     results.push({
-      addaId: adda.id,
+      venueId: venue.id,
       isTrending: qualifies,
       metrics: { eventsIn30d, eventsInPrev30d, attendanceGrowth, avgRatingIn30d, capacityUtilization },
     })

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import type { AddaPayoutSummary, PayableBooking, PayoutRequest } from '@/app/actions/venue-payouts'
+import type { VenuePayoutSummary, PayableBooking, PayoutRequest } from '@/app/actions/venue-payouts'
 import { requestVenuePayout } from '@/app/actions/venue-payouts'
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
@@ -36,8 +36,8 @@ const A = {
 // ── Props ──────────────────────────────────────────────────────────────────────
 
 interface Props {
-  addaId: string
-  summary: AddaPayoutSummary
+  venueId: string
+  summary: VenuePayoutSummary
   initialPayableBookings: PayableBooking[]
   initialPayoutHistory: PayoutRequest[]
   serverError: string | null
@@ -46,7 +46,7 @@ interface Props {
 // ── Component ──────────────────────────────────────────────────────────────────
 
 export default function VenuePayoutsClient({
-  addaId,
+  venueId,
   summary,
   initialPayableBookings,
   initialPayoutHistory,
@@ -78,13 +78,13 @@ export default function VenuePayoutsClient({
 
   const selectedTotal = payableBookings
     .filter(b => selectedIds.has(b.id))
-    .reduce((s, b) => s + b.adda_share_paise, 0)
+    .reduce((s, b) => s + b.venue_share_paise, 0)
 
   async function handleSubmit() {
     if (selectedIds.size === 0 || isPending) return
     setError(null)
     startTransition(async () => {
-      const { success, error: err } = await requestVenuePayout(addaId, {
+      const { success, error: err } = await requestVenuePayout(venueId, {
         bookingIds: Array.from(selectedIds),
         paymentMethod: payMethod,
         upiId: payMethod === 'upi' ? upiId : undefined,
@@ -222,7 +222,7 @@ export default function VenuePayoutsClient({
                         </div>
                         <div style={{ textAlign: 'right' }}>
                           <div style={{ fontFamily: "'DM Sans', sans-serif", fontWeight: 600, fontSize: 14, color: A.text }}>
-                            {paise2inr(b.adda_share_paise)}
+                            {paise2inr(b.venue_share_paise)}
                           </div>
                           <div style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 11, color: A.textSub }}>
                             your share
@@ -330,7 +330,7 @@ export default function VenuePayoutsClient({
                 <tr key={p.id} style={{ borderBottom: `1px solid ${A.border}` }}>
                   <td style={{ padding: '12px 16px', fontFamily: "'DM Sans', sans-serif", fontSize: 13, color: A.text }}>{fmtDate(p.requested_at)}</td>
                   <td style={{ padding: '12px 16px', fontFamily: "'DM Sans', sans-serif", fontSize: 13, color: A.textSub }}>{p.booking_ids.length}</td>
-                  <td style={{ padding: '12px 16px', fontFamily: "'DM Sans', sans-serif", fontWeight: 600, fontSize: 13, color: A.text }}>{paise2inr(p.adda_share_paise)}</td>
+                  <td style={{ padding: '12px 16px', fontFamily: "'DM Sans', sans-serif", fontWeight: 600, fontSize: 13, color: A.text }}>{paise2inr(p.venue_share_paise)}</td>
                   <td style={{ padding: '12px 16px', fontFamily: "'DM Sans', sans-serif", fontSize: 13, color: A.textSub, textTransform: 'uppercase' }}>{p.payment_method}</td>
                   <td style={{ padding: '12px 16px' }}>
                     <span style={{

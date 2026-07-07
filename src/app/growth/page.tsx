@@ -32,7 +32,7 @@ const TIERS = [
   {
     num: '02', id: 'local', name: 'Local', story: 'I belong to this scene.',
     color: '#F5A800', bg: 'rgba(245,168,0,0.07)', border: 'rgba(245,168,0,0.2)', icon: 'home_pin',
-    perks: ['Early access before public ticket sales', 'Local-only pricing at partner Addas', 'Streak freeze tokens — life happens'],
+    perks: ['Early access before public ticket sales', 'Local-only pricing at partner Venues', 'Streak freeze tokens — life happens'],
     gate: '6 events attended in 90 days',
   },
   {

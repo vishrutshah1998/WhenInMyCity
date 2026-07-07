@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import type { AddaProfile } from '@/types/database'
+import type { VenueProfile } from '@/types/database'
 import type { PricingRule } from '@/components/venue/editor/types'
 import PricingRulesSection from '@/components/venue/editor/PricingRulesSection'
 import { savePricingSettings } from '@/app/actions/venue-pricing'
@@ -72,16 +72,16 @@ const DEFAULT_PRICING_RULES: PricingRule[] = [
 type SaveStatus = 'idle' | 'saving' | 'saved' | 'error'
 
 interface Props {
-  adda: AddaProfile
+  venue: VenueProfile
 }
 
 // ─── Main component ────────────────────────────────────────────────────────────
 
-export default function PricingClient({ adda }: Props) {
-  const config = (adda.pricing_config ?? {}) as Record<string, unknown>
+export default function PricingClient({ venue }: Props) {
+  const config = (venue.pricing_config ?? {}) as Record<string, unknown>
   const initialRules = (config.pricing_rules as PricingRule[] | undefined) ?? DEFAULT_PRICING_RULES
 
-  const [pricingModel, setPricingModel] = useState<string>(adda.pricing_model ?? 'fixed_rental')
+  const [pricingModel, setPricingModel] = useState<string>(venue.pricing_model ?? 'fixed_rental')
   const [pricingRules, setPricingRules] = useState<PricingRule[]>(initialRules)
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle')
   const [savedAt, setSavedAt] = useState<Date | null>(null)
@@ -101,7 +101,7 @@ export default function PricingClient({ adda }: Props) {
 
     debounceRef.current = setTimeout(async () => {
       try {
-        const result = await savePricingSettings(adda.id, pricingModel, pricingRules)
+        const result = await savePricingSettings(venue.id, pricingModel, pricingRules)
         if (result.success) {
           setSaveStatus('saved')
           setSavedAt(new Date())

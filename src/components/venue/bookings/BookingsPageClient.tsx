@@ -123,7 +123,7 @@ function DetailPlaceholder() {
 // ---------------------------------------------------------------------------
 
 interface Props {
-  addaId: string
+  venueId: string
   initialProposals: ProposalWithMaker[]
   fetchError: string | null
 }
@@ -132,7 +132,7 @@ interface Props {
 // Main component
 // ---------------------------------------------------------------------------
 
-export default function BookingsPageClient({ addaId, initialProposals, fetchError }: Props) {
+export default function BookingsPageClient({ venueId, initialProposals, fetchError }: Props) {
   const [activeTab, setActiveTab] = useState<TabKey>('pending')
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [mobileDetailOpen, setMobileDetailOpen] = useState(false)
@@ -286,7 +286,7 @@ export default function BookingsPageClient({ addaId, initialProposals, fetchErro
           {selectedProposal ? (
             <BookingRequestCard
               proposal={selectedProposal}
-              addaId={addaId}
+              venueId={venueId}
               onRespond={handleRespond}
             />
           ) : (
@@ -344,7 +344,7 @@ export default function BookingsPageClient({ addaId, initialProposals, fetchErro
 
           <BookingRequestCard
             proposal={selectedProposal}
-            addaId={addaId}
+            venueId={venueId}
             onRespond={(id, action) => {
               handleRespond(id, action)
               setMobileDetailOpen(false)

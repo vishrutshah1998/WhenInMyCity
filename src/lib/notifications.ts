@@ -7,7 +7,7 @@ import 'server-only'
 
 import { createAdminClient } from '@/lib/supabase/admin'
 import { sendWhatsAppMessage } from '@/lib/whatsapp'
-import type { Event, MakerAddaProposal, UserProfile } from '@/types/database'
+import type { Event, MakerVenueProposal, UserProfile } from '@/types/database'
 
 /** Short date formatter for notification messages — e.g. "15 Apr 2026". */
 function formatDate(isoDate: string): string {
@@ -19,11 +19,11 @@ function formatDate(isoDate: string): string {
 }
 
 // ---------------------------------------------------------------------------
-// notifyAddaOfProposal
+// notifyVenueOfProposal
 // ---------------------------------------------------------------------------
 
 /**
- * Logs a WhatsApp-style notification to the Adda owner when a Maker sends
+ * Logs a WhatsApp-style notification to the Venue owner when a Maker sends
  * a new event proposal.
  *
  * **v1:** Outputs to `console.log`. A real WhatsApp Business API call
@@ -32,32 +32,32 @@ function formatDate(isoDate: string): string {
  * Message format:
  * ```
  * 🎪 New event proposal!
- * [Maker name] wants to host [event title] at your Adda on [date]
- * View proposal: wheninmycity.com/adda/[slug]/proposals/[id]
+ * [Maker name] wants to host [event title] at your Venue on [date]
+ * View proposal: wheninmycity.com/venue/[slug]/proposals/[id]
  * ```
  *
- * @param proposal  The `maker_adda_proposals` row that was just inserted.
+ * @param proposal  The `maker_venue_proposals` row that was just inserted.
  * @param makerName Human-readable name of the Maker (from user_profiles).
- * @param addaSlug  The Adda's URL slug (for the deep-link in the message).
+ * @param venueSlug  The Venue's URL slug (for the deep-link in the message).
  */
-export async function notifyAddaOfProposal(
-  proposal: MakerAddaProposal,
+export async function notifyVenueOfProposal(
+  proposal: MakerVenueProposal,
   makerName: string,
-  addaSlug: string,
-  addaWhatsapp?: string | null,
+  venueSlug: string,
+  venueWhatsapp?: string | null,
 ): Promise<void> {
   try {
-    const proposalUrl = `${process.env.NEXT_PUBLIC_APP_URL ?? 'https://www.wheninmycity.com'}/adda/${addaSlug}/proposals/${proposal.id}`
+    const proposalUrl = `${process.env.NEXT_PUBLIC_APP_URL ?? 'https://www.wheninmycity.com'}/venue/${venueSlug}/proposals/${proposal.id}`
     const message = [
       '🎪 New event proposal!',
-      `${makerName} wants to host "${proposal.event_title}" at your Adda on ${formatDate(proposal.proposed_date)}.`,
+      `${makerName} wants to host "${proposal.event_title}" at your Venue on ${formatDate(proposal.proposed_date)}.`,
       `View proposal: ${proposalUrl}`,
     ].join('\n')
 
-    if (addaWhatsapp) {
-      await sendWhatsAppMessage(addaWhatsapp, message)
+    if (venueWhatsapp) {
+      await sendWhatsAppMessage(venueWhatsapp, message)
     } else {
-      console.log('[NOTIFY:WhatsApp → Adda]', message)
+      console.log('[NOTIFY:WhatsApp → Venue]', message)
     }
   } catch {
     // Notifications must never crash the caller.
@@ -69,7 +69,7 @@ export async function notifyAddaOfProposal(
 // ---------------------------------------------------------------------------
 
 /**
- * Logs a WhatsApp-style notification to the Maker when an Adda responds to
+ * Logs a WhatsApp-style notification to the Maker when an Venue responds to
  * their proposal (accept, decline, or counter-offer).
  *
  * **v1:** Outputs to `console.log`. Real WhatsApp delivery in v2.
@@ -77,32 +77,32 @@ export async function notifyAddaOfProposal(
  * Message format (accepted):
  * ```
  * ✅ Your proposal was accepted!
- * [Adda name] accepted your request to host "[event title]" on [date].
+ * [Venue name] accepted your request to host "[event title]" on [date].
  * Manage booking: wheninmycity.com/dashboard/proposals/[id]
  * ```
  *
  * Message format (declined):
  * ```
  * ❌ Proposal declined
- * [Adda name] couldn't accommodate "[event title]" on [date].
- * Find another Adda: wheninmycity.com/dashboard/addas
+ * [Venue name] couldn't accommodate "[event title]" on [date].
+ * Find another Venue: wheninmycity.com/dashboard/venues
  * ```
  *
  * Message format (counter_offered):
  * ```
  * 💬 Counter-offer received
- * [Adda name] sent a counter-offer for "[event title]".
+ * [Venue name] sent a counter-offer for "[event title]".
  * Review and respond: wheninmycity.com/dashboard/proposals/[id]
  * ```
  *
- * @param proposal  The `maker_adda_proposals` row.
- * @param response  How the Adda responded.
- * @param addaName  Human-readable name of the Adda.
+ * @param proposal  The `maker_venue_proposals` row.
+ * @param response  How the Venue responded.
+ * @param venueName  Human-readable name of the Venue.
  */
 export async function notifyMakerOfProposalResponse(
-  proposal: MakerAddaProposal,
+  proposal: MakerVenueProposal,
   response: 'accepted' | 'declined' | 'counter_offered',
-  addaName: string,
+  venueName: string,
 ): Promise<void> {
   try {
     const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://www.wheninmycity.com'
@@ -112,20 +112,20 @@ export async function notifyMakerOfProposalResponse(
       accepted: {
         type:  'proposal_accepted',
         title: 'Booking Request Accepted 🎉',
-        body:  `${addaName} accepted your request to host "${proposal.event_title}" on ${formatDate(proposal.proposed_date)}.`,
-        wa:    `✅ Great news! ${addaName} accepted your booking request for "${proposal.event_title}" on ${formatDate(proposal.proposed_date)}. Manage it here: ${proposalUrl}`,
+        body:  `${venueName} accepted your request to host "${proposal.event_title}" on ${formatDate(proposal.proposed_date)}.`,
+        wa:    `✅ Great news! ${venueName} accepted your booking request for "${proposal.event_title}" on ${formatDate(proposal.proposed_date)}. Manage it here: ${proposalUrl}`,
       },
       declined: {
         type:  'proposal_declined',
         title: 'Booking Request Declined',
-        body:  `${addaName} couldn't accommodate "${proposal.event_title}" on ${formatDate(proposal.proposed_date)}.`,
-        wa:    `❌ ${addaName} couldn't accommodate "${proposal.event_title}" on ${formatDate(proposal.proposed_date)}. Try another venue: ${proposalUrl}`,
+        body:  `${venueName} couldn't accommodate "${proposal.event_title}" on ${formatDate(proposal.proposed_date)}.`,
+        wa:    `❌ ${venueName} couldn't accommodate "${proposal.event_title}" on ${formatDate(proposal.proposed_date)}. Try another venue: ${proposalUrl}`,
       },
       counter_offered: {
         type:  'proposal_counter_offered',
         title: 'Counter-offer Received 💬',
-        body:  `${addaName} sent a counter-offer for "${proposal.event_title}".`,
-        wa:    `💬 ${addaName} sent a counter-offer for "${proposal.event_title}". Review it: ${proposalUrl}`,
+        body:  `${venueName} sent a counter-offer for "${proposal.event_title}".`,
+        wa:    `💬 ${venueName} sent a counter-offer for "${proposal.event_title}". Review it: ${proposalUrl}`,
       },
     }
 
@@ -140,7 +140,7 @@ export async function notifyMakerOfProposalResponse(
         title:        cfg.title,
         body:         cfg.body,
         action_url:   '/dashboard/venues',
-        metadata:     { proposal_id: proposal.id, adda_name: addaName },
+        metadata:     { proposal_id: proposal.id, venue_name: venueName },
       }),
 
       (async () => {

@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { SK } from '@/lib/onboarding/session-keys'
 import { VenueNoticePoster } from '@/components/onboarding/BoardingPassArtifact'
-import { saveAddaOnboardingStep } from '@/app/actions/venue-onboarding'
+import { saveVenueOnboardingStep } from '@/app/actions/venue-onboarding'
 
 const ACCENT = '#5DD9D0'
 const MONO   = "var(--font-jetbrains-mono), 'JetBrains Mono', monospace"
@@ -357,7 +357,7 @@ export default function V7Page() {
         }
         if (validModel === 'f_and_b_minimum' && amountPaise) pricing_config.f_and_b_minimum_paise = amountPaise
 
-        await saveAddaOnboardingStep(3, {
+        await saveVenueOnboardingStep(3, {
           step:           3,
           amenities:      [],
           pricing_model:  validModel,

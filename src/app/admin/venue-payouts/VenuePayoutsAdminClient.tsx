@@ -2,8 +2,8 @@
 
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import type { AdminAddaPayoutRow } from '@/app/actions/admin'
-import { updateAddaPayoutStatus } from '@/app/actions/admin'
+import type { AdminVenuePayoutRow } from '@/app/actions/admin'
+import { updateVenuePayoutStatus } from '@/app/actions/admin'
 
 const STATUS_TABS = [
   { value: 'pending',  label: 'Pending' },
@@ -21,7 +21,7 @@ const STATUS_COLORS: Record<string, string> = {
 }
 
 interface Props {
-  payouts: AdminAddaPayoutRow[]
+  payouts: AdminVenuePayoutRow[]
   currentStatus: string
 }
 
@@ -39,7 +39,7 @@ export default function VenuePayoutsAdminClient({ payouts, currentStatus }: Prop
   async function doAction(id: string, status: 'approved' | 'paid' | 'rejected') {
     setProcessing(id)
     setErrors((prev) => ({ ...prev, [id]: '' }))
-    const result = await updateAddaPayoutStatus({ id, status, notes: actionNote[id] })
+    const result = await updateVenuePayoutStatus({ id, status, notes: actionNote[id] })
     if (!result.success) {
       setErrors((prev) => ({ ...prev, [id]: result.error ?? 'Failed' }))
     } else {
@@ -111,7 +111,7 @@ export default function VenuePayoutsAdminClient({ payouts, currentStatus }: Prop
 function VenuePayoutCard({
   payout, note, onNoteChange, onAction, isProcessing, error, statusColor,
 }: {
-  payout: AdminAddaPayoutRow
+  payout: AdminVenuePayoutRow
   note: string
   onNoteChange: (v: string) => void
   onAction: (status: 'approved' | 'paid' | 'rejected') => void
@@ -119,7 +119,7 @@ function VenuePayoutCard({
   error: string | undefined
   statusColor: string
 }) {
-  const addaRs    = (payout.adda_share_paise   / 100).toFixed(0)
+  const venueRs    = (payout.venue_share_paise   / 100).toFixed(0)
   const grossRs   = (payout.gross_paise         / 100).toFixed(0)
   const platRs    = (payout.platform_fee_paise  / 100).toFixed(0)
   const date = new Date(payout.requested_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
@@ -134,7 +134,7 @@ function VenuePayoutCard({
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, marginBottom: 14 }}>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
-            <span style={{ fontWeight: 700, fontSize: 15 }}>{payout.adda_name}</span>
+            <span style={{ fontWeight: 700, fontSize: 15 }}>{payout.venue_name}</span>
             <span style={{
               fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 9999,
               background: `${statusColor}22`, color: statusColor,
@@ -151,7 +151,7 @@ function VenuePayoutCard({
 
         <div style={{ textAlign: 'right', flexShrink: 0 }}>
           <div style={{ fontSize: 20, fontWeight: 800, color: '#5DD9D0', fontFamily: 'var(--font-jetbrains-mono)' }}>
-            ₹{addaRs}
+            ₹{venueRs}
           </div>
           <div style={{ fontSize: 11, color: 'var(--wimc-text-muted)' }}>
             of ₹{grossRs} gross · platform ₹{platRs}

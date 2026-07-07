@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { formatDistanceToNow } from 'date-fns'
 import type { Notification } from '@/types/database'
 import { NOTIFICATION_META } from '@/lib/notifications/types'
-import { markAddaNotificationRead, markAllAddaNotificationsRead } from '@/app/actions/venue-notifications'
+import { markVenueNotificationRead, markAllVenueNotificationsRead } from '@/app/actions/venue-notifications'
 
 const TEAL = '#5DD9D0'
 
@@ -22,9 +22,9 @@ type FilterKey = (typeof FILTER_TABS)[number]['key']
 const FILTER_TYPES: Record<FilterKey, string[] | null> = {
   all:       null,
   unread:    null,
-  proposals: ['adda_new_proposal', 'adda_proposal_accepted', 'adda_proposal_counter', 'new_proposal', 'proposal_accepted', 'proposal_counter'],
-  events:    ['adda_event_confirmed', 'adda_booking_reminder', 'event_confirmed'],
-  ratings:   ['adda_new_rating', 'adda_new_review'],
+  proposals: ['venue_new_proposal', 'venue_proposal_accepted', 'venue_proposal_counter', 'new_proposal', 'proposal_accepted', 'proposal_counter'],
+  events:    ['venue_event_confirmed', 'venue_booking_reminder', 'event_confirmed'],
+  ratings:   ['venue_new_rating', 'venue_new_review'],
 }
 
 interface Props {
@@ -50,7 +50,7 @@ export function VenueNotificationsClient({ notifications: initial, unreadCount: 
     if (!n.is_read) {
       setItems((prev) => prev.map((x) => x.id === n.id ? { ...x, is_read: true } : x))
       setUnreadCount((c) => Math.max(0, c - 1))
-      await markAddaNotificationRead(n.id)
+      await markVenueNotificationRead(n.id)
     }
     if (n.action_url) {
       router.push(n.action_url)
@@ -60,7 +60,7 @@ export function VenueNotificationsClient({ notifications: initial, unreadCount: 
   async function handleMarkAllRead() {
     setItems((prev) => prev.map((n) => ({ ...n, is_read: true })))
     setUnreadCount(0)
-    await markAllAddaNotificationsRead()
+    await markAllVenueNotificationsRead()
     startTransition(() => router.refresh())
   }
 

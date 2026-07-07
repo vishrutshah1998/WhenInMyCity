@@ -259,7 +259,7 @@ export default function DashboardPage() {
       const [pr, er, rr, posts, sr, payable] = await Promise.all([
         supabase.from('user_profiles').select('*').eq('id', session.user.id).single(),
         supabase.from('events').select('*').eq('creator_id', session.user.id).order('starts_at').limit(10),
-        supabase.from('maker_adda_proposals').select('id, event_title, status, proposed_date').eq('maker_id', session.user.id).eq('status', 'pending').limit(5),
+        supabase.from('maker_venue_proposals').select('id, event_title, status, proposed_date').eq('maker_id', session.user.id).eq('status', 'pending').limit(5),
         db.from('creator_posts').select('*').eq('creator_id', session.user.id).order('created_at', { ascending: false }).limit(5)
           .then((r: { data: CreatorPost[] | null }) => r)
           .catch(() => ({ data: [] })),
@@ -372,7 +372,7 @@ export default function DashboardPage() {
             }
             const PERSONA_LABEL: Record<string, string> = {
               creator: 'Become a Creator', explorer: 'Become an Explorer',
-              venue: 'List an Adda', brand: 'Add a Brand',
+              venue: 'List an Venue', brand: 'Add a Brand',
             }
             return (
               <PaperCard accent="#5DD9D0" style={{ padding: 24, marginBottom: 32 }}>
@@ -711,15 +711,15 @@ export default function DashboardPage() {
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
-              {/* ADDA MODE — active if user has venue persona */}
+              {/* VENUE MODE — active if user has venue persona */}
               {personas.includes('venue') ? (
                 <Link href="/business/venue/dashboard" style={{ textDecoration: 'none' }}>
                   <div style={{ background: '#FEFCF8', border: '1px solid rgba(13,148,136,0.3)', borderLeft: '4px solid #0D9488', padding: '24px 24px 20px', position: 'relative', overflow: 'hidden', height: '100%', boxSizing: 'border-box' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
                       <span className="material-symbols-outlined" style={{ fontSize: 15, color: '#0D9488' }}>apartment</span>
-                      <span style={{ fontSize: 9, fontFamily: 'var(--font-jetbrains-mono)', color: '#0D9488', textTransform: 'uppercase', letterSpacing: 1.5 }}>ADDA MODE</span>
+                      <span style={{ fontSize: 9, fontFamily: 'var(--font-jetbrains-mono)', color: '#0D9488', textTransform: 'uppercase', letterSpacing: 1.5 }}>VENUE MODE</span>
                     </div>
-                    <p style={{ fontFamily: 'var(--font-syne)', fontWeight: 900, fontSize: 20, color: '#1A2744', margin: '0 0 8px' }}>Manage Adda</p>
+                    <p style={{ fontFamily: 'var(--font-syne)', fontWeight: 900, fontSize: 20, color: '#1A2744', margin: '0 0 8px' }}>Manage Venue</p>
                     <p style={{ fontSize: 12, color: 'rgba(26,39,68,0.55)', fontFamily: 'var(--font-dm-sans)', margin: '0 0 14px', lineHeight: 1.55 }}>List your space, manage bookings from creators, track revenue and availability.</p>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                       <div style={{ flex: 1, height: 1, background: 'rgba(13,148,136,0.2)' }} />
@@ -732,9 +732,9 @@ export default function DashboardPage() {
                 <div style={{ background: '#FEFCF8', border: '1px solid rgba(26,39,68,0.12)', borderLeft: '4px solid #0D9488', padding: '24px 24px 20px', position: 'relative', overflow: 'hidden', opacity: 0.65 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
                     <span className="material-symbols-outlined" style={{ fontSize: 15, color: '#0D9488' }}>apartment</span>
-                    <span style={{ fontSize: 9, fontFamily: 'var(--font-jetbrains-mono)', color: '#0D9488', textTransform: 'uppercase', letterSpacing: 1.5 }}>ADDA MODE</span>
+                    <span style={{ fontSize: 9, fontFamily: 'var(--font-jetbrains-mono)', color: '#0D9488', textTransform: 'uppercase', letterSpacing: 1.5 }}>VENUE MODE</span>
                   </div>
-                  <p style={{ fontFamily: 'var(--font-syne)', fontWeight: 900, fontSize: 20, color: '#1A2744', margin: '0 0 8px' }}>Manage Adda</p>
+                  <p style={{ fontFamily: 'var(--font-syne)', fontWeight: 900, fontSize: 20, color: '#1A2744', margin: '0 0 8px' }}>Manage Venue</p>
                   <p style={{ fontSize: 12, color: 'rgba(26,39,68,0.55)', fontFamily: 'var(--font-dm-sans)', margin: '0 0 14px', lineHeight: 1.55 }}>List your space, manage bookings from creators, track revenue and availability.</p>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     <div style={{ flex: 1, height: 1, background: 'rgba(26,39,68,0.1)' }} />

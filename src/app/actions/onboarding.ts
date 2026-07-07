@@ -479,9 +479,9 @@ export async function completeOnboarding(
 // ---------------------------------------------------------------------------
 
 export async function selectUserRole(
-  role: 'maker' | 'adda' | 'explorer',
+  role: 'maker' | 'venue' | 'explorer',
 ): Promise<{ redirectTo: string | null; error: string | null }> {
-  if (!['maker', 'adda', 'explorer'].includes(role)) {
+  if (!['maker', 'venue', 'explorer'].includes(role)) {
     return { redirectTo: null, error: 'Invalid role selected.' }
   }
 
@@ -502,7 +502,7 @@ export async function selectUserRole(
 
   const redirectMap: Record<string, string> = {
     maker:    '/onboarding',
-    adda:     '/onboarding/venue',
+    venue:     '/onboarding/venue',
     explorer: '/onboarding',
   }
 

@@ -274,11 +274,11 @@ function SlotWrapper({ children, value, resource, onBlockFromSlot }: {
 
 interface Props {
   venueName: string
-  addaId: string
+  venueId: string
   googleCalendarConnected: boolean
 }
 
-export default function VenueCalendarClient({ venueName, addaId, googleCalendarConnected }: Props) {
+export default function VenueCalendarClient({ venueName, venueId, googleCalendarConnected }: Props) {
   const isMobile = useIsMobile()
   const [events, setEvents] = useState<CalendarEvent[]>(MOCK_CALENDAR_EVENTS)
   const [view, setView] = useState<View>(Views.WEEK)
@@ -461,7 +461,7 @@ export default function VenueCalendarClient({ venueName, addaId, googleCalendarC
       <GoogleSyncDrawer
         open={syncDrawerOpen}
         onClose={() => setSyncDrawerOpen(false)}
-        addaId={addaId}
+        venueId={venueId}
         initiallyConnected={googleCalendarConnected}
       />
 

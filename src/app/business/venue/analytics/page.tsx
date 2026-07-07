@@ -3,11 +3,11 @@ import { Suspense } from 'react'
 import Link from 'next/link'
 import { requireAuth } from '@/lib/auth/requireAuth'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { getAddaAnalytics } from '@/app/actions/venue-analytics'
-import type { AddaAnalyticsData } from '@/app/actions/venue-analytics'
+import { getVenueAnalytics } from '@/app/actions/venue-analytics'
+import type { VenueAnalyticsData } from '@/app/actions/venue-analytics'
 import AnalyticsPageClient from '@/components/venue/analytics/AnalyticsPageClient'
 
-const EMPTY_ANALYTICS: AddaAnalyticsData = {
+const EMPTY_ANALYTICS: VenueAnalyticsData = {
   dailyMetrics: [],
   proposalFunnel: { received: 0, accepted: 0, eventsCompleted: 0 },
   demandGrid: [],
@@ -15,20 +15,20 @@ const EMPTY_ANALYTICS: AddaAnalyticsData = {
   hasData: false,
 }
 
-export default async function AddaAnalyticsPage() {
+export default async function VenueAnalyticsPage() {
   const { user } = await requireAuth('/business/venue/analytics')
 
   const admin = createAdminClient()
 
-  const { data: adda } = await admin
-    .from('adda_profiles')
+  const { data: venue } = await admin
+    .from('venue_profiles')
     .select('id, name, slug')
     .eq('auth_user_id', user.id)
     .maybeSingle()
 
-  if (!adda) redirect('/business/venue/onboard')
+  if (!venue) redirect('/business/venue/onboard')
 
-  const analytics = await getAddaAnalytics(adda.id)
+  const analytics = await getVenueAnalytics(venue.id)
 
   return (
     <div style={{ paddingTop: 28 }}>
@@ -49,11 +49,11 @@ export default async function AddaAnalyticsPage() {
             fontSize: 11, color: 'var(--venue-text-muted)',
             fontFamily: 'var(--font-jetbrains-mono), monospace', marginTop: 2,
           }}>
-            {adda.name}
+            {venue.name}
           </div>
         </div>
         <Link
-          href={`/venue/${adda.slug}`}
+          href={`/venue/${venue.slug}`}
           target="_blank"
           rel="noopener noreferrer"
           style={{
@@ -71,8 +71,8 @@ export default async function AddaAnalyticsPage() {
       <main style={{ maxWidth: 1400, margin: '0 auto' }}>
         <Suspense fallback={<AnalyticsSkeleton />}>
           <AnalyticsPageClient
-            venueName={adda.name}
-            venueSlug={adda.slug}
+            venueName={venue.name}
+            venueSlug={venue.slug}
             realData={analytics ?? EMPTY_ANALYTICS}
           />
         </Suspense>

@@ -10,7 +10,11 @@ Standing instructions for Claude Code on this repo. Follow these by default in e
 Use these terms precisely; never interchange them.
 
 ## Stack
-Next.js 14, TypeScript, Tailwind, Supabase. Payments via Razorpay (Route for marketplace splits).
+Next.js 14, TypeScript, Tailwind, Supabase. Payments via Razorpay Orders (single-account); revenue
+split (platform/maker/venue) is computed and stored per-RSVP as bookkeeping only. Payouts to
+creators/venues are currently manual and admin-approved (`payout_requests` / `venue_payout_requests`
+→ `/admin/payouts`, `/admin/venue-payouts`) — Razorpay Route / automated-split payout is planned but
+NOT live; do not assume it exists. See "Known debt" below for the parked payout-automation work.
 Framer Motion for animation; `vaul` for bottom-sheets/drawers; `useIsMobile` (768px) for the
 mobile breakpoint. Reuse these — do NOT add new dependencies for things already covered.
 
@@ -54,8 +58,11 @@ mobile breakpoint. Reuse these — do NOT add new dependencies for things alread
   in-memory React state.
 
 ## Naming / conventions
-- User-facing term for venues/cafés is "Adda"; code identifiers, DB columns, routes intentionally
-  left unchanged (e.g. Adda payouts/analytics live at `/business/venue/...`, not `/adda/...`).
+- User-facing term for venues/cafés is "Venue" — renamed from the historical internal "Adda" name
+  in mid-2026, across DB schema, code identifiers, and routes (e.g. venue payouts/analytics live at
+  `/business/venue/...` and `/admin/venue-payouts`, `venue_profiles` table, `/venue/[slug]` public
+  page). "Adda" may still resurface in informal/marketing copy, but is no longer the product term —
+  do not reintroduce "adda"-named identifiers, routes, or DB columns.
 - Deleted files: `lib/email.ts`, `lib/instagram.ts` — check for stale imports when touching adjacent code.
 - Pagination pattern is `PAGE_SIZE=500` with cursor/nextCursor/done — apply to any new cron/unbounded query.
 - Empty states: match existing empty-state visual style; distinguish owner-vs-visitor views on
@@ -66,3 +73,7 @@ mobile breakpoint. Reuse these — do NOT add new dependencies for things alread
 - Pre-existing type errors in `explore/lists/`, `legal/privacy/`, `legal/terms/` (not caused by new work).
 - DPDP consent stored in localStorage — should move to server-persisted flag (`explorer_profiles`) eventually.
 - Legacy users may lose a few old interest selections on first load after the tag-ID migration.
+- **Payout automation is parked, not built.** Real creator/venue payouts require 194-O TDS
+  withholding (currently not implemented) before automated/Route-based payout can go live; until
+  then payouts stay manual/admin-approved. Do not build KYC, Razorpay Route, or TDS logic unless a
+  task explicitly scopes it in.

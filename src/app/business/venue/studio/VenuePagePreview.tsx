@@ -2,14 +2,14 @@
 
 import { useRef, useEffect, useState } from 'react'
 import Image from 'next/image'
-import type { AddaProfile, PageBlock } from '@/types/database'
+import type { VenueProfile, PageBlock } from '@/types/database'
 import type { ProfileTheme } from '@/types/theme'
 import BlockRenderer from '@/components/profile/BlockRenderer'
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 
 export interface VenuePagePreviewProps {
-  adda:             AddaProfile
+  venue:             VenueProfile
   tagline:          string
   eventPreferences: string[]
   highlights:       string[]
@@ -96,7 +96,7 @@ function fmtDate(iso: string): string {
 // ─── 1. SHOWCASE (poster/steel) ───────────────────────────────────────────────
 // Full-bleed hero image, name as giant bold text at bottom of hero
 
-function ShowcasePreview({ adda, tagline, eventPreferences, highlights, blocks, pageTheme, upcomingEvents }: VenuePagePreviewProps) {
+function ShowcasePreview({ venue, tagline, eventPreferences, highlights, blocks, pageTheme, upcomingEvents }: VenuePagePreviewProps) {
   const p = PALETTES.poster
   const visibleBlocks = blocks.filter((b) => b.is_visible)
   return (
@@ -104,16 +104,16 @@ function ShowcasePreview({ adda, tagline, eventPreferences, highlights, blocks, 
       {/* Mini header */}
       <div style={{ height: 38, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 14px', background: p.bg, borderBottom: `1px solid ${p.border}` }}>
         <span style={{ fontSize: 11, fontWeight: 900, color: p.primary, fontFamily: p.mono, letterSpacing: '-0.3px' }}>WIMC</span>
-        <span style={{ fontSize: 8, fontFamily: p.mono, color: p.textMuted, textTransform: 'uppercase', letterSpacing: '0.08em' }}>{adda.city ?? 'YOUR CITY'}</span>
+        <span style={{ fontSize: 8, fontFamily: p.mono, color: p.textMuted, textTransform: 'uppercase', letterSpacing: '0.08em' }}>{venue.city ?? 'YOUR CITY'}</span>
       </div>
 
       {/* Hero — full-bleed cover, name overlaid */}
       <div style={{ position: 'relative', height: 200, background: p.bgPanel, overflow: 'hidden' }}>
-        {adda.cover_image_url ? (
-          <Image src={adda.cover_image_url} alt={adda.name} fill style={{ objectFit: 'cover', opacity: 0.65 }} unoptimized />
+        {venue.cover_image_url ? (
+          <Image src={venue.cover_image_url} alt={venue.name} fill style={{ objectFit: 'cover', opacity: 0.65 }} unoptimized />
         ) : (
           <div style={{ position: 'absolute', inset: 0, background: `linear-gradient(135deg, ${p.bgCard} 0%, ${p.bgPanel} 100%)`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <span className="material-symbols-outlined" style={{ fontSize: 56, color: p.border }}>{typeIcon(adda.adda_type)}</span>
+            <span className="material-symbols-outlined" style={{ fontSize: 56, color: p.border }}>{typeIcon(venue.venue_type)}</span>
           </div>
         )}
         {/* Gradient overlay — heavy at bottom */}
@@ -121,13 +121,13 @@ function ShowcasePreview({ adda, tagline, eventPreferences, highlights, blocks, 
 
         {/* Type badge top-left */}
         <div style={{ position: 'absolute', top: 10, left: 12, background: p.primary, color: '#fff', padding: '3px 8px', fontSize: 8, fontFamily: p.mono, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', display: 'flex', alignItems: 'center', gap: 3 }}>
-          <span className="material-symbols-outlined" style={{ fontSize: 9 }}>{typeIcon(adda.adda_type)}</span>
-          {typeLabel(adda.adda_type)}
+          <span className="material-symbols-outlined" style={{ fontSize: 9 }}>{typeIcon(venue.venue_type)}</span>
+          {typeLabel(venue.venue_type)}
         </div>
 
         {/* Venue name at bottom */}
         <div style={{ position: 'absolute', bottom: 12, left: 12, right: 12 }}>
-          <div style={{ fontSize: 28, fontWeight: 900, color: p.text, lineHeight: 0.9, textTransform: 'uppercase', letterSpacing: '-0.5px' }}>{adda.name}</div>
+          <div style={{ fontSize: 28, fontWeight: 900, color: p.text, lineHeight: 0.9, textTransform: 'uppercase', letterSpacing: '-0.5px' }}>{venue.name}</div>
           {tagline && <div style={{ fontSize: 10, color: p.textMuted, marginTop: 5, fontFamily: p.mono, fontStyle: 'italic' }}>{tagline}</div>}
         </div>
       </div>
@@ -135,9 +135,9 @@ function ShowcasePreview({ adda, tagline, eventPreferences, highlights, blocks, 
       {/* Quick info strip */}
       <div style={{ display: 'flex', borderBottom: `1px solid ${p.border}` }}>
         {[
-          { label: 'CAPACITY', value: adda.capacity_max ? `${adda.capacity_max}` : '—' },
-          { label: 'CITY', value: adda.city ?? '—' },
-          { label: 'TYPE', value: typeLabel(adda.adda_type) },
+          { label: 'CAPACITY', value: venue.capacity_max ? `${venue.capacity_max}` : '—' },
+          { label: 'CITY', value: venue.city ?? '—' },
+          { label: 'TYPE', value: typeLabel(venue.venue_type) },
         ].map(({ label, value }) => (
           <div key={label} style={{ flex: 1, padding: '8px 10px', borderRight: `1px solid ${p.border}`, textAlign: 'center' }}>
             <div style={{ fontSize: 8, fontFamily: p.mono, color: p.textMuted, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 2 }}>{label}</div>
@@ -200,7 +200,7 @@ function ShowcasePreview({ adda, tagline, eventPreferences, highlights, blocks, 
 // ─── 2. EVENT HOUSE (corporate/ocean) ────────────────────────────────────────
 // Upcoming events front & centre, professional navy feel
 
-function EventHousePreview({ adda, tagline, eventPreferences, highlights, blocks, pageTheme, upcomingEvents }: VenuePagePreviewProps) {
+function EventHousePreview({ venue, tagline, eventPreferences, highlights, blocks, pageTheme, upcomingEvents }: VenuePagePreviewProps) {
   const p = PALETTES.corporate
   const visibleBlocks = blocks.filter((b) => b.is_visible)
   return (
@@ -209,17 +209,17 @@ function EventHousePreview({ adda, tagline, eventPreferences, highlights, blocks
       <div style={{ padding: '12px 14px 10px', background: p.bgCard, borderBottom: `1px solid ${p.border}` }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
           <span style={{ fontSize: 10, fontWeight: 700, color: p.primary, fontFamily: p.mono }}>WIMC</span>
-          <span style={{ fontSize: 8, fontFamily: p.mono, color: p.textMuted, textTransform: 'uppercase' }}>{adda.city}</span>
+          <span style={{ fontSize: 8, fontFamily: p.mono, color: p.textMuted, textTransform: 'uppercase' }}>{venue.city}</span>
         </div>
         {/* Venue card */}
         <div style={{ background: p.bgPanel, border: `1px solid ${p.border}`, padding: '10px 12px' }}>
-          <div style={{ fontSize: 8, color: p.primary, fontFamily: p.mono, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 4 }}>{typeLabel(adda.adda_type)}</div>
-          <div style={{ fontSize: 18, fontWeight: 700, color: p.text, lineHeight: 1.1 }}>{adda.name}</div>
+          <div style={{ fontSize: 8, color: p.primary, fontFamily: p.mono, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 4 }}>{typeLabel(venue.venue_type)}</div>
+          <div style={{ fontSize: 18, fontWeight: 700, color: p.text, lineHeight: 1.1 }}>{venue.name}</div>
           {tagline && <div style={{ fontSize: 9, color: p.textMuted, marginTop: 4, fontStyle: 'italic' }}>{tagline}</div>}
           <div style={{ display: 'flex', gap: 10, marginTop: 8 }}>
-            <span style={{ fontSize: 9, fontFamily: p.mono, color: p.primary }}>{adda.capacity_max ? `${adda.capacity_max} CAP` : '—'}</span>
+            <span style={{ fontSize: 9, fontFamily: p.mono, color: p.primary }}>{venue.capacity_max ? `${venue.capacity_max} CAP` : '—'}</span>
             <span style={{ fontSize: 9, fontFamily: p.mono, color: p.textMuted }}>·</span>
-            <span style={{ fontSize: 9, fontFamily: p.mono, color: p.textMuted }}>{adda.city}</span>
+            <span style={{ fontSize: 9, fontFamily: p.mono, color: p.textMuted }}>{venue.city}</span>
           </div>
         </div>
       </div>
@@ -287,10 +287,10 @@ function EventHousePreview({ adda, tagline, eventPreferences, highlights, blocks
   )
 }
 
-// ─── 3. COMMUNITY ADDA (boarding-pass/default) ───────────────────────────────
+// ─── 3. COMMUNITY VENUE (boarding-pass/default) ───────────────────────────────
 // Ticket-stub energy, warm orange on dark, culture pass vibe
 
-function CommunityVenuePreview({ adda, tagline, eventPreferences, highlights, blocks, pageTheme, upcomingEvents, contactWhatsapp }: VenuePagePreviewProps) {
+function CommunityVenuePreview({ venue, tagline, eventPreferences, highlights, blocks, pageTheme, upcomingEvents, contactWhatsapp }: VenuePagePreviewProps) {
   const p = PALETTES['boarding-pass']
   const visibleBlocks = blocks.filter((b) => b.is_visible)
   const waLink = contactWhatsapp ? `https://wa.me/${contactWhatsapp.replace(/\D/g, '').replace(/^(?!91)/, '91')}` : '#'
@@ -299,16 +299,16 @@ function CommunityVenuePreview({ adda, tagline, eventPreferences, highlights, bl
       {/* Mini header */}
       <div style={{ height: 38, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 14px', background: '#080808', borderBottom: `1px dashed ${p.border}` }}>
         <span style={{ fontSize: 10, fontWeight: 900, color: p.primary, fontFamily: p.mono }}>WIMC</span>
-        <span style={{ fontSize: 8, fontFamily: p.mono, color: p.textMuted, textTransform: 'uppercase', letterSpacing: '0.1em' }}>{adda.city ?? 'YOUR CITY'}</span>
+        <span style={{ fontSize: 8, fontFamily: p.mono, color: p.textMuted, textTransform: 'uppercase', letterSpacing: '0.1em' }}>{venue.city ?? 'YOUR CITY'}</span>
       </div>
 
       {/* Cover image */}
       <div style={{ position: 'relative', height: 120, background: p.bgPanel, overflow: 'hidden' }}>
-        {adda.cover_image_url ? (
-          <Image src={adda.cover_image_url} alt={adda.name} fill style={{ objectFit: 'cover', opacity: 0.5 }} unoptimized />
+        {venue.cover_image_url ? (
+          <Image src={venue.cover_image_url} alt={venue.name} fill style={{ objectFit: 'cover', opacity: 0.5 }} unoptimized />
         ) : (
           <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <span className="material-symbols-outlined" style={{ fontSize: 40, color: p.border }}>{typeIcon(adda.adda_type)}</span>
+            <span className="material-symbols-outlined" style={{ fontSize: 40, color: p.border }}>{typeIcon(venue.venue_type)}</span>
           </div>
         )}
         <div style={{ position: 'absolute', inset: 0, background: `linear-gradient(to top, ${p.bg} 0%, rgba(18,18,18,0.3) 100%)` }} />
@@ -319,10 +319,10 @@ function CommunityVenuePreview({ adda, tagline, eventPreferences, highlights, bl
         <div style={{ fontSize: 8, fontFamily: p.mono, color: p.primary, textTransform: 'uppercase', letterSpacing: '0.15em', marginBottom: 3 }}>
           WHEN IN MY CITY PRESENTS
         </div>
-        <div style={{ fontSize: 22, fontWeight: 900, color: p.text, lineHeight: 0.95, textTransform: 'uppercase' }}>{adda.name}</div>
+        <div style={{ fontSize: 22, fontWeight: 900, color: p.text, lineHeight: 0.95, textTransform: 'uppercase' }}>{venue.name}</div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 5 }}>
-          <span style={{ background: p.primary, color: '#fff', fontSize: 7, fontFamily: p.mono, padding: '2px 6px', textTransform: 'uppercase', fontWeight: 700 }}>{typeLabel(adda.adda_type)}</span>
-          {adda.capacity_max && <span style={{ fontSize: 8, fontFamily: p.mono, color: p.textMuted }}>UP TO {adda.capacity_max} PEOPLE</span>}
+          <span style={{ background: p.primary, color: '#fff', fontSize: 7, fontFamily: p.mono, padding: '2px 6px', textTransform: 'uppercase', fontWeight: 700 }}>{typeLabel(venue.venue_type)}</span>
+          {venue.capacity_max && <span style={{ fontSize: 8, fontFamily: p.mono, color: p.textMuted }}>UP TO {venue.capacity_max} PEOPLE</span>}
         </div>
         {tagline && <div style={{ fontSize: 10, color: p.textMuted, marginTop: 5, fontStyle: 'italic', borderLeft: `2px solid ${p.primary}`, paddingLeft: 8 }}>{tagline}</div>}
       </div>
@@ -396,7 +396,7 @@ function CommunityVenuePreview({ adda, tagline, eventPreferences, highlights, bl
 // ─── 4. OPEN STUDIO (minimal/gallery) ────────────────────────────────────────
 // White background, clean Inter type, gallery-white aesthetic
 
-function OpenStudioPreview({ adda, tagline, eventPreferences, highlights, blocks, pageTheme, upcomingEvents }: VenuePagePreviewProps) {
+function OpenStudioPreview({ venue, tagline, eventPreferences, highlights, blocks, pageTheme, upcomingEvents }: VenuePagePreviewProps) {
   const p = PALETTES.minimal
   const visibleBlocks = blocks.filter((b) => b.is_visible)
   return (
@@ -404,27 +404,27 @@ function OpenStudioPreview({ adda, tagline, eventPreferences, highlights, blocks
       {/* Minimal header */}
       <div style={{ height: 44, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 16px', borderBottom: `1px solid ${p.border}` }}>
         <span style={{ fontSize: 10, fontFamily: p.mono, color: p.textMuted, letterSpacing: '0.15em', textTransform: 'uppercase' }}>WIMC</span>
-        <span style={{ fontSize: 9, fontFamily: p.mono, color: p.textMuted, textTransform: 'uppercase' }}>{adda.city}</span>
+        <span style={{ fontSize: 9, fontFamily: p.mono, color: p.textMuted, textTransform: 'uppercase' }}>{venue.city}</span>
       </div>
 
       {/* Cover — muted, not dominant */}
-      {adda.cover_image_url && (
+      {venue.cover_image_url && (
         <div style={{ position: 'relative', height: 100, overflow: 'hidden', borderBottom: `1px solid ${p.border}` }}>
-          <Image src={adda.cover_image_url} alt={adda.name} fill style={{ objectFit: 'cover', filter: 'grayscale(30%)' }} unoptimized />
+          <Image src={venue.cover_image_url} alt={venue.name} fill style={{ objectFit: 'cover', filter: 'grayscale(30%)' }} unoptimized />
         </div>
       )}
 
       {/* Centered venue name */}
       <div style={{ padding: '20px 16px 12px', textAlign: 'center', borderBottom: `1px solid ${p.border}` }}>
-        <div style={{ fontSize: 8, fontFamily: p.mono, color: p.textMuted, textTransform: 'uppercase', letterSpacing: '0.2em', marginBottom: 6 }}>{typeLabel(adda.adda_type)}</div>
-        <div style={{ fontSize: 22, fontWeight: 300, color: p.text, letterSpacing: '-0.3px', lineHeight: 1.1 }}>{adda.name}</div>
+        <div style={{ fontSize: 8, fontFamily: p.mono, color: p.textMuted, textTransform: 'uppercase', letterSpacing: '0.2em', marginBottom: 6 }}>{typeLabel(venue.venue_type)}</div>
+        <div style={{ fontSize: 22, fontWeight: 300, color: p.text, letterSpacing: '-0.3px', lineHeight: 1.1 }}>{venue.name}</div>
         {tagline && <div style={{ fontSize: 10, color: p.textMuted, marginTop: 6 }}>{tagline}</div>}
         <div style={{ width: 32, height: 1, background: p.primary, margin: '10px auto 0' }} />
       </div>
 
       {/* Location + capacity pill row */}
       <div style={{ display: 'flex', justifyContent: 'center', gap: 10, padding: '10px 16px', borderBottom: `1px solid ${p.border}` }}>
-        {[adda.city, adda.capacity_max ? `Up to ${adda.capacity_max}` : null].filter(Boolean).map((val) => (
+        {[venue.city, venue.capacity_max ? `Up to ${venue.capacity_max}` : null].filter(Boolean).map((val) => (
           <span key={val} style={{ fontSize: 9, fontFamily: p.mono, color: p.textMuted, textTransform: 'uppercase', letterSpacing: '0.08em' }}>{val}</span>
         ))}
       </div>
@@ -483,7 +483,7 @@ function OpenStudioPreview({ adda, tagline, eventPreferences, highlights, blocks
 // ─── 5. NIGHTSPOT (reel/electric) ────────────────────────────────────────────
 // Electric cyan on near-black, glow effects, nightlife energy
 
-function NightspotPreview({ adda, tagline, eventPreferences, highlights, blocks, pageTheme, upcomingEvents, contactWhatsapp }: VenuePagePreviewProps) {
+function NightspotPreview({ venue, tagline, eventPreferences, highlights, blocks, pageTheme, upcomingEvents, contactWhatsapp }: VenuePagePreviewProps) {
   const p = PALETTES.reel
   const visibleBlocks = blocks.filter((b) => b.is_visible)
   const waLink = contactWhatsapp ? `https://wa.me/${contactWhatsapp.replace(/\D/g, '').replace(/^(?!91)/, '91')}` : '#'
@@ -492,8 +492,8 @@ function NightspotPreview({ adda, tagline, eventPreferences, highlights, blocks,
 
       {/* Gradient hero */}
       <div style={{ position: 'relative', height: 190, background: `linear-gradient(160deg, #050A10 0%, #0A1828 50%, #050A10 100%)`, overflow: 'hidden' }}>
-        {adda.cover_image_url && (
-          <Image src={adda.cover_image_url} alt={adda.name} fill style={{ objectFit: 'cover', opacity: 0.2, mixBlendMode: 'luminosity' }} unoptimized />
+        {venue.cover_image_url && (
+          <Image src={venue.cover_image_url} alt={venue.name} fill style={{ objectFit: 'cover', opacity: 0.2, mixBlendMode: 'luminosity' }} unoptimized />
         )}
         {/* Glow orb */}
         <div style={{ position: 'absolute', top: -30, right: -30, width: 130, height: 130, background: `radial-gradient(circle, ${p.primary}25 0%, transparent 70%)`, pointerEvents: 'none' }} />
@@ -502,17 +502,17 @@ function NightspotPreview({ adda, tagline, eventPreferences, highlights, blocks,
         {/* WIMC header overlay */}
         <div style={{ position: 'absolute', top: 10, left: 0, right: 0, display: 'flex', justifyContent: 'space-between', padding: '0 14px' }}>
           <span style={{ fontSize: 10, fontWeight: 700, color: p.primary, fontFamily: p.mono, letterSpacing: '0.2em' }}>WIMC</span>
-          <span style={{ fontSize: 8, fontFamily: p.mono, color: p.textMuted, textTransform: 'uppercase' }}>{adda.city}</span>
+          <span style={{ fontSize: 8, fontFamily: p.mono, color: p.textMuted, textTransform: 'uppercase' }}>{venue.city}</span>
         </div>
 
         {/* Type chip */}
         <div style={{ position: 'absolute', top: 32, left: 14 }}>
-          <span style={{ background: `${p.primary}20`, border: `1px solid ${p.primary}60`, color: p.primary, fontSize: 8, fontFamily: p.mono, padding: '2px 8px', textTransform: 'uppercase', letterSpacing: '0.1em' }}>{typeLabel(adda.adda_type)}</span>
+          <span style={{ background: `${p.primary}20`, border: `1px solid ${p.primary}60`, color: p.primary, fontSize: 8, fontFamily: p.mono, padding: '2px 8px', textTransform: 'uppercase', letterSpacing: '0.1em' }}>{typeLabel(venue.venue_type)}</span>
         </div>
 
         {/* Venue name with glow */}
         <div style={{ position: 'absolute', bottom: 14, left: 14, right: 14 }}>
-          <div style={{ fontSize: 26, fontWeight: 700, color: p.primary, lineHeight: 0.95, textShadow: `0 0 30px ${p.primary}60, 0 0 60px ${p.primary}25`, textTransform: 'uppercase' }}>{adda.name}</div>
+          <div style={{ fontSize: 26, fontWeight: 700, color: p.primary, lineHeight: 0.95, textShadow: `0 0 30px ${p.primary}60, 0 0 60px ${p.primary}25`, textTransform: 'uppercase' }}>{venue.name}</div>
           {tagline && <div style={{ fontSize: 9, color: p.textMuted, marginTop: 5 }}>{tagline}</div>}
         </div>
       </div>
@@ -589,7 +589,7 @@ function NightspotPreview({ adda, tagline, eventPreferences, highlights, blocks,
 // ─── 6. HERITAGE HALL (stage/velvet) ─────────────────────────────────────────
 // Deep wine-dark, ornamental rules, centered Playfair type, theatrical
 
-function HeritageHallPreview({ adda, tagline, eventPreferences, highlights, blocks, pageTheme, upcomingEvents }: VenuePagePreviewProps) {
+function HeritageHallPreview({ venue, tagline, eventPreferences, highlights, blocks, pageTheme, upcomingEvents }: VenuePagePreviewProps) {
   const p = PALETTES.stage
   const visibleBlocks = blocks.filter((b) => b.is_visible)
   return (
@@ -597,8 +597,8 @@ function HeritageHallPreview({ adda, tagline, eventPreferences, highlights, bloc
 
       {/* Cover — dark overlay */}
       <div style={{ position: 'relative', height: 120, background: p.bgPanel, overflow: 'hidden' }}>
-        {adda.cover_image_url ? (
-          <Image src={adda.cover_image_url} alt={adda.name} fill style={{ objectFit: 'cover', opacity: 0.35 }} unoptimized />
+        {venue.cover_image_url ? (
+          <Image src={venue.cover_image_url} alt={venue.name} fill style={{ objectFit: 'cover', opacity: 0.35 }} unoptimized />
         ) : (
           <div style={{ position: 'absolute', inset: 0, background: `linear-gradient(135deg, ${p.bgCard} 0%, ${p.bgPanel} 100%)` }} />
         )}
@@ -607,7 +607,7 @@ function HeritageHallPreview({ adda, tagline, eventPreferences, highlights, bloc
         {/* WIMC header */}
         <div style={{ position: 'absolute', top: 0, left: 0, right: 0, display: 'flex', justifyContent: 'space-between', padding: '10px 14px' }}>
           <span style={{ fontSize: 9, fontFamily: "'JetBrains Mono', monospace", color: p.primary, letterSpacing: '0.15em' }}>WIMC</span>
-          <span style={{ fontSize: 8, fontFamily: "'JetBrains Mono', monospace", color: p.textMuted, textTransform: 'uppercase' }}>{adda.city}</span>
+          <span style={{ fontSize: 8, fontFamily: "'JetBrains Mono', monospace", color: p.textMuted, textTransform: 'uppercase' }}>{venue.city}</span>
         </div>
       </div>
 
@@ -615,14 +615,14 @@ function HeritageHallPreview({ adda, tagline, eventPreferences, highlights, bloc
       <div style={{ textAlign: 'center', padding: '14px 14px 10px', borderBottom: `1px solid ${p.border}` }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'center', marginBottom: 8 }}>
           <div style={{ flex: 1, height: 1, background: `linear-gradient(to right, transparent, ${p.primary}60)` }} />
-          <span style={{ fontSize: 8, fontFamily: "'JetBrains Mono', monospace", color: p.primary, textTransform: 'uppercase', letterSpacing: '0.2em' }}>✦ {typeLabel(adda.adda_type)} ✦</span>
+          <span style={{ fontSize: 8, fontFamily: "'JetBrains Mono', monospace", color: p.primary, textTransform: 'uppercase', letterSpacing: '0.2em' }}>✦ {typeLabel(venue.venue_type)} ✦</span>
           <div style={{ flex: 1, height: 1, background: `linear-gradient(to left, transparent, ${p.primary}60)` }} />
         </div>
-        <div style={{ fontSize: 22, fontWeight: 700, color: p.text, lineHeight: 1, letterSpacing: '0.5px', fontStyle: 'italic' }}>{adda.name}</div>
+        <div style={{ fontSize: 22, fontWeight: 700, color: p.text, lineHeight: 1, letterSpacing: '0.5px', fontStyle: 'italic' }}>{venue.name}</div>
         {tagline && <div style={{ fontSize: 9, color: p.textMuted, marginTop: 6, letterSpacing: '0.05em' }}>{tagline}</div>}
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'center', marginTop: 10 }}>
           <div style={{ flex: 1, height: 1, background: `linear-gradient(to right, transparent, ${p.border})` }} />
-          <span style={{ fontSize: 7, fontFamily: "'JetBrains Mono', monospace", color: p.textMuted, textTransform: 'uppercase', letterSpacing: '0.15em' }}>{adda.city}</span>
+          <span style={{ fontSize: 7, fontFamily: "'JetBrains Mono', monospace", color: p.textMuted, textTransform: 'uppercase', letterSpacing: '0.15em' }}>{venue.city}</span>
           <div style={{ flex: 1, height: 1, background: `linear-gradient(to left, transparent, ${p.border})` }} />
         </div>
       </div>
@@ -687,7 +687,7 @@ function HeritageHallPreview({ adda, tagline, eventPreferences, highlights, bloc
             <span style={{ fontSize: 8, fontFamily: "'JetBrains Mono', monospace", color: p.primary, letterSpacing: '0.15em', textTransform: 'uppercase' }}>ENQUIRE</span>
             <div style={{ flex: 1, height: 1, background: p.border }} />
           </div>
-          <span style={{ fontSize: 9, fontFamily: "'JetBrains Mono', monospace", color: p.textMuted, letterSpacing: '0.05em' }}>wheninmycity.com/adda/{adda.slug}</span>
+          <span style={{ fontSize: 9, fontFamily: "'JetBrains Mono', monospace", color: p.textMuted, letterSpacing: '0.05em' }}>wheninmycity.com/venue/{venue.slug}</span>
         </div>
       </div>
     </div>
@@ -753,7 +753,7 @@ export default function VenuePagePreview(props: VenuePagePreviewProps) {
       <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
         <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#5DD9D0' }} />
         <span style={{ fontSize: 10, fontFamily: "'JetBrains Mono', monospace", color: 'rgba(255,255,255,0.28)', letterSpacing: '0.10em', textTransform: 'uppercase' }}>
-          Live Preview · wheninmycity.com/adda/{props.adda.slug}
+          Live Preview · wheninmycity.com/venue/{props.venue.slug}
         </span>
       </div>
     </div>

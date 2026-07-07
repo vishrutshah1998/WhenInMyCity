@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useCallback, useTransition, useRef } from 'react'
-import { updateAddaStudioContent } from '@/app/actions/venue'
+import { updateVenueStudioContent } from '@/app/actions/venue'
 import { updateProfileTheme } from '@/app/actions/profile'
 import { reorderBlocks } from '@/app/actions/blocks'
 import BlockEditor from '@/components/dashboard/BlockEditor'
@@ -9,7 +9,7 @@ import ThemeEditor from '@/components/dashboard/ThemeEditor'
 import StudioShell, { type StudioTab } from '@/components/dashboard/StudioShell'
 import VenuePagePreview from './VenuePagePreview'
 import VenuePublicPage from '@/app/venue/[slug]/VenuePublicPage'
-import type { AddaProfile, PageBlock } from '@/types/database'
+import type { VenueProfile, PageBlock } from '@/types/database'
 import type { ProfileTheme } from '@/types/theme'
 
 type Device = 'mobile' | 'desktop'
@@ -35,7 +35,7 @@ const INTER = "'Inter', system-ui, sans-serif"
 
 type Tab = 'content' | 'blocks' | 'theme'
 
-const ADDA_TABS: StudioTab[] = [
+const VENUE_TABS: StudioTab[] = [
   { key: 'content', label: 'Content', icon: 'edit'    },
   { key: 'blocks',  label: 'Blocks',  icon: 'add_box' },
   { key: 'theme',   label: 'Theme',   icon: 'palette' },
@@ -103,7 +103,7 @@ function TabBtn({ label, icon, active, onClick }: { label: string; icon: string;
 // ── Props ──────────────────────────────────────────────────────────────────────
 
 interface Props {
-  adda:           AddaProfile
+  venue:           VenueProfile
   initialBlocks:  PageBlock[]
   upcomingEvents: { id: string; title: string; starts_at: string }[]
   theme:          ProfileTheme
@@ -111,19 +111,19 @@ interface Props {
 
 // ── Main component ─────────────────────────────────────────────────────────────
 
-export default function VenueStudioClient({ adda, initialBlocks, upcomingEvents, theme: initialTheme }: Props) {
+export default function VenueStudioClient({ venue, initialBlocks, upcomingEvents, theme: initialTheme }: Props) {
   const [tab, setTab]       = useState<Tab>('content')
   const [device, setDevice] = useState<Device>('mobile')
 
   // ── Content state ──────────────────────────────────────────────────────────
-  const existingConfig = (adda.pricing_config as Record<string, unknown>) ?? {}
+  const existingConfig = (venue.pricing_config as Record<string, unknown>) ?? {}
   const existingHighlights = (existingConfig.studio_highlights as string[] | undefined) ?? ['', '', '']
 
   const [tagline,          setTagline]           = useState((existingConfig.tagline as string | undefined) ?? '')
-  const [eventPrefs,       setEventPrefs]        = useState<string[]>((adda.event_preferences as string[] | null) ?? [])
+  const [eventPrefs,       setEventPrefs]        = useState<string[]>((venue.event_preferences as string[] | null) ?? [])
   const [highlights,       setHighlights]        = useState<string[]>(existingHighlights.length >= 3 ? existingHighlights : [...existingHighlights, ...['', '', '']].slice(0, 3))
-  const [contactWhatsapp,  setContactWhatsapp]   = useState(adda.contact_whatsapp ?? '')
-  const [instagramHandle,  setInstagramHandle]   = useState(adda.instagram_handle ?? '')
+  const [contactWhatsapp,  setContactWhatsapp]   = useState(venue.contact_whatsapp ?? '')
+  const [instagramHandle,  setInstagramHandle]   = useState(venue.instagram_handle ?? '')
   const [contentDirty,     setContentDirty]      = useState(false)
   const [contentSaving,    setContentSaving]      = useState(false)
   const [contentStatus,    setContentStatus]      = useState<'idle' | 'saved' | 'error'>('idle')
@@ -144,10 +144,10 @@ export default function VenueStudioClient({ adda, initialBlocks, upcomingEvents,
   // ── Originals for discard ──────────────────────────────────────────────────
   const origContent = useRef({
     tagline:         (existingConfig.tagline as string | undefined) ?? '',
-    eventPrefs:      [...((adda.event_preferences as string[] | null) ?? [])],
+    eventPrefs:      [...((venue.event_preferences as string[] | null) ?? [])],
     highlights:      [...(existingHighlights.length >= 3 ? existingHighlights : [...existingHighlights, ...['', '', '']].slice(0, 3))],
-    contactWhatsapp: adda.contact_whatsapp ?? '',
-    instagramHandle: adda.instagram_handle ?? '',
+    contactWhatsapp: venue.contact_whatsapp ?? '',
+    instagramHandle: venue.instagram_handle ?? '',
   })
   const origBlocks = useRef<PageBlock[]>([...initialBlocks])
   const origTheme  = useRef<ProfileTheme>({ ...initialTheme })
@@ -173,7 +173,7 @@ export default function VenueStudioClient({ adda, initialBlocks, upcomingEvents,
 
   async function handleContentSave() {
     setContentSaving(true)
-    const result = await updateAddaStudioContent(adda.id, {
+    const result = await updateVenueStudioContent(venue.id, {
       tagline:           tagline,
       event_preferences: eventPrefs,
       studio_highlights: highlights,
@@ -283,17 +283,17 @@ export default function VenueStudioClient({ adda, initialBlocks, upcomingEvents,
   // Used in both the desktop browser-mockup preview and the mobile shell preview
   // so the merge logic is defined once.
   const liveVenue = {
-    ...adda,
-    contact_whatsapp: contactWhatsapp || adda.contact_whatsapp,
-    instagram_handle: instagramHandle || adda.instagram_handle,
-    event_preferences: eventPrefs as unknown as typeof adda.event_preferences,
+    ...venue,
+    contact_whatsapp: contactWhatsapp || venue.contact_whatsapp,
+    instagram_handle: instagramHandle || venue.instagram_handle,
+    event_preferences: eventPrefs as unknown as typeof venue.event_preferences,
     pricing_config: {
-      ...(typeof adda.pricing_config === 'object' && adda.pricing_config !== null
-        ? adda.pricing_config as Record<string, unknown>
+      ...(typeof venue.pricing_config === 'object' && venue.pricing_config !== null
+        ? venue.pricing_config as Record<string, unknown>
         : {}),
       tagline,
       studio_highlights: highlights,
-    } as unknown as typeof adda.pricing_config,
+    } as unknown as typeof venue.pricing_config,
   }
 
   // ── ContentPanel: render function (not a component) for the content tab ────
@@ -470,7 +470,7 @@ export default function VenueStudioClient({ adda, initialBlocks, upcomingEvents,
       return (
         <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
           <BlockEditor
-            persona="adda"
+            persona="venue"
             blocks={blocks}
             events={[]}
             onBlocksChange={handleBlocksChange}
@@ -485,7 +485,7 @@ export default function VenueStudioClient({ adda, initialBlocks, upcomingEvents,
       return (
         <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
           <ThemeEditor
-            persona="adda"
+            persona="venue"
             theme={theme}
             onThemeChange={handleThemeChange}
             onThemeReplace={handleThemeReplace}
@@ -503,7 +503,7 @@ export default function VenueStudioClient({ adda, initialBlocks, upcomingEvents,
     <StudioShell
       preview={
         <VenuePublicPage
-          adda={liveVenue}
+          venue={liveVenue}
           upcomingEvents={[]}
           pastEvents={[]}
           stats={{ total_events: 0, average_rating: 0 }}
@@ -511,7 +511,7 @@ export default function VenueStudioClient({ adda, initialBlocks, upcomingEvents,
           isPreview
         />
       }
-      tabs={ADDA_TABS}
+      tabs={VENUE_TABS}
       renderPanel={renderVenuePanel}
       accentColor={S.teal}
       panelBg={S.panel}
@@ -580,7 +580,7 @@ export default function VenueStudioClient({ adda, initialBlocks, upcomingEvents,
         </div>
 
         <a
-          href={`/venue/${adda.slug}`}
+          href={`/venue/${venue.slug}`}
           target="_blank" rel="noopener noreferrer"
           style={{ display: 'flex', alignItems: 'center', gap: 5, border: `1px solid ${S.teal}`, borderRadius: 6, padding: '5px 14px', color: S.teal, textDecoration: 'none', fontFamily: MONO, fontSize: 11, letterSpacing: '0.4px' }}
         >
@@ -618,7 +618,7 @@ export default function VenueStudioClient({ adda, initialBlocks, upcomingEvents,
           {tab === 'blocks' && (
             <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
               <BlockEditor
-                persona="adda"
+                persona="venue"
                 blocks={blocks}
                 events={[]}
                 onBlocksChange={handleBlocksChange}
@@ -633,7 +633,7 @@ export default function VenueStudioClient({ adda, initialBlocks, upcomingEvents,
           {tab === 'theme' && (
             <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
               <ThemeEditor
-                persona="adda"
+                persona="venue"
                 theme={theme}
                 onThemeChange={handleThemeChange}
                 onThemeReplace={handleThemeReplace}
@@ -657,7 +657,7 @@ export default function VenueStudioClient({ adda, initialBlocks, upcomingEvents,
           {device === 'mobile' ? (
             <div style={{ flex: 1, overflowY: 'auto', display: 'flex', justifyContent: 'center' }}>
               <VenuePagePreview
-                adda={adda}
+                venue={venue}
                 tagline={tagline}
                 eventPreferences={eventPrefs}
                 highlights={highlights}
@@ -694,14 +694,14 @@ export default function VenueStudioClient({ adda, initialBlocks, upcomingEvents,
                     fontSize: 11, fontFamily: MONO, color: S.muted, border: `1px solid ${S.border}`,
                   }}>
                     <span className="material-symbols-outlined" style={{ fontSize: 12, color: S.muted }}>lock</span>
-                    wheninmycity.com/adda/{adda.slug}
+                    wheninmycity.com/venue/{venue.slug}
                   </div>
                 </div>
                 {/* Page content — zoomed to fit preview panel */}
                 <div style={{ overflowY: 'auto', overflowX: 'hidden', maxHeight: 'calc(100vh - 162px)' }}>
                   <div style={{ width: 1280, zoom: 0.65, transformOrigin: 'top left' }}>
                   <VenuePublicPage
-                    adda={liveVenue}
+                    venue={liveVenue}
                     upcomingEvents={[]}
                     pastEvents={[]}
                     stats={{ total_events: 0, average_rating: 0 }}

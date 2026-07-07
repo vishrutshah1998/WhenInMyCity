@@ -7,7 +7,7 @@ import { CITIES } from '@/lib/constants/interests'
 // Types
 // ---------------------------------------------------------------------------
 
-export interface LegendaryAdda {
+export interface LegendaryVenue {
   id:                      string
   slug:                    string
   name:                    string
@@ -17,7 +17,7 @@ export interface LegendaryAdda {
   cityEmoji:               string
   neighbourhood:           string | null
   coverImageUrl:           string | null
-  addaType:                string[]
+  venueType:                string[]
   capacityMax:             number | null
   totalEventsHosted:       number
   averageMakerRating:      number
@@ -29,23 +29,23 @@ export interface LegendaryAdda {
 }
 
 // ---------------------------------------------------------------------------
-// getLegendaryAddas
+// getLegendaryVenues
 // ---------------------------------------------------------------------------
 
 const cityLookup = new Map(CITIES.map((c) => [c.id, { name: c.name, emoji: c.emoji }]))
 
 /**
- * Returns all active Legendary-tier Addas, grouped by city.
+ * Returns all active Legendary-tier Venues, grouped by city.
  * Within each city, sorted by total_events_hosted DESC.
  * Public — no auth required.
  */
-export async function getLegendaryAddas(): Promise<LegendaryAdda[]> {
+export async function getLegendaryVenues(): Promise<LegendaryVenue[]> {
   const admin = createAdminClient()
 
   const { data, error } = await admin
-    .from('adda_profiles')
-    .select('id, slug, name, description, city, neighbourhood, cover_image_url, adda_type, capacity_max, total_events_hosted, average_maker_rating, repeat_attendee_rate, on_time_rate, unique_lantern_beacon_hosts, beloved_since, trending_until')
-    .eq('adda_tier', 'legendary')
+    .from('venue_profiles')
+    .select('id, slug, name, description, city, neighbourhood, cover_image_url, venue_type, capacity_max, total_events_hosted, average_maker_rating, repeat_attendee_rate, on_time_rate, unique_lantern_beacon_hosts, beloved_since, trending_until')
+    .eq('venue_tier', 'legendary')
     .eq('is_active', true)
     .order('city')
     .order('total_events_hosted', { ascending: false })
@@ -66,7 +66,7 @@ export async function getLegendaryAddas(): Promise<LegendaryAdda[]> {
       cityEmoji:                city?.emoji ?? '🏙️',
       neighbourhood:            row.neighbourhood,
       coverImageUrl:            row.cover_image_url,
-      addaType:                 row.adda_type ?? [],
+      venueType:                 row.venue_type ?? [],
       capacityMax:              row.capacity_max,
       totalEventsHosted:        row.total_events_hosted,
       averageMakerRating:       row.average_maker_rating,

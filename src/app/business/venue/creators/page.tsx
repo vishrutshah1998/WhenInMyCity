@@ -3,21 +3,21 @@ import { requireAuth } from '@/lib/auth/requireAuth'
 import { createAdminClient } from '@/lib/supabase/admin'
 import CreatorsClient, { type ProposalWithMaker } from './CreatorsClient'
 
-export default async function AddaCreatorsPage() {
+export default async function VenueCreatorsPage() {
   const { user } = await requireAuth('/business/venue/creators')
 
   const admin = createAdminClient()
 
-  const { data: adda } = await admin
-    .from('adda_profiles')
+  const { data: venue } = await admin
+    .from('venue_profiles')
     .select('id, name, slug')
     .eq('auth_user_id', user.id)
     .maybeSingle()
 
-  if (!adda) redirect('/business/venue/onboard')
+  if (!venue) redirect('/business/venue/onboard')
 
   const { data: proposals } = await admin
-    .from('maker_adda_proposals')
+    .from('maker_venue_proposals')
     .select(`
       *,
       maker:maker_id (
@@ -25,7 +25,7 @@ export default async function AddaCreatorsPage() {
         creator_type, user_tier, cumulative_events_hosted
       )
     `)
-    .eq('adda_id', adda.id)
+    .eq('venue_id', venue.id)
     .order('created_at', { ascending: false })
 
   return (

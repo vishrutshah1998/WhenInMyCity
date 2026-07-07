@@ -51,7 +51,7 @@ export interface AdminEventRow {
   city:         string | null
 }
 
-export interface AdminAddaRow {
+export interface AdminVenueRow {
   id:                       string
   name:                     string
   slug:                     string
@@ -188,17 +188,17 @@ export async function updatePayoutStatus(raw: unknown): Promise<{ success: boole
 }
 
 // ---------------------------------------------------------------------------
-// Adda Payouts
+// Venue Payouts
 // ---------------------------------------------------------------------------
 
-export interface AdminAddaPayoutRow {
+export interface AdminVenuePayoutRow {
   id:                  string
-  adda_id:             string
-  adda_name:           string
+  venue_id:             string
+  venue_name:           string
   booking_ids:         string[]
   gross_paise:         number
   platform_fee_paise:  number
-  adda_share_paise:    number
+  venue_share_paise:    number
   payment_method:      'bank' | 'upi'
   bank_account_name:   string | null
   bank_account_number: string | null
@@ -210,13 +210,13 @@ export interface AdminAddaPayoutRow {
   processed_at:        string | null
 }
 
-export async function getAdminAddaPayouts(status?: string): Promise<{ data: AdminAddaPayoutRow[] | null; error?: string }> {
+export async function getAdminVenuePayouts(status?: string): Promise<{ data: AdminVenuePayoutRow[] | null; error?: string }> {
   await requireAdmin()
   const admin = createAdminClient()
 
   let query = admin
-    .from('adda_payout_requests')
-    .select('*, adda:adda_profiles(name)')
+    .from('venue_payout_requests')
+    .select('*, venue:venue_profiles(name)')
     .order('requested_at', { ascending: false })
 
   if (status && status !== 'all') {
@@ -226,14 +226,14 @@ export async function getAdminAddaPayouts(status?: string): Promise<{ data: Admi
   const { data, error } = await query
   if (error) return { data: null, error: error.message }
 
-  const rows: AdminAddaPayoutRow[] = (data ?? []).map((r) => ({
+  const rows: AdminVenuePayoutRow[] = (data ?? []).map((r) => ({
     id:                  r.id,
-    adda_id:             r.adda_id,
-    adda_name:           (r.adda as { name: string } | null)?.name ?? 'Unknown',
+    venue_id:             r.venue_id,
+    venue_name:           (r.venue as { name: string } | null)?.name ?? 'Unknown',
     booking_ids:         r.booking_ids,
     gross_paise:         r.gross_paise,
     platform_fee_paise:  r.platform_fee_paise,
-    adda_share_paise:    r.adda_share_paise,
+    venue_share_paise:    r.venue_share_paise,
     payment_method:      r.payment_method,
     bank_account_name:   r.bank_account_name,
     bank_account_number: r.bank_account_number,
@@ -248,22 +248,22 @@ export async function getAdminAddaPayouts(status?: string): Promise<{ data: Admi
   return { data: rows }
 }
 
-const UpdateAddaPayoutSchema = z.object({
+const UpdateVenuePayoutSchema = z.object({
   id:     z.string().uuid(),
   status: z.enum(['approved', 'paid', 'rejected']),
   notes:  z.string().max(500).optional(),
 })
 
-export async function updateAddaPayoutStatus(raw: unknown): Promise<{ success: boolean; error?: string }> {
+export async function updateVenuePayoutStatus(raw: unknown): Promise<{ success: boolean; error?: string }> {
   await requireAdmin()
   const admin = createAdminClient()
 
-  const parsed = UpdateAddaPayoutSchema.safeParse(raw)
+  const parsed = UpdateVenuePayoutSchema.safeParse(raw)
   if (!parsed.success) return { success: false, error: parsed.error.errors[0]?.message }
   const { id, status, notes } = parsed.data
 
   const { error } = await admin
-    .from('adda_payout_requests')
+    .from('venue_payout_requests')
     .update({
       status,
       rejection_reason: status === 'rejected' ? (notes ?? null) : null,
@@ -336,33 +336,33 @@ export async function getAdminEvents(status?: string): Promise<{ data: AdminEven
 }
 
 // ---------------------------------------------------------------------------
-// Addas
+// Venues
 // ---------------------------------------------------------------------------
 
-export async function getAdminAddas(): Promise<{ data: AdminAddaRow[] | null; error?: string }> {
+export async function getAdminVenues(): Promise<{ data: AdminVenueRow[] | null; error?: string }> {
   await requireAdmin()
   const admin = createAdminClient()
 
-  const { data: addas, error: addaErr } = await admin
-    .from('adda_profiles')
+  const { data: venues, error: venueErr } = await admin
+    .from('venue_profiles')
     .select('id, name, slug, city, address, pricing_model, is_active, is_verified, total_events_hosted, total_revenue_earned_paise, created_at')
     .order('created_at', { ascending: false })
 
-  if (addaErr) return { data: null, error: addaErr.message }
-  if (!addas?.length) return { data: [] }
+  if (venueErr) return { data: null, error: venueErr.message }
+  if (!venues?.length) return { data: [] }
 
-  const addaIds = addas.map((a) => a.id)
+  const venueIds = venues.map((a) => a.id)
   const { data: proposals } = await admin
-    .from('maker_adda_proposals')
-    .select('adda_id')
-    .in('adda_id', addaIds)
+    .from('maker_venue_proposals')
+    .select('venue_id')
+    .in('venue_id', venueIds)
 
   const proposalCount = new Map<string, number>()
   for (const p of proposals ?? []) {
-    proposalCount.set(p.adda_id, (proposalCount.get(p.adda_id) ?? 0) + 1)
+    proposalCount.set(p.venue_id, (proposalCount.get(p.venue_id) ?? 0) + 1)
   }
 
-  const rows: AdminAddaRow[] = addas.map((a) => ({
+  const rows: AdminVenueRow[] = venues.map((a) => ({
     id:                       a.id,
     name:                     a.name,
     slug:                     a.slug,
@@ -380,20 +380,20 @@ export async function getAdminAddas(): Promise<{ data: AdminAddaRow[] | null; er
   return { data: rows }
 }
 
-const ToggleAddaSchema = z.object({
+const ToggleVenueSchema = z.object({
   id:        z.string().uuid(),
   is_active: z.boolean(),
 })
 
-export async function toggleAddaActive(raw: unknown): Promise<{ success: boolean; error?: string }> {
+export async function toggleVenueActive(raw: unknown): Promise<{ success: boolean; error?: string }> {
   await requireAdmin()
   const admin = createAdminClient()
 
-  const parsed = ToggleAddaSchema.safeParse(raw)
+  const parsed = ToggleVenueSchema.safeParse(raw)
   if (!parsed.success) return { success: false, error: parsed.error.errors[0]?.message }
 
   const { error } = await admin
-    .from('adda_profiles')
+    .from('venue_profiles')
     .update({ is_active: parsed.data.is_active })
     .eq('id', parsed.data.id)
 
@@ -406,7 +406,7 @@ const ToggleVerifySchema = z.object({
   is_verified: z.boolean(),
 })
 
-export async function toggleAddaVerified(raw: unknown): Promise<{ success: boolean; error?: string }> {
+export async function toggleVenueVerified(raw: unknown): Promise<{ success: boolean; error?: string }> {
   await requireAdmin()
   const admin = createAdminClient()
 
@@ -414,7 +414,7 @@ export async function toggleAddaVerified(raw: unknown): Promise<{ success: boole
   if (!parsed.success) return { success: false, error: parsed.error.errors[0]?.message }
 
   const { error } = await admin
-    .from('adda_profiles')
+    .from('venue_profiles')
     .update({ is_verified: parsed.data.is_verified })
     .eq('id', parsed.data.id)
 

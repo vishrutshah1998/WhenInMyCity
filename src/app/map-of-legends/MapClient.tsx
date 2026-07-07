@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { WimcWordmark } from '@/components/WimcWordmark'
-import type { LegendaryAdda } from '@/app/actions/mapOfLegends'
+import type { LegendaryVenue } from '@/app/actions/mapOfLegends'
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -19,7 +19,7 @@ function belovedSinceLabel(iso: string | null): string | null {
   return d.toLocaleDateString('en-IN', { month: 'short', year: 'numeric' })
 }
 
-function AddaPlaceholder({ name }: { name: string }) {
+function VenuePlaceholder({ name }: { name: string }) {
   const initials = name.split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase()
   return (
     <div style={{
@@ -50,11 +50,11 @@ function StatPill({ icon, value, label }: { icon: string; value: string; label: 
   )
 }
 
-function AddaCard({ adda }: { adda: LegendaryAdda }) {
-  const since = belovedSinceLabel(adda.belovedSince)
+function VenueCard({ venue }: { venue: LegendaryVenue }) {
+  const since = belovedSinceLabel(venue.belovedSince)
 
   return (
-    <Link href={`/venue/${adda.slug}`} style={{ textDecoration: 'none' }}>
+    <Link href={`/venue/${venue.slug}`} style={{ textDecoration: 'none' }}>
       <div
         style={{
           background: 'var(--wimc-bg-elevated)',
@@ -77,15 +77,15 @@ function AddaCard({ adda }: { adda: LegendaryAdda }) {
       >
         {/* Cover */}
         <div style={{ position: 'relative', flexShrink: 0 }}>
-          {adda.coverImageUrl ? (
+          {venue.coverImageUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
-              src={adda.coverImageUrl}
-              alt={adda.name}
+              src={venue.coverImageUrl}
+              alt={venue.name}
               style={{ width: '100%', height: 160, objectFit: 'cover', display: 'block' }}
             />
           ) : (
-            <AddaPlaceholder name={adda.name} />
+            <VenuePlaceholder name={venue.name} />
           )}
 
           {/* Legendary badge */}
@@ -105,7 +105,7 @@ function AddaCard({ adda }: { adda: LegendaryAdda }) {
           </div>
 
           {/* Trending badge */}
-          {adda.isTrending && (
+          {venue.isTrending && (
             <div style={{
               position: 'absolute', top: 10, right: 10,
               padding: '4px 10px', borderRadius: 9999,
@@ -124,37 +124,37 @@ function AddaCard({ adda }: { adda: LegendaryAdda }) {
           {/* Name + location */}
           <div>
             <div style={{ fontFamily: 'var(--font-syne)', fontWeight: 700, fontSize: 16, marginBottom: 4 }}>
-              {adda.name}
+              {venue.name}
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--wimc-text-secondary)' }}>
               <span className="material-symbols-outlined" style={{ fontSize: 13 }}>location_on</span>
-              {adda.neighbourhood ?? adda.cityName}
-              {adda.capacityMax && (
+              {venue.neighbourhood ?? venue.cityName}
+              {venue.capacityMax && (
                 <>
                   <span style={{ color: 'var(--wimc-border-default)' }}>·</span>
-                  <span>Up to {adda.capacityMax}</span>
+                  <span>Up to {venue.capacityMax}</span>
                 </>
               )}
             </div>
           </div>
 
           {/* Description */}
-          {adda.description && (
+          {venue.description && (
             <p style={{
               fontSize: 13, color: 'var(--wimc-text-secondary)', lineHeight: 1.5,
               margin: 0,
               display: '-webkit-box', WebkitLineClamp: 2,
               WebkitBoxOrient: 'vertical', overflow: 'hidden',
             }}>
-              {adda.description}
+              {venue.description}
             </p>
           )}
 
           {/* Signal stats */}
           <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 'auto' }}>
-            <StatPill icon="star" value={adda.averageMakerRating.toFixed(1)} label="★" />
-            <StatPill icon="group" value={pct(adda.repeatAttendeeRate)} label="repeat" />
-            <StatPill icon="schedule" value={pct(adda.onTimeRate)} label="on-time" />
+            <StatPill icon="star" value={venue.averageMakerRating.toFixed(1)} label="★" />
+            <StatPill icon="group" value={pct(venue.repeatAttendeeRate)} label="repeat" />
+            <StatPill icon="schedule" value={pct(venue.onTimeRate)} label="on-time" />
           </div>
 
           {/* Footer row */}
@@ -164,7 +164,7 @@ function AddaCard({ adda }: { adda: LegendaryAdda }) {
             fontSize: 12, color: 'var(--wimc-text-secondary)',
           }}>
             <span>
-              <strong style={{ color: 'var(--wimc-text-primary)' }}>{adda.totalEventsHosted}</strong>
+              <strong style={{ color: 'var(--wimc-text-primary)' }}>{venue.totalEventsHosted}</strong>
               {' '}events hosted
             </span>
             {since && (
@@ -184,14 +184,14 @@ function AddaCard({ adda }: { adda: LegendaryAdda }) {
 // ---------------------------------------------------------------------------
 
 interface Props {
-  addas: LegendaryAdda[]
+  venues: LegendaryVenue[]
 }
 
-export default function MapClient({ addas }: Props) {
+export default function MapClient({ venues }: Props) {
   // Group by city
-  const cityGroups = addas.reduce<Record<string, LegendaryAdda[]>>((acc, adda) => {
-    if (!acc[adda.cityId]) acc[adda.cityId] = []
-    acc[adda.cityId].push(adda)
+  const cityGroups = venues.reduce<Record<string, LegendaryVenue[]>>((acc, venue) => {
+    if (!acc[venue.cityId]) acc[venue.cityId] = []
+    acc[venue.cityId].push(venue)
     return acc
   }, {})
 
@@ -267,9 +267,9 @@ export default function MapClient({ addas }: Props) {
           {/* Summary */}
           <div style={{ display: 'flex', justifyContent: 'center', gap: 28 }}>
             {[
-              { value: addas.length, label: 'Legendary Venues' },
+              { value: venues.length, label: 'Legendary Venues' },
               { value: cities.length, label: 'Cities' },
-              { value: addas.filter((a) => a.isTrending).length, label: 'Trending now' },
+              { value: venues.filter((a) => a.isTrending).length, label: 'Trending now' },
             ].map(({ value, label }) => (
               <div key={label} style={{ textAlign: 'center' }}>
                 <div style={{ fontFamily: 'var(--font-syne)', fontWeight: 900, fontSize: 26, color: 'var(--wimc-teal)' }}>
@@ -295,7 +295,7 @@ export default function MapClient({ addas }: Props) {
                 transition: 'all 150ms',
               }}
             >
-              All cities ({addas.length})
+              All cities ({venues.length})
             </button>
             {cities.map((cityId) => {
               const first = cityGroups[cityId][0]
@@ -321,7 +321,7 @@ export default function MapClient({ addas }: Props) {
         )}
 
         {/* ── City sections ──────────────────────────────────────────────────── */}
-        {addas.length === 0 ? (
+        {venues.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '80px 24px', color: 'var(--wimc-text-secondary)', fontSize: 15 }}>
             No Legendary Venues yet — every institution starts somewhere.
           </div>
@@ -350,7 +350,7 @@ export default function MapClient({ addas }: Props) {
 
                   {/* Card grid */}
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(290px, 1fr))', gap: 20 }}>
-                    {group.map((adda) => <AddaCard key={adda.id} adda={adda} />)}
+                    {group.map((venue) => <VenueCard key={venue.id} venue={venue} />)}
                   </div>
                 </section>
               )

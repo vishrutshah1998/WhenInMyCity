@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { SK } from '@/lib/onboarding/session-keys'
 import { VenueNoticePoster } from '@/components/onboarding/BoardingPassArtifact'
-import { saveAddaOnboardingStep } from '@/app/actions/venue-onboarding'
+import { saveVenueOnboardingStep } from '@/app/actions/venue-onboarding'
 import { deriveWimcTypes } from '@/lib/onboarding/google-type-map'
 
 const ACCENT = '#5DD9D0'
@@ -35,11 +35,11 @@ const VENUE_TYPES = [
 
 type VenueTypeId = typeof VENUE_TYPES[number]['id']
 
-type ValidAddaType =
+type ValidVenueType =
   | 'cafe' | 'coworking' | 'gallery' | 'community_hall'
   | 'rooftop' | 'garden' | 'studio' | 'library' | 'restaurant'
 
-const TYPE_TO_VALID: Record<string, ValidAddaType> = {
+const TYPE_TO_VALID: Record<string, ValidVenueType> = {
   cafe:       'cafe',       coworking:  'coworking', studio:     'studio',
   rooftop:    'rooftop',   gallery:    'gallery',   theatre:    'community_hall',
   event_hall: 'community_hall', retail: 'restaurant', bar:       'restaurant',
@@ -48,8 +48,8 @@ const TYPE_TO_VALID: Record<string, ValidAddaType> = {
   workshop:   'coworking',
 }
 
-function toValidAddaTypes(types: string[]): ValidAddaType[] {
-  const result = new Set<ValidAddaType>()
+function toValidVenueTypes(types: string[]): ValidVenueType[] {
+  const result = new Set<ValidVenueType>()
   types.forEach(t => { const v = TYPE_TO_VALID[t]; if (v) result.add(v) })
   return Array.from(result)
 }
@@ -164,20 +164,20 @@ export default function V4Page() {
       const lng           = parseFloat(sessionStorage.getItem(SK.v_lng) ?? '') || undefined
       const city          = sessionStorage.getItem(SK.v_city) || sessionStorage.getItem(SK.b_city) || bCity
       if (address.trim().length >= 5) {
-        await saveAddaOnboardingStep(1, {
+        await saveVenueOnboardingStep(1, {
           step: 1, name: bName, city,
           address, neighbourhood, lat, lng,
         })
       }
     } catch {}
     try {
-      const validTypes = toValidAddaTypes(venueTypes)
+      const validTypes = toValidVenueTypes(venueTypes)
       if (validTypes.length > 0) {
         const capMin = typeof minCapacity === 'number' ? minCapacity : undefined
         const capMax = typeof maxCapacity === 'number' ? maxCapacity : undefined
-        await saveAddaOnboardingStep(2, {
+        await saveVenueOnboardingStep(2, {
           step:                    2,
-          adda_type:               validTypes,
+          venue_type:               validTypes,
           capacity_min:            capMin,
           capacity_max:            capMax,
           capacity_configurations: [],
