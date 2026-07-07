@@ -19,7 +19,7 @@ const DASHBOARD_URL: Record<string, string> = {
 const LABEL: Record<string, string> = {
   creator:  'Creator',
   explorer: 'Explorer',
-  venue:    'Adda',
+  venue:    'Venue',
   brand:    'Brand',
 }
 

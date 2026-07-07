@@ -343,12 +343,12 @@ export default function V8Page() {
         {/* Live dot */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 28, animation: 'v8-fade-up 0.4s ease 0.1s both' }}>
           <div style={{ width: 7, height: 7, borderRadius: '50%', background: '#22C55E', animation: 'v8-pulse 2s ease-in-out infinite' }} />
-          <span style={{ fontFamily: MONO, fontSize: 9, color: '#22C55E', letterSpacing: '0.2em', textTransform: 'uppercase' }}>ADDA LIVE</span>
+          <span style={{ fontFamily: MONO, fontSize: 9, color: '#22C55E', letterSpacing: '0.2em', textTransform: 'uppercase' }}>VENUE LIVE</span>
         </div>
 
         {/* Overline */}
         <p style={{ fontFamily: MONO, fontSize: 9, color: `${CORAL}99`, letterSpacing: '0.35em', textTransform: 'uppercase', margin: '0 0 10px', animation: 'v8-fade-up 0.4s ease 0.2s both' }}>
-          — YOUR ADDA IS LIVE —
+          — YOUR VENUE IS LIVE —
         </p>
 
         {/* Name */}
@@ -405,7 +405,7 @@ export default function V8Page() {
                   animation: 'v8-stamp-in 0.5s cubic-bezier(0.175,0.885,0.32,1.275) 0.75s both',
                 }}>
                   <span style={{ fontFamily: OUTFIT, fontWeight: 900, fontSize: 30, color: ACCENT, lineHeight: 1, display: 'block' }}>LISTED</span>
-                  <span style={{ fontFamily: MONO, fontSize: 8, color: ACCENT, letterSpacing: '0.3em', display: 'block', marginTop: 2 }}>ADDA PROFILE</span>
+                  <span style={{ fontFamily: MONO, fontSize: 8, color: ACCENT, letterSpacing: '0.3em', display: 'block', marginTop: 2 }}>VENUE PROFILE</span>
                 </div>
               </div>
 
@@ -453,7 +453,7 @@ export default function V8Page() {
               opacity: isLeaving ? 0.6 : 1,
             }}
           >
-            <span>Continue to your Adda page</span>
+            <span>Continue to your Venue page</span>
             <span className="material-symbols-outlined" style={{ fontSize: 17 }}>arrow_forward</span>
           </button>
         </div>
@@ -646,7 +646,7 @@ export default function V8Page() {
                 Identity Check
               </div>
               <div style={{ fontFamily: DM, fontSize: 11, color: '#9896B0', marginTop: 2 }}>
-                Contact details stamped to your Adda profile.
+                Contact details stamped to your Venue profile.
               </div>
             </div>
           </div>

@@ -689,13 +689,13 @@ function StatsGridBlock({ block }: { block: PageBlock }) {
 
 type LayoutPresetId = 'boarding-pass' | 'poster' | 'editorial' | 'minimal' | 'reel' | 'corporate' | 'stage' | 'zine'
 
-function EventCard({ event, layout = 'boarding-pass' }: { event: Event; layout?: LayoutPresetId }) {
+function EventCard({ event, layout = 'boarding-pass', discoverySource }: { event: Event; layout?: LayoutPresetId; discoverySource: 'creator_link' | 'platform_discovery' }) {
   const isFree   = event.ticket_price === 0
   const priceStr = isFree ? 'FREE' : `₹${(event.ticket_price / 100).toLocaleString('en-IN')}`
 
   if (layout === 'poster') {
     return (
-      <Link href={`/events/${event.slug}`}>
+      <Link href={`/events/${event.slug}?src=${discoverySource}`}>
         <div
           className="relative border-l-4 border-primary bg-surface-container-high p-4 hover:bg-surface-container-highest transition-colors group"
           style={{ boxShadow: 'var(--wimc-card-shadow, none)' }}
@@ -718,7 +718,7 @@ function EventCard({ event, layout = 'boarding-pass' }: { event: Event; layout?:
   if (layout === 'editorial') {
     return (
       <Link
-        href={`/events/${event.slug}`}
+        href={`/events/${event.slug}?src=${discoverySource}`}
         className="group flex items-baseline gap-4 py-3 hover:opacity-70 transition-opacity"
       >
         <span className="font-mono text-[10px] text-on-surface/40 shrink-0 w-10 tabular-nums">
@@ -734,7 +734,7 @@ function EventCard({ event, layout = 'boarding-pass' }: { event: Event; layout?:
 
   if (layout === 'minimal') {
     return (
-      <Link href={`/events/${event.slug}`}>
+      <Link href={`/events/${event.slug}?src=${discoverySource}`}>
         <div className="card-surface rounded-2xl bg-surface-container-high hover:bg-surface-container-highest transition-colors p-4 group">
           <h3 className="font-semibold text-on-surface text-sm leading-snug">{event.title}</h3>
           <p className="text-xs text-on-surface/50 mt-1">
@@ -751,7 +751,7 @@ function EventCard({ event, layout = 'boarding-pass' }: { event: Event; layout?:
 
   if (layout === 'reel') {
     return (
-      <Link href={`/events/${event.slug}`}>
+      <Link href={`/events/${event.slug}?src=${discoverySource}`}>
         <div className="card-surface rounded-2xl overflow-hidden group">
           <div className="h-1 w-full" style={{ background: 'rgb(var(--color-primary))' }} />
           <div className="p-4 bg-surface-container-high hover:bg-surface-container-highest transition-colors">
@@ -779,7 +779,7 @@ function EventCard({ event, layout = 'boarding-pass' }: { event: Event; layout?:
     const day = d.getDate()
     const month = d.toLocaleString('en-IN', { month: 'short' }).toUpperCase()
     return (
-      <Link href={`/events/${event.slug}`}>
+      <Link href={`/events/${event.slug}?src=${discoverySource}`}>
         <div className="flex items-center gap-4 py-3.5 px-4 hover:bg-surface-container-high transition-colors group">
           {/* Date column */}
           <div className="shrink-0 text-center w-9">
@@ -802,7 +802,7 @@ function EventCard({ event, layout = 'boarding-pass' }: { event: Event; layout?:
 
   if (layout === 'stage') {
     return (
-      <Link href={`/events/${event.slug}`}>
+      <Link href={`/events/${event.slug}?src=${discoverySource}`}>
         <div className="flex flex-col items-center gap-0.5 py-4 px-5 hover:bg-surface-container-high transition-colors group">
           <span className="font-mono text-[9px] text-on-surface/35 uppercase tracking-[0.15em]" suppressHydrationWarning>
             {formatShortDate(event.starts_at)}
@@ -819,7 +819,7 @@ function EventCard({ event, layout = 'boarding-pass' }: { event: Event; layout?:
 
   if (layout === 'zine') {
     return (
-      <Link href={`/events/${event.slug}`}>
+      <Link href={`/events/${event.slug}?src=${discoverySource}`}>
         <div
           className="py-3 px-4 bg-surface-container-high hover:bg-surface-container-highest transition-colors group"
           style={{
@@ -844,7 +844,7 @@ function EventCard({ event, layout = 'boarding-pass' }: { event: Event; layout?:
 
   // Default: boarding-pass — original ticket stub
   return (
-    <Link href={`/events/${event.slug}`}>
+    <Link href={`/events/${event.slug}?src=${discoverySource}`}>
       <div
         className="card-surface relative bg-[#FAF7F0] border-2 border-dashed border-outline-variant flex overflow-hidden group"
         style={{ ['--color-on-surface' as string]: '26 17 8', ['--color-on-surface-variant' as string]: '90 65 55' }}
@@ -1113,7 +1113,7 @@ function SubstackPreviewBlock({ block, posts }: { block: PageBlock; posts: Subst
   )
 }
 
-function EventCalendarBlock({ block, events }: { block: PageBlock; events: Event[] }) {
+function EventCalendarBlock({ block, events, discoverySource }: { block: PageBlock; events: Event[]; discoverySource: 'creator_link' | 'platform_discovery' }) {
   const cfg = block.config as unknown as EventCalendarConfig
   const now = new Date()
   const maxDate = new Date(now.getFullYear(), now.getMonth() + (cfg.months_ahead ?? 1), 0)
@@ -1146,7 +1146,7 @@ function EventCalendarBlock({ block, events }: { block: PageBlock; events: Event
           {evs.map((ev) => (
             <a
               key={ev.id}
-              href={`/events/${ev.slug}`}
+              href={`/events/${ev.slug}?src=${discoverySource}`}
               className="group flex items-center gap-4 px-5 py-3 hover:bg-surface-container-highest transition-colors border-b border-outline-variant/10 last:border-0"
             >
               <div className="flex flex-col items-center w-10 shrink-0 text-center">
@@ -1172,7 +1172,7 @@ function EventCalendarBlock({ block, events }: { block: PageBlock; events: Event
   )
 }
 
-function PastEventsGalleryBlock({ block, events }: { block: PageBlock; events: Event[] }) {
+function PastEventsGalleryBlock({ block, events, discoverySource }: { block: PageBlock; events: Event[]; discoverySource: 'creator_link' | 'platform_discovery' }) {
   const cfg = block.config as unknown as PastEventsGalleryConfig
   if (events.length === 0) return null
 
@@ -1186,7 +1186,7 @@ function PastEventsGalleryBlock({ block, events }: { block: PageBlock; events: E
           {events.map((ev) => (
             <a
               key={ev.id}
-              href={`/events/${ev.slug}`}
+              href={`/events/${ev.slug}?src=${discoverySource}`}
               className="group flex items-center gap-4 px-5 py-4 hover:bg-surface-container-highest transition-colors"
             >
               {ev.cover_image_url && (
@@ -1212,7 +1212,7 @@ function PastEventsGalleryBlock({ block, events }: { block: PageBlock; events: E
         {events.map((ev) => (
           <a
             key={ev.id}
-            href={`/events/${ev.slug}`}
+            href={`/events/${ev.slug}?src=${discoverySource}`}
             className="card-surface group relative aspect-square rounded-xl overflow-hidden bg-surface-container-high"
           >
             {ev.cover_image_url ? (
@@ -1234,7 +1234,7 @@ function PastEventsGalleryBlock({ block, events }: { block: PageBlock; events: E
   )
 }
 
-function EventSeriesBlock({ block, events }: { block: PageBlock; events: Event[] }) {
+function EventSeriesBlock({ block, events, discoverySource }: { block: PageBlock; events: Event[]; discoverySource: 'creator_link' | 'platform_discovery' }) {
   const cfg = block.config as unknown as EventSeriesConfig
   const seriesEvts = events.filter((e) => cfg.linked_event_ids?.includes(e.id))
   const FREQ_LABELS: Record<string, string> = {
@@ -1267,7 +1267,7 @@ function EventSeriesBlock({ block, events }: { block: PageBlock; events: Event[]
             {seriesEvts.slice(0, 4).map((ev) => (
               <a
                 key={ev.id}
-                href={`/events/${ev.slug}`}
+                href={`/events/${ev.slug}?src=${discoverySource}`}
                 className="group flex items-center gap-3 py-2 hover:text-primary transition-colors"
               >
                 <span className="material-symbols-outlined text-sm text-primary">calendar_today</span>
@@ -1427,7 +1427,7 @@ function VenuePartnershipBlock({ block, venueData }: { block: PageBlock; venueDa
 
   return (
     <section className="flex flex-col gap-3">
-      <h3 className="font-headline font-bold text-lg text-on-surface px-1">Adda Partners</h3>
+      <h3 className="font-headline font-bold text-lg text-on-surface px-1">Venue Partners</h3>
       {cfg.display_style === 'row' ? (
         <div className="flex gap-3 overflow-x-auto pb-1">
           {venues.map((v) => (
@@ -2367,6 +2367,10 @@ interface PublicProfilePageProps {
   posts?:               CreatorPostWithReactions[]
   viewerUserId?:        string | null
   isPreview?:           boolean
+  /** Tag applied to outgoing event links: this page counts as the creator's
+   * own promotion unless the visitor arrived here via a platform discovery
+   * surface (Hall of Lights), in which case that attribution is forwarded. */
+  discoverySource?:     'creator_link' | 'platform_discovery'
 }
 
 const PublicProfilePage = React.memo(function PublicProfilePage({
@@ -2389,6 +2393,7 @@ const PublicProfilePage = React.memo(function PublicProfilePage({
   posts = [],
   viewerUserId = null,
   isPreview = false,
+  discoverySource = 'creator_link',
 }: PublicProfilePageProps) {
   const resolvedTheme = useMemo<ProfileTheme>(() => theme ?? DEFAULT_PROFILE_THEME, [theme])
   const contentBlocks = useMemo(() => blocks.filter((b) => b.is_visible), [blocks])
@@ -2741,7 +2746,7 @@ const PublicProfilePage = React.memo(function PublicProfilePage({
                       'gap-3'
                     }`}>
                       {upcomingEvents.map((ev) => (
-                        <EventCard key={ev.id} event={ev} layout={layout} />
+                        <EventCard key={ev.id} event={ev} layout={layout} discoverySource={discoverySource} />
                       ))}
                     </div>
                   </section>
@@ -2880,6 +2885,7 @@ const PublicProfilePage = React.memo(function PublicProfilePage({
                   key={block.id}
                   block={block}
                   events={calendarEvents}
+                  discoverySource={discoverySource}
                 />
               )
             case 'past_events_gallery':
@@ -2888,6 +2894,7 @@ const PublicProfilePage = React.memo(function PublicProfilePage({
                   key={block.id}
                   block={block}
                   events={pastEvents}
+                  discoverySource={discoverySource}
                 />
               )
             case 'event_series':
@@ -2896,6 +2903,7 @@ const PublicProfilePage = React.memo(function PublicProfilePage({
                   key={block.id}
                   block={block}
                   events={seriesEvents}
+                  discoverySource={discoverySource}
                 />
               )
             case 'community_stats':

@@ -32,23 +32,23 @@ export interface BottomNavConfig {
 
 const WORKSPACE_META: Record<string, WorkspaceLink> = {
   creator:  { icon: 'palette',    label: 'Creator',  color: '#E8705A', href: '/dashboard' },
-  venue:    { icon: 'storefront', label: 'Adda',     color: '#5DD9D0', href: '/business/venue/dashboard' },
+  venue:    { icon: 'storefront', label: 'Venue',    color: '#5DD9D0', href: '/business/venue/dashboard' },
   // 'business' is an older alias for venue in some user_profiles rows
-  business: { icon: 'storefront', label: 'Adda',     color: '#5DD9D0', href: '/business/venue/dashboard' },
+  business: { icon: 'storefront', label: 'Venue',    color: '#5DD9D0', href: '/business/venue/dashboard' },
   explorer: { icon: 'explore',    label: 'Explorer', color: '#9B8FFF', href: '/explore/dashboard' },
   brand:    { icon: 'campaign',   label: 'Brand',    color: '#F5A800', href: '/business/brand/dashboard' },
 }
 
 /**
  * Returns workspace links for all of the user's personas except the current one.
- * Deduplicates venue/business aliases so only one Adda link is ever shown.
+ * Deduplicates venue/business aliases so only one Venue link is ever shown.
  */
 export function resolveWorkspaces(personas: string[], currentPersona: string): WorkspaceLink[] {
   const seen = new Set<string>()
   const result: WorkspaceLink[] = []
   for (const p of personas) {
     if (p === currentPersona) continue
-    // Normalise the business alias so it doesn't produce a duplicate Adda entry
+    // Normalise the business alias so it doesn't produce a duplicate Venue entry
     const key = p === 'business' ? 'venue' : p
     if (seen.has(key)) continue
     seen.add(key)
@@ -73,7 +73,7 @@ export const creatorBottomNavConfig: BottomNavConfig = {
     { href: '/dashboard/leads',     icon: 'group',             label: 'Leads' },
     { href: '/dashboard/analytics', icon: 'bar_chart',         label: 'Analytics' },
     { href: '/dashboard/payouts',   icon: 'payments',          label: 'Payouts' },
-    { href: '/dashboard/venues',    icon: 'apartment',         label: 'Addas' },
+    { href: '/dashboard/venues',    icon: 'apartment',         label: 'Venues' },
     { href: '/dashboard/hub',       icon: 'hub',               label: 'Creator Hub' },
     { href: '/dashboard/community', icon: 'diversity_3',       label: 'My Circles' },
     { href: '/hall-of-lights',      icon: 'auto_awesome',      label: 'Hall of Lights' },
@@ -86,7 +86,7 @@ export const creatorBottomNavConfig: BottomNavConfig = {
   badgeFg: '#fff',
 }
 
-// ── Adda — Venue ─────────────────────────────────────────────────────────────
+// ── Venue ────────────────────────────────────────────────────────────────────
 
 export const venueBottomNavConfig: BottomNavConfig = {
   items: [
@@ -112,7 +112,7 @@ export const venueBottomNavConfig: BottomNavConfig = {
   badgeFg: '#000',
 }
 
-// ── Adda — Brand ─────────────────────────────────────────────────────────────
+// ── Brand ────────────────────────────────────────────────────────────────────
 // Brand enquiries unread count has no existing server-side query path (BrandSidebarServer
 // hardcodes 0). The badge architecture is wired; a future query can supply the count.
 

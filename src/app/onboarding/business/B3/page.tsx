@@ -22,7 +22,7 @@ const PATHS = [
     label:    'SPACES & VENUES',
     heading:  'VENUE',
     desc:     'Café, rooftop, studio, gallery — creators book your space.',
-    cta:      '→ Get a WIMC Adda listing',
+    cta:      '→ Get a WIMC Venue listing',
     next:     '/onboarding/business/B2',
   },
   {

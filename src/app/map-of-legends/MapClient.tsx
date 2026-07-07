@@ -242,7 +242,7 @@ export default function MapClient({ addas }: Props) {
           }}>
             <span className="material-symbols-outlined" style={{ fontSize: 14, color: 'var(--wimc-teal)' }}>workspace_premium</span>
             <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--wimc-teal)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
-              Legendary Addas
+              Legendary Venues
             </span>
           </div>
 
@@ -260,14 +260,14 @@ export default function MapClient({ addas }: Props) {
             </span>
           </h1>
           <p style={{ fontSize: 16, color: 'var(--wimc-text-secondary)', maxWidth: 480, margin: '0 auto 24px', lineHeight: 1.6 }}>
-            The Addas where culture doesn&apos;t just happen — it stays.
+            The Venues where culture doesn&apos;t just happen — it stays.
             Ranked by the people who keep coming back.
           </p>
 
           {/* Summary */}
           <div style={{ display: 'flex', justifyContent: 'center', gap: 28 }}>
             {[
-              { value: addas.length, label: 'Legendary Addas' },
+              { value: addas.length, label: 'Legendary Venues' },
               { value: cities.length, label: 'Cities' },
               { value: addas.filter((a) => a.isTrending).length, label: 'Trending now' },
             ].map(({ value, label }) => (
@@ -323,7 +323,7 @@ export default function MapClient({ addas }: Props) {
         {/* ── City sections ──────────────────────────────────────────────────── */}
         {addas.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '80px 24px', color: 'var(--wimc-text-secondary)', fontSize: 15 }}>
-            No Legendary Addas yet — every institution starts somewhere.
+            No Legendary Venues yet — every institution starts somewhere.
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 52 }}>
@@ -344,7 +344,7 @@ export default function MapClient({ addas }: Props) {
                       fontSize: 13, color: 'var(--wimc-text-secondary)',
                       fontFamily: 'var(--font-jetbrains-mono)',
                     }}>
-                      {group.length} legendary adda{group.length !== 1 ? 's' : ''}
+                      {group.length} legendary venue{group.length !== 1 ? 's' : ''}
                     </span>
                   </div>
 
