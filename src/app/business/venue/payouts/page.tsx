@@ -2,7 +2,7 @@ import { redirect } from 'next/navigation'
 import { requireAuth } from '@/lib/auth/requireAuth'
 import { createAdminClient } from '@/lib/supabase/admin'
 import VenuePayoutsClient from './VenuePayoutsClient'
-import { getAddaPayoutData } from '@/app/actions/adda-payouts'
+import { getAddaPayoutData } from '@/app/actions/venue-payouts'
 
 export const metadata = { title: 'Payouts — Adda' }
 

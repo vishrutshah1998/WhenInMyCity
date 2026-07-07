@@ -1,6 +1,6 @@
 import { requireAuth } from '@/lib/auth/requireAuth'
 import { createAdminClient } from '@/lib/supabase/admin'
-import AddaSidebarClient from '@/components/adda/AddaSidebarClient'
+import VenueSidebarClient from '@/components/venue/VenueSidebarClient'
 
 function getInitials(name: string): string {
   return name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2)
@@ -31,7 +31,7 @@ export default async function BrandSidebarServer() {
     personas.includes('creator') || profile?.user_role === 'maker'
 
   return (
-    <AddaSidebarClient
+    <VenueSidebarClient
       businessName={brandName}
       ownerName={ownerName}
       initials={initials}

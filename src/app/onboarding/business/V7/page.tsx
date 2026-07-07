@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { SK } from '@/lib/onboarding/session-keys'
 import { VenueNoticePoster } from '@/components/onboarding/BoardingPassArtifact'
-import { saveAddaOnboardingStep } from '@/app/actions/adda-onboarding'
+import { saveAddaOnboardingStep } from '@/app/actions/venue-onboarding'
 
 const ACCENT = '#5DD9D0'
 const MONO   = "var(--font-jetbrains-mono), 'JetBrains Mono', monospace"

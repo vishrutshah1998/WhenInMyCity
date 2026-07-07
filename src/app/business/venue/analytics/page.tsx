@@ -3,9 +3,9 @@ import { Suspense } from 'react'
 import Link from 'next/link'
 import { requireAuth } from '@/lib/auth/requireAuth'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { getAddaAnalytics } from '@/app/actions/adda-analytics'
-import type { AddaAnalyticsData } from '@/app/actions/adda-analytics'
-import AnalyticsPageClient from '@/components/adda/analytics/AnalyticsPageClient'
+import { getAddaAnalytics } from '@/app/actions/venue-analytics'
+import type { AddaAnalyticsData } from '@/app/actions/venue-analytics'
+import AnalyticsPageClient from '@/components/venue/analytics/AnalyticsPageClient'
 
 const EMPTY_ANALYTICS: AddaAnalyticsData = {
   dailyMetrics: [],

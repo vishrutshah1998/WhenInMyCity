@@ -1,8 +1,8 @@
 import { redirect } from 'next/navigation'
 import { requireAuth } from '@/lib/auth/requireAuth'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { getAddaNotifications } from '@/app/actions/adda-notifications'
-import { AddaNotificationsClient } from '@/components/adda/AddaNotificationsClient'
+import { getAddaNotifications } from '@/app/actions/venue-notifications'
+import { VenueNotificationsClient } from '@/components/venue/VenueNotificationsClient'
 
 export const metadata = { title: 'Inbox — Adda' }
 
@@ -20,5 +20,5 @@ export default async function AddaNotificationsPage() {
 
   const { notifications, unreadCount } = await getAddaNotifications(adda.id, 100)
 
-  return <AddaNotificationsClient notifications={notifications} unreadCount={unreadCount} />
+  return <VenueNotificationsClient notifications={notifications} unreadCount={unreadCount} />
 }

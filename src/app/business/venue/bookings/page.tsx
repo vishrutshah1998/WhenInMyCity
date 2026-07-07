@@ -1,8 +1,8 @@
 import { redirect } from 'next/navigation'
 import { requireAuth } from '@/lib/auth/requireAuth'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { getAddaBookings } from '@/app/actions/adda-bookings'
-import BookingsPageClient from '@/components/adda/bookings/BookingsPageClient'
+import { getAddaBookings } from '@/app/actions/venue-bookings'
+import BookingsPageClient from '@/components/venue/bookings/BookingsPageClient'
 
 export default async function AddaBookingsPage() {
   const { user } = await requireAuth('/business/venue/bookings')

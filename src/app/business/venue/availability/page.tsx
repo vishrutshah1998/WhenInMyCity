@@ -2,7 +2,7 @@ import { redirect } from 'next/navigation'
 import { requireAuth } from '@/lib/auth/requireAuth'
 import { createAdminClient } from '@/lib/supabase/admin'
 import AvailabilityClient from './AvailabilityClient'
-import { getAvailabilityRules } from '@/app/actions/adda-availability'
+import { getAvailabilityRules } from '@/app/actions/venue-availability'
 
 export const metadata = { title: 'Availability Rules — Adda' }
 

@@ -1,11 +1,11 @@
 import { requireAuth } from '@/lib/auth/requireAuth'
 import { redirect } from 'next/navigation'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { getAddaNotifications } from '@/app/actions/adda-notifications'
-import AddaSidebar from '@/components/adda/AddaSidebar'
+import { getAddaNotifications } from '@/app/actions/venue-notifications'
+import VenueSidebar from '@/components/venue/VenueSidebar'
 import MobileBottomNav from '@/components/ui/MobileBottomNav'
 import { venueBottomNavConfig, resolveWorkspaces } from '@/lib/constants/bottomNavConfigs'
-import AddaNotificationBell from '@/components/adda/AddaNotificationBell'
+import VenueNotificationBell from '@/components/venue/VenueNotificationBell'
 import Link from 'next/link'
 import { WimcWordmark } from '@/components/WimcWordmark'
 
@@ -41,7 +41,7 @@ export default async function VenueLayout({ children }: { children: React.ReactN
       <div className="wimc-grain" aria-hidden />
 
       <div className="hidden md:block">
-        <AddaSidebar
+        <VenueSidebar
           addaId={adda.id}
           venueName={adda.name}
           ownerName={ownerName}
@@ -76,7 +76,7 @@ export default async function VenueLayout({ children }: { children: React.ReactN
           >
             <WimcWordmark color="white" height={26} />
           </Link>
-          <AddaNotificationBell
+          <VenueNotificationBell
             addaId={adda.id}
             initialNotifications={notifications}
             initialUnreadCount={unreadCount}

@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation'
 import { requireAuth } from '@/lib/auth/requireAuth'
 import { createAdminClient } from '@/lib/supabase/admin'
-import VenueEditorClient from '@/components/adda/venue/VenueEditorClient'
+import VenueEditorClient from '@/components/venue/editor/VenueEditorClient'
 
 export default async function VenuePage() {
   const { user } = await requireAuth('/business/venue/venue')

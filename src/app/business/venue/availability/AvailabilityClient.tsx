@@ -1,12 +1,12 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import type { AvailabilityRule } from '@/app/actions/adda-availability'
+import type { AvailabilityRule } from '@/app/actions/venue-availability'
 import {
   createAvailabilityRule,
   deleteAvailabilityRule,
   updateBookingWindow,
-} from '@/app/actions/adda-availability'
+} from '@/app/actions/venue-availability'
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 

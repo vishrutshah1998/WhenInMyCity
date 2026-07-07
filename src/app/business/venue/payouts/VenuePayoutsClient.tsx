@@ -1,8 +1,8 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import type { AddaPayoutSummary, PayableBooking, PayoutRequest } from '@/app/actions/adda-payouts'
-import { requestVenuePayout } from '@/app/actions/adda-payouts'
+import type { AddaPayoutSummary, PayableBooking, PayoutRequest } from '@/app/actions/venue-payouts'
+import { requestVenuePayout } from '@/app/actions/venue-payouts'
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 

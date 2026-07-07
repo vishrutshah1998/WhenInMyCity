@@ -15,7 +15,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { evaluateAddaTier, computeTrendingAddas } from '@/app/actions/adda-tiers'
+import { evaluateAddaTier, computeTrendingAddas } from '@/app/actions/venue-tiers'
 import { sendWhatsAppMessage } from '@/lib/whatsapp'
 import type { AddaTier } from '@/types/database'
 

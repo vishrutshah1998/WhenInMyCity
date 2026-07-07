@@ -1,6 +1,6 @@
 import { notFound, redirect } from 'next/navigation'
 import type { Metadata } from 'next'
-import { getAddaPublicPage } from '@/app/actions/adda'
+import { getAddaPublicPage } from '@/app/actions/venue'
 import { getBrandPublicPage } from '@/app/actions/persona-complete'
 import { getCreatorPosts, type CreatorPostWithReactions } from '@/app/actions/posts'
 import { createClient } from '@/lib/supabase/server'
@@ -8,8 +8,8 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { resolveTheme } from '@/types/theme'
 import { cityToSlug } from '@/lib/profile-url'
 import type { Event, PageBlock } from '@/types/database'
-import AddaCityPage from './AddaCityPage'
-import AddaBrandPage from './AddaBrandPage'
+import VenueCityPage from './VenueCityPage'
+import BrandCityPage from './BrandCityPage'
 import PublicProfilePage from '@/components/profile/PublicProfilePage'
 import ExplorerPublicProfile from '@/components/profile/ExplorerPublicProfile'
 
@@ -86,18 +86,22 @@ export async function generateMetadata({
   return { title: 'Not found — When In My City' }
 }
 
-export default async function AddaCitySlugPage({
+export default async function CitySlugPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ username: string; slug: string }>
+  searchParams: Promise<{ src?: string }>
 }) {
   const { username: city, slug } = await params
+  const { src } = await searchParams
+  const discoverySource = src === 'platform_discovery' ? 'platform_discovery' as const : 'creator_link' as const
 
   // 1. Try venue/adda
   const addaResult = await getAddaPublicPage(slug)
   if (!('error' in addaResult) && normalizeCity(addaResult.adda.city) === normalizeCity(city)) {
     return (
-      <AddaCityPage
+      <VenueCityPage
         adda={addaResult.adda}
         upcomingEvents={addaResult.upcomingEvents}
         pastEvents={addaResult.pastEvents}
@@ -122,7 +126,7 @@ export default async function AddaCitySlugPage({
       businessCategories: brand.business_categories,
     })
     return (
-      <AddaBrandPage
+      <BrandCityPage
         brand={brand}
         blocks={(brandBlocks ?? []) as PageBlock[]}
         pageTheme={brandTheme}
@@ -269,6 +273,7 @@ export default async function AddaCitySlugPage({
         viewerIsExplorer={!isOwner && !!sessionUser}
         posts={posts}
         viewerUserId={sessionUser?.id ?? null}
+        discoverySource={discoverySource}
       />
     )
   }

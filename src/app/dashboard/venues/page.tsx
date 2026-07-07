@@ -1,6 +1,6 @@
 import { Suspense } from 'react'
 import { requireProfile } from '@/lib/auth/requireAuth'
-import { getProposalHistory } from '@/app/actions/adda'
+import { getProposalHistory } from '@/app/actions/venue'
 import VenuesClient from './VenuesClient'
 
 export default async function VenuesPage() {

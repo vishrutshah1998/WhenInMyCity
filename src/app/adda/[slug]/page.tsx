@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation'
 import type { Metadata } from 'next'
-import { getAddaPublicPage } from '@/app/actions/adda'
-import AddaPublicPage from './AddaPublicPage'
+import { getAddaPublicPage } from '@/app/actions/venue'
+import VenuePublicPage from './VenuePublicPage'
 
 export async function generateMetadata({
   params,
@@ -36,7 +36,7 @@ export default async function AddaSlugPage({
   if ('error' in result) notFound()
 
   return (
-    <AddaPublicPage
+    <VenuePublicPage
       adda={result.adda}
       upcomingEvents={result.upcomingEvents}
       pastEvents={result.pastEvents}

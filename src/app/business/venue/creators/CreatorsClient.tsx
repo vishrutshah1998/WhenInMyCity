@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { respondToProposal } from '@/app/actions/adda'
+import { respondToProposal } from '@/app/actions/venue'
 import type { MakerAddaProposal } from '@/types/database'
 
 // ---------------------------------------------------------------------------

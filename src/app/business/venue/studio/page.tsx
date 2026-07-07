@@ -3,7 +3,7 @@ import { requireAuth } from '@/lib/auth/requireAuth'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { resolveTheme } from '@/types/theme'
 import { seedPersonaDefaultBlocks } from '@/app/actions/blocks'
-import AddaStudioClient from './AddaStudioClient'
+import VenueStudioClient from './VenueStudioClient'
 
 export default async function AddaStudioPage() {
   const { user } = await requireAuth('/business/venue/studio')
@@ -32,7 +32,7 @@ export default async function AddaStudioPage() {
   const theme = resolveTheme(profileRes.data?.page_theme, { venueTypes: addaRes.data.adda_type ?? [] })
 
   return (
-    <AddaStudioClient
+    <VenueStudioClient
       adda={addaRes.data}
       initialBlocks={initialBlocks}
       upcomingEvents={eventsRes.data ?? []}

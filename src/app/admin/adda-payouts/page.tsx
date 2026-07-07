@@ -1,5 +1,5 @@
 import { getAdminAddaPayouts } from '@/app/actions/admin'
-import AddaPayoutsAdminClient from './AddaPayoutsAdminClient'
+import VenuePayoutsAdminClient from './VenuePayoutsAdminClient'
 
 interface Props {
   searchParams: Promise<{ status?: string }>
@@ -18,7 +18,7 @@ export default async function AdminAddaPayoutsPage({ searchParams }: Props) {
   }
 
   return (
-    <AddaPayoutsAdminClient
+    <VenuePayoutsAdminClient
       payouts={payouts ?? []}
       currentStatus={status}
     />

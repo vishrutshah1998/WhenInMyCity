@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation'
 import { requireAuth } from '@/lib/auth/requireAuth'
 import { createAdminClient } from '@/lib/supabase/admin'
-import VenueProfileForm from '@/components/adda/venue/VenueProfileForm'
+import VenueProfileForm from '@/components/venue/editor/VenueProfileForm'
 
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })

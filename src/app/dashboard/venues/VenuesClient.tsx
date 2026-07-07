@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { searchAddas, getAddaPublicPage, sendProposal } from '@/app/actions/adda'
+import { searchAddas, getAddaPublicPage, sendProposal } from '@/app/actions/venue'
 import { CITIES } from '@/lib/constants/interests'
 import type { AddaProfile, AddaTier, MakerAddaProposal } from '@/types/database'
 import type { UserTier } from '@/types/database'

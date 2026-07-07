@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { SK } from '@/lib/onboarding/session-keys'
 import { VenueNoticePoster } from '@/components/onboarding/BoardingPassArtifact'
-import { saveAddaOnboardingStep } from '@/app/actions/adda-onboarding'
+import { saveAddaOnboardingStep } from '@/app/actions/venue-onboarding'
 import { deriveWimcTypes } from '@/lib/onboarding/google-type-map'
 
 const ACCENT = '#5DD9D0'

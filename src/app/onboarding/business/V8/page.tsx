@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { SK, clearNewOnboardingKeys } from '@/lib/onboarding/session-keys'
 import { updatePersonas } from '@/lib/onboarding/update-personas'
-import { completeAddaOnboarding, type CompleteAddaInput } from '@/app/actions/adda-onboarding'
+import { completeAddaOnboarding, type CompleteAddaInput } from '@/app/actions/venue-onboarding'
 import { createClient } from '@/lib/supabase/client'
 
 const ACCENT  = '#5DD9D0'

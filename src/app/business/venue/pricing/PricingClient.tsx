@@ -3,9 +3,9 @@
 import { useState, useEffect, useRef } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import type { AddaProfile } from '@/types/database'
-import type { PricingRule } from '@/components/adda/venue/types'
-import PricingRulesSection from '@/components/adda/venue/PricingRulesSection'
-import { savePricingSettings } from '@/app/actions/adda-pricing'
+import type { PricingRule } from '@/components/venue/editor/types'
+import PricingRulesSection from '@/components/venue/editor/PricingRulesSection'
+import { savePricingSettings } from '@/app/actions/venue-pricing'
 
 // ─── Pricing model definitions ─────────────────────────────────────────────────
 
