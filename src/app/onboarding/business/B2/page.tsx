@@ -166,7 +166,7 @@ export default function B2Page() {
   const fetchPredictions = useCallback(async (input: string) => {
     if (input.length < 2) { setPredictions([]); setShowDropdown(false); return }
     try {
-      const res  = await fetch(`/api/adda/places/autocomplete?input=${encodeURIComponent(input)}&sessionToken=${sessionTokenRef.current}`)
+      const res  = await fetch(`/api/venue/places/autocomplete?input=${encodeURIComponent(input)}&sessionToken=${sessionTokenRef.current}`)
       const data = await res.json() as { predictions: Prediction[] }
       setPredictions(data.predictions)
       setShowDropdown(data.predictions.length > 0)
@@ -186,7 +186,7 @@ export default function B2Page() {
     setQuery(description); setPredictions([]); setShowDropdown(false)
     setPhase('loadingDetails')
     try {
-      const res = await fetch(`/api/adda/places/details?placeId=${encodeURIComponent(placeId)}&sessionToken=${sessionTokenRef.current}`)
+      const res = await fetch(`/api/venue/places/details?placeId=${encodeURIComponent(placeId)}&sessionToken=${sessionTokenRef.current}`)
       if (!res.ok) throw new Error('fetch failed')
       const d = await res.json() as PlaceDetails
       setDetails(d)
@@ -478,13 +478,13 @@ export default function B2Page() {
             {details.photoRefs.length > 0 && (
               <div style={{ marginBottom: 14, display: 'grid', gap: 4, gridTemplateColumns: details.photoRefs.length >= 3 ? '2fr 1fr' : '1fr', overflow: 'hidden' }}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={`/api/adda/places/photo?ref=${encodeURIComponent(details.photoRefs[0])}`} alt="Venue" style={{ display: 'block', width: '100%', height: 140, objectFit: 'cover' }} />
+                <img src={`/api/venue/places/photo?ref=${encodeURIComponent(details.photoRefs[0])}`} alt="Venue" style={{ display: 'block', width: '100%', height: 140, objectFit: 'cover' }} />
                 {details.photoRefs.length >= 3 && (
                   <div style={{ display: 'grid', gap: 4 }}>
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={`/api/adda/places/photo?ref=${encodeURIComponent(details.photoRefs[1])}`} alt="Venue" style={{ display: 'block', width: '100%', height: 68, objectFit: 'cover' }} />
+                    <img src={`/api/venue/places/photo?ref=${encodeURIComponent(details.photoRefs[1])}`} alt="Venue" style={{ display: 'block', width: '100%', height: 68, objectFit: 'cover' }} />
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={`/api/adda/places/photo?ref=${encodeURIComponent(details.photoRefs[2])}`} alt="Venue" style={{ display: 'block', width: '100%', height: 68, objectFit: 'cover' }} />
+                    <img src={`/api/venue/places/photo?ref=${encodeURIComponent(details.photoRefs[2])}`} alt="Venue" style={{ display: 'block', width: '100%', height: 68, objectFit: 'cover' }} />
                   </div>
                 )}
               </div>

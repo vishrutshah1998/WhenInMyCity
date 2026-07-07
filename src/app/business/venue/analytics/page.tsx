@@ -53,7 +53,7 @@ export default async function AddaAnalyticsPage() {
           </div>
         </div>
         <Link
-          href={`/adda/${adda.slug}`}
+          href={`/venue/${adda.slug}`}
           target="_blank"
           rel="noopener noreferrer"
           style={{

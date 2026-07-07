@@ -65,7 +65,7 @@ export default function VenuePayoutsAdminClient({ payouts, currentStatus }: Prop
           return (
             <button
               key={tab.value}
-              onClick={() => router.push(`/admin/adda-payouts?status=${tab.value}`)}
+              onClick={() => router.push(`/admin/venue-payouts?status=${tab.value}`)}
               style={{
                 padding: '8px 16px', fontSize: 13, fontWeight: 600,
                 border: 'none', background: 'none', cursor: 'pointer',

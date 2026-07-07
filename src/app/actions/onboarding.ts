@@ -502,7 +502,7 @@ export async function selectUserRole(
 
   const redirectMap: Record<string, string> = {
     maker:    '/onboarding',
-    adda:     '/onboarding/adda',
+    adda:     '/onboarding/venue',
     explorer: '/onboarding',
   }
 

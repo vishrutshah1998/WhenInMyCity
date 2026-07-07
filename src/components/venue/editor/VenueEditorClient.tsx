@@ -298,7 +298,7 @@ export default function VenueEditorClient({ adda, slug }: Props) {
         {/* Right: preview link */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexShrink: 0 }}>
           <Link
-            href={`/adda/${slug}`}
+            href={`/venue/${slug}`}
             target="_blank"
             rel="noopener noreferrer"
             style={{

@@ -192,7 +192,7 @@ export async function saveAddaOnboardingStep(
   step: number,
   data: AddaOnboardingStepData,
 ): Promise<{ error: string | null }> {
-  const { user } = await requireAuth('/onboarding/adda')
+  const { user } = await requireAuth('/onboarding/venue')
 
   let parsed: z.SafeParseReturnType<unknown, unknown>
 
@@ -257,7 +257,7 @@ export async function completeAddaOnboarding(
   coverImageFile?: File,
   galleryFiles?: File[],
 ): Promise<{ slug: string; error: string | null }> {
-  const { user } = await requireAuth('/onboarding/adda')
+  const { user } = await requireAuth('/onboarding/venue')
 
   // City is required for /{city}/{slug} URL routing
   if (!data.city || data.city.trim() === '') {

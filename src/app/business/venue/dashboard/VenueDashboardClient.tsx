@@ -255,7 +255,7 @@ function SetupChecklist({ adda, stats }: SetupChecklistProps) {
     {
       label: 'Get your first booking',
       done: stats.total_events_hosted > 0,
-      href: `/adda/${adda.slug}`,
+      href: `/venue/${adda.slug}`,
     },
   ]
 
@@ -279,7 +279,7 @@ function SetupChecklist({ adda, stats }: SetupChecklistProps) {
           ✦ Your adda is fully set up — share your page to get your first booking
         </span>
         <a
-          href={`/adda/${adda.slug}`}
+          href={`/venue/${adda.slug}`}
           style={{
             fontSize: 12,
             fontWeight: 600,
@@ -417,7 +417,7 @@ export default function VenueDashboardClient({
               Verified
             </span>
           )}
-          <a href={`/adda/${adda.slug}`} target="_blank" rel="noopener noreferrer"
+          <a href={`/venue/${adda.slug}`} target="_blank" rel="noopener noreferrer"
             className="venue-topbar-hide-mobile"
             style={{
               fontFamily: 'var(--font-jetbrains-mono)', fontSize: 12,

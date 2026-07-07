@@ -195,7 +195,7 @@ function EmptyState({ venueSlug }: { venueSlug: string }) {
 
       <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', justifyContent: 'center' }}>
         <Link
-          href={`/adda/${venueSlug}`}
+          href={`/venue/${venueSlug}`}
           target="_blank"
           rel="noopener noreferrer"
           style={{

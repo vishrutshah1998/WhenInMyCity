@@ -8,7 +8,7 @@ import BlockEditor from '@/components/dashboard/BlockEditor'
 import ThemeEditor from '@/components/dashboard/ThemeEditor'
 import StudioShell, { type StudioTab } from '@/components/dashboard/StudioShell'
 import VenuePagePreview from './VenuePagePreview'
-import VenuePublicPage from '@/app/adda/[slug]/VenuePublicPage'
+import VenuePublicPage from '@/app/venue/[slug]/VenuePublicPage'
 import type { AddaProfile, PageBlock } from '@/types/database'
 import type { ProfileTheme } from '@/types/theme'
 
@@ -580,7 +580,7 @@ export default function VenueStudioClient({ adda, initialBlocks, upcomingEvents,
         </div>
 
         <a
-          href={`/adda/${adda.slug}`}
+          href={`/venue/${adda.slug}`}
           target="_blank" rel="noopener noreferrer"
           style={{ display: 'flex', alignItems: 'center', gap: 5, border: `1px solid ${S.teal}`, borderRadius: 6, padding: '5px 14px', color: S.teal, textDecoration: 'none', fontFamily: MONO, fontSize: 11, letterSpacing: '0.4px' }}
         >

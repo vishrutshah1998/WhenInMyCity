@@ -1433,7 +1433,7 @@ function VenuePartnershipBlock({ block, venueData }: { block: PageBlock; venueDa
           {venues.map((v) => (
             <a
               key={v.id}
-              href={`/addas/${v.slug}`}
+              href={`/venue/${v.slug}`}
               className="card-surface group shrink-0 w-40 rounded-xl overflow-hidden bg-surface-container-high hover:bg-surface-container-highest transition-colors"
             >
               <div className="relative w-full aspect-video bg-surface-container-highest">
@@ -1453,7 +1453,7 @@ function VenuePartnershipBlock({ block, venueData }: { block: PageBlock; venueDa
           {venues.map((v) => (
             <a
               key={v.id}
-              href={`/addas/${v.slug}`}
+              href={`/venue/${v.slug}`}
               className="card-surface group flex items-center gap-3 p-3 rounded-xl bg-surface-container-high hover:bg-surface-container-highest transition-colors"
             >
               <div className="relative w-14 h-14 rounded-lg overflow-hidden bg-surface-container-highest shrink-0">

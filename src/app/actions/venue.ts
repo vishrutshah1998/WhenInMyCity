@@ -129,7 +129,7 @@ async function generateAddaSlug(name: string): Promise<string> {
 export async function createAddaProfile(
   data: CreateAddaInput,
 ): Promise<{ slug: string; error: string | null }> {
-  const { user } = await requireAuth('/onboarding/adda')
+  const { user } = await requireAuth('/onboarding/venue')
 
   const parsed = CreateAddaSchema.safeParse(data)
   if (!parsed.success) {
@@ -371,7 +371,7 @@ export async function updateAddaStudioContent(
   }
 
   revalidatePath('/business/venue/studio')
-  revalidatePath(`/adda/${adda.id}`)
+  revalidatePath(`/venue/${adda.id}`)
   return { error: null }
 }
 
@@ -1066,7 +1066,7 @@ export async function getProposalHistory(
 // ---------------------------------------------------------------------------
 
 /**
- * Fetches all data needed to render an Adda's public profile page at `/adda/[slug]`.
+ * Fetches all data needed to render an Adda's public profile page at `/venue/[slug]`.
  *
  * No authentication required — this is a public endpoint.
  *

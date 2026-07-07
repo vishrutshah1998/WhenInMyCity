@@ -54,7 +54,7 @@ function AddaCard({ adda }: { adda: LegendaryAdda }) {
   const since = belovedSinceLabel(adda.belovedSince)
 
   return (
-    <Link href={`/adda/${adda.slug}`} style={{ textDecoration: 'none' }}>
+    <Link href={`/venue/${adda.slug}`} style={{ textDecoration: 'none' }}>
       <div
         style={{
           background: 'var(--wimc-bg-elevated)',
