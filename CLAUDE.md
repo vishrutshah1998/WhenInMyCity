@@ -77,3 +77,11 @@ mobile breakpoint. Reuse these — do NOT add new dependencies for things alread
   withholding (currently not implemented) before automated/Route-based payout can go live; until
   then payouts stay manual/admin-approved. Do not build KYC, Razorpay Route, or TDS logic unless a
   task explicitly scopes it in.
+- **`venue-covers` storage bucket has no RLS policies.** The old `adda-covers` bucket's policies
+  (`adda_covers_select_public/insert_own/update_own/delete_own`) were dropped when that bucket was
+  deleted (migration 054); equivalent policies for `venue-covers` were never created. Harmless today
+  — every read goes through the public bucket URL and every write goes through the service-role
+  admin client, both of which bypass RLS entirely. This becomes a real (silent) access-control bug
+  the moment any authenticated non-admin client-side upload/download is added against this bucket.
+  Recreate the four policies (scoped to `bucket_id = 'venue-covers'`) before adding that kind of
+  access — do not assume RLS is already covering this bucket.
