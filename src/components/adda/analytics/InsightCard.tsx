@@ -14,8 +14,8 @@ export default function InsightCard({ children }: Props) {
   return (
     <div
       style={{
-        background: 'var(--adda-amber-tint)',
-        border: '1px solid var(--adda-amber-border)',
+        background: 'var(--venue-amber-tint)',
+        border: '1px solid var(--venue-amber-border)',
         borderRadius: 8,
         padding: '10px 14px',
         display: 'flex',
@@ -27,7 +27,7 @@ export default function InsightCard({ children }: Props) {
       <span
         aria-hidden
         style={{
-          color: 'var(--adda-amber)',
+          color: 'var(--venue-amber)',
           fontSize: 13,
           flexShrink: 0,
           marginTop: 1,
@@ -38,7 +38,7 @@ export default function InsightCard({ children }: Props) {
       <span
         style={{
           fontSize: 13,
-          color: 'var(--adda-text-primary)',
+          color: 'var(--venue-text-primary)',
           fontFamily: 'var(--font-inter), system-ui, sans-serif',
           lineHeight: 1.55,
         }}
@@ -52,7 +52,7 @@ export default function InsightCard({ children }: Props) {
 /** Inline amber emphasis — use inside InsightCard */
 export function Amber({ children }: { children: React.ReactNode }) {
   return (
-    <strong style={{ color: 'var(--adda-amber)', fontWeight: 600 }}>
+    <strong style={{ color: 'var(--venue-amber)', fontWeight: 600 }}>
       {children}
     </strong>
   )

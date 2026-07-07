@@ -59,9 +59,9 @@ function CancellationCard({
         flex: 1, minWidth: 160,
         padding: 16, borderRadius: 10, textAlign: 'left',
         border: selected
-          ? '2px solid var(--adda-amber)'
-          : '1px solid var(--adda-border-subtle)',
-        background: selected ? 'var(--adda-amber-tint)' : 'var(--adda-bg-elevated)',
+          ? '2px solid var(--venue-amber)'
+          : '1px solid var(--venue-border-subtle)',
+        background: selected ? 'var(--venue-amber-tint)' : 'var(--venue-bg-elevated)',
         cursor: isEditing ? 'pointer' : 'default',
         transition: 'all 140ms ease',
       }}
@@ -70,26 +70,26 @@ function CancellationCard({
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
         <span className="material-symbols-outlined" style={{
           fontSize: 18,
-          color: selected ? 'var(--adda-amber)' : 'var(--adda-text-muted)',
+          color: selected ? 'var(--venue-amber)' : 'var(--venue-text-muted)',
         }}>
           {policy.icon}
         </span>
         <span style={{
           fontFamily: 'var(--font-inter), sans-serif',
           fontWeight: 700, fontSize: 13,
-          color: selected ? 'var(--adda-amber)' : 'var(--adda-text-primary)',
+          color: selected ? 'var(--venue-amber)' : 'var(--venue-text-primary)',
         }}>
           {policy.label}
         </span>
         {selected && (
-          <span className="material-symbols-outlined" style={{ fontSize: 14, color: 'var(--adda-amber)', marginLeft: 'auto' }}>
+          <span className="material-symbols-outlined" style={{ fontSize: 14, color: 'var(--venue-amber)', marginLeft: 'auto' }}>
             check_circle
           </span>
         )}
       </div>
 
       <p style={{
-        fontSize: 11, color: 'var(--adda-text-muted)',
+        fontSize: 11, color: 'var(--venue-text-muted)',
         fontFamily: 'var(--font-inter), sans-serif',
         margin: '0 0 12px', lineHeight: 1.4,
       }}>
@@ -99,7 +99,7 @@ function CancellationCard({
       {/* Refund table */}
       <div style={{
         borderRadius: 6,
-        border: '1px solid var(--adda-border-subtle)',
+        border: '1px solid var(--venue-border-subtle)',
         overflow: 'hidden',
         fontSize: 11,
         fontFamily: 'var(--font-jetbrains-mono), monospace',
@@ -108,9 +108,9 @@ function CancellationCard({
         <div style={{
           display: 'grid', gridTemplateColumns: '1fr 60px 60px',
           padding: '4px 8px',
-          background: 'var(--adda-bg-overlay)',
-          color: 'var(--adda-text-muted)',
-          borderBottom: '1px solid var(--adda-border-subtle)',
+          background: 'var(--venue-bg-overlay)',
+          color: 'var(--venue-text-muted)',
+          borderBottom: '1px solid var(--venue-border-subtle)',
         }}>
           <span>When</span>
           <span style={{ textAlign: 'right' }}>Creator</span>
@@ -124,13 +124,13 @@ function CancellationCard({
               display: 'grid', gridTemplateColumns: '1fr 60px 60px',
               padding: '5px 8px',
               background: i % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.02)',
-              color: 'var(--adda-text-secondary)',
-              borderBottom: i < policy.rows.length - 1 ? '1px solid var(--adda-border-subtle)' : undefined,
+              color: 'var(--venue-text-secondary)',
+              borderBottom: i < policy.rows.length - 1 ? '1px solid var(--venue-border-subtle)' : undefined,
             }}
           >
-            <span style={{ fontSize: 10, color: 'var(--adda-text-muted)' }}>{row.window}</span>
+            <span style={{ fontSize: 10, color: 'var(--venue-text-muted)' }}>{row.window}</span>
             <span style={{ textAlign: 'right', color: '#4ade80' }}>{row.creator}</span>
-            <span style={{ textAlign: 'right', color: 'var(--adda-amber)' }}>{row.venue}</span>
+            <span style={{ textAlign: 'right', color: 'var(--venue-amber)' }}>{row.venue}</span>
           </div>
         ))}
       </div>
@@ -174,8 +174,8 @@ function IncludedItemsRepeater({
           style={{
             display: 'flex', alignItems: 'center', gap: 10,
             padding: '8px 10px', borderRadius: 8,
-            background: 'var(--adda-bg-elevated)',
-            border: '1px solid var(--adda-border-subtle)',
+            background: 'var(--venue-bg-elevated)',
+            border: '1px solid var(--venue-border-subtle)',
           }}
         >
           {/* Toggle */}
@@ -183,8 +183,8 @@ function IncludedItemsRepeater({
             onClick={() => isEditing && toggle(item.id)}
             style={{
               width: 20, height: 20, borderRadius: 4, flexShrink: 0,
-              background: item.included ? 'var(--adda-amber)' : 'var(--adda-bg-overlay)',
-              border: item.included ? 'none' : '1.5px solid var(--adda-border-default)',
+              background: item.included ? 'var(--venue-amber)' : 'var(--venue-bg-overlay)',
+              border: item.included ? 'none' : '1.5px solid var(--venue-border-default)',
               cursor: isEditing ? 'pointer' : 'default',
               display: 'grid', placeItems: 'center',
             }}
@@ -196,7 +196,7 @@ function IncludedItemsRepeater({
 
           <span style={{
             flex: 1, fontSize: 13,
-            color: item.included ? 'var(--adda-text-primary)' : 'var(--adda-text-muted)',
+            color: item.included ? 'var(--venue-text-primary)' : 'var(--venue-text-muted)',
             fontFamily: 'var(--font-inter), sans-serif',
             textDecoration: item.included ? 'none' : 'line-through',
           }}>
@@ -206,7 +206,7 @@ function IncludedItemsRepeater({
           <span style={{
             fontSize: 10, fontWeight: 600,
             fontFamily: 'var(--font-inter), sans-serif',
-            color: item.included ? 'var(--adda-success)' : 'var(--adda-text-muted)',
+            color: item.included ? 'var(--venue-success)' : 'var(--venue-text-muted)',
             letterSpacing: '0.05em',
             textTransform: 'uppercase',
           }}>
@@ -219,7 +219,7 @@ function IncludedItemsRepeater({
               style={{
                 width: 20, height: 20, borderRadius: 4,
                 background: 'transparent', border: 'none',
-                color: 'var(--adda-text-muted)', cursor: 'pointer',
+                color: 'var(--venue-text-muted)', cursor: 'pointer',
                 display: 'grid', placeItems: 'center',
               }}
             >
@@ -238,9 +238,9 @@ function IncludedItemsRepeater({
             placeholder="Add item (e.g. Tables & chairs)"
             style={{
               flex: 1, padding: '7px 10px', borderRadius: 8,
-              background: 'var(--adda-bg-elevated)',
-              border: '1px dashed var(--adda-border-default)',
-              color: 'var(--adda-text-primary)',
+              background: 'var(--venue-bg-elevated)',
+              border: '1px dashed var(--venue-border-default)',
+              color: 'var(--venue-text-primary)',
               fontFamily: 'var(--font-inter), sans-serif', fontSize: 12,
               outline: 'none',
             }}
@@ -249,9 +249,9 @@ function IncludedItemsRepeater({
             onClick={addItem}
             style={{
               padding: '0 14px', borderRadius: 8,
-              background: 'var(--adda-amber-tint)',
-              border: '1px solid var(--adda-amber-border)',
-              color: 'var(--adda-amber)', fontSize: 12, fontWeight: 600,
+              background: 'var(--venue-amber-tint)',
+              border: '1px solid var(--venue-amber-border)',
+              color: 'var(--venue-amber)', fontSize: 12, fontWeight: 600,
               fontFamily: 'var(--font-inter), sans-serif',
               cursor: 'pointer',
             }}
@@ -297,11 +297,11 @@ export default function HouseRulesSection({
           width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           padding: '16px 0 12px',
           background: 'transparent', border: 'none', cursor: 'pointer',
-          color: 'var(--adda-text-primary)',
+          color: 'var(--venue-text-primary)',
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span className="material-symbols-outlined" style={{ fontSize: 18, color: 'var(--adda-amber)' }}>
+          <span className="material-symbols-outlined" style={{ fontSize: 18, color: 'var(--venue-amber)' }}>
             gavel
           </span>
           <span style={{ fontFamily: 'var(--font-inter), sans-serif', fontWeight: 600, fontSize: 14 }}>
@@ -311,7 +311,7 @@ export default function HouseRulesSection({
         <span
           className="material-symbols-outlined"
           style={{
-            fontSize: 18, color: 'var(--adda-text-muted)',
+            fontSize: 18, color: 'var(--venue-text-muted)',
             transform: collapsed ? 'rotate(-90deg)' : 'rotate(0deg)',
             transition: 'transform 200ms ease',
           }}
@@ -334,7 +334,7 @@ export default function HouseRulesSection({
               {/* House Rules */}
               <div>
                 <div style={{
-                  fontSize: 12, fontWeight: 600, color: 'var(--adda-text-secondary)',
+                  fontSize: 12, fontWeight: 600, color: 'var(--venue-text-secondary)',
                   fontFamily: 'var(--font-inter), sans-serif', marginBottom: 8,
                 }}>
                   House Rules
@@ -347,21 +347,21 @@ export default function HouseRulesSection({
                   rows={6}
                   style={{
                     width: '100%', padding: '10px 12px', borderRadius: 8,
-                    background: isEditing ? 'var(--adda-bg-elevated)' : 'transparent',
-                    border: isEditing ? '1px solid var(--adda-border-default)' : '1px solid transparent',
-                    color: 'var(--adda-text-primary)',
+                    background: isEditing ? 'var(--venue-bg-elevated)' : 'transparent',
+                    border: isEditing ? '1px solid var(--venue-border-default)' : '1px solid transparent',
+                    color: 'var(--venue-text-primary)',
                     fontFamily: 'var(--font-inter), sans-serif', fontSize: 13,
                     outline: 'none', resize: 'vertical',
-                    caretColor: 'var(--adda-amber)',
+                    caretColor: 'var(--venue-amber)',
                     boxSizing: 'border-box',
                     lineHeight: 1.6,
                     transition: 'border-color 150ms',
                   }}
-                  onFocus={e => { e.currentTarget.style.borderColor = 'var(--adda-amber)' }}
-                  onBlur={e => { e.currentTarget.style.borderColor = 'var(--adda-border-default)' }}
+                  onFocus={e => { e.currentTarget.style.borderColor = 'var(--venue-amber)' }}
+                  onBlur={e => { e.currentTarget.style.borderColor = 'var(--venue-border-default)' }}
                 />
                 <p style={{
-                  fontSize: 11, color: 'var(--adda-text-muted)', marginTop: 4,
+                  fontSize: 11, color: 'var(--venue-text-muted)', marginTop: 4,
                   fontFamily: 'var(--font-inter), sans-serif',
                 }}>
                   Use bullet points (•) for clarity. Makers see this before booking.
@@ -371,7 +371,7 @@ export default function HouseRulesSection({
               {/* What's included */}
               <div>
                 <div style={{
-                  fontSize: 12, fontWeight: 600, color: 'var(--adda-text-secondary)',
+                  fontSize: 12, fontWeight: 600, color: 'var(--venue-text-secondary)',
                   fontFamily: 'var(--font-inter), sans-serif', marginBottom: 8,
                 }}>
                   What&apos;s Included
@@ -386,7 +386,7 @@ export default function HouseRulesSection({
               {/* Cancellation policy */}
               <div>
                 <div style={{
-                  fontSize: 12, fontWeight: 600, color: 'var(--adda-text-secondary)',
+                  fontSize: 12, fontWeight: 600, color: 'var(--venue-text-secondary)',
                   fontFamily: 'var(--font-inter), sans-serif', marginBottom: 12,
                 }}>
                   Cancellation Policy

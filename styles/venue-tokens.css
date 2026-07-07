@@ -1,122 +1,122 @@
 /*
- * Adda Design Tokens
- * Scoped to .adda-theme — does not affect Creator Studio.
+ * Venue Design Tokens
+ * Scoped to .venue-theme — does not affect Creator Studio.
  *
  * Contrast ratios (WCAG):
- *   --adda-amber #f59e0b on --adda-bg-base #0a0a0a      = 10.4:1 ✓ AAA
- *   --adda-text-primary #fafafa on --adda-bg-surface #111114 = 19.2:1 ✓ AAA
- *   --adda-text-secondary #a1a1aa on --adda-bg-elevated #18181b = 5.7:1 ✓ AA
+ *   --venue-amber #f59e0b on --venue-bg-base #0a0a0a      = 10.4:1 ✓ AAA
+ *   --venue-text-primary #fafafa on --venue-bg-surface #111114 = 19.2:1 ✓ AAA
+ *   --venue-text-secondary #a1a1aa on --venue-bg-elevated #18181b = 5.7:1 ✓ AA
  */
 
-.adda-theme {
+.venue-theme {
   /* ── Surface stack ───────────────────────────────────────────────────────── */
-  --adda-bg-base:     #0F172A;
-  --adda-bg-surface:  #111114;
-  --adda-bg-elevated: #18181b;
-  --adda-bg-overlay:  #27272a;
-  --adda-bg-hover:    #3f3f46;
+  --venue-bg-base:     #0F172A;
+  --venue-bg-surface:  #111114;
+  --venue-bg-elevated: #18181b;
+  --venue-bg-overlay:  #27272a;
+  --venue-bg-hover:    #3f3f46;
 
   /* ── Borders ─────────────────────────────────────────────────────────────── */
-  --adda-border-subtle:  rgba(255, 255, 255, 0.05);
-  --adda-border-default: rgba(255, 255, 255, 0.09);
-  --adda-border-strong:  rgba(255, 255, 255, 0.16);
+  --venue-border-subtle:  rgba(255, 255, 255, 0.05);
+  --venue-border-default: rgba(255, 255, 255, 0.09);
+  --venue-border-strong:  rgba(255, 255, 255, 0.16);
 
   /* ── Text ────────────────────────────────────────────────────────────────── */
-  --adda-text-primary:   #fafafa;
-  --adda-text-secondary: #a1a1aa;
-  --adda-text-muted:     #52525b;
+  --venue-text-primary:   #fafafa;
+  --venue-text-secondary: #a1a1aa;
+  --venue-text-muted:     #52525b;
 
   /* ── Brand amber (hero CTAs, confirmed bookings, top-quartile metrics only) */
-  --adda-amber:        #f59e0b;
-  --adda-amber-hover:  #fbbf24;
-  --adda-amber-pressed: #d97706;
-  --adda-amber-tint:   rgba(245, 158, 11, 0.10);
-  --adda-amber-border: rgba(245, 158, 11, 0.25);
+  --venue-amber:        #f59e0b;
+  --venue-amber-hover:  #fbbf24;
+  --venue-amber-pressed: #d97706;
+  --venue-amber-tint:   rgba(245, 158, 11, 0.10);
+  --venue-amber-border: rgba(245, 158, 11, 0.25);
 
   /* ── Semantic booking states ─────────────────────────────────────────────── */
   /* confirmed  → solid amber fill, black text */
-  --adda-confirmed: #f59e0b;
+  --venue-confirmed: #f59e0b;
   /* pending    → amber tint fill, dashed amber border, amber text */
-  --adda-pending:   rgba(245, 158, 11, 0.15);
+  --venue-pending:   rgba(245, 158, 11, 0.15);
   /* tentative  → no fill, dashed amber border, subdued text */
-  --adda-tentative: transparent;
+  --venue-tentative: transparent;
   /* blocked    → neutral fill, dotted neutral border */
-  --adda-blocked:   #27272a;
+  --venue-blocked:   #27272a;
   /* external   → synced from Google Calendar */
-  --adda-external:  rgba(16, 185, 129, 0.15);
+  --venue-external:  rgba(16, 185, 129, 0.15);
   /* conflict   → overlapping bookings */
-  --adda-conflict:  rgba(239, 68, 68, 0.15);
+  --venue-conflict:  rgba(239, 68, 68, 0.15);
 
   /* ── Semantic utility ────────────────────────────────────────────────────── */
-  --adda-success: #10b981;
-  --adda-danger:  #ef4444;
+  --venue-success: #10b981;
+  --venue-danger:  #ef4444;
   /* warning uses orange-400, NOT amber, to avoid brand color collision */
-  --adda-warning: #fb923c;
-  --adda-info:    #38bdf8;
+  --venue-warning: #fb923c;
+  --venue-info:    #38bdf8;
 
   /* ── UI accent (overridden per workspace variant below) ──────────────────── */
-  --adda-accent:        #f59e0b;
-  --adda-accent-tint:   rgba(245, 158, 11, 0.10);
-  --adda-accent-border: rgba(245, 158, 11, 0.22);
+  --venue-accent:        #f59e0b;
+  --venue-accent-tint:   rgba(245, 158, 11, 0.10);
+  --venue-accent-border: rgba(245, 158, 11, 0.22);
 }
 
 /*
  * Venue workspace — Night Venue palette
  * Deep teal-ocean dark. Teal = venue identity. Amber = money/revenue only.
  */
-.adda-theme.venue-variant {
-  --adda-bg-base:     #060D11;
-  --adda-bg-surface:  #0C1922;
-  --adda-bg-elevated: #122636;
-  --adda-bg-overlay:  #1A3040;
-  --adda-bg-hover:    #243D4C;
+.venue-theme.venue-variant {
+  --venue-bg-base:     #060D11;
+  --venue-bg-surface:  #0C1922;
+  --venue-bg-elevated: #122636;
+  --venue-bg-overlay:  #1A3040;
+  --venue-bg-hover:    #243D4C;
 
-  --adda-border-subtle:  rgba(93, 217, 208, 0.07);
-  --adda-border-default: rgba(93, 217, 208, 0.13);
-  --adda-border-strong:  rgba(93, 217, 208, 0.24);
+  --venue-border-subtle:  rgba(93, 217, 208, 0.07);
+  --venue-border-default: rgba(93, 217, 208, 0.13);
+  --venue-border-strong:  rgba(93, 217, 208, 0.24);
 
-  --adda-text-primary:   #E6F4F3;
-  --adda-text-secondary: #7AADB0;
-  --adda-text-muted:     #3D6A68;
+  --venue-text-primary:   #E6F4F3;
+  --venue-text-secondary: #7AADB0;
+  --venue-text-muted:     #3D6A68;
 
-  --adda-accent:        #5DD9D0;
-  --adda-accent-tint:   rgba(93, 217, 208, 0.10);
-  --adda-accent-border: rgba(93, 217, 208, 0.22);
+  --venue-accent:        #5DD9D0;
+  --venue-accent-tint:   rgba(93, 217, 208, 0.10);
+  --venue-accent-border: rgba(93, 217, 208, 0.22);
 
   /* Amber reserved strictly for revenue / financial metrics */
-  --adda-amber:         #F5A800;
-  --adda-amber-hover:   #FFB833;
-  --adda-amber-pressed: #D97706;
-  --adda-amber-tint:    rgba(245, 168, 0, 0.10);
-  --adda-amber-border:  rgba(245, 168, 0, 0.22);
+  --venue-amber:         #F5A800;
+  --venue-amber-hover:   #FFB833;
+  --venue-amber-pressed: #D97706;
+  --venue-amber-tint:    rgba(245, 168, 0, 0.10);
+  --venue-amber-border:  rgba(245, 168, 0, 0.22);
 }
 
 /*
  * Brand workspace — Executive Office palette
  * Warm espresso-black. Gold accent in a warm (not cold) dark context.
  */
-.adda-theme.brand-variant {
-  --adda-bg-base:     #0C0A06;
-  --adda-bg-surface:  #171310;
-  --adda-bg-elevated: #1E1A12;
-  --adda-bg-overlay:  #26221A;
-  --adda-bg-hover:    #322C22;
+.venue-theme.brand-variant {
+  --venue-bg-base:     #0C0A06;
+  --venue-bg-surface:  #171310;
+  --venue-bg-elevated: #1E1A12;
+  --venue-bg-overlay:  #26221A;
+  --venue-bg-hover:    #322C22;
 
-  --adda-border-subtle:  rgba(245, 168, 0, 0.08);
-  --adda-border-default: rgba(245, 168, 0, 0.15);
-  --adda-border-strong:  rgba(245, 168, 0, 0.28);
+  --venue-border-subtle:  rgba(245, 168, 0, 0.08);
+  --venue-border-default: rgba(245, 168, 0, 0.15);
+  --venue-border-strong:  rgba(245, 168, 0, 0.28);
 
-  --adda-text-primary:   #F7F3EB;
-  --adda-text-secondary: #B09E7A;
-  --adda-text-muted:     #6B5C3E;
+  --venue-text-primary:   #F7F3EB;
+  --venue-text-secondary: #B09E7A;
+  --venue-text-muted:     #6B5C3E;
 
-  --adda-accent:        #F5A800;
-  --adda-accent-tint:   rgba(245, 168, 0, 0.10);
-  --adda-accent-border: rgba(245, 168, 0, 0.22);
+  --venue-accent:        #F5A800;
+  --venue-accent-tint:   rgba(245, 168, 0, 0.10);
+  --venue-accent-border: rgba(245, 168, 0, 0.22);
 
-  --adda-amber:         #F5A800;
-  --adda-amber-hover:   #FFB833;
-  --adda-amber-pressed: #D97706;
-  --adda-amber-tint:    rgba(245, 168, 0, 0.10);
-  --adda-amber-border:  rgba(245, 168, 0, 0.22);
+  --venue-amber:         #F5A800;
+  --venue-amber-hover:   #FFB833;
+  --venue-amber-pressed: #D97706;
+  --venue-amber-tint:    rgba(245, 168, 0, 0.10);
+  --venue-amber-border:  rgba(245, 168, 0, 0.22);
 }

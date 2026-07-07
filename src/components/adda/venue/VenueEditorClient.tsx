@@ -158,11 +158,11 @@ export default function VenueEditorClient({ adda, slug }: Props) {
         <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
           <div style={{
             width: 7, height: 7, borderRadius: '50%',
-            background: 'var(--adda-amber)',
+            background: 'var(--venue-amber)',
             animation: 'pulse 1.2s ease-in-out infinite',
           }} />
           <span style={{
-            fontSize: 11, color: 'var(--adda-amber)',
+            fontSize: 11, color: 'var(--venue-amber)',
             fontFamily: 'var(--font-inter), sans-serif',
           }}>
             Saving…
@@ -174,7 +174,7 @@ export default function VenueEditorClient({ adda, slug }: Props) {
     if (saveStatus === 'saved') {
       return (
         <span style={{
-          fontSize: 11, color: 'var(--adda-success)',
+          fontSize: 11, color: 'var(--venue-success)',
           fontFamily: 'var(--font-inter), sans-serif',
           display: 'flex', alignItems: 'center', gap: 4,
         }}>
@@ -245,7 +245,7 @@ export default function VenueEditorClient({ adda, slug }: Props) {
       <header style={{
         position: 'sticky', top: 0, zIndex: 40, height: 56,
         background: 'rgba(10, 10, 10, 0.92)', backdropFilter: 'blur(12px)',
-        borderBottom: '1px solid var(--adda-border-subtle)',
+        borderBottom: '1px solid var(--venue-border-subtle)',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         padding: '0 28px', gap: 16,
       }}>
@@ -253,7 +253,7 @@ export default function VenueEditorClient({ adda, slug }: Props) {
         <h1 style={{
           fontFamily: 'var(--font-inter), sans-serif',
           fontWeight: 700, fontSize: 15,
-          color: 'var(--adda-text-primary)', margin: 0,
+          color: 'var(--venue-text-primary)', margin: 0,
           flexShrink: 0,
         }}>
           My Venue
@@ -267,9 +267,9 @@ export default function VenueEditorClient({ adda, slug }: Props) {
             style={{
               display: 'inline-flex', alignItems: 'center', gap: 5,
               padding: '6px 14px', borderRadius: 8,
-              background: isEditing ? 'var(--adda-amber)' : 'var(--adda-bg-elevated)',
-              border: isEditing ? 'none' : '1px solid var(--adda-border-default)',
-              color: isEditing ? '#000' : 'var(--adda-text-secondary)',
+              background: isEditing ? 'var(--venue-amber)' : 'var(--venue-bg-elevated)',
+              border: isEditing ? 'none' : '1px solid var(--venue-border-default)',
+              color: isEditing ? '#000' : 'var(--venue-text-secondary)',
               fontWeight: 600, fontSize: 12,
               fontFamily: 'var(--font-inter), sans-serif',
               cursor: 'pointer', transition: 'all 160ms ease',
@@ -304,7 +304,7 @@ export default function VenueEditorClient({ adda, slug }: Props) {
             style={{
               display: 'flex', alignItems: 'center', gap: 5,
               fontSize: 12.5, fontWeight: 600,
-              color: 'var(--adda-amber)', textDecoration: 'none',
+              color: 'var(--venue-amber)', textDecoration: 'none',
               fontFamily: 'var(--font-inter), sans-serif',
               transition: 'opacity 150ms',
             }}
@@ -324,7 +324,7 @@ export default function VenueEditorClient({ adda, slug }: Props) {
         <div style={{
           flex: '0 0 60%',
           padding: '28px 32px 80px',
-          borderRight: '1px solid var(--adda-border-subtle)',
+          borderRight: '1px solid var(--venue-border-subtle)',
           maxWidth: '60%',
           boxSizing: 'border-box',
         }}>
@@ -342,7 +342,7 @@ export default function VenueEditorClient({ adda, slug }: Props) {
                   background: 'rgba(245,166,35,0.08)',
                   border: '1px solid rgba(245,166,35,0.2)',
                   display: 'flex', alignItems: 'center', gap: 8,
-                  fontSize: 12, color: 'var(--adda-amber)',
+                  fontSize: 12, color: 'var(--venue-amber)',
                   fontFamily: 'var(--font-inter), sans-serif',
                   overflow: 'hidden',
                 }}

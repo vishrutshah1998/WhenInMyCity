@@ -55,8 +55,8 @@ export default function GoogleSyncDrawer({ open, onClose, initiallyConnected }: 
               right: 0,
               bottom: 0,
               width: 380,
-              background: 'var(--adda-bg-surface)',
-              borderLeft: '1px solid var(--adda-border-subtle)',
+              background: 'var(--venue-bg-surface)',
+              borderLeft: '1px solid var(--venue-border-subtle)',
               zIndex: 91,
               display: 'flex',
               flexDirection: 'column',
@@ -67,24 +67,24 @@ export default function GoogleSyncDrawer({ open, onClose, initiallyConnected }: 
             {/* Header */}
             <div style={{
               padding: '20px 24px 16px',
-              borderBottom: '1px solid var(--adda-border-subtle)',
+              borderBottom: '1px solid var(--venue-border-subtle)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
               flexShrink: 0,
             }}>
               <div>
-                <h2 style={{ fontSize: 16, fontWeight: 700, color: 'var(--adda-text-primary)', margin: 0, lineHeight: 1.2 }}>
+                <h2 style={{ fontSize: 16, fontWeight: 700, color: 'var(--venue-text-primary)', margin: 0, lineHeight: 1.2 }}>
                   Google Calendar Sync
                 </h2>
-                <p style={{ fontSize: 12, color: 'var(--adda-text-muted)', margin: '4px 0 0' }}>
+                <p style={{ fontSize: 12, color: 'var(--venue-text-muted)', margin: '4px 0 0' }}>
                   Sync your personal calendar to block out time automatically
                 </p>
               </div>
               <button onClick={onClose} style={{
                 width: 32, height: 32, borderRadius: '50%',
-                border: 'none', background: 'var(--adda-bg-overlay)',
-                color: 'var(--adda-text-muted)', cursor: 'pointer',
+                border: 'none', background: 'var(--venue-bg-overlay)',
+                color: 'var(--venue-text-muted)', cursor: 'pointer',
                 display: 'grid', placeItems: 'center', fontSize: 16, flexShrink: 0,
               }}>×</button>
             </div>
@@ -95,13 +95,13 @@ export default function GoogleSyncDrawer({ open, onClose, initiallyConnected }: 
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, textAlign: 'center', paddingTop: 20 }}>
                   <div style={{
                     width: 60, height: 60, borderRadius: 14,
-                    background: 'var(--adda-bg-overlay)',
+                    background: 'var(--venue-bg-overlay)',
                     display: 'grid', placeItems: 'center',
                   }}>
                     <GoogleLogo />
                   </div>
 
-                  <p style={{ fontSize: 13, color: 'var(--adda-text-secondary)', lineHeight: 1.6, margin: 0 }}>
+                  <p style={{ fontSize: 13, color: 'var(--venue-text-secondary)', lineHeight: 1.6, margin: 0 }}>
                     Connect Google Calendar to automatically block out times when you&apos;re busy — creators won&apos;t be able to request those slots.
                   </p>
 
@@ -113,7 +113,7 @@ export default function GoogleSyncDrawer({ open, onClose, initiallyConnected }: 
                       style={{
                         display: 'flex', alignItems: 'center', gap: 8,
                         padding: '10px 20px', borderRadius: 8,
-                        background: 'var(--adda-amber)', color: '#000',
+                        background: 'var(--venue-amber)', color: '#000',
                         border: 'none', fontWeight: 700, fontSize: 14,
                         fontFamily: 'var(--font-inter), system-ui, sans-serif',
                         cursor: isPending ? 'not-allowed' : 'pointer',
@@ -125,7 +125,7 @@ export default function GoogleSyncDrawer({ open, onClose, initiallyConnected }: 
                     </button>
                   </form>
 
-                  <p style={{ fontSize: 11, color: 'var(--adda-text-muted)', lineHeight: 1.5, margin: 0 }}>
+                  <p style={{ fontSize: 11, color: 'var(--venue-text-muted)', lineHeight: 1.5, margin: 0 }}>
                     We only read calendar events — we never write to your Google Calendar.
                   </p>
                 </div>
@@ -148,10 +148,10 @@ export default function GoogleSyncDrawer({ open, onClose, initiallyConnected }: 
                   {/* What gets synced note */}
                   <div style={{
                     padding: '12px 14px', borderRadius: 9,
-                    background: 'var(--adda-bg-elevated)',
-                    border: '1px solid var(--adda-border-subtle)',
+                    background: 'var(--venue-bg-elevated)',
+                    border: '1px solid var(--venue-border-subtle)',
                   }}>
-                    <p style={{ fontSize: 12, color: 'var(--adda-text-muted)', lineHeight: 1.55, margin: 0 }}>
+                    <p style={{ fontSize: 12, color: 'var(--venue-text-muted)', lineHeight: 1.55, margin: 0 }}>
                       Busy blocks from your Google Calendar appear as{' '}
                       <span style={{ color: '#10b981', fontWeight: 600 }}>emerald</span> read-only blocks
                       on your WIMC calendar. Creators cannot book these times.
@@ -159,7 +159,7 @@ export default function GoogleSyncDrawer({ open, onClose, initiallyConnected }: 
                   </div>
 
                   {disconnectError && (
-                    <p style={{ fontSize: 12, color: 'var(--adda-danger)', margin: 0 }}>
+                    <p style={{ fontSize: 12, color: 'var(--venue-danger)', margin: 0 }}>
                       {disconnectError}
                     </p>
                   )}
@@ -173,7 +173,7 @@ export default function GoogleSyncDrawer({ open, onClose, initiallyConnected }: 
                       padding: '6px 0',
                       background: 'transparent',
                       border: 'none',
-                      color: 'var(--adda-danger)',
+                      color: 'var(--venue-danger)',
                       fontFamily: 'var(--font-inter), system-ui, sans-serif',
                       fontSize: 12,
                       cursor: isPending ? 'not-allowed' : 'pointer',

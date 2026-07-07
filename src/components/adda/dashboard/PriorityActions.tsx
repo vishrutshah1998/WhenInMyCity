@@ -132,10 +132,10 @@ export default function PriorityActions({ pendingProposals, adda, stats }: Props
             gap: 8,
             padding: '8px 12px',
             borderRadius: 8,
-            background: 'var(--adda-amber-tint)',
+            background: 'var(--venue-amber-tint)',
             border: chip.urgency === 'high'
-              ? '1px solid var(--adda-amber-border)'
-              : '1px dashed var(--adda-amber-border)',
+              ? '1px solid var(--venue-amber-border)'
+              : '1px dashed var(--venue-amber-border)',
             whiteSpace: 'nowrap',
             flexShrink: 0,
           }}
@@ -144,7 +144,7 @@ export default function PriorityActions({ pendingProposals, adda, stats }: Props
             className="material-symbols-outlined"
             style={{
               fontSize: 16,
-              color: 'var(--adda-amber)',
+              color: 'var(--venue-amber)',
               fontVariationSettings: "'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 20",
             }}
           >
@@ -157,7 +157,7 @@ export default function PriorityActions({ pendingProposals, adda, stats }: Props
               style={{
                 fontSize: 12.5,
                 fontWeight: 500,
-                color: 'var(--adda-amber)',
+                color: 'var(--venue-amber)',
                 fontFamily: 'var(--font-inter), system-ui, sans-serif',
                 textDecoration: 'none',
               }}
@@ -168,7 +168,7 @@ export default function PriorityActions({ pendingProposals, adda, stats }: Props
             <span style={{
               fontSize: 12.5,
               fontWeight: 500,
-              color: 'var(--adda-amber)',
+              color: 'var(--venue-amber)',
               fontFamily: 'var(--font-inter), system-ui, sans-serif',
             }}>
               {chip.message}
@@ -184,7 +184,7 @@ export default function PriorityActions({ pendingProposals, adda, stats }: Props
               background: 'transparent',
               border: 'none',
               cursor: 'pointer',
-              color: 'var(--adda-text-muted)',
+              color: 'var(--venue-text-muted)',
               padding: 2,
               borderRadius: 4,
               lineHeight: 1,

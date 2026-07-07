@@ -82,7 +82,7 @@ function FieldLabel({ children, htmlFor }: { children: React.ReactNode; htmlFor?
         display: 'block',
         fontSize: 11,
         fontWeight: 500,
-        color: 'var(--adda-text-muted)',
+        color: 'var(--venue-text-muted)',
         letterSpacing: '0.7px',
         textTransform: 'uppercase',
         marginBottom: 6,
@@ -96,12 +96,12 @@ function FieldLabel({ children, htmlFor }: { children: React.ReactNode; htmlFor?
 
 const inputStyle: React.CSSProperties = {
   width: '100%',
-  background: 'var(--adda-bg-base)',
-  border: '1px solid var(--adda-border-default)',
+  background: 'var(--venue-bg-base)',
+  border: '1px solid var(--venue-border-default)',
   borderRadius: 7,
   padding: '10px 12px',
   fontSize: 14,
-  color: 'var(--adda-text-primary)',
+  color: 'var(--venue-text-primary)',
   fontFamily: 'var(--font-jetbrains-mono), monospace',
   outline: 'none',
   boxSizing: 'border-box',
@@ -133,7 +133,7 @@ function BreakdownLine({
     }}>
       <span style={{
         fontSize: large ? 14 : 13,
-        color: muted ? 'var(--adda-text-muted)' : 'var(--adda-text-secondary)',
+        color: muted ? 'var(--venue-text-muted)' : 'var(--venue-text-secondary)',
         fontFamily: 'var(--font-inter), system-ui, sans-serif',
       }}>
         {label}
@@ -141,7 +141,7 @@ function BreakdownLine({
       <span style={{
         fontSize: large ? 16 : 13,
         fontWeight: large ? 700 : 500,
-        color: amber ? 'var(--adda-amber)' : muted ? 'var(--adda-text-muted)' : 'var(--adda-text-primary)',
+        color: amber ? 'var(--venue-amber)' : muted ? 'var(--venue-text-muted)' : 'var(--venue-text-primary)',
         fontFamily: 'var(--font-jetbrains-mono), monospace',
       }}>
         {value}
@@ -269,8 +269,8 @@ export default function CounterOfferModal({
           width: 'min(640px, calc(100vw - 24px))',
           maxHeight: '92vh',
           overflowY: 'auto',
-          background: 'var(--adda-bg-surface)',
-          border: '1px solid var(--adda-border-default)',
+          background: 'var(--venue-bg-surface)',
+          border: '1px solid var(--venue-border-default)',
           borderRadius: 14,
           fontFamily: 'var(--font-inter), system-ui, sans-serif',
         }}
@@ -279,8 +279,8 @@ export default function CounterOfferModal({
         <div style={{
           position: 'sticky',
           top: 0,
-          background: 'var(--adda-bg-surface)',
-          borderBottom: '1px solid var(--adda-border-subtle)',
+          background: 'var(--venue-bg-surface)',
+          borderBottom: '1px solid var(--venue-border-subtle)',
           padding: '20px 24px 16px',
           zIndex: 10,
           display: 'flex',
@@ -290,11 +290,11 @@ export default function CounterOfferModal({
           <div>
             <h2
               id="counter-offer-title"
-              style={{ margin: 0, fontSize: 17, fontWeight: 600, color: 'var(--adda-text-primary)', lineHeight: 1.3 }}
+              style={{ margin: 0, fontSize: 17, fontWeight: 600, color: 'var(--venue-text-primary)', lineHeight: 1.3 }}
             >
               Send a counter offer
             </h2>
-            <p style={{ margin: '3px 0 0', fontSize: 13, color: 'var(--adda-text-muted)' }}>
+            <p style={{ margin: '3px 0 0', fontSize: 13, color: 'var(--venue-text-muted)' }}>
               to {creatorName}
             </p>
           </div>
@@ -302,7 +302,7 @@ export default function CounterOfferModal({
             onClick={onClose}
             style={{
               background: 'transparent', border: 'none', cursor: 'pointer',
-              color: 'var(--adda-text-muted)', padding: 4, lineHeight: 1, flexShrink: 0,
+              color: 'var(--venue-text-muted)', padding: 4, lineHeight: 1, flexShrink: 0,
             }}
           >
             <span className="material-symbols-outlined" style={{ fontSize: 20 }}>close</span>
@@ -349,7 +349,7 @@ export default function CounterOfferModal({
               <FieldLabel>Duration</FieldLabel>
               <div style={{
                 ...inputStyle,
-                color: durationHours > 0 ? 'var(--adda-amber)' : 'var(--adda-text-muted)',
+                color: durationHours > 0 ? 'var(--venue-amber)' : 'var(--venue-text-muted)',
                 fontWeight: 600,
                 display: 'flex',
                 alignItems: 'center',
@@ -369,7 +369,7 @@ export default function CounterOfferModal({
                 top: '50%',
                 transform: 'translateY(-50%)',
                 fontSize: 14,
-                color: 'var(--adda-text-muted)',
+                color: 'var(--venue-text-muted)',
                 fontFamily: 'var(--font-jetbrains-mono), monospace',
                 pointerEvents: 'none',
               }}>
@@ -398,12 +398,12 @@ export default function CounterOfferModal({
                   alignItems: 'center',
                   gap: 5,
                   background: 'transparent',
-                  border: '1px solid var(--adda-amber-border)',
+                  border: '1px solid var(--venue-amber-border)',
                   borderRadius: 6,
                   padding: '4px 10px',
                   fontSize: 12,
                   fontWeight: 600,
-                  color: 'var(--adda-amber)',
+                  color: 'var(--venue-amber)',
                   cursor: 'pointer',
                   fontFamily: 'var(--font-inter), system-ui, sans-serif',
                 }}
@@ -416,10 +416,10 @@ export default function CounterOfferModal({
             {addOns.length === 0 && (
               <div style={{
                 padding: '12px 14px',
-                background: 'var(--adda-bg-elevated)',
+                background: 'var(--venue-bg-elevated)',
                 borderRadius: 7,
                 fontSize: 13,
-                color: 'var(--adda-text-muted)',
+                color: 'var(--venue-text-muted)',
               }}>
                 No add-ons yet — e.g. projector rental, cleaning fee, setup time.
               </div>
@@ -447,7 +447,7 @@ export default function CounterOfferModal({
                   <span style={{
                     position: 'absolute', left: 10, top: '50%',
                     transform: 'translateY(-50%)', fontSize: 13,
-                    color: 'var(--adda-text-muted)',
+                    color: 'var(--venue-text-muted)',
                     fontFamily: 'var(--font-jetbrains-mono), monospace',
                     pointerEvents: 'none',
                   }}>
@@ -481,7 +481,7 @@ export default function CounterOfferModal({
                   onClick={() => removeAddon(addon.id)}
                   style={{
                     background: 'transparent', border: 'none', cursor: 'pointer',
-                    color: 'var(--adda-text-muted)', display: 'grid', placeItems: 'center',
+                    color: 'var(--venue-text-muted)', display: 'grid', placeItems: 'center',
                     padding: 0, height: 38,
                   }}
                 >
@@ -497,7 +497,7 @@ export default function CounterOfferModal({
               <FieldLabel htmlFor={`${uid}-msg`}>Message to creator</FieldLabel>
               <span style={{
                 fontSize: 11,
-                color: msgRemaining > 0 ? 'var(--adda-warning)' : 'var(--adda-success)',
+                color: msgRemaining > 0 ? 'var(--venue-warning)' : 'var(--venue-success)',
                 fontFamily: 'var(--font-jetbrains-mono), monospace',
               }}>
                 {msgRemaining > 0 ? `${msgRemaining} more chars required` : `${message.length} chars ✓`}
@@ -516,15 +516,15 @@ export default function CounterOfferModal({
                 resize: 'vertical',
                 lineHeight: 1.6,
                 padding: '12px 14px',
-                border: `1px solid ${msgRemaining > 0 && message.length > 0 ? 'rgba(251,146,60,0.4)' : 'var(--adda-border-default)'}`,
+                border: `1px solid ${msgRemaining > 0 && message.length > 0 ? 'rgba(251,146,60,0.4)' : 'var(--venue-border-default)'}`,
               }}
             />
           </div>
 
           {/* ── Live breakdown ────────────────────────────────────────────── */}
           <div style={{
-            background: 'var(--adda-bg-elevated)',
-            border: '1px solid var(--adda-border-subtle)',
+            background: 'var(--venue-bg-elevated)',
+            border: '1px solid var(--venue-border-subtle)',
             borderRadius: 10,
             padding: '16px 18px',
             marginBottom: 24,
@@ -532,7 +532,7 @@ export default function CounterOfferModal({
             <div style={{
               fontSize: 11,
               fontWeight: 600,
-              color: 'var(--adda-text-muted)',
+              color: 'var(--venue-text-muted)',
               letterSpacing: '0.8px',
               textTransform: 'uppercase',
               marginBottom: 12,
@@ -561,7 +561,7 @@ export default function CounterOfferModal({
               />
             ))}
 
-            <div style={{ height: 1, background: 'var(--adda-border-subtle)', margin: '8px 0' }} />
+            <div style={{ height: 1, background: 'var(--venue-border-subtle)', margin: '8px 0' }} />
             <BreakdownLine label="Subtotal" value={formatInr(subtotalPaise)} />
 
             <BreakdownLine
@@ -570,7 +570,7 @@ export default function CounterOfferModal({
               muted
             />
 
-            <div style={{ height: 1, background: 'var(--adda-border-subtle)', margin: '8px 0' }} />
+            <div style={{ height: 1, background: 'var(--venue-border-subtle)', margin: '8px 0' }} />
             <BreakdownLine label="Guest pays" value={formatInr(guestPaysPaise)} />
             <BreakdownLine label="Your payout" value={formatInr(subtotalPaise)} amber large />
           </div>
@@ -583,7 +583,7 @@ export default function CounterOfferModal({
               border: '1px solid rgba(239,68,68,0.2)',
               borderRadius: 8,
               fontSize: 13,
-              color: 'var(--adda-danger)',
+              color: 'var(--venue-danger)',
               marginBottom: 16,
               fontFamily: 'var(--font-inter), system-ui, sans-serif',
             }}>
@@ -597,7 +597,7 @@ export default function CounterOfferModal({
             style={{
               width: '100%',
               padding: '14px 0',
-              background: 'var(--adda-amber)',
+              background: 'var(--venue-amber)',
               color: '#000',
               border: 'none',
               borderRadius: 9,
@@ -615,7 +615,7 @@ export default function CounterOfferModal({
             margin: 0,
             textAlign: 'center',
             fontSize: 12,
-            color: 'var(--adda-text-muted)',
+            color: 'var(--venue-text-muted)',
             fontFamily: 'var(--font-inter), system-ui, sans-serif',
           }}>
             Creator has 7 days to accept before it expires.

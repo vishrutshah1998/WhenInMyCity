@@ -103,8 +103,8 @@ function ProposalCard({
 
   return (
     <div style={{
-      background: 'var(--adda-bg-elevated)',
-      border: `1px solid ${isActionable ? 'rgba(245,168,0,0.25)' : 'var(--adda-border-subtle)'}`,
+      background: 'var(--venue-bg-elevated)',
+      border: `1px solid ${isActionable ? 'rgba(245,168,0,0.25)' : 'var(--venue-border-subtle)'}`,
       borderRadius: 16,
       overflow: 'hidden',
     }}>
@@ -114,11 +114,11 @@ function ProposalCard({
 
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4, flexWrap: 'wrap' }}>
-            <span style={{ fontWeight: 700, fontSize: 15, color: 'var(--adda-text-primary)', fontFamily: 'var(--font-syne)' }}>
+            <span style={{ fontWeight: 700, fontSize: 15, color: 'var(--venue-text-primary)', fontFamily: 'var(--font-syne)' }}>
               {proposal.maker?.display_name ?? 'Creator'}
             </span>
             {proposal.maker?.username && (
-              <span style={{ fontSize: 11, color: 'var(--adda-text-muted)', fontFamily: 'var(--font-jetbrains-mono)' }}>
+              <span style={{ fontSize: 11, color: 'var(--venue-text-muted)', fontFamily: 'var(--font-jetbrains-mono)' }}>
                 @{proposal.maker.username}
               </span>
             )}
@@ -130,7 +130,7 @@ function ProposalCard({
               {tier}
             </span>
           </div>
-          <div style={{ display: 'flex', gap: 12, fontSize: 11, color: 'var(--adda-text-muted)', fontFamily: 'var(--font-jetbrains-mono)', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', gap: 12, fontSize: 11, color: 'var(--venue-text-muted)', fontFamily: 'var(--font-jetbrains-mono)', flexWrap: 'wrap' }}>
             {proposal.maker?.creator_type && (
               <span style={{ textTransform: 'capitalize' }}>{proposal.maker.creator_type.replace(/_/g, ' ')}</span>
             )}
@@ -166,10 +166,10 @@ function ProposalCard({
           ...(proposal.expected_revenue_paise ? [{ label: 'Est. Revenue', value: formatInr(proposal.expected_revenue_paise), highlight: true }] : []),
         ].map(({ label, value, highlight }) => (
           <div key={label}>
-            <div style={{ fontSize: 10, color: 'var(--adda-text-muted)', fontFamily: 'var(--font-jetbrains-mono)', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: 3 }}>
+            <div style={{ fontSize: 10, color: 'var(--venue-text-muted)', fontFamily: 'var(--font-jetbrains-mono)', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: 3 }}>
               {label}
             </div>
-            <div style={{ fontSize: 13, color: highlight ? '#4dd2b1' : 'var(--adda-text-secondary)', fontWeight: highlight ? 700 : 500, fontFamily: 'var(--font-jetbrains-mono)', textTransform: 'capitalize' }}>
+            <div style={{ fontSize: 13, color: highlight ? '#4dd2b1' : 'var(--venue-text-secondary)', fontWeight: highlight ? 700 : 500, fontFamily: 'var(--font-jetbrains-mono)', textTransform: 'capitalize' }}>
               {value}
             </div>
           </div>
@@ -179,7 +179,7 @@ function ProposalCard({
       {/* Creator message */}
       {proposal.message && (
         <div style={{ margin: '0 24px 14px', padding: '10px 14px', background: 'rgba(255,255,255,0.03)', borderRadius: 8, borderLeft: '2px solid rgba(245,168,0,0.4)' }}>
-          <p style={{ fontSize: 13, color: 'var(--adda-text-secondary)', fontStyle: 'italic', margin: 0, lineHeight: 1.55 }}>
+          <p style={{ fontSize: 13, color: 'var(--venue-text-secondary)', fontStyle: 'italic', margin: 0, lineHeight: 1.55 }}>
             &ldquo;{proposal.message}&rdquo;
           </p>
         </div>
@@ -187,7 +187,7 @@ function ProposalCard({
 
       {/* Actions */}
       {isActionable && (
-        <div style={{ padding: '12px 24px 16px', display: 'flex', gap: 10, borderTop: '1px solid var(--adda-border-subtle)' }}>
+        <div style={{ padding: '12px 24px 16px', display: 'flex', gap: 10, borderTop: '1px solid var(--venue-border-subtle)' }}>
           <button
             onClick={onAccept}
             disabled={isPending}
@@ -206,8 +206,8 @@ function ProposalCard({
             style={{
               padding: '9px 24px', borderRadius: 8, fontSize: 13, fontWeight: 600,
               fontFamily: 'var(--font-jetbrains-mono)', cursor: 'pointer',
-              background: 'transparent', border: '1px solid var(--adda-border-default)',
-              color: 'var(--adda-text-muted)',
+              background: 'transparent', border: '1px solid var(--venue-border-default)',
+              color: 'var(--venue-text-muted)',
               opacity: isPending ? 0.5 : 1,
             }}
           >
@@ -262,10 +262,10 @@ export default function CreatorsClient({ initialProposals }: { initialProposals:
 
       {/* Page header */}
       <div style={{ marginBottom: 28 }}>
-        <h1 style={{ fontFamily: 'var(--font-syne)', fontSize: 26, fontWeight: 800, color: 'var(--adda-text-primary)', margin: '0 0 6px' }}>
+        <h1 style={{ fontFamily: 'var(--font-syne)', fontSize: 26, fontWeight: 800, color: 'var(--venue-text-primary)', margin: '0 0 6px' }}>
           Creators
         </h1>
-        <p style={{ fontSize: 13, color: 'var(--adda-text-muted)', margin: 0, fontFamily: 'var(--font-dm-sans, sans-serif)' }}>
+        <p style={{ fontSize: 13, color: 'var(--venue-text-muted)', margin: 0, fontFamily: 'var(--font-dm-sans, sans-serif)' }}>
           Creators who want to perform at your space, and your full booking pipeline.
         </p>
       </div>
@@ -284,7 +284,7 @@ export default function CreatorsClient({ initialProposals }: { initialProposals:
             <div style={{ fontWeight: 700, fontSize: 14, color: '#F5A800', marginBottom: 2 }}>
               {pendingCount} creator{pendingCount !== 1 ? 's' : ''} waiting for your response
             </div>
-            <div style={{ fontSize: 12, color: 'var(--adda-text-muted)' }}>
+            <div style={{ fontSize: 12, color: 'var(--venue-text-muted)' }}>
               Unanswered requests expire in 48h — respond to lock in the booking.
             </div>
           </div>
@@ -298,7 +298,7 @@ export default function CreatorsClient({ initialProposals }: { initialProposals:
       )}
 
       {/* Tabs */}
-      <div style={{ display: 'flex', gap: 0, marginBottom: 24, borderBottom: '1px solid var(--adda-border-subtle)' }}>
+      <div style={{ display: 'flex', gap: 0, marginBottom: 24, borderBottom: '1px solid var(--venue-border-subtle)' }}>
         {TABS.map(tab => {
           const count = proposals.filter(p => {
             if (tab === 'pending') return p.status === 'pending' || p.status === 'counter_offered'
@@ -312,9 +312,9 @@ export default function CreatorsClient({ initialProposals }: { initialProposals:
               onClick={() => setActiveTab(tab)}
               style={{
                 padding: '10px 18px 12px', background: 'transparent', border: 'none',
-                borderBottom: isActive ? '2px solid var(--adda-amber)' : '2px solid transparent',
+                borderBottom: isActive ? '2px solid var(--venue-amber)' : '2px solid transparent',
                 cursor: 'pointer', fontSize: 13, fontWeight: isActive ? 700 : 500,
-                color: isActive ? 'var(--adda-amber)' : 'var(--adda-text-muted)',
+                color: isActive ? 'var(--venue-amber)' : 'var(--venue-text-muted)',
                 display: 'flex', alignItems: 'center', gap: 6,
                 marginBottom: -1,
               }}
@@ -323,8 +323,8 @@ export default function CreatorsClient({ initialProposals }: { initialProposals:
               {count > 0 && (
                 <span style={{
                   fontSize: 10, fontWeight: 700, padding: '1px 7px', borderRadius: 9999,
-                  background: isActive ? 'var(--adda-amber)' : 'rgba(255,255,255,0.08)',
-                  color: isActive ? '#000' : 'var(--adda-text-muted)',
+                  background: isActive ? 'var(--venue-amber)' : 'rgba(255,255,255,0.08)',
+                  color: isActive ? '#000' : 'var(--venue-text-muted)',
                   fontFamily: 'var(--font-jetbrains-mono)',
                 }}>
                   {count}
@@ -337,9 +337,9 @@ export default function CreatorsClient({ initialProposals }: { initialProposals:
 
       {/* List */}
       {tabProposals.length === 0 ? (
-        <div style={{ padding: '56px 24px', textAlign: 'center', border: '1px dashed var(--adda-border-subtle)', borderRadius: 16 }}>
-          <span className="material-symbols-outlined" style={{ fontSize: 40, color: 'var(--adda-text-muted)', display: 'block', marginBottom: 12, opacity: 0.4 }}>person_search</span>
-          <p style={{ fontSize: 13, color: 'var(--adda-text-muted)', fontFamily: 'var(--font-jetbrains-mono)', margin: 0 }}>
+        <div style={{ padding: '56px 24px', textAlign: 'center', border: '1px dashed var(--venue-border-subtle)', borderRadius: 16 }}>
+          <span className="material-symbols-outlined" style={{ fontSize: 40, color: 'var(--venue-text-muted)', display: 'block', marginBottom: 12, opacity: 0.4 }}>person_search</span>
+          <p style={{ fontSize: 13, color: 'var(--venue-text-muted)', fontFamily: 'var(--font-jetbrains-mono)', margin: 0 }}>
             {activeTab === 'pending'
               ? 'No pending requests — share your adda listing to attract creators'
               : `No ${TAB_LABELS[activeTab].toLowerCase()} bookings yet`}

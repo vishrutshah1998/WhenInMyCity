@@ -69,10 +69,10 @@ export default function DateRangeBar({ currentRange, compareEnabled }: Props) {
                 fontFamily: 'var(--font-inter), system-ui, sans-serif',
                 cursor: 'pointer',
                 border: active
-                  ? '1px solid var(--adda-amber-border)'
-                  : '1px solid var(--adda-border-default)',
-                background: active ? 'var(--adda-amber-tint)' : 'transparent',
-                color: active ? 'var(--adda-amber)' : 'var(--adda-text-secondary)',
+                  ? '1px solid var(--venue-amber-border)'
+                  : '1px solid var(--venue-border-default)',
+                background: active ? 'var(--venue-amber-tint)' : 'transparent',
+                color: active ? 'var(--venue-amber)' : 'var(--venue-text-secondary)',
                 transition: 'all 0.15s',
               }}
             >
@@ -96,10 +96,10 @@ export default function DateRangeBar({ currentRange, compareEnabled }: Props) {
           fontFamily: 'var(--font-inter), system-ui, sans-serif',
           cursor: 'pointer',
           border: compareEnabled
-            ? '1px solid var(--adda-amber-border)'
-            : '1px solid var(--adda-border-default)',
-          background: compareEnabled ? 'var(--adda-amber-tint)' : 'transparent',
-          color: compareEnabled ? 'var(--adda-amber)' : 'var(--adda-text-secondary)',
+            ? '1px solid var(--venue-amber-border)'
+            : '1px solid var(--venue-border-default)',
+          background: compareEnabled ? 'var(--venue-amber-tint)' : 'transparent',
+          color: compareEnabled ? 'var(--venue-amber)' : 'var(--venue-text-secondary)',
           transition: 'all 0.15s',
         }}
       >
@@ -110,7 +110,7 @@ export default function DateRangeBar({ currentRange, compareEnabled }: Props) {
             width: 28,
             height: 15,
             borderRadius: 99,
-            background: compareEnabled ? 'var(--adda-amber)' : 'var(--adda-bg-hover)',
+            background: compareEnabled ? 'var(--venue-amber)' : 'var(--venue-bg-hover)',
             position: 'relative',
             flexShrink: 0,
             transition: 'background 0.2s',

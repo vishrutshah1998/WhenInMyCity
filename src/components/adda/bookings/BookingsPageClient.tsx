@@ -61,14 +61,14 @@ function EmptyState({ tab }: { tab: TabKey }) {
     }}>
       <span
         className="material-symbols-outlined"
-        style={{ fontSize: 36, color: 'var(--adda-text-muted)', marginBottom: 16 }}
+        style={{ fontSize: 36, color: 'var(--venue-text-muted)', marginBottom: 16 }}
       >
         {icon}
       </span>
       <div style={{
         fontSize: 14,
         fontWeight: 600,
-        color: 'var(--adda-text-secondary)',
+        color: 'var(--venue-text-secondary)',
         fontFamily: 'var(--font-inter), system-ui, sans-serif',
         marginBottom: 8,
       }}>
@@ -76,7 +76,7 @@ function EmptyState({ tab }: { tab: TabKey }) {
       </div>
       <div style={{
         fontSize: 12.5,
-        color: 'var(--adda-text-muted)',
+        color: 'var(--venue-text-muted)',
         fontFamily: 'var(--font-inter), system-ui, sans-serif',
         lineHeight: 1.6,
         maxWidth: 260,
@@ -103,13 +103,13 @@ function DetailPlaceholder() {
     }}>
       <span
         className="material-symbols-outlined"
-        style={{ fontSize: 40, color: 'var(--adda-text-muted)' }}
+        style={{ fontSize: 40, color: 'var(--venue-text-muted)' }}
       >
         select_window
       </span>
       <div style={{
         fontSize: 13,
-        color: 'var(--adda-text-muted)',
+        color: 'var(--venue-text-muted)',
         fontFamily: 'var(--font-inter), system-ui, sans-serif',
       }}>
         Select a request to view details
@@ -180,17 +180,17 @@ export default function BookingsPageClient({ addaId, initialProposals, fetchErro
         <div style={{
           width: 400,
           flexShrink: 0,
-          borderRight: '1px solid var(--adda-border-subtle)',
+          borderRight: '1px solid var(--venue-border-subtle)',
           display: 'flex',
           flexDirection: 'column',
-          background: 'var(--adda-bg-surface)',
+          background: 'var(--venue-bg-surface)',
           overflow: 'hidden',
         }}>
 
           {/* Tab bar */}
           <div style={{
             display: 'flex',
-            borderBottom: '1px solid var(--adda-border-subtle)',
+            borderBottom: '1px solid var(--venue-border-subtle)',
             padding: '0 4px',
             flexShrink: 0,
           }}>
@@ -214,12 +214,12 @@ export default function BookingsPageClient({ addaId, initialProposals, fetchErro
                     background: 'transparent',
                     border: 'none',
                     borderBottom: isActive
-                      ? '2px solid var(--adda-amber)'
+                      ? '2px solid var(--venue-amber)'
                       : '2px solid transparent',
                     cursor: 'pointer',
                     fontSize: 12.5,
                     fontWeight: isActive ? 600 : 500,
-                    color: isActive ? 'var(--adda-text-primary)' : 'var(--adda-text-muted)',
+                    color: isActive ? 'var(--venue-text-primary)' : 'var(--venue-text-muted)',
                     fontFamily: 'var(--font-inter), system-ui, sans-serif',
                     transition: 'color 140ms ease, border-color 140ms ease',
                     whiteSpace: 'nowrap',
@@ -228,7 +228,7 @@ export default function BookingsPageClient({ addaId, initialProposals, fetchErro
                   {tab.label}
                   {count !== null && count > 0 && (
                     <span style={{
-                      background: 'var(--adda-amber)',
+                      background: 'var(--venue-amber)',
                       color: '#000',
                       fontSize: 9.5,
                       fontWeight: 700,
@@ -252,7 +252,7 @@ export default function BookingsPageClient({ addaId, initialProposals, fetchErro
               background: 'rgba(239,68,68,0.08)',
               borderBottom: '1px solid rgba(239,68,68,0.2)',
               fontSize: 12,
-              color: 'var(--adda-danger)',
+              color: 'var(--venue-danger)',
               fontFamily: 'var(--font-inter), system-ui, sans-serif',
             }}>
               {fetchError}
@@ -281,7 +281,7 @@ export default function BookingsPageClient({ addaId, initialProposals, fetchErro
         <div style={{
           flex: 1,
           overflowY: 'auto',
-          background: 'var(--adda-bg-base)',
+          background: 'var(--venue-bg-base)',
         }}>
           {selectedProposal ? (
             <BookingRequestCard
@@ -301,7 +301,7 @@ export default function BookingsPageClient({ addaId, initialProposals, fetchErro
           style={{
             position: 'fixed',
             inset: 0,
-            background: 'var(--adda-bg-base)',
+            background: 'var(--venue-bg-base)',
             zIndex: 100,
             overflowY: 'auto',
             display: 'none', // shown via media query via inline style trick below
@@ -314,7 +314,7 @@ export default function BookingsPageClient({ addaId, initialProposals, fetchErro
             height: 48,
             background: 'rgba(10,10,10,0.92)',
             backdropFilter: 'blur(12px)',
-            borderBottom: '1px solid var(--adda-border-subtle)',
+            borderBottom: '1px solid var(--venue-border-subtle)',
             display: 'flex',
             alignItems: 'center',
             padding: '0 16px',
@@ -330,7 +330,7 @@ export default function BookingsPageClient({ addaId, initialProposals, fetchErro
                 background: 'transparent',
                 border: 'none',
                 cursor: 'pointer',
-                color: 'var(--adda-amber)',
+                color: 'var(--venue-amber)',
                 fontSize: 13,
                 fontWeight: 600,
                 fontFamily: 'var(--font-inter), system-ui, sans-serif',

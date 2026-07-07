@@ -9,7 +9,7 @@ const RevenueTrendChart = dynamic(
     ssr: false,
     loading: () => (
       <div style={{ height: 240, display: 'grid', placeItems: 'center' }}>
-        <span style={{ fontSize: 12, color: 'var(--adda-text-muted)', fontFamily: 'var(--font-inter)' }}>
+        <span style={{ fontSize: 12, color: 'var(--venue-text-muted)', fontFamily: 'var(--font-inter)' }}>
           Loading chart…
         </span>
       </div>
@@ -28,15 +28,15 @@ export default function RevenueTrend({ data }: Props) {
 
   return (
     <div style={{
-      background: 'var(--adda-bg-surface)',
-      border: '1px solid var(--adda-border-subtle)',
+      background: 'var(--venue-bg-surface)',
+      border: '1px solid var(--venue-border-subtle)',
       borderRadius: 12,
       overflow: 'hidden',
     }}>
       {/* Header */}
       <div style={{
         padding: '16px 20px',
-        borderBottom: '1px solid var(--adda-border-subtle)',
+        borderBottom: '1px solid var(--venue-border-subtle)',
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
@@ -45,14 +45,14 @@ export default function RevenueTrend({ data }: Props) {
           <div style={{
             fontSize: 13,
             fontWeight: 600,
-            color: 'var(--adda-text-primary)',
+            color: 'var(--venue-text-primary)',
             fontFamily: 'var(--font-inter), system-ui, sans-serif',
           }}>
             Revenue Trend
           </div>
           <div style={{
             fontSize: 11,
-            color: 'var(--adda-text-muted)',
+            color: 'var(--venue-text-muted)',
             fontFamily: 'var(--font-jetbrains-mono), monospace',
             marginTop: 2,
           }}>
@@ -63,14 +63,14 @@ export default function RevenueTrend({ data }: Props) {
         {/* Legend */}
         <div style={{ display: 'flex', gap: 16 }}>
           {[
-            { color: 'var(--adda-amber)',   label: 'Gross' },
-            { color: 'var(--adda-success)', label: 'Net' },
+            { color: 'var(--venue-amber)',   label: 'Gross' },
+            { color: 'var(--venue-success)', label: 'Net' },
           ].map(({ color, label }) => (
             <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
               <div style={{ width: 20, height: 2, background: color, borderRadius: 1 }} />
               <span style={{
                 fontSize: 11,
-                color: 'var(--adda-text-muted)',
+                color: 'var(--venue-text-muted)',
                 fontFamily: 'var(--font-jetbrains-mono), monospace',
               }}>
                 {label}

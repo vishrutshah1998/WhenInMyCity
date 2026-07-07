@@ -35,17 +35,17 @@ function ChartTooltip({ active, payload, label }: any) {
   return (
     <div
       style={{
-        background: 'var(--adda-bg-elevated)',
-        border: '1px solid var(--adda-border-default)',
+        background: 'var(--venue-bg-elevated)',
+        border: '1px solid var(--venue-border-default)',
         borderRadius: 8,
         padding: '10px 14px',
         fontSize: 12,
         fontFamily: 'var(--font-inter), system-ui, sans-serif',
-        color: 'var(--adda-text-primary)',
+        color: 'var(--venue-text-primary)',
         minWidth: 160,
       }}
     >
-      <div style={{ fontWeight: 600, marginBottom: 6, color: 'var(--adda-text-secondary)' }}>
+      <div style={{ fontWeight: 600, marginBottom: 6, color: 'var(--venue-text-secondary)' }}>
         {label}
       </div>
       {payload.map((entry: any) => (
@@ -93,8 +93,8 @@ export default function RevOccTrendChart({ data, compareData }: Props) {
   return (
     <div
       style={{
-        background: 'var(--adda-bg-surface)',
-        border: '1px solid var(--adda-border-subtle)',
+        background: 'var(--venue-bg-surface)',
+        border: '1px solid var(--venue-border-subtle)',
         borderRadius: 12,
         padding: 20,
         marginBottom: 24,
@@ -106,13 +106,13 @@ export default function RevOccTrendChart({ data, compareData }: Props) {
           <div style={{
             fontSize: 13,
             fontWeight: 600,
-            color: 'var(--adda-text-primary)',
+            color: 'var(--venue-text-primary)',
             fontFamily: 'var(--font-inter), system-ui, sans-serif',
             marginBottom: 2,
           }}>
             Revenue & Occupancy Trend
           </div>
-          <div style={{ fontSize: 11, color: 'var(--adda-text-muted)', fontFamily: 'var(--font-inter)' }}>
+          <div style={{ fontSize: 11, color: 'var(--venue-text-muted)', fontFamily: 'var(--font-inter)' }}>
             Correlate marketing campaigns with booking spikes
           </div>
         </div>
@@ -130,9 +130,9 @@ export default function RevOccTrendChart({ data, compareData }: Props) {
                 fontFamily: 'var(--font-inter)',
                 fontWeight: 500,
                 cursor: 'pointer',
-                border: mode === m ? '1px solid var(--adda-amber-border)' : '1px solid var(--adda-border-default)',
-                background: mode === m ? 'var(--adda-amber-tint)' : 'transparent',
-                color: mode === m ? 'var(--adda-amber)' : 'var(--adda-text-muted)',
+                border: mode === m ? '1px solid var(--venue-amber-border)' : '1px solid var(--venue-border-default)',
+                background: mode === m ? 'var(--venue-amber-tint)' : 'transparent',
+                color: mode === m ? 'var(--venue-amber)' : 'var(--venue-text-muted)',
               }}
             >
               {m === 'both' ? 'Both' : m === 'revenue' ? 'Revenue only' : 'Occupancy only'}
@@ -147,12 +147,12 @@ export default function RevOccTrendChart({ data, compareData }: Props) {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          background: 'var(--adda-bg-elevated)',
+          background: 'var(--venue-bg-elevated)',
           borderRadius: 8,
         }}>
           <span style={{
             fontSize: 13,
-            color: 'var(--adda-text-muted)',
+            color: 'var(--venue-text-muted)',
             fontFamily: 'var(--font-inter), system-ui, sans-serif',
           }}>
             No bookings with revenue in this range
@@ -164,13 +164,13 @@ export default function RevOccTrendChart({ data, compareData }: Props) {
             <ComposedChart data={chartData} margin={{ top: 10, right: 28, bottom: 0, left: 8 }}>
               <CartesianGrid
                 strokeDasharray="3 3"
-                stroke="var(--adda-border-subtle)"
+                stroke="var(--venue-border-subtle)"
                 vertical={false}
               />
               <XAxis
                 dataKey="label"
-                tick={{ fontSize: 11, fill: 'var(--adda-text-muted)', fontFamily: 'var(--font-jetbrains-mono)' }}
-                axisLine={{ stroke: 'var(--adda-border-subtle)' }}
+                tick={{ fontSize: 11, fill: 'var(--venue-text-muted)', fontFamily: 'var(--font-jetbrains-mono)' }}
+                axisLine={{ stroke: 'var(--venue-border-subtle)' }}
                 tickLine={false}
                 interval="preserveStartEnd"
               />
@@ -179,7 +179,7 @@ export default function RevOccTrendChart({ data, compareData }: Props) {
                 yAxisId="revenue"
                 orientation="left"
                 tickFormatter={v => `₹${(v / 10000).toFixed(0)}k`}
-                tick={{ fontSize: 10, fill: 'var(--adda-text-muted)', fontFamily: 'var(--font-jetbrains-mono)' }}
+                tick={{ fontSize: 10, fill: 'var(--venue-text-muted)', fontFamily: 'var(--font-jetbrains-mono)' }}
                 axisLine={false}
                 tickLine={false}
                 width={52}
@@ -191,7 +191,7 @@ export default function RevOccTrendChart({ data, compareData }: Props) {
                 orientation="right"
                 domain={[0, 100]}
                 tickFormatter={v => `${v}%`}
-                tick={{ fontSize: 10, fill: 'var(--adda-text-muted)', fontFamily: 'var(--font-jetbrains-mono)' }}
+                tick={{ fontSize: 10, fill: 'var(--venue-text-muted)', fontFamily: 'var(--font-jetbrains-mono)' }}
                 axisLine={false}
                 tickLine={false}
                 width={38}
@@ -278,22 +278,22 @@ export default function RevOccTrendChart({ data, compareData }: Props) {
           {/* Legend */}
           <div style={{ display: 'flex', gap: 16, marginTop: 10, paddingLeft: 4 }}>
             {showRevenue && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: 'var(--adda-text-muted)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: 'var(--venue-text-muted)' }}>
                 <span style={{ display: 'inline-block', width: 16, height: 2, background: '#f59e0b', borderRadius: 1 }} />
                 Revenue (₹)
               </div>
             )}
             {showOccupancy && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: 'var(--adda-text-muted)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: 'var(--venue-text-muted)' }}>
                 <span style={{ display: 'inline-block', width: 16, height: 2, background: '#38bdf8', borderRadius: 1 }} />
                 Occupancy (%)
               </div>
             )}
             {compareData && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: 'var(--adda-text-muted)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: 'var(--venue-text-muted)' }}>
                 <span style={{
                   display: 'inline-block', width: 16, height: 2,
-                  background: 'repeating-linear-gradient(90deg, var(--adda-text-muted) 0 5px, transparent 5px 9px)',
+                  background: 'repeating-linear-gradient(90deg, var(--venue-text-muted) 0 5px, transparent 5px 9px)',
                 }} />
                 Previous period
               </div>

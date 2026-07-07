@@ -15,13 +15,13 @@ const ADDA_TYPE_LABELS: Record<string, string> = {
 }
 
 const T = {
-  bg:       'var(--adda-bg-base)',
-  surface:  'var(--adda-bg-surface)',
-  border:   'var(--adda-border-subtle)',
-  borderMd: 'var(--adda-border-default)',
-  text:     'var(--adda-text-primary)',
-  muted:    'var(--adda-text-muted)',
-  amber:    'var(--adda-amber)',
+  bg:       'var(--venue-bg-base)',
+  surface:  'var(--venue-bg-surface)',
+  border:   'var(--venue-border-subtle)',
+  borderMd: 'var(--venue-border-default)',
+  text:     'var(--venue-text-primary)',
+  muted:    'var(--venue-text-muted)',
+  amber:    'var(--venue-amber)',
 } as const
 
 const MONO  = "'JetBrains Mono', monospace"

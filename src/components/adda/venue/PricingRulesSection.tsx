@@ -53,7 +53,7 @@ function RuleForm({
   }
 
   const labelStyle: React.CSSProperties = {
-    fontSize: 11, fontWeight: 600, color: 'var(--adda-text-muted)',
+    fontSize: 11, fontWeight: 600, color: 'var(--venue-text-muted)',
     fontFamily: 'var(--font-inter), sans-serif',
     textTransform: 'uppercase', letterSpacing: '0.07em',
     marginBottom: 6, display: 'block',
@@ -61,11 +61,11 @@ function RuleForm({
 
   const inputStyle: React.CSSProperties = {
     width: '100%', padding: '9px 12px', borderRadius: 8,
-    background: 'var(--adda-bg-elevated)',
-    border: '1px solid var(--adda-border-default)',
-    color: 'var(--adda-text-primary)',
+    background: 'var(--venue-bg-elevated)',
+    border: '1px solid var(--venue-border-default)',
+    color: 'var(--venue-text-primary)',
     fontFamily: 'var(--font-inter), sans-serif', fontSize: 13,
-    outline: 'none', caretColor: 'var(--adda-amber)',
+    outline: 'none', caretColor: 'var(--venue-amber)',
     boxSizing: 'border-box' as const,
   }
 
@@ -121,9 +121,9 @@ function RuleForm({
                 onClick={() => toggleDay(d.key)}
                 style={{
                   width: 34, height: 34, borderRadius: 8,
-                  border: on ? 'none' : '1px solid var(--adda-border-default)',
-                  background: on ? 'var(--adda-amber)' : 'var(--adda-bg-elevated)',
-                  color: on ? '#000' : 'var(--adda-text-secondary)',
+                  border: on ? 'none' : '1px solid var(--venue-border-default)',
+                  background: on ? 'var(--venue-amber)' : 'var(--venue-bg-elevated)',
+                  color: on ? '#000' : 'var(--venue-text-secondary)',
                   fontWeight: 700, fontSize: 12,
                   fontFamily: 'var(--font-inter), sans-serif',
                   cursor: 'pointer',
@@ -164,7 +164,7 @@ function RuleForm({
           onClick={() => patch('active', !draft.active)}
           style={{
             width: 40, height: 22, borderRadius: 11,
-            background: draft.active ? 'var(--adda-amber)' : 'var(--adda-bg-overlay)',
+            background: draft.active ? 'var(--venue-amber)' : 'var(--venue-bg-overlay)',
             border: 'none', cursor: 'pointer', position: 'relative',
             transition: 'background 200ms',
           }}
@@ -177,7 +177,7 @@ function RuleForm({
           }} />
         </button>
         <span style={{
-          fontSize: 13, color: 'var(--adda-text-secondary)',
+          fontSize: 13, color: 'var(--venue-text-secondary)',
           fontFamily: 'var(--font-inter), sans-serif',
         }}>
           {draft.active ? 'Active' : 'Inactive'}
@@ -220,12 +220,12 @@ function PricingPreview({ rules }: { rules: PricingRule[] }) {
   return (
     <div style={{
       padding: 16, borderRadius: 10,
-      background: 'var(--adda-bg-elevated)',
-      border: '1px solid var(--adda-border-subtle)',
+      background: 'var(--venue-bg-elevated)',
+      border: '1px solid var(--venue-border-subtle)',
       marginTop: 16,
     }}>
       <div style={{
-        fontSize: 11, fontWeight: 600, color: 'var(--adda-text-muted)',
+        fontSize: 11, fontWeight: 600, color: 'var(--venue-text-muted)',
         fontFamily: 'var(--font-inter), sans-serif',
         textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 12,
       }}>
@@ -235,7 +235,7 @@ function PricingPreview({ rules }: { rules: PricingRule[] }) {
       {/* Controls */}
       <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 14 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ fontSize: 12, color: 'var(--adda-text-muted)', fontFamily: 'var(--font-inter), sans-serif' }}>
+          <span style={{ fontSize: 12, color: 'var(--venue-text-muted)', fontFamily: 'var(--font-inter), sans-serif' }}>
             Hours:
           </span>
           <input
@@ -246,9 +246,9 @@ function PricingPreview({ rules }: { rules: PricingRule[] }) {
             max={24}
             style={{
               width: 56, padding: '5px 8px', borderRadius: 6,
-              background: 'var(--adda-bg-overlay)',
-              border: '1px solid var(--adda-border-default)',
-              color: 'var(--adda-text-primary)',
+              background: 'var(--venue-bg-overlay)',
+              border: '1px solid var(--venue-border-default)',
+              color: 'var(--venue-text-primary)',
               fontFamily: 'var(--font-jetbrains-mono), monospace', fontSize: 12,
               outline: 'none', textAlign: 'center',
             }}
@@ -256,7 +256,7 @@ function PricingPreview({ rules }: { rules: PricingRule[] }) {
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ fontSize: 12, color: 'var(--adda-text-muted)', fontFamily: 'var(--font-inter), sans-serif' }}>
+          <span style={{ fontSize: 12, color: 'var(--venue-text-muted)', fontFamily: 'var(--font-inter), sans-serif' }}>
             Day:
           </span>
           <select
@@ -264,9 +264,9 @@ function PricingPreview({ rules }: { rules: PricingRule[] }) {
             onChange={e => setDayKey(e.target.value)}
             style={{
               padding: '5px 8px', borderRadius: 6,
-              background: 'var(--adda-bg-overlay)',
-              border: '1px solid var(--adda-border-default)',
-              color: 'var(--adda-text-primary)',
+              background: 'var(--venue-bg-overlay)',
+              border: '1px solid var(--venue-border-default)',
+              color: 'var(--venue-text-primary)',
               fontFamily: 'var(--font-inter), sans-serif', fontSize: 12,
               outline: 'none',
             }}
@@ -276,7 +276,7 @@ function PricingPreview({ rules }: { rules: PricingRule[] }) {
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ fontSize: 12, color: 'var(--adda-text-muted)', fontFamily: 'var(--font-inter), sans-serif' }}>
+          <span style={{ fontSize: 12, color: 'var(--venue-text-muted)', fontFamily: 'var(--font-inter), sans-serif' }}>
             Time:
           </span>
           <input
@@ -285,9 +285,9 @@ function PricingPreview({ rules }: { rules: PricingRule[] }) {
             onChange={e => setTimeStr(e.target.value)}
             style={{
               padding: '5px 8px', borderRadius: 6,
-              background: 'var(--adda-bg-overlay)',
-              border: '1px solid var(--adda-border-default)',
-              color: 'var(--adda-text-primary)',
+              background: 'var(--venue-bg-overlay)',
+              border: '1px solid var(--venue-border-default)',
+              color: 'var(--venue-text-primary)',
               fontFamily: 'var(--font-jetbrains-mono), monospace', fontSize: 12,
               outline: 'none',
             }}
@@ -299,25 +299,25 @@ function PricingPreview({ rules }: { rules: PricingRule[] }) {
       {matched ? (
         <div>
           <div style={{
-            fontSize: 12, color: 'var(--adda-text-muted)',
+            fontSize: 12, color: 'var(--venue-text-muted)',
             fontFamily: 'var(--font-inter), sans-serif', marginBottom: 6,
           }}>
-            Applies rule: <span style={{ color: 'var(--adda-amber)', fontWeight: 600 }}>{matched.name}</span>
+            Applies rule: <span style={{ color: 'var(--venue-amber)', fontWeight: 600 }}>{matched.name}</span>
           </div>
           <div style={{
             fontFamily: 'var(--font-jetbrains-mono), monospace',
-            fontSize: 13, color: 'var(--adda-text-secondary)',
+            fontSize: 13, color: 'var(--venue-text-secondary)',
           }}>
             {formatRate(matched.rate_per_hour_paise)} × {hours}h
             {' = '}
-            <span style={{ fontWeight: 700, fontSize: 16, color: 'var(--adda-amber)' }}>
+            <span style={{ fontWeight: 700, fontSize: 16, color: 'var(--venue-amber)' }}>
               ₹{Math.round((totalPaise ?? 0) / 100).toLocaleString('en-IN')}
             </span>
           </div>
         </div>
       ) : (
         <div style={{
-          fontSize: 12, color: 'var(--adda-text-muted)',
+          fontSize: 12, color: 'var(--venue-text-muted)',
           fontFamily: 'var(--font-inter), sans-serif',
         }}>
           No active rule matches this booking scenario.
@@ -367,8 +367,8 @@ function RuleDrawer({
         onClick={e => e.stopPropagation()}
         style={{
           width: 380, maxWidth: '90vw',
-          background: 'var(--adda-bg-surface)',
-          borderLeft: '1px solid var(--adda-border-subtle)',
+          background: 'var(--venue-bg-surface)',
+          borderLeft: '1px solid var(--venue-border-subtle)',
           height: '100%', display: 'flex', flexDirection: 'column',
           overflow: 'hidden',
         }}
@@ -376,12 +376,12 @@ function RuleDrawer({
         {/* Drawer header */}
         <div style={{
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          padding: '20px 24px', borderBottom: '1px solid var(--adda-border-subtle)',
+          padding: '20px 24px', borderBottom: '1px solid var(--venue-border-subtle)',
           flexShrink: 0,
         }}>
           <h3 style={{
             fontFamily: 'var(--font-inter), sans-serif',
-            fontWeight: 700, fontSize: 15, color: 'var(--adda-text-primary)',
+            fontWeight: 700, fontSize: 15, color: 'var(--venue-text-primary)',
             margin: 0,
           }}>
             {rule.name === '' ? 'New Pricing Rule' : `Edit: ${rule.name}`}
@@ -390,8 +390,8 @@ function RuleDrawer({
             onClick={onClose}
             style={{
               width: 28, height: 28, borderRadius: 6,
-              background: 'var(--adda-bg-overlay)', border: 'none',
-              color: 'var(--adda-text-muted)', cursor: 'pointer',
+              background: 'var(--venue-bg-overlay)', border: 'none',
+              color: 'var(--venue-text-muted)', cursor: 'pointer',
               display: 'grid', placeItems: 'center',
             }}
           >
@@ -406,14 +406,14 @@ function RuleDrawer({
 
         {/* Footer */}
         <div style={{
-          padding: '16px 24px', borderTop: '1px solid var(--adda-border-subtle)',
+          padding: '16px 24px', borderTop: '1px solid var(--venue-border-subtle)',
           display: 'flex', gap: 10, flexShrink: 0,
         }}>
           <button
             onClick={() => onSave(draft)}
             style={{
               flex: 1, padding: '10px 0', borderRadius: 8,
-              background: 'var(--adda-amber)', border: 'none',
+              background: 'var(--venue-amber)', border: 'none',
               color: '#000', fontWeight: 700, fontSize: 13,
               fontFamily: 'var(--font-inter), sans-serif',
               cursor: 'pointer',
@@ -425,8 +425,8 @@ function RuleDrawer({
             onClick={onClose}
             style={{
               padding: '10px 16px', borderRadius: 8,
-              background: 'var(--adda-bg-overlay)', border: '1px solid var(--adda-border-subtle)',
-              color: 'var(--adda-text-secondary)', fontSize: 13,
+              background: 'var(--venue-bg-overlay)', border: '1px solid var(--venue-border-subtle)',
+              color: 'var(--venue-text-secondary)', fontSize: 13,
               fontFamily: 'var(--font-inter), sans-serif',
               cursor: 'pointer',
             }}
@@ -479,7 +479,7 @@ export default function PricingRulesSection({ pricingRules, onChange, isEditing 
   return (
     <>
       <div style={{
-        borderBottom: '1px solid var(--adda-border-subtle)',
+        borderBottom: '1px solid var(--venue-border-subtle)',
         paddingBottom: 24, marginBottom: 24,
       }}>
         <button
@@ -488,11 +488,11 @@ export default function PricingRulesSection({ pricingRules, onChange, isEditing 
             width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
             padding: '16px 0 12px',
             background: 'transparent', border: 'none', cursor: 'pointer',
-            color: 'var(--adda-text-primary)',
+            color: 'var(--venue-text-primary)',
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span className="material-symbols-outlined" style={{ fontSize: 18, color: 'var(--adda-amber)' }}>
+            <span className="material-symbols-outlined" style={{ fontSize: 18, color: 'var(--venue-amber)' }}>
               price_change
             </span>
             <span style={{ fontFamily: 'var(--font-inter), sans-serif', fontWeight: 600, fontSize: 14 }}>
@@ -500,9 +500,9 @@ export default function PricingRulesSection({ pricingRules, onChange, isEditing 
             </span>
             <span style={{
               padding: '1px 8px', borderRadius: 9999,
-              background: 'var(--adda-bg-overlay)',
+              background: 'var(--venue-bg-overlay)',
               fontSize: 11, fontFamily: 'var(--font-jetbrains-mono), monospace',
-              color: 'var(--adda-text-muted)',
+              color: 'var(--venue-text-muted)',
             }}>
               {pricingRules.filter(r => r.active).length} active
             </span>
@@ -510,7 +510,7 @@ export default function PricingRulesSection({ pricingRules, onChange, isEditing 
           <span
             className="material-symbols-outlined"
             style={{
-              fontSize: 18, color: 'var(--adda-text-muted)',
+              fontSize: 18, color: 'var(--venue-text-muted)',
               transform: collapsed ? 'rotate(-90deg)' : 'rotate(0deg)',
               transition: 'transform 200ms ease',
             }}
@@ -531,20 +531,20 @@ export default function PricingRulesSection({ pricingRules, onChange, isEditing 
               {/* Rules table */}
               <div style={{
                 borderRadius: 10, overflow: 'hidden',
-                border: '1px solid var(--adda-border-subtle)',
+                border: '1px solid var(--venue-border-subtle)',
               }}>
                 {/* Table header */}
                 <div style={{
                   display: 'grid',
                   gridTemplateColumns: '1fr 110px 80px 1fr 80px',
                   padding: '8px 14px',
-                  background: 'var(--adda-bg-overlay)',
-                  borderBottom: '1px solid var(--adda-border-subtle)',
+                  background: 'var(--venue-bg-overlay)',
+                  borderBottom: '1px solid var(--venue-border-subtle)',
                 }}>
                   {['Rule', 'Rate', 'Min Hrs', 'Days / Time', 'Status'].map(h => (
                     <span key={h} style={{
                       fontSize: 10, fontWeight: 600, letterSpacing: '0.08em',
-                      textTransform: 'uppercase', color: 'var(--adda-text-muted)',
+                      textTransform: 'uppercase', color: 'var(--venue-text-muted)',
                       fontFamily: 'var(--font-jetbrains-mono), monospace',
                     }}>
                       {h}
@@ -555,7 +555,7 @@ export default function PricingRulesSection({ pricingRules, onChange, isEditing 
                 {pricingRules.length === 0 ? (
                   <div style={{
                     padding: '20px 14px', textAlign: 'center',
-                    color: 'var(--adda-text-muted)', fontSize: 13,
+                    color: 'var(--venue-text-muted)', fontSize: 13,
                     fontFamily: 'var(--font-inter), sans-serif',
                   }}>
                     No pricing rules yet. Add one below.
@@ -570,13 +570,13 @@ export default function PricingRulesSection({ pricingRules, onChange, isEditing 
                         padding: '10px 14px',
                         alignItems: 'center',
                         background: i % 2 === 1 ? 'rgba(255,255,255,0.015)' : 'transparent',
-                        borderBottom: i < pricingRules.length - 1 ? '1px solid var(--adda-border-subtle)' : undefined,
+                        borderBottom: i < pricingRules.length - 1 ? '1px solid var(--venue-border-subtle)' : undefined,
                       }}
                     >
                       {/* Name + edit */}
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                         <span style={{
-                          fontSize: 13, fontWeight: 600, color: 'var(--adda-text-primary)',
+                          fontSize: 13, fontWeight: 600, color: 'var(--venue-text-primary)',
                           fontFamily: 'var(--font-inter), sans-serif',
                         }}>
                           {rule.name}
@@ -586,8 +586,8 @@ export default function PricingRulesSection({ pricingRules, onChange, isEditing 
                             onClick={() => setDrawerRule(rule)}
                             style={{
                               width: 22, height: 22, borderRadius: 5,
-                              background: 'var(--adda-bg-overlay)', border: 'none',
-                              color: 'var(--adda-text-muted)', cursor: 'pointer',
+                              background: 'var(--venue-bg-overlay)', border: 'none',
+                              color: 'var(--venue-text-muted)', cursor: 'pointer',
                               display: 'grid', placeItems: 'center',
                             }}
                           >
@@ -600,7 +600,7 @@ export default function PricingRulesSection({ pricingRules, onChange, isEditing 
                             style={{
                               width: 22, height: 22, borderRadius: 5,
                               background: 'transparent', border: 'none',
-                              color: 'var(--adda-text-muted)', cursor: 'pointer',
+                              color: 'var(--venue-text-muted)', cursor: 'pointer',
                               display: 'grid', placeItems: 'center',
                             }}
                           >
@@ -611,7 +611,7 @@ export default function PricingRulesSection({ pricingRules, onChange, isEditing 
 
                       {/* Rate */}
                       <span style={{
-                        fontSize: 12, fontWeight: 700, color: 'var(--adda-amber)',
+                        fontSize: 12, fontWeight: 700, color: 'var(--venue-amber)',
                         fontFamily: 'var(--font-jetbrains-mono), monospace',
                       }}>
                         {formatRate(rule.rate_per_hour_paise)}
@@ -619,7 +619,7 @@ export default function PricingRulesSection({ pricingRules, onChange, isEditing 
 
                       {/* Min hours */}
                       <span style={{
-                        fontSize: 12, color: 'var(--adda-text-secondary)',
+                        fontSize: 12, color: 'var(--venue-text-secondary)',
                         fontFamily: 'var(--font-jetbrains-mono), monospace',
                       }}>
                         {rule.min_hours}h min
@@ -627,10 +627,10 @@ export default function PricingRulesSection({ pricingRules, onChange, isEditing 
 
                       {/* Days + time */}
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                        <span style={{ fontSize: 11, color: 'var(--adda-text-secondary)', fontFamily: 'var(--font-inter), sans-serif' }}>
+                        <span style={{ fontSize: 11, color: 'var(--venue-text-secondary)', fontFamily: 'var(--font-inter), sans-serif' }}>
                           {dayLabel(rule.days)}
                         </span>
-                        <span style={{ fontSize: 10, color: 'var(--adda-text-muted)', fontFamily: 'var(--font-jetbrains-mono), monospace' }}>
+                        <span style={{ fontSize: 10, color: 'var(--venue-text-muted)', fontFamily: 'var(--font-jetbrains-mono), monospace' }}>
                           {formatTimeRange(rule.time_from, rule.time_to)}
                         </span>
                       </div>
@@ -640,9 +640,9 @@ export default function PricingRulesSection({ pricingRules, onChange, isEditing 
                         onClick={() => isEditing && toggleActive(rule.id)}
                         style={{
                           padding: '3px 8px', borderRadius: 9999,
-                          background: rule.active ? 'rgba(74,222,128,0.15)' : 'var(--adda-bg-overlay)',
-                          border: rule.active ? '1px solid rgba(74,222,128,0.3)' : '1px solid var(--adda-border-subtle)',
-                          color: rule.active ? '#4ade80' : 'var(--adda-text-muted)',
+                          background: rule.active ? 'rgba(74,222,128,0.15)' : 'var(--venue-bg-overlay)',
+                          border: rule.active ? '1px solid rgba(74,222,128,0.3)' : '1px solid var(--venue-border-subtle)',
+                          color: rule.active ? '#4ade80' : 'var(--venue-text-muted)',
                           fontSize: 10, fontWeight: 600,
                           fontFamily: 'var(--font-jetbrains-mono), monospace',
                           cursor: isEditing ? 'pointer' : 'default',
@@ -664,9 +664,9 @@ export default function PricingRulesSection({ pricingRules, onChange, isEditing 
                     marginTop: 10,
                     display: 'inline-flex', alignItems: 'center', gap: 6,
                     padding: '8px 16px', borderRadius: 8,
-                    background: 'var(--adda-amber-tint)',
-                    border: '1px solid var(--adda-amber-border)',
-                    color: 'var(--adda-amber)', fontSize: 13, fontWeight: 600,
+                    background: 'var(--venue-amber-tint)',
+                    border: '1px solid var(--venue-amber-border)',
+                    color: 'var(--venue-amber)', fontSize: 13, fontWeight: 600,
                     fontFamily: 'var(--font-inter), sans-serif',
                     cursor: 'pointer',
                   }}

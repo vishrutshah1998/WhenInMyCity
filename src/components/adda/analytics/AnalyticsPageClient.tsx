@@ -15,6 +15,7 @@ import RevOccTrendChart from './RevOccTrendChart'
 import WaterfallChart from './WaterfallChart'
 import CalendarHeatmap from './CalendarHeatmap'
 import DemandHeatmap from './DemandHeatmap'
+import PageViewsChart from './PageViewsChart'
 import InsightCard, { Amber } from './InsightCard'
 
 import {
@@ -36,7 +37,7 @@ function SectionHeading({ children }: { children: React.ReactNode }) {
     <div style={{
       fontSize: 11,
       fontWeight: 600,
-      color: 'var(--adda-text-muted)',
+      color: 'var(--venue-text-muted)',
       fontFamily: 'var(--font-jetbrains-mono), monospace',
       letterSpacing: '0.7px',
       textTransform: 'uppercase',
@@ -60,13 +61,13 @@ function ProposalFunnelSection({ funnel }: { funnel: ProposalFunnel }) {
     {
       label: 'Proposals received',
       value: received,
-      color: 'var(--adda-text-secondary)',
+      color: 'var(--venue-text-secondary)',
       desc: 'Booking requests from makers',
     },
     {
       label: 'Accepted',
       value: accepted,
-      color: 'var(--adda-amber)',
+      color: 'var(--venue-amber)',
       desc: acceptRate > 0 ? `${acceptRate}% acceptance rate` : 'No accepted proposals yet',
     },
     {
@@ -79,15 +80,15 @@ function ProposalFunnelSection({ funnel }: { funnel: ProposalFunnel }) {
 
   return (
     <div style={{
-      background: 'var(--adda-bg-surface)',
-      border: '1px solid var(--adda-border-subtle)',
+      background: 'var(--venue-bg-surface)',
+      border: '1px solid var(--venue-border-subtle)',
       borderRadius: 12,
       padding: 20,
       marginBottom: 24,
     }}>
       <div style={{
         fontSize: 13, fontWeight: 600,
-        color: 'var(--adda-text-primary)',
+        color: 'var(--venue-text-primary)',
         fontFamily: 'var(--font-inter), system-ui, sans-serif',
         marginBottom: 20,
       }}>
@@ -100,7 +101,7 @@ function ProposalFunnelSection({ funnel }: { funnel: ProposalFunnel }) {
             key={label}
             style={{
               flex: 1, textAlign: 'center', padding: '0 20px',
-              borderRight: i < steps.length - 1 ? '1px solid var(--adda-border-subtle)' : 'none',
+              borderRight: i < steps.length - 1 ? '1px solid var(--venue-border-subtle)' : 'none',
             }}
           >
             <div style={{
@@ -112,14 +113,14 @@ function ProposalFunnelSection({ funnel }: { funnel: ProposalFunnel }) {
             </div>
             <div style={{
               fontSize: 12, fontWeight: 600,
-              color: 'var(--adda-text-primary)',
+              color: 'var(--venue-text-primary)',
               fontFamily: 'var(--font-inter), system-ui, sans-serif',
               marginTop: 8,
             }}>
               {label}
             </div>
             <div style={{
-              fontSize: 11, color: 'var(--adda-text-muted)',
+              fontSize: 11, color: 'var(--venue-text-muted)',
               fontFamily: 'var(--font-inter), system-ui, sans-serif',
               marginTop: 3,
             }}>
@@ -140,56 +141,13 @@ function ProposalFunnelSection({ funnel }: { funnel: ProposalFunnel }) {
       {received === 0 && (
         <div style={{
           textAlign: 'center', marginTop: 16, paddingTop: 16,
-          borderTop: '1px solid var(--adda-border-subtle)',
-          fontSize: 12, color: 'var(--adda-text-muted)',
+          borderTop: '1px solid var(--venue-border-subtle)',
+          fontSize: 12, color: 'var(--venue-text-muted)',
           fontFamily: 'var(--font-inter), system-ui, sans-serif',
         }}>
           No proposals yet — your funnel will populate as makers discover and book your space.
         </div>
       )}
-    </div>
-  )
-}
-
-// ---------------------------------------------------------------------------
-// Traffic not-tracked notice (honest empty state)
-// ---------------------------------------------------------------------------
-
-function TrafficNotTracked({ venueSlug }: { venueSlug: string }) {
-  return (
-    <div style={{
-      background: 'var(--adda-bg-surface)',
-      border: '1px solid var(--adda-border-subtle)',
-      borderRadius: 12,
-      padding: 32,
-      marginBottom: 24,
-      textAlign: 'center',
-    }}>
-      <span
-        className="material-symbols-outlined"
-        style={{ fontSize: 32, color: 'var(--adda-text-muted)', display: 'block', marginBottom: 12 }}
-      >
-        bar_chart_4_bars
-      </span>
-      <div style={{
-        fontSize: 13, fontWeight: 600,
-        color: 'var(--adda-text-primary)',
-        fontFamily: 'var(--font-inter), system-ui, sans-serif',
-        marginBottom: 6,
-      }}>
-        Page view tracking coming soon
-      </div>
-      <div style={{
-        fontSize: 12, color: 'var(--adda-text-muted)',
-        fontFamily: 'var(--font-inter), system-ui, sans-serif',
-        maxWidth: 380, margin: '0 auto', lineHeight: 1.6,
-      }}>
-        Visits to your public listing at{' '}
-        <span style={{ color: 'var(--adda-amber)', fontFamily: 'var(--font-jetbrains-mono), monospace', fontSize: 11 }}>
-          wheninmycity.com/adda/{venueSlug}
-        </span>{' '}
-        are not yet tracked. Traffic analytics will appear here once enabled.
-      </div>
     </div>
   )
 }
@@ -220,14 +178,14 @@ function EmptyState({ venueSlug }: { venueSlug: string }) {
       <div style={{ textAlign: 'center', maxWidth: 360 }}>
         <div style={{
           fontSize: 18, fontWeight: 700,
-          color: 'var(--adda-text-primary)',
+          color: 'var(--venue-text-primary)',
           fontFamily: 'var(--font-inter), system-ui, sans-serif',
           marginBottom: 8,
         }}>
           No data yet
         </div>
         <div style={{
-          fontSize: 13, color: 'var(--adda-text-muted)',
+          fontSize: 13, color: 'var(--venue-text-muted)',
           fontFamily: 'var(--font-inter), system-ui, sans-serif',
           lineHeight: 1.6,
         }}>
@@ -259,8 +217,8 @@ function EmptyState({ venueSlug }: { venueSlug: string }) {
             display: 'flex', alignItems: 'center', gap: 6,
             padding: '10px 20px',
             background: 'transparent',
-            border: '1px solid var(--adda-border-default)',
-            color: 'var(--adda-text-secondary)',
+            border: '1px solid var(--venue-border-default)',
+            color: 'var(--venue-text-secondary)',
             fontFamily: 'var(--font-jetbrains-mono), monospace',
             fontSize: 11, fontWeight: 700,
             letterSpacing: '0.12em', textTransform: 'uppercase',
@@ -273,7 +231,7 @@ function EmptyState({ venueSlug }: { venueSlug: string }) {
       </div>
 
       <div style={{
-        fontSize: 9, color: 'var(--adda-text-muted)',
+        fontSize: 9, color: 'var(--venue-text-muted)',
         fontFamily: 'var(--font-jetbrains-mono), monospace',
         letterSpacing: '0.2em', textTransform: 'uppercase',
       }}>
@@ -396,10 +354,10 @@ export default function AnalyticsPageClient({ venueName: _venueName, venueSlug, 
 
       <DemandHeatmap grid={realData.demandGrid} venueSlug={venueSlug} />
 
-      {/* ── Page Views (not tracked yet) ────────────────────────────────────── */}
+      {/* ── Page Views ──────────────────────────────────────────────────────── */}
       <SectionHeading>Page Views</SectionHeading>
 
-      <TrafficNotTracked venueSlug={venueSlug} />
+      <PageViewsChart trafficStats={realData.trafficStats} venueSlug={venueSlug} />
 
     </div>
   )

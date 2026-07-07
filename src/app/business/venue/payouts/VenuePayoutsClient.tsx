@@ -25,12 +25,12 @@ const STATUS_COLORS: Record<string, string> = {
 // ── Theme tokens ───────────────────────────────────────────────────────────────
 
 const A = {
-  bg:      'var(--adda-bg-base)',
-  surface: 'var(--adda-bg-surface)',
-  border:  'var(--adda-border)',
-  text:    'var(--adda-text-primary)',
-  textSub: 'var(--adda-text-secondary)',
-  accent:  'var(--adda-accent)',
+  bg:      'var(--venue-bg-base)',
+  surface: 'var(--venue-bg-surface)',
+  border:  'var(--venue-border)',
+  text:    'var(--venue-text-primary)',
+  textSub: 'var(--venue-text-secondary)',
+  accent:  'var(--venue-accent)',
 }
 
 // ── Props ──────────────────────────────────────────────────────────────────────

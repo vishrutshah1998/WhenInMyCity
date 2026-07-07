@@ -170,19 +170,19 @@ function DayRevenueSummary({ date }: { date: Date }) {
   return (
     <div style={{
       padding: '6px 16px',
-      background: 'var(--adda-bg-elevated)',
-      borderBottom: '1px solid var(--adda-border-subtle)',
+      background: 'var(--venue-bg-elevated)',
+      borderBottom: '1px solid var(--venue-border-subtle)',
       display: 'flex',
       alignItems: 'center',
       gap: 16,
       fontSize: 12,
       fontFamily: 'var(--font-inter), system-ui, sans-serif',
-      color: 'var(--adda-text-muted)',
+      color: 'var(--venue-text-muted)',
       flexShrink: 0,
     }}>
       <span>Today:</span>
       {confirmedPaise > 0 && (
-        <span style={{ fontWeight: 600, color: 'var(--adda-amber)' }}>
+        <span style={{ fontWeight: 600, color: 'var(--venue-amber)' }}>
           {fmt(confirmedPaise)} confirmed
         </span>
       )}
@@ -213,7 +213,7 @@ function MonthDateHeader({ date, label }: { date: Date; label: string }) {
           width: 6,
           height: 6,
           borderRadius: '50%',
-          background: 'var(--adda-amber)',
+          background: 'var(--venue-amber)',
           flexShrink: 0,
         }} />
       )}
@@ -372,7 +372,7 @@ export default function AddaCalendarClient({ venueName, addaId, googleCalendarCo
 
   if (isMobile) {
     return (
-      <div className="adda-theme" style={{ height: '100%' }}>
+      <div className="venue-theme" style={{ height: '100%' }}>
         <MobileCalendarView
           events={events}
           onBlockTime={() => {
@@ -399,12 +399,12 @@ export default function AddaCalendarClient({ venueName, addaId, googleCalendarCo
   const isDay = view === Views.DAY
 
   return (
-    <div className="adda-theme" style={{
+    <div className="venue-theme" style={{
       display: 'flex',
       flexDirection: 'column',
       height: '100%',
-      background: 'var(--adda-bg-base)',
-      color: 'var(--adda-text-primary)',
+      background: 'var(--venue-bg-base)',
+      color: 'var(--venue-text-primary)',
       fontFamily: 'var(--font-inter), system-ui, sans-serif',
     }}>
       {/* Day view revenue summary */}
@@ -468,17 +468,17 @@ export default function AddaCalendarClient({ venueName, addaId, googleCalendarCo
       {/* Calendar CSS overrides — dark theme */}
       <style>{`
         .rbc-calendar {
-          background: var(--adda-bg-base);
-          color: var(--adda-text-primary);
+          background: var(--venue-bg-base);
+          color: var(--venue-text-primary);
           font-family: var(--font-inter), system-ui, sans-serif;
           height: 100%;
         }
 
         /* Header row */
         .rbc-header {
-          background: var(--adda-bg-surface);
-          border-color: var(--adda-border-subtle) !important;
-          color: var(--adda-text-muted);
+          background: var(--venue-bg-surface);
+          border-color: var(--venue-border-subtle) !important;
+          color: var(--venue-text-muted);
           font-size: 11px;
           font-weight: 600;
           letter-spacing: 0.06em;
@@ -488,31 +488,31 @@ export default function AddaCalendarClient({ venueName, addaId, googleCalendarCo
 
         /* Time gutter */
         .rbc-time-gutter .rbc-timeslot-group {
-          border-color: var(--adda-border-subtle);
+          border-color: var(--venue-border-subtle);
         }
         .rbc-label {
-          color: var(--adda-text-muted);
+          color: var(--venue-text-muted);
           font-size: 11px;
           font-family: var(--font-jetbrains-mono), monospace;
         }
 
         /* Slots */
         .rbc-time-slot {
-          border-color: var(--adda-border-subtle) !important;
+          border-color: var(--venue-border-subtle) !important;
         }
         .rbc-timeslot-group {
-          border-color: var(--adda-border-subtle) !important;
+          border-color: var(--venue-border-subtle) !important;
         }
         .rbc-day-slot .rbc-time-slot {
-          border-top-color: var(--adda-border-subtle) !important;
+          border-top-color: var(--venue-border-subtle) !important;
         }
 
         /* Day columns */
         .rbc-day-bg + .rbc-day-bg {
-          border-color: var(--adda-border-subtle) !important;
+          border-color: var(--venue-border-subtle) !important;
         }
         .rbc-time-content > * + * > * {
-          border-color: var(--adda-border-subtle) !important;
+          border-color: var(--venue-border-subtle) !important;
         }
 
         /* Today highlight */
@@ -520,7 +520,7 @@ export default function AddaCalendarClient({ venueName, addaId, googleCalendarCo
           background: rgba(245,158,11,0.04) !important;
         }
         .rbc-header.rbc-today {
-          color: var(--adda-amber) !important;
+          color: var(--venue-amber) !important;
           background: rgba(245,158,11,0.08) !important;
         }
 
@@ -543,24 +543,24 @@ export default function AddaCalendarClient({ venueName, addaId, googleCalendarCo
 
         /* Month grid */
         .rbc-month-view {
-          border-color: var(--adda-border-subtle) !important;
+          border-color: var(--venue-border-subtle) !important;
         }
         .rbc-month-row + .rbc-month-row {
-          border-color: var(--adda-border-subtle) !important;
+          border-color: var(--venue-border-subtle) !important;
         }
         .rbc-day-bg.rbc-off-range-bg {
           background: rgba(0,0,0,0.3) !important;
         }
         .rbc-date-cell {
-          color: var(--adda-text-secondary);
+          color: var(--venue-text-secondary);
           font-size: 12px;
           padding: 4px 6px;
         }
         .rbc-off-range .rbc-date-cell {
-          color: var(--adda-text-muted) !important;
+          color: var(--venue-text-muted) !important;
         }
         .rbc-show-more {
-          color: var(--adda-amber) !important;
+          color: var(--venue-amber) !important;
           font-size: 11px;
           font-weight: 600;
           background: transparent;
@@ -580,7 +580,7 @@ export default function AddaCalendarClient({ venueName, addaId, googleCalendarCo
 
         /* Resize handle */
         .rbc-addons-dnd .rbc-addons-dnd-resize-ns-anchor:last-child .rbc-addons-dnd-resize-ns-icon {
-          border-top: 3px double var(--adda-amber-border);
+          border-top: 3px double var(--venue-amber-border);
         }
 
         /* Scrollbar for time view */
@@ -595,18 +595,18 @@ export default function AddaCalendarClient({ venueName, addaId, googleCalendarCo
 
         /* Popup (month "+X more") */
         .rbc-overlay {
-          background: var(--adda-bg-elevated);
-          border: 1px solid var(--adda-border-default);
+          background: var(--venue-bg-elevated);
+          border: 1px solid var(--venue-border-default);
           border-radius: 10px;
           box-shadow: 0 20px 40px rgba(0,0,0,0.5);
           z-index: 80;
         }
         .rbc-overlay-header {
-          border-bottom: 1px solid var(--adda-border-subtle);
+          border-bottom: 1px solid var(--venue-border-subtle);
           padding: 8px 12px;
           font-size: 12px;
           font-weight: 600;
-          color: var(--adda-text-secondary);
+          color: var(--venue-text-secondary);
           font-family: var(--font-inter), system-ui, sans-serif;
         }
 
@@ -631,7 +631,7 @@ export default function AddaCalendarClient({ venueName, addaId, googleCalendarCo
           border: none !important;
         }
         .rbc-event:focus {
-          outline: 2px solid var(--adda-amber) !important;
+          outline: 2px solid var(--venue-amber) !important;
           outline-offset: 1px;
         }
 
@@ -644,7 +644,7 @@ export default function AddaCalendarClient({ venueName, addaId, googleCalendarCo
         /* Selection highlight when dragging to create */
         .rbc-slot-selection {
           background: rgba(245,158,11,0.12) !important;
-          border: 1px dashed var(--adda-amber-border) !important;
+          border: 1px dashed var(--venue-amber-border) !important;
           border-radius: 4px;
         }
       `}</style>

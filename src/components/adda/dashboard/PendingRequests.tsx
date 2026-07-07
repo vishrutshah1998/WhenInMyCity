@@ -43,11 +43,11 @@ function getInitials(name: string): string {
 function EmptyClipboard() {
   return (
     <svg width="40" height="40" viewBox="0 0 40 40" fill="none" aria-hidden>
-      <rect x="8" y="12" width="24" height="22" rx="3" stroke="var(--adda-border-strong)" strokeWidth="1.5" fill="none" />
-      <rect x="14" y="8" width="12" height="7" rx="2" stroke="var(--adda-border-strong)" strokeWidth="1.5" fill="none" />
-      <rect x="9" y="9" width="22" height="4" rx="2" fill="var(--adda-bg-elevated)" />
-      <line x1="13" y1="21" x2="27" y2="21" stroke="var(--adda-border-default)" strokeWidth="1.5" strokeLinecap="round" />
-      <line x1="13" y1="26" x2="22" y2="26" stroke="var(--adda-border-default)" strokeWidth="1.5" strokeLinecap="round" />
+      <rect x="8" y="12" width="24" height="22" rx="3" stroke="var(--venue-border-strong)" strokeWidth="1.5" fill="none" />
+      <rect x="14" y="8" width="12" height="7" rx="2" stroke="var(--venue-border-strong)" strokeWidth="1.5" fill="none" />
+      <rect x="9" y="9" width="22" height="4" rx="2" fill="var(--venue-bg-elevated)" />
+      <line x1="13" y1="21" x2="27" y2="21" stroke="var(--venue-border-default)" strokeWidth="1.5" strokeLinecap="round" />
+      <line x1="13" y1="26" x2="22" y2="26" stroke="var(--venue-border-default)" strokeWidth="1.5" strokeLinecap="round" />
     </svg>
   )
 }
@@ -78,7 +78,7 @@ function ProposalCard({
   return (
     <div style={{
       padding: '14px 16px',
-      borderBottom: '1px solid var(--adda-border-subtle)',
+      borderBottom: '1px solid var(--venue-border-subtle)',
     }}>
       {/* Creator row */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
@@ -90,14 +90,14 @@ function ProposalCard({
             width: 32,
             height: 32,
             borderRadius: '50%',
-            background: 'var(--adda-bg-overlay)',
-            border: avatarHovered ? '2px solid var(--adda-amber)' : '2px solid transparent',
+            background: 'var(--venue-bg-overlay)',
+            border: avatarHovered ? '2px solid var(--venue-amber)' : '2px solid transparent',
             transition: 'border-color 160ms ease',
             display: 'grid',
             placeItems: 'center',
             fontSize: 11,
             fontWeight: 700,
-            color: 'var(--adda-text-secondary)',
+            color: 'var(--venue-text-secondary)',
             fontFamily: 'var(--font-inter), system-ui, sans-serif',
             flexShrink: 0,
           }}
@@ -110,7 +110,7 @@ function ProposalCard({
             <span style={{
               fontSize: 13,
               fontWeight: 600,
-              color: 'var(--adda-text-primary)',
+              color: 'var(--venue-text-primary)',
               fontFamily: 'var(--font-inter), system-ui, sans-serif',
               overflow: 'hidden',
               textOverflow: 'ellipsis',
@@ -124,8 +124,8 @@ function ProposalCard({
               fontWeight: 600,
               padding: '1px 6px',
               borderRadius: 9999,
-              background: 'var(--adda-bg-hover)',
-              color: 'var(--adda-text-muted)',
+              background: 'var(--venue-bg-hover)',
+              color: 'var(--venue-text-muted)',
               fontFamily: 'var(--font-jetbrains-mono), monospace',
               flexShrink: 0,
             }}>
@@ -135,7 +135,7 @@ function ProposalCard({
           {/* Meta row */}
           <div style={{
             fontSize: 11,
-            color: 'var(--adda-text-muted)',
+            color: 'var(--venue-text-muted)',
             fontFamily: 'var(--font-jetbrains-mono), monospace',
             marginTop: 1,
             display: 'flex',
@@ -160,7 +160,7 @@ function ProposalCard({
       <div style={{
         fontSize: 12.5,
         fontWeight: 500,
-        color: 'var(--adda-text-secondary)',
+        color: 'var(--venue-text-secondary)',
         fontFamily: 'var(--font-inter), system-ui, sans-serif',
         marginBottom: 10,
         overflow: 'hidden',
@@ -206,8 +206,8 @@ export default function PendingRequests({ proposals: initialProposals }: Props) 
 
   return (
     <div style={{
-      background: 'var(--adda-bg-surface)',
-      border: '1px solid var(--adda-border-subtle)',
+      background: 'var(--venue-bg-surface)',
+      border: '1px solid var(--venue-border-subtle)',
       borderRadius: 12,
       overflow: 'hidden',
       display: 'flex',
@@ -216,7 +216,7 @@ export default function PendingRequests({ proposals: initialProposals }: Props) 
       {/* Header */}
       <div style={{
         padding: '14px 16px',
-        borderBottom: '1px solid var(--adda-border-subtle)',
+        borderBottom: '1px solid var(--venue-border-subtle)',
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
@@ -224,7 +224,7 @@ export default function PendingRequests({ proposals: initialProposals }: Props) 
         <span style={{
           fontSize: 13,
           fontWeight: 600,
-          color: 'var(--adda-text-primary)',
+          color: 'var(--venue-text-primary)',
           fontFamily: 'var(--font-inter), system-ui, sans-serif',
         }}>
           Booking Requests
@@ -233,7 +233,7 @@ export default function PendingRequests({ proposals: initialProposals }: Props) 
           <span
             className="font-adda-nums"
             style={{
-              background: 'var(--adda-amber)',
+              background: 'var(--venue-amber)',
               color: '#000',
               fontSize: 10,
               fontWeight: 700,
@@ -251,9 +251,9 @@ export default function PendingRequests({ proposals: initialProposals }: Props) 
       {error && (
         <div style={{
           padding: '8px 16px',
-          background: 'var(--adda-conflict)',
+          background: 'var(--venue-conflict)',
           fontSize: 12,
-          color: 'var(--adda-danger)',
+          color: 'var(--venue-danger)',
           fontFamily: 'var(--font-inter), system-ui, sans-serif',
         }}>
           {error}
@@ -276,14 +276,14 @@ export default function PendingRequests({ proposals: initialProposals }: Props) 
           <div style={{
             fontSize: 13,
             fontWeight: 600,
-            color: 'var(--adda-text-secondary)',
+            color: 'var(--venue-text-secondary)',
             fontFamily: 'var(--font-inter), system-ui, sans-serif',
           }}>
             All caught up!
           </div>
           <div style={{
             fontSize: 12,
-            color: 'var(--adda-text-muted)',
+            color: 'var(--venue-text-muted)',
             fontFamily: 'var(--font-inter), system-ui, sans-serif',
             textAlign: 'center',
             lineHeight: 1.5,
@@ -300,14 +300,14 @@ export default function PendingRequests({ proposals: initialProposals }: Props) 
           {proposals.length > 3 && (
             <div style={{
               padding: '12px 16px',
-              borderTop: '1px solid var(--adda-border-subtle)',
+              borderTop: '1px solid var(--venue-border-subtle)',
             }}>
               <Link
                 href="/business/venue/bookings"
                 style={{
                   fontSize: 12.5,
                   fontWeight: 600,
-                  color: 'var(--adda-amber)',
+                  color: 'var(--venue-amber)',
                   textDecoration: 'none',
                   fontFamily: 'var(--font-inter), system-ui, sans-serif',
                   display: 'flex',

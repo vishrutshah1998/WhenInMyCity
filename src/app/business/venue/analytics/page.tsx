@@ -11,6 +11,7 @@ const EMPTY_ANALYTICS: AddaAnalyticsData = {
   dailyMetrics: [],
   proposalFunnel: { received: 0, accepted: 0, eventsCompleted: 0 },
   demandGrid: [],
+  trafficStats: { totalViews: 0, byDay: [], windowDays: 30 },
   hasData: false,
 }
 
@@ -39,13 +40,13 @@ export default async function AddaAnalyticsPage() {
         <div>
           <div style={{
             fontSize: 20, fontWeight: 700,
-            color: 'var(--adda-text-primary)',
+            color: 'var(--venue-text-primary)',
             fontFamily: 'var(--font-inter), system-ui, sans-serif',
           }}>
             Analytics
           </div>
           <div style={{
-            fontSize: 11, color: 'var(--adda-text-muted)',
+            fontSize: 11, color: 'var(--venue-text-muted)',
             fontFamily: 'var(--font-jetbrains-mono), monospace', marginTop: 2,
           }}>
             {adda.name}
@@ -58,7 +59,7 @@ export default async function AddaAnalyticsPage() {
           style={{
             display: 'flex', alignItems: 'center', gap: 5,
             fontSize: 12.5, fontWeight: 600,
-            color: 'var(--adda-amber)', textDecoration: 'none',
+            color: 'var(--venue-amber)', textDecoration: 'none',
             fontFamily: 'var(--font-inter), system-ui, sans-serif',
           }}
         >
@@ -85,15 +86,15 @@ function AnalyticsSkeleton() {
     <div style={{ padding: '0 28px 48px' }}>
       <div style={{ display: 'flex', gap: 6, marginBottom: 24 }}>
         {Array.from({ length: 5 }).map((_, i) => (
-          <div key={i} style={{ width: 72, height: 28, borderRadius: 6, background: 'var(--adda-bg-elevated)' }} />
+          <div key={i} style={{ width: 72, height: 28, borderRadius: 6, background: 'var(--venue-bg-elevated)' }} />
         ))}
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 24 }}>
         {Array.from({ length: 4 }).map((_, i) => (
-          <div key={i} style={{ height: 120, borderRadius: 12, background: 'var(--adda-bg-elevated)' }} />
+          <div key={i} style={{ height: 120, borderRadius: 12, background: 'var(--venue-bg-elevated)' }} />
         ))}
       </div>
-      <div style={{ height: 320, borderRadius: 12, background: 'var(--adda-bg-elevated)', marginBottom: 16 }} />
+      <div style={{ height: 320, borderRadius: 12, background: 'var(--venue-bg-elevated)', marginBottom: 16 }} />
     </div>
   )
 }

@@ -32,8 +32,8 @@ export default async function BrandLayout({ children }: { children: React.ReactN
 
   return (
     <div
-      className="adda-theme brand-variant"
-      style={{ minHeight: '100vh', background: 'var(--adda-bg-base)', position: 'relative' }}
+      className="venue-theme brand-variant"
+      style={{ minHeight: '100vh', background: 'var(--venue-bg-base)', position: 'relative' }}
     >
       {/* Grain texture — matches creator dashboard aesthetic */}
       <div className="wimc-grain" aria-hidden />
@@ -43,7 +43,7 @@ export default async function BrandLayout({ children }: { children: React.ReactN
       </div>
 
       <div
-        className="dash-content md:ml-[var(--adda-sidebar-w)]"
+        className="dash-content md:ml-[var(--venue-sidebar-w)]"
         style={{
           transition: 'margin-left 220ms cubic-bezier(0.4,0,0.2,1)',
           display: 'flex', flexDirection: 'column', minHeight: '100vh',

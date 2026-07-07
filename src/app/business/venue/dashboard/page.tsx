@@ -37,7 +37,7 @@ function buildRevenueTrend(): MonthlyRevenue[] {
 // ---------------------------------------------------------------------------
 
 const TIER_COLORS: Record<AddaTier, { bg: string; border: string; color: string; icon: string }> = {
-  open:      { bg: 'rgba(255,255,255,0.04)', border: 'var(--adda-border-subtle)', color: 'var(--adda-text-muted)',  icon: 'storefront' },
+  open:      { bg: 'rgba(255,255,255,0.04)', border: 'var(--venue-border-subtle)', color: 'var(--venue-text-muted)',  icon: 'storefront' },
   verified:  { bg: 'rgba(77,210,177,0.08)',  border: 'rgba(77,210,177,0.3)',      color: '#4dd2b1',               icon: 'verified' },
   beloved:   { bg: 'rgba(245,168,0,0.08)',   border: 'rgba(245,168,0,0.3)',       color: '#f5a800',               icon: 'favorite' },
   legendary: { bg: 'rgba(168,85,247,0.08)',  border: 'rgba(168,85,247,0.3)',      color: '#a855f7',               icon: 'workspace_premium' },
@@ -54,13 +54,13 @@ function Gate({ met, label, detail }: { met: boolean; label: string; detail: str
     <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '8px 0' }}>
       <span
         className="material-symbols-outlined"
-        style={{ fontSize: 16, color: met ? '#4dd2b1' : 'var(--adda-text-muted)', flexShrink: 0, marginTop: 1 }}
+        style={{ fontSize: 16, color: met ? '#4dd2b1' : 'var(--venue-text-muted)', flexShrink: 0, marginTop: 1 }}
       >
         {met ? 'check_circle' : 'radio_button_unchecked'}
       </span>
       <div>
-        <div style={{ fontSize: 13, fontWeight: 600, color: met ? 'var(--adda-text-primary)' : 'var(--adda-text-muted)' }}>{label}</div>
-        <div style={{ fontSize: 11, color: 'var(--adda-text-muted)', fontFamily: 'var(--font-jetbrains-mono)', marginTop: 1 }}>{detail}</div>
+        <div style={{ fontSize: 13, fontWeight: 600, color: met ? 'var(--venue-text-primary)' : 'var(--venue-text-muted)' }}>{label}</div>
+        <div style={{ fontSize: 11, color: 'var(--venue-text-muted)', fontFamily: 'var(--font-jetbrains-mono)', marginTop: 1 }}>{detail}</div>
       </div>
     </div>
   )
@@ -117,7 +117,7 @@ function TierProgressCard({ adda, reviewCount }: { adda: AddaProfile; reviewCoun
             <span className="material-symbols-outlined" style={{ fontSize: 20 }}>{c.icon}</span>
           </div>
           <div>
-            <div style={{ fontSize: 11, fontFamily: 'var(--font-jetbrains-mono)', color: 'var(--adda-text-muted)', textTransform: 'uppercase', letterSpacing: '0.7px', marginBottom: 2 }}>
+            <div style={{ fontSize: 11, fontFamily: 'var(--font-jetbrains-mono)', color: 'var(--venue-text-muted)', textTransform: 'uppercase', letterSpacing: '0.7px', marginBottom: 2 }}>
               Current Tier
             </div>
             <div style={{ fontFamily: 'var(--font-syne)', fontWeight: 800, fontSize: 20, color: c.color }}>
@@ -139,15 +139,15 @@ function TierProgressCard({ adda, reviewCount }: { adda: AddaProfile; reviewCoun
 
       {nextTier ? (
         <>
-          <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--adda-text-secondary)', fontFamily: 'var(--font-jetbrains-mono)', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: 8 }}>
+          <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--venue-text-secondary)', fontFamily: 'var(--font-jetbrains-mono)', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: 8 }}>
             Requirements for {TIER_LABELS[nextTier]}
           </div>
-          <div style={{ borderTop: '1px solid var(--adda-border-subtle)' }}>
+          <div style={{ borderTop: '1px solid var(--venue-border-subtle)' }}>
             {gates.map((g) => <Gate key={g.label} {...g} />)}
           </div>
         </>
       ) : (
-        <div style={{ fontSize: 13, color: 'var(--adda-text-secondary)', textAlign: 'center', padding: '8px 0' }}>
+        <div style={{ fontSize: 13, color: 'var(--venue-text-secondary)', textAlign: 'center', padding: '8px 0' }}>
           You have reached the highest Adda tier. Keep the flame alive!
         </div>
       )}
@@ -214,7 +214,7 @@ export default async function AddaDashboardPage() {
       <div style={{
         display: 'grid', placeItems: 'center', minHeight: '60vh',
         fontFamily: 'var(--font-inter), system-ui, sans-serif',
-        color: 'var(--adda-text-secondary)',
+        color: 'var(--venue-text-secondary)',
       }}>
         {(result as { error: string }).error}
       </div>
@@ -307,7 +307,7 @@ export default async function AddaDashboardPage() {
             }}>
               <span style={{
                 fontFamily: 'var(--font-syne)', fontSize: 28, fontWeight: 900,
-                color: 'var(--adda-amber)', lineHeight: 1,
+                color: 'var(--venue-amber)', lineHeight: 1,
               }}>
                 {pendingProposals.length}
               </span>
@@ -315,13 +315,13 @@ export default async function AddaDashboardPage() {
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{
                 fontFamily: 'var(--font-syne)', fontWeight: 800, fontSize: 18,
-                color: 'var(--adda-text-primary)', marginBottom: 4,
+                color: 'var(--venue-text-primary)', marginBottom: 4,
               }}>
                 {pendingProposals.length === 1
                   ? '1 creator wants to perform at your space'
                   : `${pendingProposals.length} creators want to perform at your space`}
               </div>
-              <div style={{ fontSize: 13, color: 'var(--adda-text-muted)', fontFamily: 'var(--font-dm-sans, sans-serif)' }}>
+              <div style={{ fontSize: 13, color: 'var(--venue-text-muted)', fontFamily: 'var(--font-dm-sans, sans-serif)' }}>
                 Respond within 48 hours to secure the booking · Tap to review
               </div>
             </div>
@@ -330,7 +330,7 @@ export default async function AddaDashboardPage() {
               background: 'rgba(245,168,0,0.15)',
               display: 'grid', placeItems: 'center', flexShrink: 0,
             }}>
-              <span className="material-symbols-outlined" style={{ fontSize: 20, color: 'var(--adda-amber)' }}>arrow_forward</span>
+              <span className="material-symbols-outlined" style={{ fontSize: 20, color: 'var(--venue-amber)' }}>arrow_forward</span>
             </div>
           </Link>
         )}

@@ -90,13 +90,13 @@ function Bubble({ message }: { message: Message }) {
         maxWidth: '72%',
         padding: '10px 14px',
         borderRadius: isVenue ? '16px 4px 16px 16px' : '4px 16px 16px 16px',
-        background: isVenue ? 'var(--adda-amber-tint)' : 'var(--adda-bg-elevated)',
-        border: `1px solid ${isVenue ? 'var(--adda-amber-border)' : 'var(--adda-border-subtle)'}`,
+        background: isVenue ? 'var(--venue-amber-tint)' : 'var(--venue-bg-elevated)',
+        border: `1px solid ${isVenue ? 'var(--venue-amber-border)' : 'var(--venue-border-subtle)'}`,
       }}>
         <p style={{
           margin: 0,
           fontSize: 13.5,
-          color: 'var(--adda-text-primary)',
+          color: 'var(--venue-text-primary)',
           fontFamily: 'var(--font-inter), system-ui, sans-serif',
           lineHeight: 1.6,
           whiteSpace: 'pre-wrap',
@@ -107,7 +107,7 @@ function Bubble({ message }: { message: Message }) {
       </div>
       <span style={{
         fontSize: 11,
-        color: 'var(--adda-text-muted)',
+        color: 'var(--venue-text-muted)',
         fontFamily: 'var(--font-jetbrains-mono), monospace',
         marginTop: 4,
         paddingLeft: isVenue ? 0 : 4,
@@ -194,7 +194,7 @@ export default function MessageThread({ bookingId }: Props) {
     <div style={{
       display: 'flex',
       flexDirection: 'column',
-      borderTop: '1px solid var(--adda-border-subtle)',
+      borderTop: '1px solid var(--venue-border-subtle)',
       marginTop: 8,
     }}>
       {/* Thread header */}
@@ -206,7 +206,7 @@ export default function MessageThread({ bookingId }: Props) {
       }}>
         <span
           className="material-symbols-outlined"
-          style={{ fontSize: 16, color: 'var(--adda-text-muted)' }}
+          style={{ fontSize: 16, color: 'var(--venue-text-muted)' }}
         >
           chat
         </span>
@@ -215,14 +215,14 @@ export default function MessageThread({ bookingId }: Props) {
           fontWeight: 600,
           letterSpacing: '0.8px',
           textTransform: 'uppercase',
-          color: 'var(--adda-text-muted)',
+          color: 'var(--venue-text-muted)',
           fontFamily: 'var(--font-inter), system-ui, sans-serif',
         }}>
           Messages
         </span>
         <span style={{
           fontSize: 10,
-          color: 'var(--adda-text-muted)',
+          color: 'var(--venue-text-muted)',
           fontFamily: 'var(--font-inter), system-ui, sans-serif',
           marginLeft: 4,
           fontStyle: 'italic',
@@ -239,7 +239,7 @@ export default function MessageThread({ bookingId }: Props) {
             textAlign: 'center',
             padding: '24px 0',
             fontSize: 13,
-            color: 'var(--adda-text-muted)',
+            color: 'var(--venue-text-muted)',
             fontFamily: 'var(--font-inter), system-ui, sans-serif',
           }}>
             No messages yet. Start the conversation.
@@ -259,8 +259,8 @@ export default function MessageThread({ bookingId }: Props) {
             {/* Animated dots */}
             <div style={{
               padding: '8px 14px',
-              background: 'var(--adda-bg-elevated)',
-              border: '1px solid var(--adda-border-subtle)',
+              background: 'var(--venue-bg-elevated)',
+              border: '1px solid var(--venue-border-subtle)',
               borderRadius: '4px 16px 16px 16px',
               display: 'flex',
               gap: 4,
@@ -273,7 +273,7 @@ export default function MessageThread({ bookingId }: Props) {
                     width: 5,
                     height: 5,
                     borderRadius: '50%',
-                    background: 'var(--adda-text-muted)',
+                    background: 'var(--venue-text-muted)',
                     display: 'inline-block',
                     animation: `typingDot 1.2s ease-in-out ${i * 0.2}s infinite`,
                   }}
@@ -282,7 +282,7 @@ export default function MessageThread({ bookingId }: Props) {
             </div>
             <span style={{
               fontSize: 11,
-              color: 'var(--adda-text-muted)',
+              color: 'var(--venue-text-muted)',
               fontFamily: 'var(--font-inter), system-ui, sans-serif',
             }}>
               Creator is typing…
@@ -299,8 +299,8 @@ export default function MessageThread({ bookingId }: Props) {
         gap: 10,
         alignItems: 'flex-end',
         padding: '12px 14px',
-        background: 'var(--adda-bg-elevated)',
-        border: '1px solid var(--adda-border-default)',
+        background: 'var(--venue-bg-elevated)',
+        border: '1px solid var(--venue-border-default)',
         borderRadius: 10,
         marginTop: 8,
       }}>
@@ -318,7 +318,7 @@ export default function MessageThread({ bookingId }: Props) {
             outline: 'none',
             resize: 'none',
             fontSize: 13.5,
-            color: 'var(--adda-text-primary)',
+            color: 'var(--venue-text-primary)',
             fontFamily: 'var(--font-inter), system-ui, sans-serif',
             lineHeight: 1.6,
             overflowY: 'hidden',
@@ -335,7 +335,7 @@ export default function MessageThread({ bookingId }: Props) {
             width: 34,
             height: 34,
             borderRadius: '50%',
-            background: canSend ? 'var(--adda-amber)' : 'var(--adda-bg-overlay)',
+            background: canSend ? 'var(--venue-amber)' : 'var(--venue-bg-overlay)',
             border: 'none',
             cursor: canSend ? 'pointer' : 'not-allowed',
             flexShrink: 0,
@@ -346,7 +346,7 @@ export default function MessageThread({ bookingId }: Props) {
             className="material-symbols-outlined"
             style={{
               fontSize: 18,
-              color: canSend ? '#000' : 'var(--adda-text-muted)',
+              color: canSend ? '#000' : 'var(--venue-text-muted)',
               fontVariationSettings: "'FILL' 1",
             }}
           >

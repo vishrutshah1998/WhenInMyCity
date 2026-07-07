@@ -42,22 +42,22 @@ function fmtTime(d: Date): string {
 
 function statusColor(status: CalendarEvent['status']): string {
   switch (status) {
-    case 'confirmed': return 'var(--adda-amber)'
+    case 'confirmed': return 'var(--venue-amber)'
     case 'pending':   return '#d97706'
     case 'tentative': return '#d97706'
-    case 'blocked':   return 'var(--adda-text-muted)'
+    case 'blocked':   return 'var(--venue-text-muted)'
     case 'external':  return '#10b981'
-    case 'buffer':    return 'var(--adda-text-muted)'
-    default:          return 'var(--adda-text-muted)'
+    case 'buffer':    return 'var(--venue-text-muted)'
+    default:          return 'var(--venue-text-muted)'
   }
 }
 
 function statusDotBg(status: CalendarEvent['status']): string {
   switch (status) {
-    case 'confirmed': return 'var(--adda-amber)'
+    case 'confirmed': return 'var(--venue-amber)'
     case 'pending':   return 'transparent'
     case 'tentative': return 'transparent'
-    case 'blocked':   return 'var(--adda-bg-overlay, #27272a)'
+    case 'blocked':   return 'var(--venue-bg-overlay, #27272a)'
     case 'external':  return '#10b981'
     default:          return 'transparent'
   }
@@ -107,7 +107,7 @@ function DayCell({
         flex: 1,
         borderRadius: 10,
         border: isSelected
-          ? '1.5px solid var(--adda-amber)'
+          ? '1.5px solid var(--venue-amber)'
           : isToday
             ? '1px solid rgba(245,158,11,0.4)'
             : '1px solid transparent',
@@ -125,7 +125,7 @@ function DayCell({
       <span style={{
         fontSize: 10,
         fontWeight: 500,
-        color: isSelected || isToday ? 'var(--adda-amber)' : 'var(--adda-text-muted)',
+        color: isSelected || isToday ? 'var(--venue-amber)' : 'var(--venue-text-muted)',
         fontFamily: 'var(--font-jetbrains-mono), monospace',
         letterSpacing: '0.4px',
         lineHeight: 1,
@@ -137,7 +137,7 @@ function DayCell({
       <span style={{
         fontSize: 18,
         fontWeight: isSelected || isToday ? 700 : 400,
-        color: isSelected || isToday ? 'var(--adda-amber)' : 'var(--adda-text-primary)',
+        color: isSelected || isToday ? 'var(--venue-amber)' : 'var(--venue-text-primary)',
         fontFamily: 'var(--font-inter), system-ui, sans-serif',
         lineHeight: 1,
       }}>
@@ -151,7 +151,7 @@ function DayCell({
             width: dotCount > 2 ? 16 : dotCount * 7,
             height: 4,
             borderRadius: 2,
-            background: 'var(--adda-amber)',
+            background: 'var(--venue-amber)',
             opacity: isSelected ? 1 : 0.7,
           }} />
         )}
@@ -182,7 +182,7 @@ function AgendaItem({ event }: { event: CalendarEvent }) {
       alignItems: 'flex-start',
       gap: 14,
       padding: '14px 0',
-      borderBottom: '1px solid var(--adda-border-subtle)',
+      borderBottom: '1px solid var(--venue-border-subtle)',
     }}>
       {/* Time column */}
       <div style={{
@@ -196,14 +196,14 @@ function AgendaItem({ event }: { event: CalendarEvent }) {
         <span style={{
           fontSize: 13,
           fontWeight: 600,
-          color: 'var(--adda-text-primary)',
+          color: 'var(--venue-text-primary)',
           fontFamily: 'var(--font-jetbrains-mono), monospace',
         }}>
           {fmtTime(event.start)}
         </span>
         <span style={{
           fontSize: 11,
-          color: 'var(--adda-text-muted)',
+          color: 'var(--venue-text-muted)',
           fontFamily: 'var(--font-jetbrains-mono), monospace',
         }}>
           {fmtTime(event.end)}
@@ -236,7 +236,7 @@ function AgendaItem({ event }: { event: CalendarEvent }) {
           <span style={{
             fontSize: 15,
             fontWeight: 600,
-            color: 'var(--adda-text-primary)',
+            color: 'var(--venue-text-primary)',
             fontFamily: 'var(--font-inter), system-ui, sans-serif',
             overflow: 'hidden',
             textOverflow: 'ellipsis',
@@ -258,10 +258,10 @@ function AgendaItem({ event }: { event: CalendarEvent }) {
           </span>
           {event.creatorName && (
             <>
-              <span style={{ color: 'var(--adda-border-default)', fontSize: 10 }}>·</span>
+              <span style={{ color: 'var(--venue-border-default)', fontSize: 10 }}>·</span>
               <span style={{
                 fontSize: 12,
-                color: 'var(--adda-text-secondary)',
+                color: 'var(--venue-text-secondary)',
                 fontFamily: 'var(--font-inter), system-ui, sans-serif',
               }}>
                 {event.creatorName}
@@ -270,10 +270,10 @@ function AgendaItem({ event }: { event: CalendarEvent }) {
           )}
           {event.hourlyRate && event.status === 'confirmed' && (
             <>
-              <span style={{ color: 'var(--adda-border-default)', fontSize: 10 }}>·</span>
+              <span style={{ color: 'var(--venue-border-default)', fontSize: 10 }}>·</span>
               <span style={{
                 fontSize: 11,
-                color: 'var(--adda-amber)',
+                color: 'var(--venue-amber)',
                 fontFamily: 'var(--font-jetbrains-mono), monospace',
               }}>
                 ₹{Math.round(event.hourlyRate * (event.end.getTime() - event.start.getTime()) / 3_600_000_00) / 10}
@@ -346,12 +346,12 @@ export default function MobileCalendarView({ events, onBlockTime }: Props) {
   }
 
   return (
-    <div className="adda-theme" style={{
+    <div className="venue-theme" style={{
       display: 'flex',
       flexDirection: 'column',
       height: '100%',
-      background: 'var(--adda-bg-base)',
-      color: 'var(--adda-text-primary)',
+      background: 'var(--venue-bg-base)',
+      color: 'var(--venue-text-primary)',
       fontFamily: 'var(--font-inter), system-ui, sans-serif',
       overflow: 'hidden',
     }}>
@@ -360,8 +360,8 @@ export default function MobileCalendarView({ events, onBlockTime }: Props) {
       <div style={{
         flexShrink: 0,
         padding: '12px 16px 0',
-        borderBottom: '1px solid var(--adda-border-subtle)',
-        background: 'var(--adda-bg-surface)',
+        borderBottom: '1px solid var(--venue-border-subtle)',
+        background: 'var(--venue-bg-surface)',
       }}>
         {/* Month label + nav */}
         <div style={{
@@ -374,7 +374,7 @@ export default function MobileCalendarView({ events, onBlockTime }: Props) {
             <span style={{
               fontSize: 14,
               fontWeight: 600,
-              color: 'var(--adda-text-primary)',
+              color: 'var(--venue-text-primary)',
               fontFamily: 'var(--font-inter), system-ui, sans-serif',
             }}>
               {weekLabel}
@@ -386,9 +386,9 @@ export default function MobileCalendarView({ events, onBlockTime }: Props) {
               style={{
                 padding: '4px 10px',
                 borderRadius: 6,
-                border: '1px solid var(--adda-border-default)',
+                border: '1px solid var(--venue-border-default)',
                 background: 'transparent',
-                color: 'var(--adda-amber)',
+                color: 'var(--venue-amber)',
                 fontSize: 11,
                 fontFamily: 'var(--font-jetbrains-mono), monospace',
                 cursor: 'pointer',
@@ -405,9 +405,9 @@ export default function MobileCalendarView({ events, onBlockTime }: Props) {
                 width: 36,
                 height: 36,
                 borderRadius: 8,
-                border: '1px solid var(--adda-border-subtle)',
+                border: '1px solid var(--venue-border-subtle)',
                 background: 'transparent',
-                color: 'var(--adda-text-secondary)',
+                color: 'var(--venue-text-secondary)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -424,9 +424,9 @@ export default function MobileCalendarView({ events, onBlockTime }: Props) {
                 width: 36,
                 height: 36,
                 borderRadius: 8,
-                border: '1px solid var(--adda-border-subtle)',
+                border: '1px solid var(--venue-border-subtle)',
                 background: 'transparent',
-                color: 'var(--adda-text-secondary)',
+                color: 'var(--venue-text-secondary)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -483,7 +483,7 @@ export default function MobileCalendarView({ events, onBlockTime }: Props) {
           <span style={{
             fontSize: 13,
             fontWeight: 600,
-            color: selectedKey === todayKey ? 'var(--adda-amber)' : 'var(--adda-text-secondary)',
+            color: selectedKey === todayKey ? 'var(--venue-amber)' : 'var(--venue-text-secondary)',
             fontFamily: 'var(--font-inter), system-ui, sans-serif',
           }}>
             {selectedKey === todayKey ? 'Today' : `${DAY_ABBR[selectedDate.getDay()]}, ${MONTH_NAMES[selectedDate.getMonth()]} ${selectedDate.getDate()}`}
@@ -491,7 +491,7 @@ export default function MobileCalendarView({ events, onBlockTime }: Props) {
           {selectedDayEvents.length > 0 && (
             <span style={{
               fontSize: 11,
-              color: 'var(--adda-text-muted)',
+              color: 'var(--venue-text-muted)',
               fontFamily: 'var(--font-jetbrains-mono), monospace',
             }}>
               {selectedDayEvents.length} booking{selectedDayEvents.length !== 1 ? 's' : ''}
@@ -511,13 +511,13 @@ export default function MobileCalendarView({ events, onBlockTime }: Props) {
           }}>
             <span className="material-symbols-outlined" style={{
               fontSize: 40,
-              color: 'var(--adda-border-default)',
+              color: 'var(--venue-border-default)',
             }}>
               event_available
             </span>
             <span style={{
               fontSize: 14,
-              color: 'var(--adda-text-muted)',
+              color: 'var(--venue-text-muted)',
               fontFamily: 'var(--font-inter), system-ui, sans-serif',
             }}>
               No bookings this day
@@ -529,9 +529,9 @@ export default function MobileCalendarView({ events, onBlockTime }: Props) {
                   marginTop: 8,
                   padding: '10px 20px',
                   borderRadius: 8,
-                  border: '1px dashed var(--adda-amber-border, rgba(245,158,11,0.4))',
+                  border: '1px dashed var(--venue-amber-border, rgba(245,158,11,0.4))',
                   background: 'transparent',
-                  color: 'var(--adda-amber)',
+                  color: 'var(--venue-amber)',
                   fontSize: 12,
                   fontFamily: 'var(--font-jetbrains-mono), monospace',
                   letterSpacing: '0.05em',

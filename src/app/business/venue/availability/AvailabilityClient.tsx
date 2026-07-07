@@ -13,12 +13,12 @@ import {
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
 const A = {
-  bg:       'var(--adda-bg-base)',
-  surface:  'var(--adda-bg-surface)',
-  border:   'var(--adda-border)',
-  text:     'var(--adda-text-primary)',
-  textSub:  'var(--adda-text-secondary)',
-  accent:   'var(--adda-accent)',
+  bg:       'var(--venue-bg-base)',
+  surface:  'var(--venue-bg-surface)',
+  border:   'var(--venue-border)',
+  text:     'var(--venue-text-primary)',
+  textSub:  'var(--venue-text-secondary)',
+  accent:   'var(--venue-accent)',
   error:    '#EF4444',
 }
 
@@ -73,7 +73,7 @@ function RuleChip({ label, onDelete }: { label: string; onDelete: () => void }) 
   return (
     <div style={{
       display: 'inline-flex', alignItems: 'center', gap: 8,
-      background: 'var(--adda-accent-muted, rgba(0,0,0,0.06))',
+      background: 'var(--venue-accent-muted, rgba(0,0,0,0.06))',
       border: `1px solid ${A.border}`, borderRadius: 8,
       padding: '6px 10px', margin: '4px',
     }}>

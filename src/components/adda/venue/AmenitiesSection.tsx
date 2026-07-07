@@ -99,8 +99,8 @@ function CompareModal({
         onClick={e => e.stopPropagation()}
         style={{
           width: '100%', maxWidth: 480,
-          background: 'var(--adda-bg-surface)',
-          border: '1px solid var(--adda-border-subtle)',
+          background: 'var(--venue-bg-surface)',
+          border: '1px solid var(--venue-border-subtle)',
           borderRadius: 16, padding: 24,
           maxHeight: '80vh', overflowY: 'auto',
         }}
@@ -110,12 +110,12 @@ function CompareModal({
             <h3 style={{
               fontFamily: 'var(--font-inter), sans-serif',
               fontWeight: 700, fontSize: 15,
-              color: 'var(--adda-text-primary)', margin: 0,
+              color: 'var(--venue-text-primary)', margin: 0,
             }}>
               Similar venues in your city offer…
             </h3>
             <p style={{
-              fontSize: 12, color: 'var(--adda-text-muted)',
+              fontSize: 12, color: 'var(--venue-text-muted)',
               fontFamily: 'var(--font-inter), sans-serif', margin: '4px 0 0',
             }}>
               Amenities you don&apos;t currently list
@@ -125,8 +125,8 @@ function CompareModal({
             onClick={onClose}
             style={{
               width: 28, height: 28, borderRadius: 6,
-              background: 'var(--adda-bg-overlay)', border: 'none',
-              color: 'var(--adda-text-muted)', cursor: 'pointer',
+              background: 'var(--venue-bg-overlay)', border: 'none',
+              color: 'var(--venue-text-muted)', cursor: 'pointer',
               display: 'grid', placeItems: 'center',
             }}
           >
@@ -137,7 +137,7 @@ function CompareModal({
         {missing.length === 0 ? (
           <div style={{
             textAlign: 'center', padding: '24px 0',
-            color: 'var(--adda-success)',
+            color: 'var(--venue-success)',
             fontFamily: 'var(--font-inter), sans-serif', fontSize: 13,
           }}>
             <span className="material-symbols-outlined" style={{ fontSize: 32, display: 'block', marginBottom: 8 }}>
@@ -155,13 +155,13 @@ function CompareModal({
                   style={{
                     display: 'inline-flex', alignItems: 'center', gap: 5,
                     padding: '6px 12px', borderRadius: 6,
-                    background: 'var(--adda-bg-overlay)',
-                    border: '1px solid var(--adda-border-subtle)',
-                    fontSize: 12, color: 'var(--adda-text-secondary)',
+                    background: 'var(--venue-bg-overlay)',
+                    border: '1px solid var(--venue-border-subtle)',
+                    fontSize: 12, color: 'var(--venue-text-secondary)',
                     fontFamily: 'var(--font-inter), sans-serif',
                   }}
                 >
-                  <span className="material-symbols-outlined" style={{ fontSize: 14, color: 'var(--adda-amber)' }}>
+                  <span className="material-symbols-outlined" style={{ fontSize: 14, color: 'var(--venue-amber)' }}>
                     {meta.icon}
                   </span>
                   {meta.label}
@@ -173,7 +173,7 @@ function CompareModal({
 
         {missing.length > 0 && (
           <p style={{
-            fontSize: 11, color: 'var(--adda-text-muted)', marginTop: 16,
+            fontSize: 11, color: 'var(--venue-text-muted)', marginTop: 16,
             fontFamily: 'var(--font-inter), sans-serif', lineHeight: 1.5,
           }}>
             Adding these to your listing can increase booking requests by making
@@ -222,7 +222,7 @@ export default function AmenitiesSection({ amenities, onChange, isEditing }: Pro
   return (
     <>
       <div style={{
-        borderBottom: '1px solid var(--adda-border-subtle)',
+        borderBottom: '1px solid var(--venue-border-subtle)',
         paddingBottom: 24, marginBottom: 24,
       }}>
         {/* Section header */}
@@ -232,11 +232,11 @@ export default function AmenitiesSection({ amenities, onChange, isEditing }: Pro
             width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
             padding: '16px 0 12px',
             background: 'transparent', border: 'none', cursor: 'pointer',
-            color: 'var(--adda-text-primary)',
+            color: 'var(--venue-text-primary)',
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span className="material-symbols-outlined" style={{ fontSize: 18, color: 'var(--adda-amber)' }}>
+            <span className="material-symbols-outlined" style={{ fontSize: 18, color: 'var(--venue-amber)' }}>
               check_circle
             </span>
             <span style={{ fontFamily: 'var(--font-inter), sans-serif', fontWeight: 600, fontSize: 14 }}>
@@ -244,9 +244,9 @@ export default function AmenitiesSection({ amenities, onChange, isEditing }: Pro
             </span>
             <span style={{
               padding: '1px 8px', borderRadius: 9999,
-              background: 'var(--adda-bg-overlay)',
+              background: 'var(--venue-bg-overlay)',
               fontSize: 11, fontFamily: 'var(--font-jetbrains-mono), monospace',
-              color: amenities.length > 0 ? 'var(--adda-amber)' : 'var(--adda-text-muted)',
+              color: amenities.length > 0 ? 'var(--venue-amber)' : 'var(--venue-text-muted)',
             }}>
               {amenities.length} selected
             </span>
@@ -254,7 +254,7 @@ export default function AmenitiesSection({ amenities, onChange, isEditing }: Pro
           <span
             className="material-symbols-outlined"
             style={{
-              fontSize: 18, color: 'var(--adda-text-muted)',
+              fontSize: 18, color: 'var(--venue-text-muted)',
               transform: collapsed ? 'rotate(-90deg)' : 'rotate(0deg)',
               transition: 'transform 200ms ease',
             }}
@@ -281,7 +281,7 @@ export default function AmenitiesSection({ amenities, onChange, isEditing }: Pro
                     padding: 0, background: 'none', border: 'none',
                     cursor: 'pointer',
                     display: 'inline-flex', alignItems: 'center', gap: 5,
-                    color: 'var(--adda-amber)', fontSize: 12, fontWeight: 600,
+                    color: 'var(--venue-amber)', fontSize: 12, fontWeight: 600,
                     fontFamily: 'var(--font-inter), sans-serif',
                   }}
                 >
@@ -303,7 +303,7 @@ export default function AmenitiesSection({ amenities, onChange, isEditing }: Pro
                   >
                     <span style={{
                       fontSize: 10, fontWeight: 600, letterSpacing: '0.08em',
-                      textTransform: 'uppercase', color: 'var(--adda-text-muted)',
+                      textTransform: 'uppercase', color: 'var(--venue-text-muted)',
                       fontFamily: 'var(--font-inter), sans-serif',
                     }}>
                       {cat.label}
@@ -312,7 +312,7 @@ export default function AmenitiesSection({ amenities, onChange, isEditing }: Pro
                       strokeWidth="2.5" style={{
                         transform: expandedCats.has(cat.label) ? 'rotate(180deg)' : 'none',
                         transition: 'transform 180ms',
-                        color: 'var(--adda-text-muted)',
+                        color: 'var(--venue-text-muted)',
                       }}>
                       <polyline points="6 9 12 15 18 9" />
                     </svg>
@@ -337,9 +337,9 @@ export default function AmenitiesSection({ amenities, onChange, isEditing }: Pro
                                 style={{
                                   height: 34, display: 'inline-flex', alignItems: 'center', gap: 5,
                                   padding: '0 12px', borderRadius: 6,
-                                  border: on ? '1.5px solid var(--adda-amber-border)' : '1px solid var(--adda-border-default)',
-                                  background: on ? 'var(--adda-amber-tint)' : 'var(--adda-bg-elevated)',
-                                  color: on ? 'var(--adda-amber)' : 'var(--adda-text-secondary)',
+                                  border: on ? '1.5px solid var(--venue-amber-border)' : '1px solid var(--venue-border-default)',
+                                  background: on ? 'var(--venue-amber-tint)' : 'var(--venue-bg-elevated)',
+                                  color: on ? 'var(--venue-amber)' : 'var(--venue-text-secondary)',
                                   fontSize: 12, fontWeight: on ? 500 : 400,
                                   fontFamily: 'var(--font-inter), sans-serif',
                                   cursor: isEditing ? 'pointer' : 'default',

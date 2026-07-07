@@ -8,11 +8,11 @@ import InsightCard, { Amber } from './InsightCard'
 import { useIsMobile } from '@/hooks/useIsMobile'
 
 // ---------------------------------------------------------------------------
-// Color interpolation: 0 = --adda-bg-elevated, 5 amber stops up to #f59e0b
+// Color interpolation: 0 = --venue-bg-elevated, 5 amber stops up to #f59e0b
 // ---------------------------------------------------------------------------
 
 function cellBackground(intensity: number): string {
-  if (intensity === 0) return 'var(--adda-bg-elevated)'
+  if (intensity === 0) return 'var(--venue-bg-elevated)'
   if (intensity < 0.2)  return 'rgba(245,158,11,0.12)'
   if (intensity < 0.4)  return 'rgba(245,158,11,0.28)'
   if (intensity < 0.6)  return 'rgba(245,158,11,0.48)'
@@ -21,7 +21,7 @@ function cellBackground(intensity: number): string {
 }
 
 function cellColor(intensity: number): string {
-  return intensity > 0.7 ? '#0a0a0a' : intensity > 0 ? 'var(--adda-text-secondary)' : 'transparent'
+  return intensity > 0.7 ? '#0a0a0a' : intensity > 0 ? 'var(--venue-text-secondary)' : 'transparent'
 }
 
 // ---------------------------------------------------------------------------
@@ -112,8 +112,8 @@ export default function DemandHeatmap({ grid, venueSlug }: Props) {
   return (
     <div
       style={{
-        background: 'var(--adda-bg-surface)',
-        border: '1px solid var(--adda-border-subtle)',
+        background: 'var(--venue-bg-surface)',
+        border: '1px solid var(--venue-border-subtle)',
         borderRadius: 12,
         padding: 20,
         marginBottom: 24,
@@ -121,10 +121,10 @@ export default function DemandHeatmap({ grid, venueSlug }: Props) {
     >
       {/* Header */}
       <div style={{ marginBottom: 12 }}>
-        <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--adda-text-primary)', fontFamily: 'var(--font-inter)', marginBottom: 2 }}>
+        <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--venue-text-primary)', fontFamily: 'var(--font-inter)', marginBottom: 2 }}>
           Hour × Day Demand Heatmap
         </div>
-        <div style={{ fontSize: 11, color: 'var(--adda-text-muted)', fontFamily: 'var(--font-inter)' }}>
+        <div style={{ fontSize: 11, color: 'var(--venue-text-muted)', fontFamily: 'var(--font-inter)' }}>
           When creators most frequently request your space — set peak rates for hot slots
         </div>
       </div>
@@ -140,7 +140,7 @@ export default function DemandHeatmap({ grid, venueSlug }: Props) {
             {venueSlug && (
               <Link
                 href="/business/venue/venue?tab=pricing"
-                style={{ color: 'var(--adda-amber)', textDecoration: 'underline', fontWeight: 600 }}
+                style={{ color: 'var(--venue-amber)', textDecoration: 'underline', fontWeight: 600 }}
               >
                 Set peak pricing →
               </Link>
@@ -156,7 +156,7 @@ export default function DemandHeatmap({ grid, venueSlug }: Props) {
             {venueSlug && (
               <Link
                 href="/business/venue/venue?tab=pricing"
-                style={{ color: 'var(--adda-amber)', textDecoration: 'underline', fontWeight: 600 }}
+                style={{ color: 'var(--venue-amber)', textDecoration: 'underline', fontWeight: 600 }}
               >
                 Create peak pricing rule →
               </Link>
@@ -192,7 +192,7 @@ export default function DemandHeatmap({ grid, venueSlug }: Props) {
                 fontSize: 10,
                 fontWeight: 600,
                 textAlign: 'center',
-                color: day === 'Fri' || day === 'Sat' ? 'var(--adda-amber)' : 'var(--adda-text-muted)',
+                color: day === 'Fri' || day === 'Sat' ? 'var(--venue-amber)' : 'var(--venue-text-muted)',
                 fontFamily: 'var(--font-jetbrains-mono), monospace',
                 paddingBottom: 4,
                 letterSpacing: '0.5px',
@@ -208,7 +208,7 @@ export default function DemandHeatmap({ grid, venueSlug }: Props) {
               <div
                 style={{
                   fontSize: 10,
-                  color: 'var(--adda-text-muted)',
+                  color: 'var(--venue-text-muted)',
                   fontFamily: 'var(--font-jetbrains-mono), monospace',
                   display: 'flex',
                   alignItems: 'center',
@@ -264,7 +264,7 @@ export default function DemandHeatmap({ grid, venueSlug }: Props) {
                   fontSize: 10,
                   fontWeight: 600,
                   textAlign: 'center',
-                  color: day === 'Fri' || day === 'Sat' ? 'var(--adda-amber)' : 'var(--adda-text-muted)',
+                  color: day === 'Fri' || day === 'Sat' ? 'var(--venue-amber)' : 'var(--venue-text-muted)',
                   fontFamily: 'var(--font-jetbrains-mono), monospace',
                   paddingBottom: 4,
                   letterSpacing: '0.5px',
@@ -281,7 +281,7 @@ export default function DemandHeatmap({ grid, venueSlug }: Props) {
                 <div
                   style={{
                     fontSize: 9,
-                    color: 'var(--adda-text-muted)',
+                    color: 'var(--venue-text-muted)',
                     fontFamily: 'var(--font-jetbrains-mono), monospace',
                     display: 'flex',
                     alignItems: 'center',
@@ -327,7 +327,7 @@ export default function DemandHeatmap({ grid, venueSlug }: Props) {
 
       {/* Color scale legend — same on both */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 12 }}>
-        <span style={{ fontSize: 10, color: 'var(--adda-text-muted)', fontFamily: 'var(--font-inter)' }}>No demand</span>
+        <span style={{ fontSize: 10, color: 'var(--venue-text-muted)', fontFamily: 'var(--font-inter)' }}>No demand</span>
         {[0, 0.25, 0.5, 0.75, 1].map((intensity, i) => (
           <span
             key={i}
@@ -336,11 +336,11 @@ export default function DemandHeatmap({ grid, venueSlug }: Props) {
               width: 14,
               height: 14,
               borderRadius: 2,
-              background: intensity === 0 ? 'var(--adda-bg-elevated)' : cellBackground(intensity),
+              background: intensity === 0 ? 'var(--venue-bg-elevated)' : cellBackground(intensity),
             }}
           />
         ))}
-        <span style={{ fontSize: 10, color: 'var(--adda-text-muted)', fontFamily: 'var(--font-inter)' }}>Peak demand</span>
+        <span style={{ fontSize: 10, color: 'var(--venue-text-muted)', fontFamily: 'var(--font-inter)' }}>Peak demand</span>
       </div>
     </div>
   )

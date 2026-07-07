@@ -13,7 +13,7 @@ const ResponsiveCalendar = dynamic(
     ssr: false,
     loading: () => (
       <div style={{ height: 180, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <span style={{ fontSize: 12, color: 'var(--adda-text-muted)', fontFamily: 'var(--font-inter)' }}>
+        <span style={{ fontSize: 12, color: 'var(--venue-text-muted)', fontFamily: 'var(--font-inter)' }}>
           Loading calendar…
         </span>
       </div>
@@ -34,7 +34,7 @@ const CALENDAR_COLORS = [
 ]
 
 function occupancyColor(pct: number): string {
-  if (pct <= 0)  return 'var(--adda-bg-elevated)'
+  if (pct <= 0)  return 'var(--venue-bg-elevated)'
   if (pct <= 20) return CALENDAR_COLORS[0]
   if (pct <= 40) return CALENDAR_COLORS[1]
   if (pct <= 60) return CALENDAR_COLORS[2]
@@ -50,44 +50,44 @@ function DayTooltip({ day, value, data }: { day: string; value: number; data: Da
   const date = new Date(day).toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })
   return (
     <div style={{
-      background: 'var(--adda-bg-elevated)',
-      border: '1px solid var(--adda-border-default)',
+      background: 'var(--venue-bg-elevated)',
+      border: '1px solid var(--venue-border-default)',
       borderRadius: 8,
       padding: '10px 14px',
       fontSize: 12,
       fontFamily: 'var(--font-inter), system-ui, sans-serif',
-      color: 'var(--adda-text-primary)',
+      color: 'var(--venue-text-primary)',
       minWidth: 180,
     }}>
-      <div style={{ fontWeight: 600, marginBottom: 6, color: 'var(--adda-text-secondary)' }}>{date}</div>
+      <div style={{ fontWeight: 600, marginBottom: 6, color: 'var(--venue-text-secondary)' }}>{date}</div>
       {data ? (
         <>
           <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, marginBottom: 3 }}>
-            <span style={{ color: 'var(--adda-text-muted)' }}>Bookings</span>
-            <span style={{ fontFamily: 'var(--font-jetbrains-mono)', color: 'var(--adda-amber)' }}>{data.bookings}</span>
+            <span style={{ color: 'var(--venue-text-muted)' }}>Bookings</span>
+            <span style={{ fontFamily: 'var(--font-jetbrains-mono)', color: 'var(--venue-amber)' }}>{data.bookings}</span>
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, marginBottom: 3 }}>
-            <span style={{ color: 'var(--adda-text-muted)' }}>Hours booked</span>
+            <span style={{ color: 'var(--venue-text-muted)' }}>Hours booked</span>
             <span style={{ fontFamily: 'var(--font-jetbrains-mono)' }}>{data.hours}h</span>
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, marginBottom: 3 }}>
-            <span style={{ color: 'var(--adda-text-muted)' }}>Revenue</span>
-            <span style={{ fontFamily: 'var(--font-jetbrains-mono)', color: 'var(--adda-amber)' }}>
+            <span style={{ color: 'var(--venue-text-muted)' }}>Revenue</span>
+            <span style={{ fontFamily: 'var(--font-jetbrains-mono)', color: 'var(--venue-amber)' }}>
               ₹{Math.round(data.revenuePaise / 100).toLocaleString('en-IN')}
             </span>
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
-            <span style={{ color: 'var(--adda-text-muted)' }}>Occupancy</span>
+            <span style={{ color: 'var(--venue-text-muted)' }}>Occupancy</span>
             <span style={{ fontFamily: 'var(--font-jetbrains-mono)' }}>{data.occupancyPercent}%</span>
           </div>
           {data.hasPendingRequest && (
-            <div style={{ marginTop: 6, fontSize: 10.5, color: 'var(--adda-amber)', borderTop: '1px solid var(--adda-border-subtle)', paddingTop: 5 }}>
+            <div style={{ marginTop: 6, fontSize: 10.5, color: 'var(--venue-amber)', borderTop: '1px solid var(--venue-border-subtle)', paddingTop: 5 }}>
               ⬤ Pending request on this day
             </div>
           )}
         </>
       ) : (
-        <div style={{ color: 'var(--adda-text-muted)' }}>No bookings</div>
+        <div style={{ color: 'var(--venue-text-muted)' }}>No bookings</div>
       )}
     </div>
   )
@@ -104,9 +104,9 @@ const NAV_BTN: React.CSSProperties = {
   width: 36,
   height: 36,
   borderRadius: 8,
-  border: '1px solid var(--adda-border-subtle)',
+  border: '1px solid var(--venue-border-subtle)',
   background: 'transparent',
-  color: 'var(--adda-text-secondary)',
+  color: 'var(--venue-text-secondary)',
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
@@ -155,7 +155,7 @@ function MobileMonthGrid({
         <span style={{
           fontSize: 13,
           fontWeight: 600,
-          color: 'var(--adda-text-primary)',
+          color: 'var(--venue-text-primary)',
           fontFamily: 'var(--font-inter), system-ui, sans-serif',
         }}>
           {MONTH_NAMES[month]} {year}
@@ -179,7 +179,7 @@ function MobileMonthGrid({
               textAlign: 'center',
               fontSize: 10,
               fontWeight: 600,
-              color: d === 'Fr' || d === 'Sa' ? 'var(--adda-amber)' : 'var(--adda-text-muted)',
+              color: d === 'Fr' || d === 'Sa' ? 'var(--venue-amber)' : 'var(--venue-text-muted)',
               fontFamily: 'var(--font-jetbrains-mono), monospace',
               paddingBottom: 4,
               letterSpacing: '0.3px',
@@ -209,7 +209,7 @@ function MobileMonthGrid({
           const pct     = metric?.occupancyPercent ?? 0
           const hasPending = metric?.hasPendingRequest ?? false
           const bg        = occupancyColor(pct)
-          const textColor = pct > 60 ? '#0a0a0a' : pct > 0 ? 'var(--adda-text-secondary)' : 'var(--adda-text-muted)'
+          const textColor = pct > 60 ? '#0a0a0a' : pct > 0 ? 'var(--venue-text-secondary)' : 'var(--venue-text-muted)'
 
           return (
             <div
@@ -240,7 +240,7 @@ function MobileMonthGrid({
                   width: 4,
                   height: 4,
                   borderRadius: '50%',
-                  background: 'var(--adda-amber)',
+                  background: 'var(--venue-amber)',
                   opacity: 0.85,
                 }} />
               )}
@@ -292,15 +292,15 @@ export default function CalendarHeatmap({ days, busiestMonth, highestOccupancyDa
   return (
     <div
       style={{
-        background: 'var(--adda-bg-surface)',
-        border: '1px solid var(--adda-border-subtle)',
+        background: 'var(--venue-bg-surface)',
+        border: '1px solid var(--venue-border-subtle)',
         borderRadius: 12,
         padding: 20,
         marginBottom: 24,
       }}
     >
       <div style={{ marginBottom: 12 }}>
-        <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--adda-text-primary)', fontFamily: 'var(--font-inter)', marginBottom: 4 }}>
+        <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--venue-text-primary)', fontFamily: 'var(--font-inter)', marginBottom: 4 }}>
           365-Day Occupancy Calendar
         </div>
       </div>
@@ -313,15 +313,15 @@ export default function CalendarHeatmap({ days, busiestMonth, highestOccupancyDa
 
       {/* Color scale legend */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12 }}>
-        <span style={{ fontSize: 10, color: 'var(--adda-text-muted)', fontFamily: 'var(--font-inter)' }}>Low</span>
+        <span style={{ fontSize: 10, color: 'var(--venue-text-muted)', fontFamily: 'var(--font-inter)' }}>Low</span>
         {CALENDAR_COLORS.map((c, i) => (
           <span key={i} style={{ display: 'inline-block', width: 14, height: 14, borderRadius: 2, background: c }} />
         ))}
-        <span style={{ fontSize: 10, color: 'var(--adda-text-muted)', fontFamily: 'var(--font-inter)' }}>High occupancy</span>
+        <span style={{ fontSize: 10, color: 'var(--venue-text-muted)', fontFamily: 'var(--font-inter)' }}>High occupancy</span>
 
         {/* Pending dot legend */}
-        <span style={{ marginLeft: 12, fontSize: 10, color: 'var(--adda-text-muted)', fontFamily: 'var(--font-inter)', display: 'flex', alignItems: 'center', gap: 4 }}>
-          <span style={{ display: 'inline-block', width: 6, height: 6, borderRadius: '50%', background: 'var(--adda-amber)', border: '1px solid var(--adda-amber)' }} />
+        <span style={{ marginLeft: 12, fontSize: 10, color: 'var(--venue-text-muted)', fontFamily: 'var(--font-inter)', display: 'flex', alignItems: 'center', gap: 4 }}>
+          <span style={{ display: 'inline-block', width: 6, height: 6, borderRadius: '50%', background: 'var(--venue-amber)', border: '1px solid var(--venue-amber)' }} />
           Pending request
         </span>
       </div>
@@ -342,17 +342,17 @@ export default function CalendarHeatmap({ days, busiestMonth, highestOccupancyDa
             data={calData}
             from={fromDate}
             to={toDate}
-            emptyColor="var(--adda-bg-elevated)"
+            emptyColor="var(--venue-bg-elevated)"
             colors={CALENDAR_COLORS}
             yearSpacing={40}
-            monthBorderColor="var(--adda-bg-base)"
+            monthBorderColor="var(--venue-bg-base)"
             monthBorderWidth={2}
             dayBorderWidth={2}
-            dayBorderColor="var(--adda-bg-base)"
+            dayBorderColor="var(--venue-bg-base)"
             theme={{
               text: {
                 fontSize: 10,
-                fill: 'var(--adda-text-muted)',
+                fill: 'var(--venue-text-muted)',
                 fontFamily: 'var(--font-inter), system-ui',
               },
               tooltip: {

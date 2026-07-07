@@ -35,20 +35,20 @@ function ChartTooltip({ active, payload, label }: any) {
   const bin: LeadTimeBin = payload[0]?.payload
   return (
     <div style={{
-      background: 'var(--adda-bg-elevated)',
-      border: '1px solid var(--adda-border-default)',
+      background: 'var(--venue-bg-elevated)',
+      border: '1px solid var(--venue-border-default)',
       borderRadius: 8,
       padding: '10px 14px',
       fontSize: 12,
       fontFamily: 'var(--font-inter), system-ui, sans-serif',
-      color: 'var(--adda-text-primary)',
+      color: 'var(--venue-text-primary)',
     }}>
       <div style={{ fontWeight: 600, marginBottom: 4 }}>{label}</div>
-      <div style={{ fontFamily: 'var(--font-jetbrains-mono)', color: 'var(--adda-amber)' }}>
+      <div style={{ fontFamily: 'var(--font-jetbrains-mono)', color: 'var(--venue-amber)' }}>
         {bin.count} bookings
       </div>
       {bin.isMedian && (
-        <div style={{ fontSize: 10, color: 'var(--adda-text-muted)', marginTop: 3 }}>← median</div>
+        <div style={{ fontSize: 10, color: 'var(--venue-text-muted)', marginTop: 3 }}>← median</div>
       )}
     </div>
   )
@@ -67,32 +67,32 @@ export default function LeadTimeChart({ bins, medianIndex }: Props) {
   return (
     <div
       style={{
-        background: 'var(--adda-bg-surface)',
-        border: '1px solid var(--adda-border-subtle)',
+        background: 'var(--venue-bg-surface)',
+        border: '1px solid var(--venue-border-subtle)',
         borderRadius: 12,
         padding: 20,
       }}
     >
       <div style={{ marginBottom: 16 }}>
-        <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--adda-text-primary)', fontFamily: 'var(--font-inter)', marginBottom: 2 }}>
+        <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--venue-text-primary)', fontFamily: 'var(--font-inter)', marginBottom: 2 }}>
           Booking Lead Time
         </div>
-        <div style={{ fontSize: 11, color: 'var(--adda-text-muted)', fontFamily: 'var(--font-inter)' }}>
+        <div style={{ fontSize: 11, color: 'var(--venue-text-muted)', fontFamily: 'var(--font-inter)' }}>
           How far in advance creators book your space
         </div>
       </div>
 
       <ResponsiveContainer width="100%" height={220}>
         <BarChart data={bins} margin={{ top: 8, right: 8, bottom: 0, left: 8 }} barSize={36}>
-          <CartesianGrid strokeDasharray="3 3" stroke="var(--adda-border-subtle)" vertical={false} />
+          <CartesianGrid strokeDasharray="3 3" stroke="var(--venue-border-subtle)" vertical={false} />
           <XAxis
             dataKey="label"
-            tick={{ fontSize: 10.5, fill: 'var(--adda-text-muted)', fontFamily: 'var(--font-inter)' }}
-            axisLine={{ stroke: 'var(--adda-border-subtle)' }}
+            tick={{ fontSize: 10.5, fill: 'var(--venue-text-muted)', fontFamily: 'var(--font-inter)' }}
+            axisLine={{ stroke: 'var(--venue-border-subtle)' }}
             tickLine={false}
           />
           <YAxis
-            tick={{ fontSize: 10, fill: 'var(--adda-text-muted)', fontFamily: 'var(--font-jetbrains-mono)' }}
+            tick={{ fontSize: 10, fill: 'var(--venue-text-muted)', fontFamily: 'var(--font-jetbrains-mono)' }}
             axisLine={false}
             tickLine={false}
             width={24}
@@ -108,7 +108,7 @@ export default function LeadTimeChart({ bins, medianIndex }: Props) {
               value: 'median',
               position: 'insideTopRight',
               fontSize: 10,
-              fill: 'var(--adda-amber)',
+              fill: 'var(--venue-amber)',
               fontFamily: 'var(--font-jetbrains-mono)',
             }}
           />
@@ -117,7 +117,7 @@ export default function LeadTimeChart({ bins, medianIndex }: Props) {
             {bins.map((bin, idx) => (
               <Cell
                 key={idx}
-                fill={idx === medianIndex ? 'var(--adda-amber)' : 'rgba(245,158,11,0.45)'}
+                fill={idx === medianIndex ? 'var(--venue-amber)' : 'rgba(245,158,11,0.45)'}
               />
             ))}
           </Bar>
@@ -129,15 +129,15 @@ export default function LeadTimeChart({ bins, medianIndex }: Props) {
         <div style={{
           marginTop: 14,
           padding: '8px 12px',
-          background: 'var(--adda-bg-elevated)',
+          background: 'var(--venue-bg-elevated)',
           borderRadius: 7,
           fontSize: 12,
-          color: 'var(--adda-text-secondary)',
+          color: 'var(--venue-text-secondary)',
           fontFamily: 'var(--font-inter)',
           lineHeight: 1.5,
         }}>
           Most bookings arrive{' '}
-          <span style={{ color: 'var(--adda-amber)', fontWeight: 600 }}>
+          <span style={{ color: 'var(--venue-amber)', fontWeight: 600 }}>
             {medianBin.daysRange} days
           </span>{' '}
           before the event — set your instant-accept window to match.

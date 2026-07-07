@@ -40,10 +40,10 @@ function formatCountdown(ms: number): string {
 }
 
 function countdownColor(ms: number): string {
-  if (ms <= 0) return 'var(--adda-text-muted)'
-  if (ms < 6 * 3_600_000) return 'var(--adda-danger)'
-  if (ms < 24 * 3_600_000) return 'var(--adda-amber)'
-  return 'var(--adda-text-muted)'
+  if (ms <= 0) return 'var(--venue-text-muted)'
+  if (ms < 6 * 3_600_000) return 'var(--venue-danger)'
+  if (ms < 24 * 3_600_000) return 'var(--venue-amber)'
+  return 'var(--venue-text-muted)'
 }
 
 // ---------------------------------------------------------------------------
@@ -51,11 +51,11 @@ function countdownColor(ms: number): string {
 // ---------------------------------------------------------------------------
 
 const STATUS_CHIP: Record<string, { label: string; bg: string; color: string }> = {
-  counter_offered: { label: 'Counter Offer', bg: 'rgba(245,158,11,0.15)', color: 'var(--adda-amber)' },
-  accepted:        { label: 'Confirmed',     bg: 'rgba(16,185,129,0.12)', color: 'var(--adda-success)' },
-  declined:        { label: 'Declined',      bg: 'rgba(239,68,68,0.10)',  color: 'var(--adda-danger)'  },
-  expired:         { label: 'Expired',       bg: 'rgba(82,82,91,0.2)',    color: 'var(--adda-text-muted)' },
-  withdrawn:       { label: 'Withdrawn',     bg: 'rgba(82,82,91,0.2)',    color: 'var(--adda-text-muted)' },
+  counter_offered: { label: 'Counter Offer', bg: 'rgba(245,158,11,0.15)', color: 'var(--venue-amber)' },
+  accepted:        { label: 'Confirmed',     bg: 'rgba(16,185,129,0.12)', color: 'var(--venue-success)' },
+  declined:        { label: 'Declined',      bg: 'rgba(239,68,68,0.10)',  color: 'var(--venue-danger)'  },
+  expired:         { label: 'Expired',       bg: 'rgba(82,82,91,0.2)',    color: 'var(--venue-text-muted)' },
+  withdrawn:       { label: 'Withdrawn',     bg: 'rgba(82,82,91,0.2)',    color: 'var(--venue-text-muted)' },
 }
 
 // ---------------------------------------------------------------------------
@@ -101,12 +101,12 @@ export default function RequestListRow({ proposal, isSelected, tab, onClick }: P
         gap: 12,
         height: 80,
         padding: '0 16px 0 20px',
-        borderBottom: '1px solid var(--adda-border-subtle)',
+        borderBottom: '1px solid var(--venue-border-subtle)',
         cursor: 'pointer',
         background: isSelected
-          ? 'var(--adda-bg-elevated)'
+          ? 'var(--venue-bg-elevated)'
           : hovered
-            ? 'var(--adda-bg-hover)'
+            ? 'var(--venue-bg-hover)'
             : 'transparent',
         transition: 'background 120ms ease',
         outline: 'none',
@@ -120,7 +120,7 @@ export default function RequestListRow({ proposal, isSelected, tab, onClick }: P
           top: 0,
           bottom: 0,
           width: 3,
-          background: 'var(--adda-amber)',
+          background: 'var(--venue-amber)',
           borderRadius: '0 3px 3px 0',
         }} />
       )}
@@ -130,13 +130,13 @@ export default function RequestListRow({ proposal, isSelected, tab, onClick }: P
         width: 36,
         height: 36,
         borderRadius: '50%',
-        background: 'var(--adda-bg-overlay)',
-        border: '1.5px solid var(--adda-border-default)',
+        background: 'var(--venue-bg-overlay)',
+        border: '1.5px solid var(--venue-border-default)',
         display: 'grid',
         placeItems: 'center',
         fontWeight: 700,
         fontSize: 12,
-        color: 'var(--adda-text-secondary)',
+        color: 'var(--venue-text-secondary)',
         fontFamily: 'var(--font-inter), system-ui, sans-serif',
         flexShrink: 0,
         overflow: 'hidden',
@@ -158,7 +158,7 @@ export default function RequestListRow({ proposal, isSelected, tab, onClick }: P
         <div style={{
           fontSize: 14,
           fontWeight: 500,
-          color: 'var(--adda-text-primary)',
+          color: 'var(--venue-text-primary)',
           fontFamily: 'var(--font-inter), system-ui, sans-serif',
           whiteSpace: 'nowrap',
           overflow: 'hidden',
@@ -170,7 +170,7 @@ export default function RequestListRow({ proposal, isSelected, tab, onClick }: P
 
         <div style={{
           fontSize: 12,
-          color: 'var(--adda-text-muted)',
+          color: 'var(--venue-text-muted)',
           fontFamily: 'var(--font-inter), system-ui, sans-serif',
           whiteSpace: 'nowrap',
           overflow: 'hidden',
@@ -204,7 +204,7 @@ export default function RequestListRow({ proposal, isSelected, tab, onClick }: P
         <div style={{
           fontSize: 15,
           fontWeight: 600,
-          color: 'var(--adda-amber)',
+          color: 'var(--venue-amber)',
           fontFamily: 'var(--font-jetbrains-mono), monospace',
           lineHeight: 1,
         }}>

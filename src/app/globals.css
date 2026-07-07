@@ -43,7 +43,7 @@
     --wimc-success: #16A34A;
 
     --wimc-sidebar-w:  60px;
-    --adda-sidebar-w:  64px;
+    --venue-sidebar-w:  64px;
     --wimc-t-base:    220ms ease;
 
     /* Default dark-orange theme — must match existing Tailwind color hex values */

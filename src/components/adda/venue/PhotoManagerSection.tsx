@@ -69,10 +69,10 @@ function SortablePhoto({ photo, isEditing, onDelete, onEditAlt }: SortablePhotoP
         aspectRatio: '4/3',
         borderRadius: 10,
         overflow: 'hidden',
-        background: 'var(--adda-bg-overlay)',
+        background: 'var(--venue-bg-overlay)',
         border: photo.is_cover
-          ? '2px solid var(--adda-amber)'
-          : '1px solid var(--adda-border-subtle)',
+          ? '2px solid var(--venue-amber)'
+          : '1px solid var(--venue-border-subtle)',
         cursor: isEditing ? 'grab' : 'default',
       }}
       onMouseEnter={() => setHovered(true)}
@@ -92,7 +92,7 @@ function SortablePhoto({ photo, isEditing, onDelete, onEditAlt }: SortablePhotoP
         <div style={{
           position: 'absolute', top: 8, left: 8,
           padding: '2px 8px', borderRadius: 9999,
-          background: 'var(--adda-amber)',
+          background: 'var(--venue-amber)',
           color: '#000', fontSize: 10, fontWeight: 700,
           fontFamily: 'var(--font-inter), sans-serif',
           letterSpacing: '0.05em',
@@ -188,7 +188,7 @@ function SortablePhoto({ photo, isEditing, onDelete, onEditAlt }: SortablePhotoP
               onClick={() => { onEditAlt(photo.id, altDraft); setShowAltEdit(false) }}
               style={{
                 padding: '4px 12px', borderRadius: 6,
-                background: 'var(--adda-amber)', border: 'none',
+                background: 'var(--venue-amber)', border: 'none',
                 color: '#000', fontSize: 11, fontWeight: 700, cursor: 'pointer',
                 fontFamily: 'var(--font-inter), sans-serif',
               }}
@@ -232,7 +232,7 @@ function PhotoRequirements({ count }: { count: number }) {
       {/* Listing strength bar */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
         <span style={{
-          fontSize: 11, fontWeight: 600, color: 'var(--adda-text-muted)',
+          fontSize: 11, fontWeight: 600, color: 'var(--venue-text-muted)',
           fontFamily: 'var(--font-inter), sans-serif',
           textTransform: 'uppercase', letterSpacing: '0.07em',
         }}>
@@ -240,7 +240,7 @@ function PhotoRequirements({ count }: { count: number }) {
         </span>
         <div style={{
           flex: 1, height: 5, borderRadius: 9999,
-          background: 'var(--adda-bg-overlay)',
+          background: 'var(--venue-bg-overlay)',
           overflow: 'hidden',
         }}>
           <motion.div
@@ -249,16 +249,16 @@ function PhotoRequirements({ count }: { count: number }) {
             style={{
               height: '100%', borderRadius: 9999,
               background: strengthPct === 100
-                ? 'var(--adda-success)'
+                ? 'var(--venue-success)'
                 : strengthPct > 50
-                  ? 'var(--adda-amber)'
+                  ? 'var(--venue-amber)'
                   : '#ef4444',
             }}
           />
         </div>
         <span style={{
           fontSize: 11, fontWeight: 700,
-          color: strengthPct === 100 ? 'var(--adda-success)' : 'var(--adda-amber)',
+          color: strengthPct === 100 ? 'var(--venue-success)' : 'var(--venue-amber)',
           fontFamily: 'var(--font-jetbrains-mono), monospace',
         }}>
           {strengthPct}%
@@ -273,13 +273,13 @@ function PhotoRequirements({ count }: { count: number }) {
               className="material-symbols-outlined"
               style={{
                 fontSize: 14,
-                color: r.met ? 'var(--adda-success)' : 'var(--adda-amber)',
+                color: r.met ? 'var(--venue-success)' : 'var(--venue-amber)',
               }}
             >
               {r.met ? 'check_circle' : 'cancel'}
             </span>
             <span style={{
-              fontSize: 12, color: 'var(--adda-text-muted)',
+              fontSize: 12, color: 'var(--venue-text-muted)',
               fontFamily: 'var(--font-inter), sans-serif',
             }}>
               {r.label}
@@ -343,7 +343,7 @@ export default function PhotoManagerSection({ photos, onChange, isEditing }: Pro
 
   return (
     <div style={{
-      borderBottom: '1px solid var(--adda-border-subtle)',
+      borderBottom: '1px solid var(--venue-border-subtle)',
       paddingBottom: 24,
       marginBottom: 24,
     }}>
@@ -354,11 +354,11 @@ export default function PhotoManagerSection({ photos, onChange, isEditing }: Pro
           width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           padding: '16px 0 12px',
           background: 'transparent', border: 'none', cursor: 'pointer',
-          color: 'var(--adda-text-primary)',
+          color: 'var(--venue-text-primary)',
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span className="material-symbols-outlined" style={{ fontSize: 18, color: 'var(--adda-amber)' }}>
+          <span className="material-symbols-outlined" style={{ fontSize: 18, color: 'var(--venue-amber)' }}>
             photo_library
           </span>
           <span style={{
@@ -369,9 +369,9 @@ export default function PhotoManagerSection({ photos, onChange, isEditing }: Pro
           </span>
           <span style={{
             padding: '1px 8px', borderRadius: 9999,
-            background: 'var(--adda-bg-overlay)',
+            background: 'var(--venue-bg-overlay)',
             fontSize: 11, fontFamily: 'var(--font-jetbrains-mono), monospace',
-            color: 'var(--adda-text-muted)',
+            color: 'var(--venue-text-muted)',
           }}>
             {photos.length}
           </span>
@@ -379,7 +379,7 @@ export default function PhotoManagerSection({ photos, onChange, isEditing }: Pro
         <span
           className="material-symbols-outlined"
           style={{
-            fontSize: 18, color: 'var(--adda-text-muted)',
+            fontSize: 18, color: 'var(--venue-text-muted)',
             transform: collapsed ? 'rotate(-90deg)' : 'rotate(0deg)',
             transition: 'transform 200ms ease',
           }}
@@ -426,20 +426,20 @@ export default function PhotoManagerSection({ photos, onChange, isEditing }: Pro
                       style={{
                         aspectRatio: '4/3',
                         borderRadius: 10,
-                        border: '1.5px dashed var(--adda-border-default)',
+                        border: '1.5px dashed var(--venue-border-default)',
                         background: 'transparent',
                         cursor: 'pointer',
                         display: 'flex', flexDirection: 'column',
                         alignItems: 'center', justifyContent: 'center',
-                        gap: 6, color: 'var(--adda-text-muted)',
+                        gap: 6, color: 'var(--venue-text-muted)',
                         transition: 'border-color 150ms, background 150ms',
                       }}
                       onMouseEnter={e => {
-                        e.currentTarget.style.borderColor = 'var(--adda-amber)'
-                        e.currentTarget.style.background = 'var(--adda-amber-tint)'
+                        e.currentTarget.style.borderColor = 'var(--venue-amber)'
+                        e.currentTarget.style.background = 'var(--venue-amber-tint)'
                       }}
                       onMouseLeave={e => {
-                        e.currentTarget.style.borderColor = 'var(--adda-border-default)'
+                        e.currentTarget.style.borderColor = 'var(--venue-border-default)'
                         e.currentTarget.style.background = 'transparent'
                       }}
                     >

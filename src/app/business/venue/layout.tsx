@@ -35,8 +35,8 @@ export default async function VenueLayout({ children }: { children: React.ReactN
 
   return (
     <div
-      className="adda-theme venue-variant"
-      style={{ minHeight: '100vh', background: 'var(--adda-bg-base)', position: 'relative' }}
+      className="venue-theme venue-variant"
+      style={{ minHeight: '100vh', background: 'var(--venue-bg-base)', position: 'relative' }}
     >
       <div className="wimc-grain" aria-hidden />
 
@@ -50,7 +50,7 @@ export default async function VenueLayout({ children }: { children: React.ReactN
       </div>
 
       <div
-        className="dash-content md:ml-[var(--adda-sidebar-w)]"
+        className="dash-content md:ml-[var(--venue-sidebar-w)]"
         style={{
           transition: 'margin-left 220ms cubic-bezier(0.4,0,0.2,1)',
           display: 'flex',
@@ -64,7 +64,7 @@ export default async function VenueLayout({ children }: { children: React.ReactN
           style={{
             position: 'sticky', top: 0, height: 48, zIndex: 40,
             background: 'rgba(6,13,17,0.92)', backdropFilter: 'blur(12px)',
-            borderBottom: '1px solid var(--adda-border-subtle)',
+            borderBottom: '1px solid var(--venue-border-subtle)',
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
             padding: '0 20px', flexShrink: 0,
           }}

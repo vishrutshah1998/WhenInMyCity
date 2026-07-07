@@ -48,13 +48,13 @@ function BandChart({ p10, p25, p50, p75, p90, venueValue, venuePercentile, unit,
           position: 'absolute',
           top: 0,
           right: 0,
-          background: 'var(--adda-amber-tint)',
-          border: '1px solid var(--adda-amber-border)',
+          background: 'var(--venue-amber-tint)',
+          border: '1px solid var(--venue-amber-border)',
           borderRadius: 5,
           padding: '2px 7px',
           fontSize: 10,
           fontWeight: 600,
-          color: 'var(--adda-amber)',
+          color: 'var(--venue-amber)',
           fontFamily: 'var(--font-jetbrains-mono), monospace',
           zIndex: 1,
         }}>
@@ -96,7 +96,7 @@ function BandChart({ p10, p25, p50, p75, p90, venueValue, venuePercentile, unit,
         <line
           x1={PAD_L} y1={PAD_T + H}
           x2={PAD_L + W} y2={PAD_T + H}
-          stroke="var(--adda-border-subtle)"
+          stroke="var(--venue-border-subtle)"
           strokeWidth={1}
         />
 
@@ -112,7 +112,7 @@ function BandChart({ p10, p25, p50, p75, p90, venueValue, venuePercentile, unit,
             y={PAD_T + H + 14}
             textAnchor="middle"
             fontSize={9}
-            fill="var(--adda-text-muted)"
+            fill="var(--venue-text-muted)"
             fontFamily="var(--font-jetbrains-mono), monospace"
           >
             {paise2Inr(v, unit)}
@@ -120,8 +120,8 @@ function BandChart({ p10, p25, p50, p75, p90, venueValue, venuePercentile, unit,
         ))}
 
         {/* Venue dot */}
-        <circle cx={xV} cy={yMid} r={6} fill="var(--adda-amber)" />
-        <circle cx={xV} cy={yMid} r={3} fill="var(--adda-bg-base)" />
+        <circle cx={xV} cy={yMid} r={6} fill="var(--venue-amber)" />
+        <circle cx={xV} cy={yMid} r={3} fill="var(--venue-bg-base)" />
 
         {/* "You" label above the dot */}
         <text
@@ -129,7 +129,7 @@ function BandChart({ p10, p25, p50, p75, p90, venueValue, venuePercentile, unit,
           y={PAD_T - 6}
           textAnchor="middle"
           fontSize={9.5}
-          fill="var(--adda-amber)"
+          fill="var(--venue-amber)"
           fontWeight={600}
           fontFamily="var(--font-inter), system-ui"
         >
@@ -140,7 +140,7 @@ function BandChart({ p10, p25, p50, p75, p90, venueValue, venuePercentile, unit,
           y={PAD_T - 6 + 11}
           textAnchor="middle"
           fontSize={8.5}
-          fill="var(--adda-text-muted)"
+          fill="var(--venue-text-muted)"
           fontFamily="var(--font-jetbrains-mono), monospace"
         >
           {paise2Inr(venueValue, unit)}
@@ -167,8 +167,8 @@ export default function BenchmarkPanel({ benchmarks, venueTierSufficient, city }
   return (
     <div
       style={{
-        background: 'var(--adda-bg-surface)',
-        border: '1px solid var(--adda-border-subtle)',
+        background: 'var(--venue-bg-surface)',
+        border: '1px solid var(--venue-border-subtle)',
         borderRadius: 12,
         padding: 20,
         marginBottom: 24,
@@ -177,11 +177,11 @@ export default function BenchmarkPanel({ benchmarks, venueTierSufficient, city }
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 16 }}>
         <div>
-          <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--adda-text-primary)', fontFamily: 'var(--font-inter)', marginBottom: 2 }}>
+          <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--venue-text-primary)', fontFamily: 'var(--font-inter)', marginBottom: 2 }}>
             Competitive Benchmarking
           </div>
           {hasEnoughData && (
-            <div style={{ fontSize: 11, color: 'var(--adda-text-muted)', fontFamily: 'var(--font-inter)' }}>
+            <div style={{ fontSize: 11, color: 'var(--venue-text-muted)', fontFamily: 'var(--font-inter)' }}>
               Based on {sampleSize} similar venues in {city}
             </div>
           )}
@@ -191,11 +191,11 @@ export default function BenchmarkPanel({ benchmarks, venueTierSufficient, city }
         {!venueTierSufficient && (
           <div style={{
             padding: '3px 8px',
-            background: 'var(--adda-bg-elevated)',
-            border: '1px solid var(--adda-border-default)',
+            background: 'var(--venue-bg-elevated)',
+            border: '1px solid var(--venue-border-default)',
             borderRadius: 5,
             fontSize: 10.5,
-            color: 'var(--adda-text-muted)',
+            color: 'var(--venue-text-muted)',
             fontFamily: 'var(--font-inter)',
           }}>
             Nukkad tier required
@@ -208,14 +208,14 @@ export default function BenchmarkPanel({ benchmarks, venueTierSufficient, city }
         <div style={{
           padding: '28px 24px',
           textAlign: 'center',
-          color: 'var(--adda-text-muted)',
+          color: 'var(--venue-text-muted)',
           fontSize: 13,
           fontFamily: 'var(--font-inter)',
           borderRadius: 8,
-          background: 'var(--adda-bg-elevated)',
-          border: '1px dashed var(--adda-border-default)',
+          background: 'var(--venue-bg-elevated)',
+          border: '1px dashed var(--venue-border-default)',
         }}>
-          Upgrade your Adda to <strong style={{ color: 'var(--adda-text-secondary)' }}>Nukkad tier</strong> to unlock
+          Upgrade your Adda to <strong style={{ color: 'var(--venue-text-secondary)' }}>Nukkad tier</strong> to unlock
           competitive benchmarking against similar Addas in {city}.
         </div>
       )}
@@ -225,12 +225,12 @@ export default function BenchmarkPanel({ benchmarks, venueTierSufficient, city }
         <div style={{
           padding: '28px 24px',
           textAlign: 'center',
-          color: 'var(--adda-text-muted)',
+          color: 'var(--venue-text-muted)',
           fontSize: 13,
           fontFamily: 'var(--font-inter)',
           borderRadius: 8,
-          background: 'var(--adda-bg-elevated)',
-          border: '1px dashed var(--adda-border-default)',
+          background: 'var(--venue-bg-elevated)',
+          border: '1px dashed var(--venue-border-default)',
         }}>
           Not enough data yet — benchmarking unlocks when more venues in your area join WIMC.
           <br />
@@ -247,7 +247,7 @@ export default function BenchmarkPanel({ benchmarks, venueTierSufficient, city }
             <div
               key={bm.metricKey}
               style={{
-                background: 'var(--adda-bg-elevated)',
+                background: 'var(--venue-bg-elevated)',
                 borderRadius: 8,
                 padding: '14px 12px 8px',
               }}
@@ -255,7 +255,7 @@ export default function BenchmarkPanel({ benchmarks, venueTierSufficient, city }
               <div style={{
                 fontSize: 11,
                 fontWeight: 600,
-                color: 'var(--adda-text-secondary)',
+                color: 'var(--venue-text-secondary)',
                 fontFamily: 'var(--font-inter)',
                 marginBottom: 2,
                 letterSpacing: '0.3px',
@@ -264,7 +264,7 @@ export default function BenchmarkPanel({ benchmarks, venueTierSufficient, city }
                 {bm.label}
               </div>
               <BandChart {...bm} width={220} height={90} />
-              <div style={{ fontSize: 10, color: 'var(--adda-text-muted)', fontFamily: 'var(--font-inter)', marginTop: 2 }}>
+              <div style={{ fontSize: 10, color: 'var(--venue-text-muted)', fontFamily: 'var(--font-inter)', marginTop: 2 }}>
                 p25–p75 band · p10–p90 range · median line
               </div>
             </div>

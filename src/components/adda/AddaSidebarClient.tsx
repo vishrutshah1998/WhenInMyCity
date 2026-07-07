@@ -107,10 +107,10 @@ export interface AddaSidebarClientProps {
 // Design tokens
 // ---------------------------------------------------------------------------
 
-const ADDA_AMBER   = 'var(--adda-amber, #F5A800)'
-const ADDA_MUTED   = 'var(--adda-text-muted)'
-const ADDA_BORDER  = 'var(--adda-border-subtle)'
-const ADDA_HOVER   = 'var(--adda-bg-hover)'
+const ADDA_AMBER   = 'var(--venue-amber, #F5A800)'
+const ADDA_MUTED   = 'var(--venue-text-muted)'
+const ADDA_BORDER  = 'var(--venue-border-subtle)'
+const ADDA_HOVER   = 'var(--venue-bg-hover)'
 
 // ── Workspace / persona helpers (mirrors dashboard Sidebar.tsx) ──────────────
 
@@ -170,7 +170,7 @@ function NavLink({ item, active, badge, collapsed }: { item: NavItem; active: bo
         borderRadius: 6, justifyContent: collapsed ? 'center' : undefined,
         cursor: 'pointer', textDecoration: 'none',
         transition: 'background 160ms ease',
-        background: active ? 'var(--adda-amber-tint)' : hovered && !active ? ADDA_HOVER : 'transparent',
+        background: active ? 'var(--venue-amber-tint)' : hovered && !active ? ADDA_HOVER : 'transparent',
         marginBottom: 1,
       }}
     >
@@ -190,7 +190,7 @@ function NavLink({ item, active, badge, collapsed }: { item: NavItem; active: bo
       </span>
 
       {collapsed && badge !== null && (
-        <span style={{ position: 'absolute', top: 7, right: 8, width: 7, height: 7, borderRadius: '50%', background: ADDA_AMBER, border: '1.5px solid var(--adda-bg-surface)' }} />
+        <span style={{ position: 'absolute', top: 7, right: 8, width: 7, height: 7, borderRadius: '50%', background: ADDA_AMBER, border: '1.5px solid var(--venue-bg-surface)' }} />
       )}
 
       {!collapsed && (
@@ -198,7 +198,7 @@ function NavLink({ item, active, badge, collapsed }: { item: NavItem; active: bo
           <span style={{
             fontSize: 13.5, fontWeight: item.primary ? 600 : 500,
             fontFamily: 'var(--font-inter), system-ui, sans-serif',
-            color: active ? 'var(--adda-text-primary)' : 'var(--adda-text-secondary)',
+            color: active ? 'var(--venue-text-primary)' : 'var(--venue-text-secondary)',
             flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
             transition: 'color 160ms ease',
           }}>
@@ -255,7 +255,7 @@ export default function AddaSidebarClient({
     if (saved !== null) {
       setCollapsed(saved === 'true')
     }
-    // Default (null + desktop): keep collapsed = true, matching CSS --adda-sidebar-w: 64px
+    // Default (null + desktop): keep collapsed = true, matching CSS --venue-sidebar-w: 64px
   }, [])
 
   useEffect(() => { setWorkspaceOpen(false) }, [pathname])
@@ -282,13 +282,13 @@ export default function AddaSidebarClient({
   const sidebarWidth = collapsed ? 64 : 240
 
   useEffect(() => {
-    document.documentElement.style.setProperty('--adda-sidebar-w', `${sidebarWidth}px`)
+    document.documentElement.style.setProperty('--venue-sidebar-w', `${sidebarWidth}px`)
   }, [sidebarWidth])
 
   return (
     <aside className="dash-sidebar" style={{
       width: sidebarWidth, minHeight: '100vh',
-      background: 'var(--adda-bg-surface)', borderRight: `1px solid ${ADDA_BORDER}`,
+      background: 'var(--venue-bg-surface)', borderRight: `1px solid ${ADDA_BORDER}`,
       display: 'flex', flexDirection: 'column', padding: '20px 0 0',
       position: 'fixed', top: 0, left: 0, zIndex: 50,
       transition: 'width 220ms cubic-bezier(0.4, 0, 0.2, 1)', overflow: 'hidden',
@@ -483,7 +483,7 @@ export default function AddaSidebarClient({
                   <span className="material-symbols-outlined" style={{ fontSize: 20, flexShrink: 0, color: ADDA_MUTED }}>{item.icon}</span>
                   {!collapsed && (
                     <>
-                      <span style={{ fontSize: 13.5, fontWeight: 500, fontFamily: 'var(--font-inter), system-ui, sans-serif', color: 'var(--adda-text-secondary)', flex: 1, whiteSpace: 'nowrap' }}>{item.label}</span>
+                      <span style={{ fontSize: 13.5, fontWeight: 500, fontFamily: 'var(--font-inter), system-ui, sans-serif', color: 'var(--venue-text-secondary)', flex: 1, whiteSpace: 'nowrap' }}>{item.label}</span>
                       <span style={{ fontSize: 9, border: '1px solid currentColor', padding: '1px 5px', color: ADDA_MUTED, fontFamily: 'var(--font-jetbrains-mono), monospace' }}>SOON</span>
                     </>
                   )}
@@ -513,9 +513,9 @@ export default function AddaSidebarClient({
         >
           <div style={{
             width: 32, height: 32, borderRadius: '50%',
-            background: 'var(--adda-bg-overlay)', border: '2px solid transparent',
+            background: 'var(--venue-bg-overlay)', border: '2px solid transparent',
             display: 'grid', placeItems: 'center',
-            fontWeight: 700, fontSize: 12, color: 'var(--adda-text-primary)',
+            fontWeight: 700, fontSize: 12, color: 'var(--venue-text-primary)',
             fontFamily: 'var(--font-inter), system-ui, sans-serif',
             flexShrink: 0, overflow: 'hidden',
           }}>
@@ -528,7 +528,7 @@ export default function AddaSidebarClient({
           {!collapsed && (
             <>
               <div style={{ overflow: 'hidden', flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 13, fontWeight: 600, fontFamily: 'var(--font-inter), system-ui, sans-serif', color: 'var(--adda-text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', lineHeight: 1.3 }}>{ownerName}</div>
+                <div style={{ fontSize: 13, fontWeight: 600, fontFamily: 'var(--font-inter), system-ui, sans-serif', color: 'var(--venue-text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', lineHeight: 1.3 }}>{ownerName}</div>
                 <div style={{ fontSize: 11, color: ADDA_MUTED, fontFamily: 'var(--font-inter), system-ui, sans-serif', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{businessName}</div>
               </div>
               <span className="material-symbols-outlined" style={{ fontSize: 16, color: ADDA_MUTED, flexShrink: 0 }}>settings</span>

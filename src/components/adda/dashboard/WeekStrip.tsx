@@ -53,40 +53,40 @@ export default function WeekStrip({ availability }: Props) {
     switch (status) {
       case 'confirmed':
         return {
-          background: 'var(--adda-confirmed)',
+          background: 'var(--venue-confirmed)',
           color: '#000',
         }
       case 'pending':
         return {
-          background: 'var(--adda-pending)',
-          border: '1px dashed var(--adda-amber)',
-          color: 'var(--adda-amber)',
+          background: 'var(--venue-pending)',
+          border: '1px dashed var(--venue-amber)',
+          color: 'var(--venue-amber)',
         }
       case 'blocked':
         return {
-          background: 'var(--adda-blocked)',
-          border: '1px dotted var(--adda-border-default)',
-          color: 'var(--adda-text-muted)',
+          background: 'var(--venue-blocked)',
+          border: '1px dotted var(--venue-border-default)',
+          color: 'var(--venue-text-muted)',
         }
       default:
         return {
-          background: 'var(--adda-bg-hover)',
-          color: 'var(--adda-text-muted)',
+          background: 'var(--venue-bg-hover)',
+          color: 'var(--venue-text-muted)',
         }
     }
   }
 
   return (
     <div style={{
-      background: 'var(--adda-bg-surface)',
-      border: '1px solid var(--adda-border-subtle)',
+      background: 'var(--venue-bg-surface)',
+      border: '1px solid var(--venue-border-subtle)',
       borderRadius: 12,
       overflow: 'hidden',
     }}>
       {/* Header */}
       <div style={{
         padding: '14px 20px',
-        borderBottom: '1px solid var(--adda-border-subtle)',
+        borderBottom: '1px solid var(--venue-border-subtle)',
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
@@ -94,7 +94,7 @@ export default function WeekStrip({ availability }: Props) {
         <span style={{
           fontSize: 13,
           fontWeight: 600,
-          color: 'var(--adda-text-primary)',
+          color: 'var(--venue-text-primary)',
           fontFamily: 'var(--font-inter), system-ui, sans-serif',
         }}>
           This Week
@@ -103,7 +103,7 @@ export default function WeekStrip({ availability }: Props) {
           href="/business/venue/calendar"
           style={{
             fontSize: 12,
-            color: 'var(--adda-amber)',
+            color: 'var(--venue-amber)',
             textDecoration: 'none',
             fontFamily: 'var(--font-inter), system-ui, sans-serif',
             fontWeight: 500,
@@ -141,8 +141,8 @@ export default function WeekStrip({ availability }: Props) {
                 gap: 4,
                 padding: '8px 4px',
                 borderRadius: 8,
-                border: isToday ? '1px solid var(--adda-amber)' : '1px solid transparent',
-                background: isToday ? 'var(--adda-amber-tint)' : 'transparent',
+                border: isToday ? '1px solid var(--venue-amber)' : '1px solid transparent',
+                background: isToday ? 'var(--venue-amber-tint)' : 'transparent',
                 textDecoration: 'none',
                 cursor: 'pointer',
                 transition: 'background 160ms ease',
@@ -153,7 +153,7 @@ export default function WeekStrip({ availability }: Props) {
               <span style={{
                 fontSize: 10,
                 fontWeight: 500,
-                color: isToday ? 'var(--adda-amber)' : 'var(--adda-text-muted)',
+                color: isToday ? 'var(--venue-amber)' : 'var(--venue-text-muted)',
                 fontFamily: 'var(--font-jetbrains-mono), monospace',
                 letterSpacing: '0.5px',
               }}>
@@ -166,7 +166,7 @@ export default function WeekStrip({ availability }: Props) {
                 style={{
                   fontSize: 15,
                   fontWeight: isToday ? 700 : 400,
-                  color: isToday ? 'var(--adda-amber)' : 'var(--adda-text-primary)',
+                  color: isToday ? 'var(--venue-amber)' : 'var(--venue-text-primary)',
                   fontFamily: 'var(--font-inter), system-ui, sans-serif',
                   lineHeight: 1,
                 }}
@@ -198,7 +198,7 @@ export default function WeekStrip({ availability }: Props) {
                 {slots.length > 3 && (
                   <div style={{
                     fontSize: 9,
-                    color: 'var(--adda-text-muted)',
+                    color: 'var(--venue-text-muted)',
                     textAlign: 'center',
                     fontFamily: 'var(--font-jetbrains-mono), monospace',
                   }}>
@@ -216,18 +216,18 @@ export default function WeekStrip({ availability }: Props) {
         display: 'flex',
         gap: 16,
         padding: '8px 20px 12px',
-        borderTop: '1px solid var(--adda-border-subtle)',
+        borderTop: '1px solid var(--venue-border-subtle)',
       }}>
         {[
-          { label: 'Confirmed', color: 'var(--adda-confirmed)' },
-          { label: 'Pending',   color: 'var(--adda-amber)' },
-          { label: 'Blocked',   color: 'var(--adda-bg-overlay)' },
+          { label: 'Confirmed', color: 'var(--venue-confirmed)' },
+          { label: 'Pending',   color: 'var(--venue-amber)' },
+          { label: 'Blocked',   color: 'var(--venue-bg-overlay)' },
         ].map(({ label, color }) => (
           <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
             <div style={{ width: 8, height: 8, borderRadius: 2, background: color, flexShrink: 0 }} />
             <span style={{
               fontSize: 10,
-              color: 'var(--adda-text-muted)',
+              color: 'var(--venue-text-muted)',
               fontFamily: 'var(--font-jetbrains-mono), monospace',
             }}>
               {label}

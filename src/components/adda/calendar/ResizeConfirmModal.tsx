@@ -58,14 +58,14 @@ export default function ResizeConfirmModal({ event, newEnd, onConfirm, onCancel 
               zIndex: 201,
               width: 360,
               maxWidth: 'calc(100vw - 32px)',
-              background: 'var(--adda-bg-elevated)',
-              border: '1px solid var(--adda-border-default)',
+              background: 'var(--venue-bg-elevated)',
+              border: '1px solid var(--venue-border-default)',
               borderRadius: 14,
               padding: '22px 22px 18px',
               fontFamily: 'var(--font-inter), system-ui, sans-serif',
             }}
           >
-            <h3 style={{ fontSize: 15, fontWeight: 700, color: 'var(--adda-text-primary)', margin: '0 0 10px' }}>
+            <h3 style={{ fontSize: 15, fontWeight: 700, color: 'var(--venue-text-primary)', margin: '0 0 10px' }}>
               Extend booking?
             </h3>
 
@@ -76,27 +76,27 @@ export default function ResizeConfirmModal({ event, newEnd, onConfirm, onCancel 
               gap: 8,
               padding: '6px 12px',
               borderRadius: 8,
-              background: 'var(--adda-amber-tint)',
-              border: '1px solid var(--adda-amber-border)',
+              background: 'var(--venue-amber-tint)',
+              border: '1px solid var(--venue-amber-border)',
               marginBottom: 14,
             }}>
-              <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--adda-amber)' }}>
+              <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--venue-amber)' }}>
                 {formatDuration(oldDurationMs)}
               </span>
-              <span style={{ fontSize: 12, color: 'var(--adda-text-muted)' }}>→</span>
-              <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--adda-amber)' }}>
+              <span style={{ fontSize: 12, color: 'var(--venue-text-muted)' }}>→</span>
+              <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--venue-amber)' }}>
                 {formatDuration(newDurationMs)}
               </span>
               {addedPaise > 0 && (
-                <span style={{ fontSize: 12, color: 'var(--adda-amber)', fontWeight: 500 }}>
+                <span style={{ fontSize: 12, color: 'var(--venue-amber)', fontWeight: 500 }}>
                   (+{formatInr(addedPaise)})
                 </span>
               )}
             </div>
 
-            <p style={{ fontSize: 13, color: 'var(--adda-text-secondary)', lineHeight: 1.55, margin: '0 0 18px' }}>
+            <p style={{ fontSize: 13, color: 'var(--venue-text-secondary)', lineHeight: 1.55, margin: '0 0 18px' }}>
               Extend{' '}
-              <strong style={{ color: 'var(--adda-text-primary)' }}>
+              <strong style={{ color: 'var(--venue-text-primary)' }}>
                 {event?.creatorName ?? 'this booking'}
               </strong>
               &apos;s booking by {formatDuration(addedMs)}
@@ -118,9 +118,9 @@ export default function ResizeConfirmModal({ event, newEnd, onConfirm, onCancel 
 const cancelBtnStyle: React.CSSProperties = {
   padding: '8px 15px',
   borderRadius: 7,
-  border: '1px solid var(--adda-border-default)',
+  border: '1px solid var(--venue-border-default)',
   background: 'transparent',
-  color: 'var(--adda-text-secondary)',
+  color: 'var(--venue-text-secondary)',
   fontFamily: 'var(--font-inter), system-ui, sans-serif',
   fontSize: 13,
   fontWeight: 500,
@@ -131,7 +131,7 @@ const confirmBtnStyle: React.CSSProperties = {
   padding: '8px 15px',
   borderRadius: 7,
   border: 'none',
-  background: 'var(--adda-amber)',
+  background: 'var(--venue-amber)',
   color: '#000',
   fontFamily: 'var(--font-inter), system-ui, sans-serif',
   fontSize: 13,

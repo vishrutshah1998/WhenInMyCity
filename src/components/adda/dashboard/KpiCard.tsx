@@ -19,9 +19,9 @@ function DeltaBadge({
   direction: 'up' | 'down' | 'neutral'
 }) {
   const color =
-    direction === 'up' ? 'var(--adda-success)'
-    : direction === 'down' ? 'var(--adda-danger)'
-    : 'var(--adda-text-muted)'
+    direction === 'up' ? 'var(--venue-success)'
+    : direction === 'down' ? 'var(--venue-danger)'
+    : 'var(--venue-text-muted)'
 
   const symbol = direction === 'up' ? '▲' : direction === 'down' ? '▼' : '—'
   const text = direction === 'neutral' ? '—' : `${symbol} ${Math.abs(delta)}%`
@@ -53,12 +53,12 @@ function RadialArc({ percent }: { percent: number }) {
   return (
     <svg width="28" height="28" viewBox="0 0 28 28" aria-hidden>
       {/* Track */}
-      <circle cx="14" cy="14" r={r} fill="none" stroke="var(--adda-bg-hover)" strokeWidth="2.5" />
+      <circle cx="14" cy="14" r={r} fill="none" stroke="var(--venue-bg-hover)" strokeWidth="2.5" />
       {/* Fill */}
       <circle
         cx="14" cy="14" r={r}
         fill="none"
-        stroke="var(--adda-amber)"
+        stroke="var(--venue-amber)"
         strokeWidth="2.5"
         strokeDasharray={`${filled} ${circ}`}
         strokeDashoffset={offset}
@@ -106,9 +106,9 @@ export default function KpiCard({
     <div
       title={tooltip}
       style={{
-        background: 'var(--adda-bg-surface)',
-        border: '1px solid var(--adda-border-subtle)',
-        borderTop: '3px solid var(--adda-accent)',
+        background: 'var(--venue-bg-surface)',
+        border: '1px solid var(--venue-border-subtle)',
+        borderTop: '3px solid var(--venue-accent)',
         borderRadius: 12,
         padding: '20px 20px 0',
         display: 'flex',
@@ -129,7 +129,7 @@ export default function KpiCard({
           fontWeight: 500,
           letterSpacing: '0.6px',
           textTransform: 'uppercase',
-          color: 'var(--adda-text-muted)',
+          color: 'var(--venue-text-muted)',
           fontFamily: 'var(--font-jetbrains-mono), monospace',
         }}>
           {label}
@@ -145,7 +145,7 @@ export default function KpiCard({
             fontSize: 28,
             fontWeight: 700,
             fontFamily: 'var(--font-inter), system-ui, sans-serif',
-            color: 'var(--adda-text-primary)',
+            color: 'var(--venue-text-primary)',
             lineHeight: 1,
             letterSpacing: '-0.02em',
           }}
@@ -159,7 +159,7 @@ export default function KpiCard({
       {subtext && (
         <div style={{
           fontSize: 11,
-          color: 'var(--adda-amber)',
+          color: 'var(--venue-amber)',
           fontFamily: 'var(--font-inter), system-ui, sans-serif',
           marginBottom: 4,
         }}>

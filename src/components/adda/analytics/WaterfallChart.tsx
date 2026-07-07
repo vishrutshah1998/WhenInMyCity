@@ -108,13 +108,13 @@ function ChartTooltip({ active, payload, label }: any) {
   if (!row) return null
   return (
     <div style={{
-      background: 'var(--adda-bg-elevated)',
-      border: '1px solid var(--adda-border-default)',
+      background: 'var(--venue-bg-elevated)',
+      border: '1px solid var(--venue-border-default)',
       borderRadius: 8,
       padding: '10px 14px',
       fontSize: 12,
       fontFamily: 'var(--font-inter), system-ui, sans-serif',
-      color: 'var(--adda-text-primary)',
+      color: 'var(--venue-text-primary)',
     }}>
       <div style={{ fontWeight: 600, marginBottom: 4 }}>{label}</div>
       <div style={{ color: row.fill, fontFamily: 'var(--font-jetbrains-mono)' }}>
@@ -131,17 +131,17 @@ export default function WaterfallChart({ data }: Props) {
   return (
     <div
       style={{
-        background: 'var(--adda-bg-surface)',
-        border: '1px solid var(--adda-border-subtle)',
+        background: 'var(--venue-bg-surface)',
+        border: '1px solid var(--venue-border-subtle)',
         borderRadius: 12,
         padding: 20,
       }}
     >
       <div style={{ marginBottom: 16 }}>
-        <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--adda-text-primary)', fontFamily: 'var(--font-inter)', marginBottom: 2 }}>
+        <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--venue-text-primary)', fontFamily: 'var(--font-inter)', marginBottom: 2 }}>
           Revenue Breakdown
         </div>
-        <div style={{ fontSize: 11, color: 'var(--adda-text-muted)', fontFamily: 'var(--font-inter)' }}>
+        <div style={{ fontSize: 11, color: 'var(--venue-text-muted)', fontFamily: 'var(--font-inter)' }}>
           From gross ticket revenue to your actual payout
         </div>
       </div>
@@ -152,12 +152,12 @@ export default function WaterfallChart({ data }: Props) {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          background: 'var(--adda-bg-elevated)',
+          background: 'var(--venue-bg-elevated)',
           borderRadius: 8,
         }}>
           <span style={{
             fontSize: 13,
-            color: 'var(--adda-text-muted)',
+            color: 'var(--venue-text-muted)',
             fontFamily: 'var(--font-inter), system-ui, sans-serif',
           }}>
             No revenue to break down yet
@@ -167,17 +167,17 @@ export default function WaterfallChart({ data }: Props) {
         <>
           <ResponsiveContainer width="100%" height={220}>
             <BarChart data={rows} margin={{ top: 8, right: 8, bottom: 0, left: 8 }} barSize={56}>
-              <CartesianGrid strokeDasharray="3 3" stroke="var(--adda-border-subtle)" vertical={false} />
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--venue-border-subtle)" vertical={false} />
               <XAxis
                 dataKey="name"
-                tick={{ fontSize: 11, fill: 'var(--adda-text-muted)', fontFamily: 'var(--font-inter)' }}
-                axisLine={{ stroke: 'var(--adda-border-subtle)' }}
+                tick={{ fontSize: 11, fill: 'var(--venue-text-muted)', fontFamily: 'var(--font-inter)' }}
+                axisLine={{ stroke: 'var(--venue-border-subtle)' }}
                 tickLine={false}
               />
               <YAxis
                 domain={[0, maxY * 1.05]}
                 tickFormatter={v => `₹${(v / 100000).toFixed(1)}L`}
-                tick={{ fontSize: 10, fill: 'var(--adda-text-muted)', fontFamily: 'var(--font-jetbrains-mono)' }}
+                tick={{ fontSize: 10, fill: 'var(--venue-text-muted)', fontFamily: 'var(--font-jetbrains-mono)' }}
                 axisLine={false}
                 tickLine={false}
                 width={48}
@@ -202,10 +202,10 @@ export default function WaterfallChart({ data }: Props) {
             style={{
               marginTop: 14,
               padding: '8px 12px',
-              background: 'var(--adda-bg-elevated)',
+              background: 'var(--venue-bg-elevated)',
               borderRadius: 7,
               fontSize: 12,
-              color: 'var(--adda-text-secondary)',
+              color: 'var(--venue-text-secondary)',
               fontFamily: 'var(--font-inter)',
               lineHeight: 1.5,
             }}

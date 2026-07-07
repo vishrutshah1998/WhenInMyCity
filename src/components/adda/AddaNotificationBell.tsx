@@ -99,10 +99,10 @@ export default function AddaNotificationBell({
         style={{
           position: 'relative',
           background: open ? 'rgba(93,217,208,0.08)' : 'none',
-          border: '1px solid var(--adda-border-subtle)',
+          border: '1px solid var(--venue-border-subtle)',
           borderRadius: 8, width: 34, height: 34,
           display: 'grid', placeItems: 'center',
-          cursor: 'pointer', color: 'var(--adda-text-muted)',
+          cursor: 'pointer', color: 'var(--venue-text-muted)',
           transition: 'background 150ms',
         }}
         title="Notifications"
@@ -132,8 +132,8 @@ export default function AddaNotificationBell({
           style={{
             position: 'absolute', top: 'calc(100% + 8px)', right: 0,
             width: 360, maxHeight: 480,
-            background: 'var(--adda-bg-surface)',
-            border: '1px solid var(--adda-border-subtle)',
+            background: 'var(--venue-bg-surface)',
+            border: '1px solid var(--venue-border-subtle)',
             borderTop: `2px solid ${TEAL}`,
             borderRadius: 12,
             boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
@@ -146,13 +146,13 @@ export default function AddaNotificationBell({
           <div style={{
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
             padding: '14px 16px 10px',
-            borderBottom: '1px solid var(--adda-border-subtle)',
+            borderBottom: '1px solid var(--venue-border-subtle)',
             flexShrink: 0,
           }}>
             <div style={{
               fontFamily: 'var(--font-inter), system-ui, sans-serif',
               fontWeight: 700, fontSize: 14,
-              color: 'var(--adda-text-primary)',
+              color: 'var(--venue-text-primary)',
             }}>
               Notifications
               {unreadCount > 0 && (
@@ -181,7 +181,7 @@ export default function AddaNotificationBell({
                 onClick={() => { setOpen(false); router.push('/business/venue/notifications') }}
                 style={{
                   background: 'none', border: 'none', cursor: 'pointer',
-                  fontSize: 12, color: 'var(--adda-text-muted)', fontWeight: 500,
+                  fontSize: 12, color: 'var(--venue-text-muted)', fontWeight: 500,
                   padding: 0,
                   fontFamily: 'var(--font-jetbrains-mono)',
                 }}
@@ -196,7 +196,7 @@ export default function AddaNotificationBell({
             {notifications.length === 0 ? (
               <div style={{
                 padding: '40px 16px', textAlign: 'center',
-                color: 'var(--adda-text-muted)', fontSize: 13,
+                color: 'var(--venue-text-muted)', fontSize: 13,
               }}>
                 <span className="material-symbols-outlined" style={{ fontSize: 36, display: 'block', marginBottom: 8, opacity: 0.4 }}>
                   notifications_off
@@ -215,7 +215,7 @@ export default function AddaNotificationBell({
                       padding: '12px 16px', border: 'none', textAlign: 'left',
                       background: n.is_read ? 'transparent' : `${TEAL}08`,
                       cursor: n.action_url ? 'pointer' : 'default',
-                      borderBottom: '1px solid var(--adda-border-subtle)',
+                      borderBottom: '1px solid var(--venue-border-subtle)',
                       transition: 'background 150ms',
                     }}
                   >
@@ -235,21 +235,21 @@ export default function AddaNotificationBell({
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{
                         fontSize: 13, fontWeight: n.is_read ? 500 : 700,
-                        color: 'var(--adda-text-primary)',
+                        color: 'var(--venue-text-primary)',
                         lineHeight: 1.35, marginBottom: 2,
                       }}>
                         {n.title}
                       </div>
                       {n.body && (
                         <div style={{
-                          fontSize: 12, color: 'var(--adda-text-secondary)',
+                          fontSize: 12, color: 'var(--venue-text-secondary)',
                           overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                         }}>
                           {n.body}
                         </div>
                       )}
                       <div style={{
-                        fontSize: 11, color: 'var(--adda-text-muted)', marginTop: 4,
+                        fontSize: 11, color: 'var(--venue-text-muted)', marginTop: 4,
                         fontFamily: 'var(--font-jetbrains-mono)',
                       }}>
                         {timeAgo(n.created_at)}

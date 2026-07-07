@@ -75,7 +75,7 @@ export function AddaNotificationsClient({ notifications: initial, unreadCount: i
           <h1 style={{
             fontFamily: 'var(--font-inter), system-ui, sans-serif',
             fontSize: 22, fontWeight: 800,
-            color: 'var(--adda-text-primary)',
+            color: 'var(--venue-text-primary)',
             margin: '0 0 4px',
           }}>
             Notifications
@@ -122,9 +122,9 @@ export function AddaNotificationsClient({ notifications: initial, unreadCount: i
               style={{
                 padding: '5px 14px',
                 borderRadius: 6,
-                border: isActive ? 'none' : '1px solid var(--adda-border-subtle)',
+                border: isActive ? 'none' : '1px solid var(--venue-border-subtle)',
                 background: isActive ? TEAL : 'transparent',
-                color: isActive ? '#07070A' : 'var(--adda-text-secondary)',
+                color: isActive ? '#07070A' : 'var(--venue-text-secondary)',
                 fontFamily: 'var(--font-jetbrains-mono)',
                 fontSize: 11,
                 fontWeight: 600,
@@ -142,7 +142,7 @@ export function AddaNotificationsClient({ notifications: initial, unreadCount: i
 
       {/* Notification list */}
       <div style={{
-        border: '1px solid var(--adda-border-subtle)',
+        border: '1px solid var(--venue-border-subtle)',
         borderRadius: 10,
         overflow: 'hidden',
       }}>
@@ -151,13 +151,13 @@ export function AddaNotificationsClient({ notifications: initial, unreadCount: i
             padding: '60px 20px',
             display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12,
           }}>
-            <span className="material-symbols-outlined" style={{ fontSize: 40, color: 'var(--adda-text-muted)', opacity: 0.4 }}>
+            <span className="material-symbols-outlined" style={{ fontSize: 40, color: 'var(--venue-text-muted)', opacity: 0.4 }}>
               notifications_off
             </span>
             <span style={{
               fontFamily: 'var(--font-jetbrains-mono)',
               fontSize: 11,
-              color: 'var(--adda-text-muted)',
+              color: 'var(--venue-text-muted)',
               letterSpacing: '0.1em',
               textTransform: 'uppercase',
             }}>
@@ -180,7 +180,7 @@ export function AddaNotificationsClient({ notifications: initial, unreadCount: i
                   padding: '16px 20px',
                   background: n.is_read ? 'transparent' : `${TEAL}08`,
                   borderLeft: `3px solid ${n.is_read ? 'transparent' : TEAL}`,
-                  borderBottom: i < filtered.length - 1 ? '1px dashed var(--adda-border-subtle)' : 'none',
+                  borderBottom: i < filtered.length - 1 ? '1px dashed var(--venue-border-subtle)' : 'none',
                   cursor: n.action_url ? 'pointer' : 'default',
                   transition: 'background 150ms',
                 }}
@@ -204,7 +204,7 @@ export function AddaNotificationsClient({ notifications: initial, unreadCount: i
                   <div style={{
                     fontSize: 14,
                     fontWeight: n.is_read ? 500 : 700,
-                    color: 'var(--adda-text-primary)',
+                    color: 'var(--venue-text-primary)',
                     lineHeight: 1.35,
                     marginBottom: 3,
                   }}>
@@ -213,7 +213,7 @@ export function AddaNotificationsClient({ notifications: initial, unreadCount: i
                   {n.body && (
                     <div style={{
                       fontSize: 13,
-                      color: 'var(--adda-text-secondary)',
+                      color: 'var(--venue-text-secondary)',
                       lineHeight: 1.5,
                       marginBottom: 5,
                     }}>
@@ -223,7 +223,7 @@ export function AddaNotificationsClient({ notifications: initial, unreadCount: i
                   <span style={{
                     fontFamily: 'var(--font-jetbrains-mono)',
                     fontSize: 10,
-                    color: 'var(--adda-text-muted)',
+                    color: 'var(--venue-text-muted)',
                     letterSpacing: '0.05em',
                   }}>
                     {formatDistanceToNow(new Date(n.created_at), { addSuffix: true })}

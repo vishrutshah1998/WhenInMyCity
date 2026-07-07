@@ -5,7 +5,7 @@ import {
   Abril_Fatface, Barlow_Condensed,
 } from 'next/font/google'
 import './globals.css'
-import '../../styles/adda-tokens.css'
+import '../../styles/venue-tokens.css'
 
 // ── Profile theme fonts ──────────────────────────────────────────────────────
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' })

@@ -86,8 +86,8 @@ export default function DeclineModal({ proposalId, creatorName, onConfirm, onClo
           transform: 'translate(-50%, -50%)',
           zIndex: 201,
           width: 'min(460px, calc(100vw - 32px))',
-          background: 'var(--adda-bg-surface)',
-          border: '1px solid var(--adda-border-default)',
+          background: 'var(--venue-bg-surface)',
+          border: '1px solid var(--venue-border-default)',
           borderRadius: 12,
           padding: '28px 28px 24px',
           fontFamily: 'var(--font-inter), system-ui, sans-serif',
@@ -102,7 +102,7 @@ export default function DeclineModal({ proposalId, creatorName, onConfirm, onClo
                 margin: 0,
                 fontSize: 17,
                 fontWeight: 600,
-                color: 'var(--adda-text-primary)',
+                color: 'var(--venue-text-primary)',
                 lineHeight: 1.3,
               }}
             >
@@ -111,7 +111,7 @@ export default function DeclineModal({ proposalId, creatorName, onConfirm, onClo
             <p style={{
               margin: '4px 0 0',
               fontSize: 13,
-              color: 'var(--adda-text-muted)',
+              color: 'var(--venue-text-muted)',
             }}>
               From {creatorName}
             </p>
@@ -122,7 +122,7 @@ export default function DeclineModal({ proposalId, creatorName, onConfirm, onClo
               background: 'transparent',
               border: 'none',
               cursor: 'pointer',
-              color: 'var(--adda-text-muted)',
+              color: 'var(--venue-text-muted)',
               padding: 4,
               lineHeight: 1,
             }}
@@ -136,7 +136,7 @@ export default function DeclineModal({ proposalId, creatorName, onConfirm, onClo
           display: 'block',
           fontSize: 12,
           fontWeight: 500,
-          color: 'var(--adda-text-muted)',
+          color: 'var(--venue-text-muted)',
           letterSpacing: '0.7px',
           textTransform: 'uppercase',
           marginBottom: 8,
@@ -150,12 +150,12 @@ export default function DeclineModal({ proposalId, creatorName, onConfirm, onClo
             style={{
               width: '100%',
               appearance: 'none',
-              background: 'var(--adda-bg-elevated)',
-              border: `1px solid ${reason ? 'var(--adda-border-strong)' : 'var(--adda-border-default)'}`,
+              background: 'var(--venue-bg-elevated)',
+              border: `1px solid ${reason ? 'var(--venue-border-strong)' : 'var(--venue-border-default)'}`,
               borderRadius: 8,
               padding: '11px 40px 11px 14px',
               fontSize: 14,
-              color: reason ? 'var(--adda-text-primary)' : 'var(--adda-text-muted)',
+              color: reason ? 'var(--venue-text-primary)' : 'var(--venue-text-muted)',
               fontFamily: 'var(--font-inter), system-ui, sans-serif',
               cursor: 'pointer',
               outline: 'none',
@@ -176,7 +176,7 @@ export default function DeclineModal({ proposalId, creatorName, onConfirm, onClo
               top: '50%',
               transform: 'translateY(-50%)',
               fontSize: 18,
-              color: 'var(--adda-text-muted)',
+              color: 'var(--venue-text-muted)',
               pointerEvents: 'none',
             }}
           >
@@ -194,12 +194,12 @@ export default function DeclineModal({ proposalId, creatorName, onConfirm, onClo
             placeholder="Please describe the reason…"
             style={{
               width: '100%',
-              background: 'var(--adda-bg-elevated)',
-              border: '1px solid var(--adda-border-default)',
+              background: 'var(--venue-bg-elevated)',
+              border: '1px solid var(--venue-border-default)',
               borderRadius: 8,
               padding: '10px 14px',
               fontSize: 14,
-              color: 'var(--adda-text-primary)',
+              color: 'var(--venue-text-primary)',
               fontFamily: 'var(--font-inter), system-ui, sans-serif',
               resize: 'vertical',
               outline: 'none',
@@ -216,20 +216,20 @@ export default function DeclineModal({ proposalId, creatorName, onConfirm, onClo
           alignItems: 'flex-start',
           padding: '10px 14px',
           background: 'rgba(245,158,11,0.05)',
-          border: '1px solid var(--adda-amber-border)',
+          border: '1px solid var(--venue-amber-border)',
           borderRadius: 8,
           marginBottom: 22,
         }}>
           <span
             className="material-symbols-outlined"
-            style={{ fontSize: 16, color: 'var(--adda-amber)', flexShrink: 0, marginTop: 1 }}
+            style={{ fontSize: 16, color: 'var(--venue-amber)', flexShrink: 0, marginTop: 1 }}
           >
             info
           </span>
           <p style={{
             margin: 0,
             fontSize: 12.5,
-            color: 'var(--adda-text-muted)',
+            color: 'var(--venue-text-muted)',
             lineHeight: 1.6,
           }}>
             Declining doesn&apos;t affect your response rate — only unanswered requests do.
@@ -244,7 +244,7 @@ export default function DeclineModal({ proposalId, creatorName, onConfirm, onClo
             border: '1px solid rgba(239,68,68,0.2)',
             borderRadius: 6,
             fontSize: 12.5,
-            color: 'var(--adda-danger)',
+            color: 'var(--venue-danger)',
             marginBottom: 16,
           }}>
             {error}
@@ -259,8 +259,8 @@ export default function DeclineModal({ proposalId, creatorName, onConfirm, onClo
             style={{
               width: '100%',
               padding: '13px 0',
-              background: canSubmit ? 'var(--adda-amber)' : 'var(--adda-bg-overlay)',
-              color: canSubmit ? '#000' : 'var(--adda-text-muted)',
+              background: canSubmit ? 'var(--venue-amber)' : 'var(--venue-bg-overlay)',
+              color: canSubmit ? '#000' : 'var(--venue-text-muted)',
               border: 'none',
               borderRadius: 8,
               fontSize: 14,
@@ -279,7 +279,7 @@ export default function DeclineModal({ proposalId, creatorName, onConfirm, onClo
               width: '100%',
               padding: '10px 0',
               background: 'transparent',
-              color: 'var(--adda-text-muted)',
+              color: 'var(--venue-text-muted)',
               border: 'none',
               cursor: 'pointer',
               fontSize: 13.5,
@@ -289,11 +289,11 @@ export default function DeclineModal({ proposalId, creatorName, onConfirm, onClo
               transition: 'text-decoration-color 160ms ease, color 160ms ease',
             }}
             onMouseEnter={e => {
-              ;(e.currentTarget as HTMLButtonElement).style.color = 'var(--adda-text-secondary)'
+              ;(e.currentTarget as HTMLButtonElement).style.color = 'var(--venue-text-secondary)'
               ;(e.currentTarget as HTMLButtonElement).style.textDecorationColor = 'currentColor'
             }}
             onMouseLeave={e => {
-              ;(e.currentTarget as HTMLButtonElement).style.color = 'var(--adda-text-muted)'
+              ;(e.currentTarget as HTMLButtonElement).style.color = 'var(--venue-text-muted)'
               ;(e.currentTarget as HTMLButtonElement).style.textDecorationColor = 'transparent'
             }}
           >

@@ -63,7 +63,7 @@ export default function ProposalActionButtons({
         style={{
           ...base,
           flex: isFull ? 2 : 1,
-          background: confirmState === 'done' ? 'var(--adda-success)' : 'var(--adda-amber)',
+          background: confirmState === 'done' ? 'var(--venue-success)' : 'var(--venue-amber)',
           color: '#000',
           border: 'none',
           cursor: busy ? 'default' : 'pointer',
@@ -88,8 +88,8 @@ export default function ProposalActionButtons({
           ...base,
           flex: 1,
           background: 'transparent',
-          border: '1px solid var(--adda-border-default)',
-          color: 'var(--adda-text-secondary)',
+          border: '1px solid var(--venue-border-default)',
+          color: 'var(--venue-text-secondary)',
           cursor: disabled ? 'default' : 'pointer',
         }}
       >

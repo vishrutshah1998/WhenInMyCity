@@ -23,7 +23,7 @@ const ADDA_TYPES = [
 function FieldLabel({ children }: { children: React.ReactNode }) {
   return (
     <div style={{
-      fontSize: 11, fontWeight: 600, color: 'var(--adda-text-muted)',
+      fontSize: 11, fontWeight: 600, color: 'var(--venue-text-muted)',
       fontFamily: 'var(--font-inter), sans-serif',
       textTransform: 'uppercase', letterSpacing: '0.07em',
       marginBottom: 6,
@@ -47,14 +47,14 @@ function TextInput({
     width: '100%',
     padding: '9px 12px',
     borderRadius: 8,
-    background: disabled ? 'transparent' : 'var(--adda-bg-elevated)',
-    border: disabled ? '1px solid transparent' : '1px solid var(--adda-border-default)',
-    color: 'var(--adda-text-primary)',
+    background: disabled ? 'transparent' : 'var(--venue-bg-elevated)',
+    border: disabled ? '1px solid transparent' : '1px solid var(--venue-border-default)',
+    color: 'var(--venue-text-primary)',
     fontFamily: 'var(--font-inter), sans-serif',
     fontSize: 13,
     outline: 'none',
     resize: multiline ? 'vertical' : undefined,
-    caretColor: 'var(--adda-amber)',
+    caretColor: 'var(--venue-amber)',
     boxSizing: 'border-box' as const,
     transition: 'border-color 150ms',
   }
@@ -68,8 +68,8 @@ function TextInput({
         disabled={disabled}
         rows={rows ?? 4}
         style={sharedStyle}
-        onFocus={e => { e.currentTarget.style.borderColor = 'var(--adda-amber)' }}
-        onBlur={e => { e.currentTarget.style.borderColor = 'var(--adda-border-default)' }}
+        onFocus={e => { e.currentTarget.style.borderColor = 'var(--venue-amber)' }}
+        onBlur={e => { e.currentTarget.style.borderColor = 'var(--venue-border-default)' }}
       />
     )
   }
@@ -82,8 +82,8 @@ function TextInput({
       placeholder={placeholder}
       disabled={disabled}
       style={sharedStyle}
-      onFocus={e => { e.currentTarget.style.borderColor = 'var(--adda-amber)' }}
-      onBlur={e => { e.currentTarget.style.borderColor = 'var(--adda-border-default)' }}
+      onFocus={e => { e.currentTarget.style.borderColor = 'var(--venue-amber)' }}
+      onBlur={e => { e.currentTarget.style.borderColor = 'var(--venue-border-default)' }}
     />
   )
 }
@@ -106,16 +106,16 @@ function NumberInput({
       min={1}
       style={{
         width: '100%', padding: '9px 12px', borderRadius: 8,
-        background: disabled ? 'transparent' : 'var(--adda-bg-elevated)',
-        border: disabled ? '1px solid transparent' : '1px solid var(--adda-border-default)',
-        color: 'var(--adda-text-primary)',
+        background: disabled ? 'transparent' : 'var(--venue-bg-elevated)',
+        border: disabled ? '1px solid transparent' : '1px solid var(--venue-border-default)',
+        color: 'var(--venue-text-primary)',
         fontFamily: 'var(--font-jetbrains-mono), monospace', fontSize: 13,
-        outline: 'none', caretColor: 'var(--adda-amber)',
+        outline: 'none', caretColor: 'var(--venue-amber)',
         boxSizing: 'border-box',
         transition: 'border-color 150ms',
       }}
-      onFocus={e => { e.currentTarget.style.borderColor = 'var(--adda-amber)' }}
-      onBlur={e => { e.currentTarget.style.borderColor = 'var(--adda-border-default)' }}
+      onFocus={e => { e.currentTarget.style.borderColor = 'var(--venue-amber)' }}
+      onBlur={e => { e.currentTarget.style.borderColor = 'var(--venue-border-default)' }}
     />
   )
 }
@@ -145,7 +145,7 @@ export default function SpaceDetailsSection({ state, onChange, isEditing }: Prop
 
   return (
     <div style={{
-      borderBottom: '1px solid var(--adda-border-subtle)',
+      borderBottom: '1px solid var(--venue-border-subtle)',
       paddingBottom: 24,
       marginBottom: 24,
     }}>
@@ -155,11 +155,11 @@ export default function SpaceDetailsSection({ state, onChange, isEditing }: Prop
           width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           padding: '16px 0 12px',
           background: 'transparent', border: 'none', cursor: 'pointer',
-          color: 'var(--adda-text-primary)',
+          color: 'var(--venue-text-primary)',
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span className="material-symbols-outlined" style={{ fontSize: 18, color: 'var(--adda-amber)' }}>
+          <span className="material-symbols-outlined" style={{ fontSize: 18, color: 'var(--venue-amber)' }}>
             apartment
           </span>
           <span style={{ fontFamily: 'var(--font-inter), sans-serif', fontWeight: 600, fontSize: 14 }}>
@@ -169,7 +169,7 @@ export default function SpaceDetailsSection({ state, onChange, isEditing }: Prop
         <span
           className="material-symbols-outlined"
           style={{
-            fontSize: 18, color: 'var(--adda-text-muted)',
+            fontSize: 18, color: 'var(--venue-text-muted)',
             transform: collapsed ? 'rotate(-90deg)' : 'rotate(0deg)',
             transition: 'transform 200ms ease',
           }}
@@ -213,9 +213,9 @@ export default function SpaceDetailsSection({ state, onChange, isEditing }: Prop
                         style={{
                           height: 34, display: 'inline-flex', alignItems: 'center', gap: 5,
                           padding: '0 12px', borderRadius: 6,
-                          border: on ? '1.5px solid var(--adda-amber-border)' : '1px solid var(--adda-border-default)',
-                          background: on ? 'var(--adda-amber-tint)' : 'var(--adda-bg-elevated)',
-                          color: on ? 'var(--adda-amber)' : 'var(--adda-text-secondary)',
+                          border: on ? '1.5px solid var(--venue-amber-border)' : '1px solid var(--venue-border-default)',
+                          background: on ? 'var(--venue-amber-tint)' : 'var(--venue-bg-elevated)',
+                          color: on ? 'var(--venue-amber)' : 'var(--venue-text-secondary)',
                           fontSize: 12, fontWeight: on ? 500 : 400,
                           fontFamily: 'var(--font-inter), sans-serif',
                           cursor: isEditing ? 'pointer' : 'default',

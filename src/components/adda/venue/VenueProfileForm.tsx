@@ -6,17 +6,17 @@ import type { AddaProfile } from '@/types/database'
 
 // ── Design tokens ─────────────────────────────────────────────────────────────
 const T = {
-  surface:  'var(--adda-bg-surface)',
-  elevated: 'var(--adda-bg-elevated)',
-  border:   'var(--adda-border-subtle)',
-  borderMd: 'var(--adda-border-default)',
-  text:     'var(--adda-text-primary)',
-  muted:    'var(--adda-text-muted)',
-  secondary:'var(--adda-text-secondary)',
-  amber:    'var(--adda-amber)',
-  amberTint:'var(--adda-amber-tint)',
-  success:  'var(--adda-success)',
-  danger:   'var(--adda-danger)',
+  surface:  'var(--venue-bg-surface)',
+  elevated: 'var(--venue-bg-elevated)',
+  border:   'var(--venue-border-subtle)',
+  borderMd: 'var(--venue-border-default)',
+  text:     'var(--venue-text-primary)',
+  muted:    'var(--venue-text-muted)',
+  secondary:'var(--venue-text-secondary)',
+  amber:    'var(--venue-amber)',
+  amberTint:'var(--venue-amber-tint)',
+  success:  'var(--venue-success)',
+  danger:   'var(--venue-danger)',
 } as const
 
 const MONO  = "'JetBrains Mono', monospace"
@@ -37,18 +37,18 @@ interface Props {
 function FieldLabel({ label, icon }: { label: string; icon: string }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
-      <span className="material-symbols-outlined" style={{ fontSize: 14, color: 'var(--adda-text-muted)' }}>{icon}</span>
-      <span style={{ fontFamily: MONO, fontSize: 10, color: 'var(--adda-text-muted)', letterSpacing: '0.12em', textTransform: 'uppercase' }}>{label}</span>
+      <span className="material-symbols-outlined" style={{ fontSize: 14, color: 'var(--venue-text-muted)' }}>{icon}</span>
+      <span style={{ fontFamily: MONO, fontSize: 10, color: 'var(--venue-text-muted)', letterSpacing: '0.12em', textTransform: 'uppercase' }}>{label}</span>
     </div>
   )
 }
 
 const inputStyle: React.CSSProperties = {
   width: '100%', boxSizing: 'border-box',
-  background: 'var(--adda-bg-elevated)',
-  border: '1px solid var(--adda-border-default)',
+  background: 'var(--venue-bg-elevated)',
+  border: '1px solid var(--venue-border-default)',
   borderRadius: 4, padding: '10px 12px',
-  fontFamily: INTER, fontSize: 14, color: 'var(--adda-text-primary)',
+  fontFamily: INTER, fontSize: 14, color: 'var(--venue-text-primary)',
   outline: 'none', transition: 'border-color 160ms ease',
 }
 

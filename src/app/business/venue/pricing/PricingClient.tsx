@@ -137,14 +137,14 @@ export default function PricingClient({ adda }: Props) {
       <header style={{
         position: 'sticky', top: 0, zIndex: 40, height: 56,
         background: 'rgba(10,10,10,0.92)', backdropFilter: 'blur(12px)',
-        borderBottom: '1px solid var(--adda-border-subtle)',
+        borderBottom: '1px solid var(--venue-border-subtle)',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         padding: '0 28px', gap: 16,
       }}>
         <h1 style={{
           fontFamily: 'var(--font-inter), sans-serif',
           fontWeight: 700, fontSize: 15,
-          color: 'var(--adda-text-primary)', margin: 0,
+          color: 'var(--venue-text-primary)', margin: 0,
         }}>
           Pricing
         </h1>
@@ -160,12 +160,12 @@ export default function PricingClient({ adda }: Props) {
           >
             {(saveStatus === 'saving' || isDirty) && (
               <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                <div style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--adda-amber)', animation: 'pulse 1.2s ease-in-out infinite' }} />
-                <span style={{ fontSize: 11, color: 'var(--adda-amber)', fontFamily: 'var(--font-inter), sans-serif' }}>Saving…</span>
+                <div style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--venue-amber)', animation: 'pulse 1.2s ease-in-out infinite' }} />
+                <span style={{ fontSize: 11, color: 'var(--venue-amber)', fontFamily: 'var(--font-inter), sans-serif' }}>Saving…</span>
               </div>
             )}
             {saveStatus === 'saved' && !isDirty && (
-              <span style={{ fontSize: 11, color: 'var(--adda-success)', fontFamily: 'var(--font-inter), sans-serif', display: 'flex', alignItems: 'center', gap: 4 }}>
+              <span style={{ fontSize: 11, color: 'var(--venue-success)', fontFamily: 'var(--font-inter), sans-serif', display: 'flex', alignItems: 'center', gap: 4 }}>
                 <span className="material-symbols-outlined" style={{ fontSize: 13 }}>check_circle</span>
                 {savedAt ? `Saved ${savedAt.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}` : 'All changes saved'}
               </span>
@@ -187,10 +187,10 @@ export default function PricingClient({ adda }: Props) {
         {/* Section: Pricing Model */}
         <section style={{ marginBottom: 40 }}>
           <div style={{ marginBottom: 20 }}>
-            <h2 style={{ fontFamily: 'var(--font-inter), sans-serif', fontWeight: 700, fontSize: 16, color: 'var(--adda-text-primary)', margin: '0 0 4px' }}>
+            <h2 style={{ fontFamily: 'var(--font-inter), sans-serif', fontWeight: 700, fontSize: 16, color: 'var(--venue-text-primary)', margin: '0 0 4px' }}>
               How do you charge?
             </h2>
-            <p style={{ fontFamily: 'var(--font-inter), sans-serif', fontSize: 13, color: 'var(--adda-text-muted)', margin: 0 }}>
+            <p style={{ fontFamily: 'var(--font-inter), sans-serif', fontSize: 13, color: 'var(--venue-text-muted)', margin: 0 }}>
               Your pricing model tells creators how booking this space works. You can change this at any time.
             </p>
           </div>
@@ -205,8 +205,8 @@ export default function PricingClient({ adda }: Props) {
                   style={{
                     display: 'flex', flexDirection: 'column', alignItems: 'flex-start',
                     gap: 8, padding: '16px 18px', borderRadius: 12, textAlign: 'left',
-                    background: selected ? `rgba(${model.color === '#5DD9D0' ? '93,217,208' : model.color === '#F5A800' ? '245,168,0' : model.color === '#9B8FFF' ? '155,143,255' : '232,112,90'},0.10)` : 'var(--adda-bg-elevated)',
-                    border: selected ? `1.5px solid ${model.color}` : '1.5px solid var(--adda-border-subtle)',
+                    background: selected ? `rgba(${model.color === '#5DD9D0' ? '93,217,208' : model.color === '#F5A800' ? '245,168,0' : model.color === '#9B8FFF' ? '155,143,255' : '232,112,90'},0.10)` : 'var(--venue-bg-elevated)',
+                    border: selected ? `1.5px solid ${model.color}` : '1.5px solid var(--venue-border-subtle)',
                     cursor: 'pointer', transition: 'all 160ms ease',
                     position: 'relative',
                   }}
@@ -223,24 +223,24 @@ export default function PricingClient({ adda }: Props) {
 
                   <div style={{
                     width: 36, height: 36, borderRadius: 8,
-                    background: selected ? model.color : 'var(--adda-bg-overlay)',
+                    background: selected ? model.color : 'var(--venue-bg-overlay)',
                     display: 'grid', placeItems: 'center', flexShrink: 0,
                   }}>
-                    <span className="material-symbols-outlined" style={{ fontSize: 20, color: selected ? '#000' : 'var(--adda-text-muted)', fontVariationSettings: selected ? "'FILL' 1" : "'FILL' 0" }}>
+                    <span className="material-symbols-outlined" style={{ fontSize: 20, color: selected ? '#000' : 'var(--venue-text-muted)', fontVariationSettings: selected ? "'FILL' 1" : "'FILL' 0" }}>
                       {model.icon}
                     </span>
                   </div>
 
                   <div>
-                    <div style={{ fontFamily: 'var(--font-inter), sans-serif', fontWeight: 700, fontSize: 14, color: selected ? 'var(--adda-text-primary)' : 'var(--adda-text-secondary)', marginBottom: 4 }}>
+                    <div style={{ fontFamily: 'var(--font-inter), sans-serif', fontWeight: 700, fontSize: 14, color: selected ? 'var(--venue-text-primary)' : 'var(--venue-text-secondary)', marginBottom: 4 }}>
                       {model.label}
                     </div>
-                    <div style={{ fontFamily: 'var(--font-inter), sans-serif', fontSize: 12, color: 'var(--adda-text-muted)', lineHeight: 1.5, marginBottom: 6 }}>
+                    <div style={{ fontFamily: 'var(--font-inter), sans-serif', fontSize: 12, color: 'var(--venue-text-muted)', lineHeight: 1.5, marginBottom: 6 }}>
                       {model.description}
                     </div>
-                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 8px', borderRadius: 9999, background: 'var(--adda-bg-overlay)', border: '1px solid var(--adda-border-subtle)' }}>
-                      <span className="material-symbols-outlined" style={{ fontSize: 11, color: 'var(--adda-text-muted)' }}>lightbulb</span>
-                      <span style={{ fontFamily: 'var(--font-inter), sans-serif', fontSize: 10, color: 'var(--adda-text-muted)' }}>
+                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 8px', borderRadius: 9999, background: 'var(--venue-bg-overlay)', border: '1px solid var(--venue-border-subtle)' }}>
+                      <span className="material-symbols-outlined" style={{ fontSize: 11, color: 'var(--venue-text-muted)' }}>lightbulb</span>
+                      <span style={{ fontFamily: 'var(--font-inter), sans-serif', fontSize: 10, color: 'var(--venue-text-muted)' }}>
                         {model.bestFor}
                       </span>
                     </div>
@@ -260,13 +260,13 @@ export default function PricingClient({ adda }: Props) {
               transition={{ duration: 0.15 }}
               style={{
                 marginTop: 14, padding: '12px 16px', borderRadius: 10,
-                background: 'var(--adda-bg-elevated)',
-                border: '1px solid var(--adda-border-subtle)',
+                background: 'var(--venue-bg-elevated)',
+                border: '1px solid var(--venue-border-subtle)',
                 display: 'flex', alignItems: 'center', gap: 10,
               }}
             >
               <span className="material-symbols-outlined" style={{ fontSize: 16, color: activeModel.color, flexShrink: 0, fontVariationSettings: "'FILL' 1" }}>info</span>
-              <span style={{ fontFamily: 'var(--font-inter), sans-serif', fontSize: 12.5, color: 'var(--adda-text-secondary)', lineHeight: 1.5 }}>
+              <span style={{ fontFamily: 'var(--font-inter), sans-serif', fontSize: 12.5, color: 'var(--venue-text-secondary)', lineHeight: 1.5 }}>
                 {activeModel.key === 'fixed_rental' && 'Creators see your hourly rate and minimum hours before booking. Your earnings are predictable regardless of event attendance.'}
                 {activeModel.key === 'door_split' && 'You earn a percentage of ticket revenue after the event. WIMC handles the split automatically from Razorpay payouts.'}
                 {activeModel.key === 'hybrid' && 'Creators pay a reduced hourly base + a smaller revenue share. Set your base rate below — the split percentage is agreed per booking.'}
@@ -277,16 +277,16 @@ export default function PricingClient({ adda }: Props) {
         </section>
 
         {/* Divider */}
-        <div style={{ height: 1, background: 'var(--adda-border-subtle)', marginBottom: 32 }} />
+        <div style={{ height: 1, background: 'var(--venue-border-subtle)', marginBottom: 32 }} />
 
         {/* Section: Hourly Rates (shown for fixed_rental and hybrid) */}
         {(pricingModel === 'fixed_rental' || pricingModel === 'hybrid') && (
           <section style={{ marginBottom: 8 }}>
             <div style={{ marginBottom: 20 }}>
-              <h2 style={{ fontFamily: 'var(--font-inter), sans-serif', fontWeight: 700, fontSize: 16, color: 'var(--adda-text-primary)', margin: '0 0 4px' }}>
+              <h2 style={{ fontFamily: 'var(--font-inter), sans-serif', fontWeight: 700, fontSize: 16, color: 'var(--venue-text-primary)', margin: '0 0 4px' }}>
                 Hourly rates & rules
               </h2>
-              <p style={{ fontFamily: 'var(--font-inter), sans-serif', fontSize: 13, color: 'var(--adda-text-muted)', margin: 0 }}>
+              <p style={{ fontFamily: 'var(--font-inter), sans-serif', fontSize: 13, color: 'var(--venue-text-muted)', margin: 0 }}>
                 Set different rates for weekdays, weekends, or peak hours. The interactive preview below shows exactly what a creator would pay.
               </p>
             </div>
@@ -304,16 +304,16 @@ export default function PricingClient({ adda }: Props) {
           <section>
             <div style={{
               padding: '20px 24px', borderRadius: 12,
-              background: 'var(--adda-bg-elevated)',
-              border: '1px solid var(--adda-border-subtle)',
+              background: 'var(--venue-bg-elevated)',
+              border: '1px solid var(--venue-border-subtle)',
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
                 <span className="material-symbols-outlined" style={{ fontSize: 20, color: '#E8705A', fontVariationSettings: "'FILL' 1" }}>restaurant</span>
-                <span style={{ fontFamily: 'var(--font-inter), sans-serif', fontWeight: 700, fontSize: 14, color: 'var(--adda-text-primary)' }}>
+                <span style={{ fontFamily: 'var(--font-inter), sans-serif', fontWeight: 700, fontSize: 14, color: 'var(--venue-text-primary)' }}>
                   F&B minimum is agreed per booking
                 </span>
               </div>
-              <p style={{ fontFamily: 'var(--font-inter), sans-serif', fontSize: 13, color: 'var(--adda-text-muted)', margin: '0 0 12px', lineHeight: 1.6 }}>
+              <p style={{ fontFamily: 'var(--font-inter), sans-serif', fontSize: 13, color: 'var(--venue-text-muted)', margin: '0 0 12px', lineHeight: 1.6 }}>
                 When a creator submits a booking proposal, they&apos;ll see your F&B minimum requirement and can counter-offer. Set the minimum in your booking response or counter-offer.
               </p>
               <div style={{
@@ -334,16 +334,16 @@ export default function PricingClient({ adda }: Props) {
           <section>
             <div style={{
               padding: '20px 24px', borderRadius: 12,
-              background: 'var(--adda-bg-elevated)',
-              border: '1px solid var(--adda-border-subtle)',
+              background: 'var(--venue-bg-elevated)',
+              border: '1px solid var(--venue-border-subtle)',
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
                 <span className="material-symbols-outlined" style={{ fontSize: 20, color: '#F5A800', fontVariationSettings: "'FILL' 1" }}>group</span>
-                <span style={{ fontFamily: 'var(--font-inter), sans-serif', fontWeight: 700, fontSize: 14, color: 'var(--adda-text-primary)' }}>
+                <span style={{ fontFamily: 'var(--font-inter), sans-serif', fontWeight: 700, fontSize: 14, color: 'var(--venue-text-primary)' }}>
                   Revenue split negotiated per booking
                 </span>
               </div>
-              <p style={{ fontFamily: 'var(--font-inter), sans-serif', fontSize: 13, color: 'var(--adda-text-muted)', margin: '0 0 12px', lineHeight: 1.6 }}>
+              <p style={{ fontFamily: 'var(--font-inter), sans-serif', fontSize: 13, color: 'var(--venue-text-muted)', margin: '0 0 12px', lineHeight: 1.6 }}>
                 You&apos;ll propose your take (e.g., 30% of ticket revenue) when accepting or counter-offering a booking. WIMC handles the split automatically at payout.
               </p>
               <div style={{

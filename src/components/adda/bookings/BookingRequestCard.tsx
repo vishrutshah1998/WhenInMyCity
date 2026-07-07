@@ -80,9 +80,9 @@ function formatCountdownChip(ms: number): string {
 }
 
 function countdownChipStyle(ms: number): { bg: string; color: string } {
-  if (ms <= 0) return { bg: 'rgba(82,82,91,0.2)', color: 'var(--adda-text-muted)' }
-  if (ms < 6 * 3_600_000) return { bg: 'rgba(239,68,68,0.12)', color: 'var(--adda-danger)' }
-  return { bg: 'var(--adda-amber-tint)', color: 'var(--adda-amber)' }
+  if (ms <= 0) return { bg: 'rgba(82,82,91,0.2)', color: 'var(--venue-text-muted)' }
+  if (ms < 6 * 3_600_000) return { bg: 'rgba(239,68,68,0.12)', color: 'var(--venue-danger)' }
+  return { bg: 'var(--venue-amber-tint)', color: 'var(--venue-amber)' }
 }
 
 function creatorTypeLabel(type: string): string {
@@ -105,12 +105,12 @@ function tierLabel(tier: string): string {
 // ---------------------------------------------------------------------------
 
 const STATUS_PILL: Record<string, { label: string; bg: string; color: string }> = {
-  pending:         { label: 'Pending Approval', bg: 'var(--adda-amber-tint)',    color: 'var(--adda-amber)'   },
-  counter_offered: { label: 'Counter Offered',  bg: 'var(--adda-amber-tint)',    color: 'var(--adda-amber)'   },
-  accepted:        { label: 'Confirmed',         bg: 'rgba(16,185,129,0.12)',     color: 'var(--adda-success)' },
-  declined:        { label: 'Declined',          bg: 'rgba(239,68,68,0.10)',      color: 'var(--adda-danger)'  },
-  expired:         { label: 'Expired',           bg: 'rgba(82,82,91,0.2)',        color: 'var(--adda-text-muted)' },
-  withdrawn:       { label: 'Withdrawn',         bg: 'rgba(82,82,91,0.2)',        color: 'var(--adda-text-muted)' },
+  pending:         { label: 'Pending Approval', bg: 'var(--venue-amber-tint)',    color: 'var(--venue-amber)'   },
+  counter_offered: { label: 'Counter Offered',  bg: 'var(--venue-amber-tint)',    color: 'var(--venue-amber)'   },
+  accepted:        { label: 'Confirmed',         bg: 'rgba(16,185,129,0.12)',     color: 'var(--venue-success)' },
+  declined:        { label: 'Declined',          bg: 'rgba(239,68,68,0.10)',      color: 'var(--venue-danger)'  },
+  expired:         { label: 'Expired',           bg: 'rgba(82,82,91,0.2)',        color: 'var(--venue-text-muted)' },
+  withdrawn:       { label: 'Withdrawn',         bg: 'rgba(82,82,91,0.2)',        color: 'var(--venue-text-muted)' },
 }
 
 // ---------------------------------------------------------------------------
@@ -131,7 +131,7 @@ function DetailCell({ label, value }: { label: string; value: string }) {
         fontWeight: 500,
         letterSpacing: '0.8px',
         textTransform: 'uppercase' as const,
-        color: 'var(--adda-text-muted)',
+        color: 'var(--venue-text-muted)',
         fontFamily: 'var(--font-inter), system-ui, sans-serif',
         marginBottom: 4,
       }}>
@@ -139,7 +139,7 @@ function DetailCell({ label, value }: { label: string; value: string }) {
       </div>
       <div style={{
         fontSize: 14,
-        color: 'var(--adda-text-primary)',
+        color: 'var(--venue-text-primary)',
         fontFamily: 'var(--font-jetbrains-mono), monospace',
         overflow: 'hidden',
         textOverflow: 'ellipsis',
@@ -180,7 +180,7 @@ function BreakdownRow({
       <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
         <span style={{
           fontSize: 13.5,
-          color: muted ? 'var(--adda-text-muted)' : 'var(--adda-text-secondary)',
+          color: muted ? 'var(--venue-text-muted)' : 'var(--venue-text-secondary)',
           fontFamily: 'var(--font-inter), system-ui, sans-serif',
         }}>
           {label}
@@ -193,7 +193,7 @@ function BreakdownRow({
               onMouseLeave={() => setTipVisible(false)}
               style={{
                 fontSize: 14,
-                color: 'var(--adda-text-muted)',
+                color: 'var(--venue-text-muted)',
                 cursor: 'help',
                 lineHeight: 1,
                 display: 'block',
@@ -211,11 +211,11 @@ function BreakdownRow({
                   transform: 'translateX(-50%)',
                   width: 220,
                   padding: '8px 10px',
-                  background: 'var(--adda-bg-overlay)',
-                  border: '1px solid var(--adda-border-default)',
+                  background: 'var(--venue-bg-overlay)',
+                  border: '1px solid var(--venue-border-default)',
                   borderRadius: 7,
                   fontSize: 12,
-                  color: 'var(--adda-text-secondary)',
+                  color: 'var(--venue-text-secondary)',
                   fontFamily: 'var(--font-inter), system-ui, sans-serif',
                   lineHeight: 1.5,
                   zIndex: 10,
@@ -234,7 +234,7 @@ function BreakdownRow({
                   height: 0,
                   borderLeft: '5px solid transparent',
                   borderRight: '5px solid transparent',
-                  borderTop: '5px solid var(--adda-border-default)',
+                  borderTop: '5px solid var(--venue-border-default)',
                 }} />
               </div>
             )}
@@ -244,7 +244,7 @@ function BreakdownRow({
       <span style={{
         fontSize: 13.5,
         fontWeight: 500,
-        color: amber ? 'var(--adda-amber)' : muted ? 'var(--adda-text-muted)' : 'var(--adda-text-primary)',
+        color: amber ? 'var(--venue-amber)' : muted ? 'var(--venue-text-muted)' : 'var(--venue-text-primary)',
         fontFamily: 'var(--font-jetbrains-mono), monospace',
       }}>
         {value}
@@ -339,13 +339,13 @@ export default function BookingRequestCard({ proposal, addaId: _addaId, onRespon
             width: 48,
             height: 48,
             borderRadius: '50%',
-            background: 'var(--adda-bg-overlay)',
-            border: '2px solid var(--adda-border-default)',
+            background: 'var(--venue-bg-overlay)',
+            border: '2px solid var(--venue-border-default)',
             display: 'grid',
             placeItems: 'center',
             fontWeight: 700,
             fontSize: 16,
-            color: 'var(--adda-text-secondary)',
+            color: 'var(--venue-text-secondary)',
             flexShrink: 0,
             overflow: 'hidden',
           }}>
@@ -359,10 +359,10 @@ export default function BookingRequestCard({ proposal, addaId: _addaId, onRespon
 
           {/* Name + meta */}
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 17, fontWeight: 600, color: 'var(--adda-text-primary)', lineHeight: 1.3 }}>
+            <div style={{ fontSize: 17, fontWeight: 600, color: 'var(--venue-text-primary)', lineHeight: 1.3 }}>
               {maker.display_name}
             </div>
-            <div style={{ fontSize: 12, color: 'var(--adda-text-muted)', marginTop: 3 }}>
+            <div style={{ fontSize: 12, color: 'var(--venue-text-muted)', marginTop: 3 }}>
               {maker.cumulative_events_hosted > 0
                 ? `${maker.cumulative_events_hosted} booking${maker.cumulative_events_hosted !== 1 ? 's' : ''} on WIMC`
                 : 'New to WIMC'}
@@ -370,21 +370,21 @@ export default function BookingRequestCard({ proposal, addaId: _addaId, onRespon
             {/* Verification chips */}
             <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 6, marginTop: 8 }}>
               {maker.is_verified && (
-                <span style={{ fontSize: 10.5, fontWeight: 600, padding: '2px 8px', borderRadius: 9999, background: 'rgba(16,185,129,0.12)', color: 'var(--adda-success)' }}>
+                <span style={{ fontSize: 10.5, fontWeight: 600, padding: '2px 8px', borderRadius: 9999, background: 'rgba(16,185,129,0.12)', color: 'var(--venue-success)' }}>
                   ID Verified
                 </span>
               )}
               {maker.is_founding_maker && (
-                <span style={{ fontSize: 10.5, fontWeight: 600, padding: '2px 8px', borderRadius: 9999, background: 'var(--adda-amber-tint)', color: 'var(--adda-amber)' }}>
+                <span style={{ fontSize: 10.5, fontWeight: 600, padding: '2px 8px', borderRadius: 9999, background: 'var(--venue-amber-tint)', color: 'var(--venue-amber)' }}>
                   Superguest
                 </span>
               )}
               {!maker.is_verified && maker.cumulative_events_hosted === 0 && (
-                <span style={{ fontSize: 10.5, fontWeight: 500, padding: '2px 8px', borderRadius: 9999, border: '1px solid var(--adda-border-default)', color: 'var(--adda-text-muted)' }}>
+                <span style={{ fontSize: 10.5, fontWeight: 500, padding: '2px 8px', borderRadius: 9999, border: '1px solid var(--venue-border-default)', color: 'var(--venue-text-muted)' }}>
                   New to WIMC
                 </span>
               )}
-              <span style={{ fontSize: 10.5, fontWeight: 500, padding: '2px 8px', borderRadius: 9999, border: '1px solid var(--adda-border-default)', color: 'var(--adda-text-muted)' }}>
+              <span style={{ fontSize: 10.5, fontWeight: 500, padding: '2px 8px', borderRadius: 9999, border: '1px solid var(--venue-border-default)', color: 'var(--venue-text-muted)' }}>
                 {tierLabel(maker.user_tier)} tier
               </span>
             </div>
@@ -416,21 +416,21 @@ export default function BookingRequestCard({ proposal, addaId: _addaId, onRespon
           gap: 10,
           marginBottom: 24,
           paddingBottom: 20,
-          borderBottom: '1px solid var(--adda-border-subtle)',
+          borderBottom: '1px solid var(--venue-border-subtle)',
         }}>
           {pill && (
             <span style={{ fontSize: 11.5, fontWeight: 600, padding: '4px 12px', borderRadius: 9999, background: pill.bg, color: pill.color }}>
               {pill.label}
             </span>
           )}
-          <span style={{ fontSize: 11.5, fontWeight: 500, padding: '4px 12px', borderRadius: 9999, border: '1px solid var(--adda-border-default)', color: 'var(--adda-text-secondary)' }}>
+          <span style={{ fontSize: 11.5, fontWeight: 500, padding: '4px 12px', borderRadius: 9999, border: '1px solid var(--venue-border-default)', color: 'var(--venue-text-secondary)' }}>
             {creatorTypeLabel(maker.creator_type)}
           </span>
           <a
             href={`/${maker.username}`}
             target="_blank"
             rel="noopener noreferrer"
-            style={{ fontSize: 12, fontWeight: 500, color: 'var(--adda-amber)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4, marginLeft: 'auto' }}
+            style={{ fontSize: 12, fontWeight: 500, color: 'var(--venue-amber)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4, marginLeft: 'auto' }}
           >
             View creator&apos;s WIMC page
             <span className="material-symbols-outlined" style={{ fontSize: 13 }}>open_in_new</span>
@@ -443,8 +443,8 @@ export default function BookingRequestCard({ proposal, addaId: _addaId, onRespon
           gridTemplateColumns: '1fr 1fr',
           gap: '0 24px',
           marginBottom: 24,
-          background: 'var(--adda-bg-surface)',
-          border: '1px solid var(--adda-border-subtle)',
+          background: 'var(--venue-bg-surface)',
+          border: '1px solid var(--venue-border-subtle)',
           borderRadius: 8,
           padding: '4px 16px',
         }}>
@@ -461,18 +461,18 @@ export default function BookingRequestCard({ proposal, addaId: _addaId, onRespon
         {/* ── Creator's message ─────────────────────────────────────────────── */}
         {proposal.message && (
           <div style={{ marginBottom: 24 }}>
-            <div style={{ fontSize: 11, fontWeight: 500, letterSpacing: '0.8px', textTransform: 'uppercase' as const, color: 'var(--adda-text-muted)', marginBottom: 10 }}>
+            <div style={{ fontSize: 11, fontWeight: 500, letterSpacing: '0.8px', textTransform: 'uppercase' as const, color: 'var(--venue-text-muted)', marginBottom: 10 }}>
               Message from creator
             </div>
             <div style={{
-              background: 'var(--adda-bg-elevated)',
-              borderLeft: '2px solid var(--adda-amber)',
+              background: 'var(--venue-bg-elevated)',
+              borderLeft: '2px solid var(--venue-amber)',
               borderRadius: '0 6px 6px 0',
               padding: 16,
             }}>
               <div style={{
                 fontSize: 14,
-                color: 'var(--adda-text-secondary)',
+                color: 'var(--venue-text-secondary)',
                 lineHeight: 1.7,
                 overflow: 'hidden',
                 display: '-webkit-box',
@@ -484,7 +484,7 @@ export default function BookingRequestCard({ proposal, addaId: _addaId, onRespon
               {proposal.message.length > 200 && (
                 <button
                   onClick={() => setMessageExpanded(p => !p)}
-                  style={{ marginTop: 8, background: 'transparent', border: 'none', cursor: 'pointer', fontSize: 12.5, fontWeight: 600, color: 'var(--adda-amber)', padding: 0, fontFamily: 'var(--font-inter), system-ui, sans-serif' }}
+                  style={{ marginTop: 8, background: 'transparent', border: 'none', cursor: 'pointer', fontSize: 12.5, fontWeight: 600, color: 'var(--venue-amber)', padding: 0, fontFamily: 'var(--font-inter), system-ui, sans-serif' }}
                 >
                   {messageExpanded ? 'Show less' : 'Read more'}
                 </button>
@@ -496,8 +496,8 @@ export default function BookingRequestCard({ proposal, addaId: _addaId, onRespon
         {/* ── Price breakdown ───────────────────────────────────────────────── */}
         <div style={{
           marginBottom: 28,
-          background: 'var(--adda-bg-surface)',
-          border: '1px solid var(--adda-border-subtle)',
+          background: 'var(--venue-bg-surface)',
+          border: '1px solid var(--venue-border-subtle)',
           borderRadius: 8,
           overflow: 'hidden',
         }}>
@@ -513,17 +513,17 @@ export default function BookingRequestCard({ proposal, addaId: _addaId, onRespon
               background: 'transparent',
               border: 'none',
               cursor: 'pointer',
-              borderBottom: breakdownExpanded ? '1px solid var(--adda-border-subtle)' : 'none',
+              borderBottom: breakdownExpanded ? '1px solid var(--venue-border-subtle)' : 'none',
             }}
           >
-            <span style={{ fontSize: 12, fontWeight: 600, letterSpacing: '0.8px', textTransform: 'uppercase' as const, color: 'var(--adda-text-muted)', fontFamily: 'var(--font-inter), system-ui, sans-serif' }}>
+            <span style={{ fontSize: 12, fontWeight: 600, letterSpacing: '0.8px', textTransform: 'uppercase' as const, color: 'var(--venue-text-muted)', fontFamily: 'var(--font-inter), system-ui, sans-serif' }}>
               Price Breakdown
               {/* TODO: replace "mock data" annotation when real split_config is standardised */}
               <span style={{ fontSize: 10, fontWeight: 400, marginLeft: 6, fontStyle: 'italic', letterSpacing: 0, textTransform: 'none' as const }}>
                 (mock data)
               </span>
             </span>
-            <span className="material-symbols-outlined" style={{ fontSize: 16, color: 'var(--adda-text-muted)', transform: breakdownExpanded ? 'rotate(180deg)' : 'none', transition: 'transform 180ms ease' }}>
+            <span className="material-symbols-outlined" style={{ fontSize: 16, color: 'var(--venue-text-muted)', transform: breakdownExpanded ? 'rotate(180deg)' : 'none', transition: 'transform 180ms ease' }}>
               expand_more
             </span>
           </button>
@@ -537,7 +537,7 @@ export default function BookingRequestCard({ proposal, addaId: _addaId, onRespon
               />
 
               {/* Separator */}
-              <div style={{ height: 1, background: 'var(--adda-border-subtle)', margin: '6px 0' }} />
+              <div style={{ height: 1, background: 'var(--venue-border-subtle)', margin: '6px 0' }} />
 
               <BreakdownRow label="Subtotal" value={formatInr(breakdown.subtotalPaise)} />
               <BreakdownRow
@@ -548,7 +548,7 @@ export default function BookingRequestCard({ proposal, addaId: _addaId, onRespon
               />
 
               {/* Separator */}
-              <div style={{ height: 1, background: 'var(--adda-border-subtle)', margin: '6px 0' }} />
+              <div style={{ height: 1, background: 'var(--venue-border-subtle)', margin: '6px 0' }} />
 
               <BreakdownRow label="Guest pays" value={formatInr(breakdown.guestPaysPaise)} muted />
 
@@ -562,7 +562,7 @@ export default function BookingRequestCard({ proposal, addaId: _addaId, onRespon
                 <span style={{
                   fontSize: 14,
                   fontWeight: 600,
-                  color: 'var(--adda-text-primary)',
+                  color: 'var(--venue-text-primary)',
                   fontFamily: 'var(--font-inter), system-ui, sans-serif',
                 }}>
                   Your payout
@@ -570,14 +570,14 @@ export default function BookingRequestCard({ proposal, addaId: _addaId, onRespon
                 <span style={{
                   fontSize: 18,
                   fontWeight: 600,
-                  color: 'var(--adda-amber)',
+                  color: 'var(--venue-amber)',
                   fontFamily: 'var(--font-jetbrains-mono), monospace',
                 }}>
                   {formatInr(breakdown.yourPayoutPaise)}
                 </span>
               </div>
 
-              <div style={{ fontSize: 11, color: 'var(--adda-text-muted)', fontFamily: 'var(--font-inter), system-ui, sans-serif', marginTop: 4 }}>
+              <div style={{ fontSize: 11, color: 'var(--venue-text-muted)', fontFamily: 'var(--font-inter), system-ui, sans-serif', marginTop: 4 }}>
                 Settled within 7 days post-event · GST applicable for events ≥ ₹500
               </div>
             </div>
@@ -588,7 +588,7 @@ export default function BookingRequestCard({ proposal, addaId: _addaId, onRespon
         {canRespond && !isExpired && (
           <div style={{ marginBottom: 32 }}>
             {actionError && (
-              <div style={{ padding: '10px 14px', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 6, fontSize: 12.5, color: 'var(--adda-danger)', fontFamily: 'var(--font-inter), system-ui, sans-serif', marginBottom: 14 }}>
+              <div style={{ padding: '10px 14px', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 6, fontSize: 12.5, color: 'var(--venue-danger)', fontFamily: 'var(--font-inter), system-ui, sans-serif', marginBottom: 14 }}>
                 {actionError}
               </div>
             )}
@@ -605,7 +605,7 @@ export default function BookingRequestCard({ proposal, addaId: _addaId, onRespon
                   justifyContent: 'center',
                   gap: 6,
                   padding: '13px 0',
-                  background: confirmState === 'done' ? 'var(--adda-success)' : 'var(--adda-amber)',
+                  background: confirmState === 'done' ? 'var(--venue-success)' : 'var(--venue-amber)',
                   color: '#000',
                   border: 'none',
                   borderRadius: 8,
@@ -637,8 +637,8 @@ export default function BookingRequestCard({ proposal, addaId: _addaId, onRespon
                   gap: 6,
                   padding: '13px 0',
                   background: 'transparent',
-                  color: 'var(--adda-amber)',
-                  border: '1px solid var(--adda-amber-border)',
+                  color: 'var(--venue-amber)',
+                  border: '1px solid var(--venue-amber-border)',
                   borderRadius: 8,
                   fontSize: 14,
                   fontWeight: 600,
@@ -663,8 +663,8 @@ export default function BookingRequestCard({ proposal, addaId: _addaId, onRespon
                   gap: 6,
                   padding: '13px 0',
                   background: 'transparent',
-                  color: 'var(--adda-text-muted)',
-                  border: '1px solid var(--adda-border-default)',
+                  color: 'var(--venue-text-muted)',
+                  border: '1px solid var(--venue-border-default)',
                   borderRadius: 8,
                   fontSize: 14,
                   fontWeight: 600,
@@ -681,7 +681,7 @@ export default function BookingRequestCard({ proposal, addaId: _addaId, onRespon
 
         {/* Expired notice */}
         {canRespond && isExpired && (
-          <div style={{ padding: '12px 16px', background: 'rgba(82,82,91,0.12)', border: '1px solid var(--adda-border-default)', borderRadius: 8, fontSize: 13, color: 'var(--adda-text-muted)', fontFamily: 'var(--font-inter), system-ui, sans-serif', marginBottom: 28 }}>
+          <div style={{ padding: '12px 16px', background: 'rgba(82,82,91,0.12)', border: '1px solid var(--venue-border-default)', borderRadius: 8, fontSize: 13, color: 'var(--venue-text-muted)', fontFamily: 'var(--font-inter), system-ui, sans-serif', marginBottom: 28 }}>
             This request expired without a response. Your response rate is not affected.
           </div>
         )}

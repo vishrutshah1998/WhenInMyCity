@@ -23,7 +23,7 @@ export interface WorkspaceLink {
 export interface BottomNavConfig {
   items: [BottomNavItem, BottomNavItem, BottomNavItem, BottomNavItem]
   more: MoreItem[]
-  accent:  string  // CSS value, e.g. 'var(--wimc-accent)' or 'var(--adda-amber)'
+  accent:  string  // CSS value, e.g. 'var(--wimc-accent)' or 'var(--venue-amber)'
   bg:      string  // nav background
   border:  string  // top border color
   muted:   string  // inactive icon/label color
@@ -105,10 +105,10 @@ export const venueBottomNavConfig: BottomNavConfig = {
     { href: '/business/venue/availability', icon: 'tune',             label: 'Availability' },
     { href: '/map-of-legends',              icon: 'location_city',    label: 'Map of Legends' },
   ],
-  accent:  'var(--adda-amber)',
-  bg:      'var(--adda-bg-surface)',
-  border:  'var(--adda-border-subtle)',
-  muted:   'var(--adda-text-muted)',
+  accent:  'var(--venue-amber)',
+  bg:      'var(--venue-bg-surface)',
+  border:  'var(--venue-border-subtle)',
+  muted:   'var(--venue-text-muted)',
   badgeFg: '#000',
 }
 
@@ -127,10 +127,10 @@ export const brandBottomNavConfig: BottomNavConfig = {
     { icon: 'campaign',         label: 'Campaigns', soon: true },
     { icon: 'bar_chart_4_bars', label: 'Analytics', soon: true },
   ],
-  accent:  'var(--adda-amber)',
-  bg:      'var(--adda-bg-surface)',
-  border:  'var(--adda-border-subtle)',
-  muted:   'var(--adda-text-muted)',
+  accent:  'var(--venue-amber)',
+  bg:      'var(--venue-bg-surface)',
+  border:  'var(--venue-border-subtle)',
+  muted:   'var(--venue-text-muted)',
   badgeFg: '#000',
 }
 

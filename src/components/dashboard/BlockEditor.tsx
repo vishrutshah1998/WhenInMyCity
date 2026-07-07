@@ -1924,7 +1924,7 @@ function AddBlockModal({ onClose, onAdd, isPending, allowedTypes }: {
   return createPortal(
     <div
       className="fixed inset-0 z-[70] flex items-center justify-center p-10"
-      style={{ paddingLeft: 'calc(var(--wimc-sidebar-w, var(--adda-sidebar-w, 0px)) + 40px)' }}
+      style={{ paddingLeft: 'calc(var(--wimc-sidebar-w, var(--venue-sidebar-w, 0px)) + 40px)' }}
     >
       <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={onClose} />
       <div

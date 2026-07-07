@@ -13,7 +13,7 @@ export default function SparklineChart({ data }: Props) {
         <Line
           type="monotone"
           dataKey="v"
-          stroke="var(--adda-amber)"
+          stroke="var(--venue-amber)"
           strokeWidth={1.5}
           dot={false}
           isAnimationActive={false}

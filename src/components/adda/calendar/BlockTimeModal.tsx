@@ -71,8 +71,8 @@ export default function BlockTimeModal({ open, initialDate, initialStart, onClos
               zIndex: 101,
               width: 380,
               maxWidth: 'calc(100vw - 32px)',
-              background: 'var(--adda-bg-elevated)',
-              border: '1px solid var(--adda-border-default)',
+              background: 'var(--venue-bg-elevated)',
+              border: '1px solid var(--venue-border-default)',
               borderRadius: 14,
               overflow: 'hidden',
               fontFamily: 'var(--font-inter), system-ui, sans-serif',
@@ -81,18 +81,18 @@ export default function BlockTimeModal({ open, initialDate, initialStart, onClos
             {/* Header */}
             <div style={{
               padding: '16px 20px',
-              borderBottom: '1px solid var(--adda-border-subtle)',
+              borderBottom: '1px solid var(--venue-border-subtle)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
             }}>
-              <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--adda-text-primary)' }}>
+              <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--venue-text-primary)' }}>
                 Block Time
               </span>
               <button onClick={onClose} style={{
                 width: 28, height: 28, borderRadius: '50%',
-                border: 'none', background: 'var(--adda-bg-overlay)',
-                color: 'var(--adda-text-muted)', cursor: 'pointer',
+                border: 'none', background: 'var(--venue-bg-overlay)',
+                color: 'var(--venue-text-muted)', cursor: 'pointer',
                 display: 'grid', placeItems: 'center', fontSize: 14,
               }}>×</button>
             </div>
@@ -128,7 +128,7 @@ export default function BlockTimeModal({ open, initialDate, initialStart, onClos
                 />
               </Field>
 
-              <p style={{ fontSize: 11, color: 'var(--adda-text-muted)', lineHeight: 1.5, margin: 0 }}>
+              <p style={{ fontSize: 11, color: 'var(--venue-text-muted)', lineHeight: 1.5, margin: 0 }}>
                 Blocked time is never shown to creators — they can't request bookings during this window.
               </p>
             </div>
@@ -136,7 +136,7 @@ export default function BlockTimeModal({ open, initialDate, initialStart, onClos
             {/* Footer */}
             <div style={{
               padding: '14px 20px',
-              borderTop: '1px solid var(--adda-border-subtle)',
+              borderTop: '1px solid var(--venue-border-subtle)',
               display: 'flex',
               gap: 8,
               justifyContent: 'flex-end',
@@ -164,7 +164,7 @@ export default function BlockTimeModal({ open, initialDate, initialStart, onClos
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-      <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--adda-text-muted)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+      <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--venue-text-muted)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
         {label}
       </label>
       {children}
@@ -175,9 +175,9 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 const inputStyle: React.CSSProperties = {
   padding: '8px 10px',
   borderRadius: 7,
-  border: '1px solid var(--adda-border-default)',
-  background: 'var(--adda-bg-overlay)',
-  color: 'var(--adda-text-primary)',
+  border: '1px solid var(--venue-border-default)',
+  background: 'var(--venue-bg-overlay)',
+  color: 'var(--venue-text-primary)',
   fontFamily: 'var(--font-inter), system-ui, sans-serif',
   fontSize: 13,
   outline: 'none',
@@ -189,9 +189,9 @@ const inputStyle: React.CSSProperties = {
 const cancelBtn: React.CSSProperties = {
   padding: '8px 16px',
   borderRadius: 7,
-  border: '1px solid var(--adda-border-default)',
+  border: '1px solid var(--venue-border-default)',
   background: 'transparent',
-  color: 'var(--adda-text-secondary)',
+  color: 'var(--venue-text-secondary)',
   fontFamily: 'var(--font-inter), system-ui, sans-serif',
   fontSize: 13,
   fontWeight: 500,
@@ -202,7 +202,7 @@ const confirmBtn: React.CSSProperties = {
   padding: '8px 16px',
   borderRadius: 7,
   border: 'none',
-  background: 'var(--adda-amber)',
+  background: 'var(--venue-amber)',
   color: '#000',
   fontFamily: 'var(--font-inter), system-ui, sans-serif',
   fontSize: 13,
