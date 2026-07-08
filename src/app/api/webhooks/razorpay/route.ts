@@ -28,6 +28,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { verifyWebhookSignature } from '@/lib/razorpay'
 import { sendWhatsAppMessage } from '@/lib/whatsapp'
+import { calculateChargeAmount } from '@/types/events'
 
 // Always return 200 — see rule #1 above.
 const OK = () => NextResponse.json({ received: true }, { status: 200 })
@@ -182,8 +183,11 @@ type AdminClient = ReturnType<typeof createAdminClient>
  * This is the webhook safety net for cases where `confirmRSVPPayment` was
  * not called (app crash, network failure, user closed the app after payment).
  *
- * The update is a no-op if `confirmRSVPPayment` already ran (idempotent
- * because we filter on `payment_status = 'pending'`).
+ * Also reconciles `amount_paid` on rows `confirmRSVPPayment` already
+ * captured (that fast path can beat this webhook to the punch) — this
+ * handler is the only writer that receives Razorpay's own captured-amount
+ * figure, so it double-checks the per-ticket amount even when it isn't the
+ * one flipping payment_status.
  */
 async function handlePaymentCaptured(
   admin: AdminClient,
@@ -197,31 +201,93 @@ async function handlePaymentCaptured(
 
   const { id: paymentId, order_id: orderId, amount } = payment
 
-  const { data: updated, error } = await admin
+  // Load every RSVP row sharing this order — both still-pending rows (the
+  // common "webhook is the safety net" case) and already-captured rows (the
+  // common "confirmRSVPPayment beat us here" case) — so amount_paid can be
+  // reconciled either way.
+  const { data: orderRows, error: fetchError } = await admin
     .from('rsvps')
-    .update({
-      payment_status: 'captured',
-      razorpay_payment_id: paymentId,
-      amount_paid: amount,
-    })
+    .select('id, payment_status, amount_paid, platform_fee_paise, maker_payout_paise, venue_fee_paise')
     .eq('razorpay_order_id', orderId)
-    .eq('payment_status', 'pending')   // idempotency — skip already-captured rows
-    .select('id, attendee_name, attendee_phone, qr_code_token, amount_paid, event_id')
 
-  if (error) {
-    console.error('[webhook:payment.captured] DB update failed', {
-      orderId, paymentId, error: error.message,
+  if (fetchError || !orderRows?.length) {
+    console.error('[webhook:payment.captured] failed to load order rows', {
+      orderId, paymentId, error: fetchError?.message,
     })
     return
+  }
+
+  // All tickets within one order share the same tier/price (one initiateRSVP
+  // call = one tier selection for the whole cart), so the per-ticket amount
+  // can be derived once from any row's frozen revenue-split fields — which
+  // sum to exactly the base ticket price locked in at booking time.
+  const perTicketBasePaise =
+    (orderRows[0].platform_fee_paise ?? 0) +
+    (orderRows[0].maker_payout_paise ?? 0) +
+    (orderRows[0].venue_fee_paise ?? 0)
+  const expectedAmountPaid = calculateChargeAmount(perTicketBasePaise, 1)
+
+  const orderTotalExpected = expectedAmountPaid * orderRows.length
+  if (Math.abs(orderTotalExpected - amount) > orderRows.length) {
+    // A paisa or two of drift from per-ticket GST rounding is expected;
+    // anything larger suggests the tier price changed after checkout, or a bug.
+    console.warn('[webhook:payment.captured] amount mismatch vs Razorpay', {
+      orderId, paymentId, orderTotalExpected, razorpayAmount: amount,
+    })
+  }
+
+  const pendingIds = orderRows.filter((r) => r.payment_status === 'pending').map((r) => r.id)
+  const staleCapturedIds = orderRows
+    .filter((r) => r.payment_status === 'captured' && r.amount_paid !== expectedAmountPaid)
+    .map((r) => r.id)
+
+  let updated: { id: string; attendee_name: string; attendee_phone: string; qr_code_token: string; amount_paid: number | null; event_id: string }[] = []
+
+  if (pendingIds.length) {
+    const { data, error } = await admin
+      .from('rsvps')
+      .update({
+        payment_status: 'captured',
+        razorpay_payment_id: paymentId,
+        amount_paid: expectedAmountPaid,
+      })
+      .in('id', pendingIds)
+      .select('id, attendee_name, attendee_phone, qr_code_token, amount_paid, event_id')
+
+    if (error) {
+      console.error('[webhook:payment.captured] DB update failed', {
+        orderId, paymentId, error: error.message,
+      })
+      return
+    }
+    updated = data ?? []
+  }
+
+  if (staleCapturedIds.length) {
+    // confirmRSVPPayment already flipped these to captured but the fast
+    // path either hadn't landed the amount_paid fix yet or computed a
+    // stale figure — reconcile amount_paid only, nothing else on the row,
+    // and don't resend notifications (already sent when it was captured).
+    const { error } = await admin
+      .from('rsvps')
+      .update({ amount_paid: expectedAmountPaid })
+      .in('id', staleCapturedIds)
+
+    if (error) {
+      console.error('[webhook:payment.captured] amount_paid reconciliation failed', {
+        orderId, paymentId, error: error.message,
+      })
+    }
   }
 
   console.info('[webhook:payment.captured] confirmed', {
     orderId,
     paymentId,
-    ticketsUpdated: updated?.length ?? 0,
+    ticketsUpdated: updated.length,
+    ticketsReconciled: staleCapturedIds.length,
   })
 
-  if (!updated?.length) return
+  if (!updated.length) return
 
   // Fetch event details for the confirmation message (all RSVPs share the same event).
   const eventId = updated[0].event_id

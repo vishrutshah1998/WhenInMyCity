@@ -186,7 +186,9 @@ function PayoutCard({
             </div>
             <div>
               <span style={{ color: 'var(--wimc-text-muted)', marginRight: 4 }}>Acc</span>
-              <span style={{ fontFamily: 'var(--font-jetbrains-mono)', fontWeight: 600 }}>{payout.bank_account}</span>
+              <span style={{ fontFamily: 'var(--font-jetbrains-mono)', fontWeight: 600 }}>
+                ****{payout.bank_account.slice(-4)}
+              </span>
             </div>
             {payout.bank_ifsc && (
               <div>

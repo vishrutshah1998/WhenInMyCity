@@ -24,6 +24,8 @@ import type {
 } from '@/types/events'
 
 const RAZORPAY_BASE = 'https://api.razorpay.com/v1'
+// v2 base — Route / Linked Accounts (KYC Track B). Not called anywhere yet.
+const RAZORPAY_BASE_V2 = 'https://api.razorpay.com/v2'
 
 // ---------------------------------------------------------------------------
 // Internal HTTP helpers
@@ -67,7 +69,26 @@ async function rzFetch<T>(
   path: string,
   options: RequestInit = {},
 ): Promise<T> {
-  const res = await fetch(`${RAZORPAY_BASE}${path}`, {
+  return rzFetchBase<T>(RAZORPAY_BASE, path, options)
+}
+
+/**
+ * Same auth/error handling as `rzFetch`, but against the Razorpay v2 base.
+ * Plumbing only for now — Route / Linked Accounts calls land in Track B.
+ */
+async function rzFetchV2<T>(
+  path: string,
+  options: RequestInit = {},
+): Promise<T> {
+  return rzFetchBase<T>(RAZORPAY_BASE_V2, path, options)
+}
+
+async function rzFetchBase<T>(
+  base: string,
+  path: string,
+  options: RequestInit,
+): Promise<T> {
+  const res = await fetch(`${base}${path}`, {
     ...options,
     headers: {
       Authorization: authHeader(),

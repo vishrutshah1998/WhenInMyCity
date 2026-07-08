@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback } from 'react'
-import { trackLinkClick } from '@/app/actions/analytics'
+import { trackBlockAnalytics } from '@/app/actions/blocks'
 
 interface ClickTrackerProps {
   blockId:   string
@@ -21,7 +21,7 @@ interface ClickTrackerProps {
  */
 export function ClickTracker({ blockId, creatorId, children }: ClickTrackerProps) {
   const handleClick = useCallback(() => {
-    void trackLinkClick(blockId, creatorId)
+    void trackBlockAnalytics('creator', creatorId, 'click', blockId)
   }, [blockId, creatorId])
 
   return (

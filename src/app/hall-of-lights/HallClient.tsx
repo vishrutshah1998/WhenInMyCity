@@ -80,7 +80,7 @@ function CreatorAvatar({ creator }: { creator: ShowcasedCreator }) {
 function CreatorCard({ creator, cohort = false }: { creator: ShowcasedCreator; cohort?: boolean }) {
   const meta = TIER_META[creator.userTier]
   return (
-    <Link href={`/${cityToSlug(creator.cityId)}/${creator.username}`} style={{ textDecoration: 'none' }}>
+    <Link href={`/${cityToSlug(creator.cityId)}/${creator.username}?src=platform_discovery`} style={{ textDecoration: 'none' }}>
       <div
         style={{
           background: cohort ? meta.gradient : 'var(--wimc-bg-elevated)',

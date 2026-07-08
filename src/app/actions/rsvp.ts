@@ -548,7 +548,7 @@ export async function confirmRSVPPayment(params: {
   // Guards against replay attacks: if already captured, return success (idempotent).
   const { data: anchor, error: fetchError } = await admin
     .from('rsvps')
-    .select('id, payment_status, razorpay_order_id, event_id, attendee_user_id')
+    .select('id, payment_status, razorpay_order_id, event_id, attendee_user_id, platform_fee_paise, maker_payout_paise, venue_fee_paise')
     .eq('id', rsvpId)
     .maybeSingle()
 
@@ -581,11 +581,20 @@ export async function confirmRSVPPayment(params: {
   }
 
   // ── 4. Update ALL RSVPs sharing this order (handles quantity > 1) ────────
+  // amount_paid is derived from this row's own frozen revenue-split fields
+  // (locked in at booking time by initiateRSVP) rather than recomputed from
+  // the event/tier, which can change after checkout. Every row in an order
+  // shares the same tier/price, so the anchor row's figure applies to all.
+  const anchorBasePaise =
+    (anchor.platform_fee_paise ?? 0) + (anchor.maker_payout_paise ?? 0) + (anchor.venue_fee_paise ?? 0)
+  const amountPaid = calculateChargeAmount(anchorBasePaise, 1)
+
   const { data: updated, error: updateError } = await admin
     .from('rsvps')
     .update({
       payment_status: 'captured',
       razorpay_payment_id: razorpayPaymentId,
+      amount_paid: amountPaid,
     })
     .eq('razorpay_order_id', razorpayOrderId)
     .eq('payment_status', 'pending')   // idempotency guard

@@ -86,7 +86,8 @@ export async function subscribeToMakerNewsletter(
     try {
       await admin.from('block_analytics').insert({
         block_id:   blockId,
-        profile_id: profileId,
+        owner_id:   profileId,
+        owner_type: 'creator',
         event_type: 'subscribe',
       })
     } catch {

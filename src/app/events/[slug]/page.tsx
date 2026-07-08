@@ -29,10 +29,14 @@ export async function generateMetadata({
 
 export default async function EventSlugPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ slug: string }>
+  searchParams: Promise<{ src?: string }>
 }) {
   const { slug } = await params
+  const { src } = await searchParams
+  const discoverySource = src === 'creator_link' || src === 'platform_discovery' ? src : undefined
   const { event, rsvpCount, spotsLeft } = await getEventBySlug(slug)
 
   if (!event) notFound()
@@ -87,6 +91,7 @@ export default async function EventSlugPage({
       reviews={reviews}
       myRSVP={myRSVP}
       isAuthenticated={isAuthenticated}
+      discoverySource={discoverySource}
     />
   )
 }
