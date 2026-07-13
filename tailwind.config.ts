@@ -55,11 +55,50 @@ const config: Config = {
         'ds-text-3':   '#5C5A72',
         'ds-coral':       '#E8705A',
         'ds-coral-light': '#FFBBA6',
+        'ds-coral-dim':   'rgba(232,112,90,0.15)',
+        'ds-coral-glow':  'rgba(232,112,90,0.35)',
         'ds-teal':     '#5DD9D0',
+        'ds-teal-light': '#A8F0EC',
+        'ds-teal-dim':   'rgba(93,217,208,0.12)',
         'ds-amber':    '#F5A800',
+        'ds-amber-light': '#FFD166',
+        'ds-amber-dim':   'rgba(245,168,0,0.12)',
         'ds-gulaal':   '#E8342A',
         'ds-neel':     '#3B6BCC',
+        'ds-neel-dim':   'rgba(59,107,204,0.15)',
         'ds-success':  '#4ADE80',
+
+        // ── Vibrant marketing reskin (static) — cream/postal, marketing pages only.
+        // Does NOT touch --wimc-* (live dashboard/explore/admin tokens) or ds-* (dark
+        // Creator Studio tokens) — scoped to /, /growth, /mission, /hall-of-lights,
+        // /map-of-legends. Values match .claude/skills/…/tokens/colors-vibrant.css.
+        'vib-cream':       '#FBF3E7',
+        'vib-cream-2':     '#F3E8D6',
+        'vib-ink':         '#201A12',
+        'vib-text-2':      '#58503F',
+        'vib-text-3':      '#8A8070',
+        'vib-sunset':      '#FF6B35',
+        'vib-coral':       '#FF8F73',
+        'vib-pink':        '#FFB5C0',
+        'vib-sky':         '#4FB8E8',
+        'vib-teal':        '#1F8A70',
+        'vib-gold':        '#FFC53D',
+        'vib-purple':      '#6B4EFF',
+        'vib-postal-red':  '#D8432E',
+        'vib-postal-blue': '#2C4A8C',
+
+        // ── Editorial Light / Chalk-Ink reskin (static) — Explorer public surface
+        // (/explore/*). Warm magazine palette per colors-editorial.css. Reuses
+        // ds-coral/ds-coral-light/ds-teal/ds-amber(turmeric)/ds-gulaal/ds-neel(neel-light)
+        // where values already match — only genuinely new tones get an ed- token.
+        'ed-ink':      '#1A1108',
+        'ed-chalk':    '#F7F2E8',
+        'ed-chalk-2':  '#EDE7D6',
+        'ed-chalk-3':  '#E0D9C8',
+        'ed-neel':     '#1B3A6B',
+        'ed-leaf':     '#2A6B4A',
+        'ed-text-2':   '#4A3F2F',
+        'ed-text-3':   '#7A6E5F',
       },
       borderRadius: {
         DEFAULT: '8px',
@@ -90,6 +129,9 @@ const config: Config = {
         // Venue portal — tabular numerals via font-venue-nums utility class
         'venue': ['Inter', 'system-ui', 'sans-serif'],
         'venue-mono': ["'JetBrains Mono'", "'Fira Code'", 'monospace'],
+        // Vibrant marketing reskin — handwritten script accent + postal/stamp serif
+        'vib-script': ['var(--font-caveat)', 'cursive'],
+        'vib-stamp': ['var(--font-dm-serif)', 'serif'],
       },
       width: {
         'ds-sidebar':    '220px',

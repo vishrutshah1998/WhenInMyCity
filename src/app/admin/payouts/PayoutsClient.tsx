@@ -15,8 +15,8 @@ const STATUS_TABS = [
 
 const STATUS_COLORS: Record<string, string> = {
   pending:  'var(--wimc-amber)',
-  approved: '#3b82f6',
-  paid:     '#22c55e',
+  approved: 'var(--wimc-neel)',
+  paid:     'var(--wimc-success)',
   rejected: 'var(--wimc-coral)',
 }
 
@@ -233,7 +233,7 @@ function PayoutCard({
               disabled={isProcessing}
               style={{
                 padding: '7px 16px', borderRadius: 7, fontSize: 12, fontWeight: 700,
-                background: '#3b82f6', color: '#fff', border: 'none', cursor: 'pointer',
+                background: 'var(--wimc-neel)', color: '#fff', border: 'none', cursor: 'pointer',
                 opacity: isProcessing ? 0.6 : 1,
               }}
             >
@@ -247,7 +247,7 @@ function PayoutCard({
               disabled={isProcessing}
               style={{
                 padding: '7px 16px', borderRadius: 7, fontSize: 12, fontWeight: 700,
-                background: '#22c55e', color: '#fff', border: 'none', cursor: 'pointer',
+                background: 'var(--wimc-success)', color: '#fff', border: 'none', cursor: 'pointer',
                 opacity: isProcessing ? 0.6 : 1,
               }}
             >

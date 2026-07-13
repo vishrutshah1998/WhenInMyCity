@@ -71,21 +71,21 @@ type TearState = 'idle' | 'tearing' | 'flying' | 'entering'
 // ── Data ─────────────────────────────────────────────────────
 const CITIES = ['Indore','Jaipur','Bhopal','Chandigarh','Kochi','Mysuru','Vadodara','Dehradun','Ranchi','Coimbatore','Agra','Vijayawada','Surat','Nagpur','Lucknow','Amritsar','Jodhpur','Udaipur']
 const EVENT_TAGS = [
-  { label: 'Jazz Nights',   color: '#E8705A' },
-  { label: 'Stand-up',      color: '#F5A800' },
-  { label: 'Workshops',     color: '#5DD9D0' },
-  { label: 'Art Pop-ups',   color: '#9B8FFF' },
-  { label: 'Open Mics',     color: '#E8705A' },
-  { label: 'Poetry Slams',  color: '#4ADE80' },
-  { label: 'Music Gigs',    color: '#F5A800' },
+  { label: 'Jazz Nights',   color: '#FF6B35' },
+  { label: 'Stand-up',      color: '#D8432E' },
+  { label: 'Workshops',     color: '#1F8A70' },
+  { label: 'Art Pop-ups',   color: '#6B4EFF' },
+  { label: 'Open Mics',     color: '#FF6B35' },
+  { label: 'Poetry Slams',  color: '#2C4A8C' },
+  { label: 'Music Gigs',    color: '#D8432E' },
 ]
 const MAKER_FEATURES = ['Ticketed events with UPI checkout','Link-in-bio page at /{username}','Keep 75–90% of every rupee earned']
 const VENUE_FEATURES  = ['Verified listing in creator search','Booking calendar & Venue proposals','Revenue from idle evening slots']
 
 const TICKET_META = [
-  { serial: 'WIMC·001', type: 'ENTRY PASS',   accent: '#E8705A', stub: 'GENERAL ADMISSION · INDIA · 2025',          bg: '#0B0807' },
-  { serial: 'WIMC·002', type: 'CREATOR PASS', accent: '#F5A800', stub: 'CLAIM YOUR PAGE · WIMCITY.IN · FREE',        bg: '#0B0A06' },
-  { serial: 'WIMC·003', type: 'ROLE SELECT',  accent: '#5DD9D0', stub: 'CHOOSE YOUR PATH · MAKERS & VENUES · 2025',  bg: '#060B0B' },
+  { serial: 'WIMC·001', type: 'ENTRY PASS',   accent: '#FF6B35', stub: 'GENERAL ADMISSION · INDIA · 2025',          bg: '#FFFFFF' },
+  { serial: 'WIMC·002', type: 'CREATOR PASS', accent: '#D8432E', stub: 'CLAIM YOUR PAGE · WIMCITY.IN · FREE',        bg: '#FFFFFF' },
+  { serial: 'WIMC·003', type: 'ROLE SELECT',  accent: '#2C4A8C', stub: 'CHOOSE YOUR PATH · MAKERS & VENUES · 2025',  bg: '#FFFFFF' },
 ]
 
 // ── Shared sub-components ─────────────────────────────────────
@@ -96,36 +96,36 @@ function AhmedabadPostmarkSVG() {
       <defs>
         <path id="apm-arc-top" d="M 22,100 A 78,78 0 0,1 178,100" />
       </defs>
-      <circle cx="100" cy="100" r="94" stroke="white" strokeWidth="2.5" />
-      <circle cx="100" cy="100" r="78" stroke="white" strokeWidth="1.2" />
-      <text fill="white" fontSize="14" fontFamily="monospace" fontWeight="800" letterSpacing="8">
+      <circle cx="100" cy="100" r="94" stroke="#2C4A8C" strokeWidth="2.5" />
+      <circle cx="100" cy="100" r="78" stroke="#2C4A8C" strokeWidth="1.2" />
+      <text fill="#2C4A8C" fontSize="14" fontFamily="monospace" fontWeight="800" letterSpacing="8">
         <textPath href="#apm-arc-top" startOffset="50%" textAnchor="middle">WIMC</textPath>
       </text>
-      <text x="100" y="155" fill="white" fontSize="8.5" fontFamily="monospace" fontWeight="700" letterSpacing="2.5" textAnchor="middle">AHMEDABAD</text>
-      <line x1="36" y1="149" x2="57" y2="149" stroke="white" strokeWidth="0.8" opacity="0.4"/>
-      <line x1="143" y1="149" x2="164" y2="149" stroke="white" strokeWidth="0.8" opacity="0.4"/>
-      <text x="100" y="167" fill="white" fontSize="7" fontFamily="monospace" fontWeight="600" letterSpacing="3" textAnchor="middle" opacity="0.5">2025</text>
-      <line x1="30" y1="77" x2="170" y2="77" stroke="white" strokeWidth="0.6" strokeDasharray="2 4" opacity="0.35"/>
-      <line x1="32" y1="142" x2="168" y2="142" stroke="white" strokeWidth="0.6" strokeDasharray="2 4" opacity="0.35"/>
+      <text x="100" y="155" fill="#2C4A8C" fontSize="8.5" fontFamily="monospace" fontWeight="700" letterSpacing="2.5" textAnchor="middle">AHMEDABAD</text>
+      <line x1="36" y1="149" x2="57" y2="149" stroke="#2C4A8C" strokeWidth="0.8" opacity="0.4"/>
+      <line x1="143" y1="149" x2="164" y2="149" stroke="#2C4A8C" strokeWidth="0.8" opacity="0.4"/>
+      <text x="100" y="167" fill="#2C4A8C" fontSize="7" fontFamily="monospace" fontWeight="600" letterSpacing="3" textAnchor="middle" opacity="0.5">2025</text>
+      <line x1="30" y1="77" x2="170" y2="77" stroke="#2C4A8C" strokeWidth="0.6" strokeDasharray="2 4" opacity="0.35"/>
+      <line x1="32" y1="142" x2="168" y2="142" stroke="#2C4A8C" strokeWidth="0.6" strokeDasharray="2 4" opacity="0.35"/>
       {/* Teen Darwaza — three-arch gateway, Ahmedabad's city landmark */}
-      <line x1="55" y1="132" x2="145" y2="132" stroke="white" strokeWidth="1.5" />
-      <path d="M 60,132 L 60,114 Q 60,105 69,105 Q 78,105 78,114 L 78,132" stroke="white" strokeWidth="1.2" />
-      <path d="M 85,132 L 85,103 Q 84.5,86 100,86 Q 115.5,86 115,103 L 115,132" stroke="white" strokeWidth="1.8" />
-      <path d="M 122,132 L 122,114 Q 122,105 131,105 Q 140,105 140,114 L 140,132" stroke="white" strokeWidth="1.2" />
-      <line x1="85" y1="93" x2="115" y2="93" stroke="white" strokeWidth="1" />
-      <rect x="87" y="86" width="4" height="8" fill="white" />
-      <rect x="95" y="86" width="4" height="8" fill="white" />
-      <rect x="103" y="86" width="4" height="8" fill="white" />
-      <rect x="111" y="86" width="4" height="8" fill="white" />
-      <line x1="60" y1="109" x2="78" y2="109" stroke="white" strokeWidth="0.8" />
-      <rect x="61" y="104" width="3" height="6" fill="white" opacity="0.85"/>
-      <rect x="67" y="104" width="3" height="6" fill="white" opacity="0.85"/>
-      <rect x="73" y="104" width="3" height="6" fill="white" opacity="0.85"/>
-      <line x1="122" y1="109" x2="140" y2="109" stroke="white" strokeWidth="0.8" />
-      <rect x="123" y="104" width="3" height="6" fill="white" opacity="0.85"/>
-      <rect x="129" y="104" width="3" height="6" fill="white" opacity="0.85"/>
-      <rect x="135" y="104" width="3" height="6" fill="white" opacity="0.85"/>
-      <line x1="55" y1="136" x2="145" y2="136" stroke="white" strokeWidth="0.7" opacity="0.5"/>
+      <line x1="55" y1="132" x2="145" y2="132" stroke="#2C4A8C" strokeWidth="1.5" />
+      <path d="M 60,132 L 60,114 Q 60,105 69,105 Q 78,105 78,114 L 78,132" stroke="#2C4A8C" strokeWidth="1.2" />
+      <path d="M 85,132 L 85,103 Q 84.5,86 100,86 Q 115.5,86 115,103 L 115,132" stroke="#2C4A8C" strokeWidth="1.8" />
+      <path d="M 122,132 L 122,114 Q 122,105 131,105 Q 140,105 140,114 L 140,132" stroke="#2C4A8C" strokeWidth="1.2" />
+      <line x1="85" y1="93" x2="115" y2="93" stroke="#2C4A8C" strokeWidth="1" />
+      <rect x="87" y="86" width="4" height="8" fill="#2C4A8C" />
+      <rect x="95" y="86" width="4" height="8" fill="#2C4A8C" />
+      <rect x="103" y="86" width="4" height="8" fill="#2C4A8C" />
+      <rect x="111" y="86" width="4" height="8" fill="#2C4A8C" />
+      <line x1="60" y1="109" x2="78" y2="109" stroke="#2C4A8C" strokeWidth="0.8" />
+      <rect x="61" y="104" width="3" height="6" fill="#2C4A8C" opacity="0.85"/>
+      <rect x="67" y="104" width="3" height="6" fill="#2C4A8C" opacity="0.85"/>
+      <rect x="73" y="104" width="3" height="6" fill="#2C4A8C" opacity="0.85"/>
+      <line x1="122" y1="109" x2="140" y2="109" stroke="#2C4A8C" strokeWidth="0.8" />
+      <rect x="123" y="104" width="3" height="6" fill="#2C4A8C" opacity="0.85"/>
+      <rect x="129" y="104" width="3" height="6" fill="#2C4A8C" opacity="0.85"/>
+      <rect x="135" y="104" width="3" height="6" fill="#2C4A8C" opacity="0.85"/>
+      <line x1="55" y1="136" x2="145" y2="136" stroke="#2C4A8C" strokeWidth="0.7" opacity="0.5"/>
     </svg>
   )
 }
@@ -135,7 +135,7 @@ function ShrutiPhoneMockup({ fast, revealDelay }: { fast: boolean; revealDelay: 
   return (
     <motion.div initial={{ opacity: 0, y: fast ? 30 : 60, scale: 0.93 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ duration: enterDur, ease: E, delay: revealDelay + (fast ? 0.10 : 0) }}>
       <motion.div animate={{ y: [0, -12, 0] }} transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut' }}>
-        <div className="relative overflow-hidden" style={{ width: 360, height: 640, background: '#0D0C1A', borderRadius: 56, border: '1px solid rgba(232,112,90,0.22)', boxShadow: '0 56px 112px rgba(0,0,0,0.80), 0 0 0 1px rgba(232,112,90,0.08), inset 0 1px 0 rgba(255,255,255,0.06)' }}>
+        <div className="relative overflow-hidden" style={{ width: 360, height: 640, background: '#0D0C1A', borderRadius: 56, border: '1px solid rgba(255,107,53,0.22)', boxShadow: '0 56px 112px rgba(0,0,0,0.80), 0 0 0 1px rgba(255,107,53,0.08), inset 0 1px 0 rgba(255,255,255,0.06)' }}>
           <div className="flex items-center justify-between px-9 pt-6 pb-1">
             <span className="font-mono text-[12px]" style={{ color: 'rgba(255,255,255,0.3)' }}>9:41</span>
             <div className="flex items-center gap-1">
@@ -147,15 +147,15 @@ function ShrutiPhoneMockup({ fast, revealDelay }: { fast: boolean; revealDelay: 
             <span className="material-symbols-outlined" style={{ fontSize: '13px', color: 'rgba(255,255,255,0.2)' }}>lock</span>
             <span className="font-mono text-[12px]" style={{ color: 'rgba(255,255,255,0.3)' }}>wheninmycity.com/shruti</span>
           </div>
-          <div className="relative px-6 pt-4 pb-5" style={{ background: 'linear-gradient(170deg, rgba(232,112,90,0.14) 0%, rgba(245,168,0,0.04) 50%, transparent 100%)' }}>
+          <div className="relative px-6 pt-4 pb-5" style={{ background: 'linear-gradient(170deg, rgba(255,107,53,0.14) 0%, rgba(255,197,61,0.04) 50%, transparent 100%)' }}>
             <div className="flex justify-center mb-3">
-              <div style={{ width: 96, height: 96, borderRadius: '50%', background: 'linear-gradient(135deg, #E8705A 0%, #F5A800 100%)', padding: 2.5, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <div style={{ width: '100%', height: '100%', borderRadius: '50%', background: 'linear-gradient(145deg, #2D1A10, #1A0D08)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 32, fontWeight: 900, color: '#E8705A', fontFamily: 'var(--font-syne)' }}>S</div>
+              <div style={{ width: 96, height: 96, borderRadius: '50%', background: 'linear-gradient(135deg, #FF6B35 0%, #FFC53D 100%)', padding: 2.5, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <div style={{ width: '100%', height: '100%', borderRadius: '50%', background: 'linear-gradient(145deg, #2D1A10, #1A0D08)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 32, fontWeight: 900, color: '#FF6B35', fontFamily: 'var(--font-syne)' }}>S</div>
               </div>
             </div>
             <div className="text-center">
               <p className="font-bold text-white" style={{ fontSize: 18 }}>Shruti</p>
-              <p style={{ fontSize: 13, color: '#E8705A', marginTop: 3 }}>Indie Pop · Singer-Songwriter</p>
+              <p style={{ fontSize: 13, color: '#FF6B35', marginTop: 3 }}>Indie Pop · Singer-Songwriter</p>
               <p className="font-mono" style={{ fontSize: 10, color: 'rgba(255,255,255,0.25)', letterSpacing: '0.18em', textTransform: 'uppercase', marginTop: 4 }}>Nashik, India</p>
               <div className="flex justify-center gap-3 mt-3">
                 <div style={{ width: 34, height: 34, borderRadius: 9999, background: 'rgba(30,215,96,0.12)', border: '1px solid rgba(30,215,96,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -170,43 +170,43 @@ function ShrutiPhoneMockup({ fast, revealDelay }: { fast: boolean; revealDelay: 
               </div>
             </div>
           </div>
-          <div style={{ height: 1, background: 'rgba(232,112,90,0.12)', margin: '0 24px' }} />
+          <div style={{ height: 1, background: 'rgba(255,107,53,0.12)', margin: '0 24px' }} />
           <div className="px-5 pt-4 pb-2 space-y-2.5">
             <p className="font-mono font-bold uppercase" style={{ fontSize: 9, letterSpacing: '0.22em', color: 'rgba(255,255,255,0.2)', paddingLeft: 2 }}>UPCOMING GIGS</p>
             {/* Event 1 */}
-            <div style={{ borderRadius: 18, padding: '12px 14px', background: 'rgba(232,112,90,0.08)', border: '1px solid rgba(232,112,90,0.2)' }}>
+            <div style={{ borderRadius: 18, padding: '12px 14px', background: 'rgba(255,107,53,0.08)', border: '1px solid rgba(255,107,53,0.2)' }}>
               <div className="flex items-center gap-3.5">
-                <div className="flex-shrink-0 text-center" style={{ width: 42, padding: '6px 0', borderRadius: 12, background: 'rgba(232,112,90,0.18)' }}>
-                  <p className="font-mono font-bold uppercase" style={{ fontSize: 8, color: '#E8705A', letterSpacing: '0.1em' }}>MAY</p>
-                  <p className="font-bold" style={{ fontSize: 22, color: '#F5A800', lineHeight: 1, fontFamily: 'var(--font-syne)' }}>31</p>
+                <div className="flex-shrink-0 text-center" style={{ width: 42, padding: '6px 0', borderRadius: 12, background: 'rgba(255,107,53,0.18)' }}>
+                  <p className="font-mono font-bold uppercase" style={{ fontSize: 8, color: '#FF6B35', letterSpacing: '0.1em' }}>MAY</p>
+                  <p className="font-bold" style={{ fontSize: 22, color: '#FFC53D', lineHeight: 1, fontFamily: 'var(--font-syne)' }}>31</p>
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="font-semibold text-white leading-tight" style={{ fontSize: 14 }}>Nashik Unplugged</p>
                   <p className="font-mono" style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', marginTop: 2 }}>Graffiti Studio · Nashik</p>
                   <div className="flex items-center gap-2 mt-2">
-                    <span className="font-bold" style={{ fontSize: 13, color: '#E8705A' }}>₹299</span>
-                    <span className="font-mono font-bold" style={{ fontSize: 9, padding: '2px 7px', borderRadius: 9999, background: 'rgba(232,112,90,0.15)', color: '#E8705A' }}>8 left</span>
+                    <span className="font-bold" style={{ fontSize: 13, color: '#FF6B35' }}>₹299</span>
+                    <span className="font-mono font-bold" style={{ fontSize: 9, padding: '2px 7px', borderRadius: 9999, background: 'rgba(255,107,53,0.15)', color: '#FF6B35' }}>8 left</span>
                   </div>
                 </div>
-                <div className="shrink-0 font-bold" style={{ fontSize: 10, padding: '6px 11px', borderRadius: 9999, background: '#E8705A', color: 'white' }}>RSVP</div>
+                <div className="shrink-0 font-bold" style={{ fontSize: 10, padding: '6px 11px', borderRadius: 9999, background: '#FF6B35', color: 'white' }}>RSVP</div>
               </div>
             </div>
             {/* Event 2 */}
-            <div style={{ borderRadius: 18, padding: '12px 14px', background: 'rgba(245,168,0,0.06)', border: '1px solid rgba(245,168,0,0.16)' }}>
+            <div style={{ borderRadius: 18, padding: '12px 14px', background: 'rgba(255,197,61,0.06)', border: '1px solid rgba(255,197,61,0.16)' }}>
               <div className="flex items-center gap-3.5">
-                <div className="flex-shrink-0 text-center" style={{ width: 42, padding: '6px 0', borderRadius: 12, background: 'rgba(245,168,0,0.14)' }}>
-                  <p className="font-mono font-bold uppercase" style={{ fontSize: 8, color: '#F5A800', letterSpacing: '0.1em' }}>JUN</p>
-                  <p className="font-bold" style={{ fontSize: 22, color: '#F5A800', lineHeight: 1, fontFamily: 'var(--font-syne)' }}>14</p>
+                <div className="flex-shrink-0 text-center" style={{ width: 42, padding: '6px 0', borderRadius: 12, background: 'rgba(255,197,61,0.14)' }}>
+                  <p className="font-mono font-bold uppercase" style={{ fontSize: 8, color: '#FFC53D', letterSpacing: '0.1em' }}>JUN</p>
+                  <p className="font-bold" style={{ fontSize: 22, color: '#FFC53D', lineHeight: 1, fontFamily: 'var(--font-syne)' }}>14</p>
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="font-semibold text-white leading-tight" style={{ fontSize: 14 }}>Rooftop Sessions</p>
                   <p className="font-mono" style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', marginTop: 2 }}>The Loft · Pune</p>
                   <div className="flex items-center gap-2 mt-2">
-                    <span className="font-bold" style={{ fontSize: 13, color: '#F5A800' }}>₹499</span>
-                    <span className="font-mono font-bold" style={{ fontSize: 9, padding: '2px 7px', borderRadius: 9999, background: 'rgba(245,168,0,0.12)', color: '#F5A800' }}>24 left</span>
+                    <span className="font-bold" style={{ fontSize: 13, color: '#FFC53D' }}>₹499</span>
+                    <span className="font-mono font-bold" style={{ fontSize: 9, padding: '2px 7px', borderRadius: 9999, background: 'rgba(255,197,61,0.12)', color: '#FFC53D' }}>24 left</span>
                   </div>
                 </div>
-                <div className="shrink-0 font-bold" style={{ fontSize: 10, padding: '6px 11px', borderRadius: 9999, background: 'rgba(245,168,0,0.15)', color: '#F5A800', border: '1px solid rgba(245,168,0,0.3)' }}>RSVP</div>
+                <div className="shrink-0 font-bold" style={{ fontSize: 10, padding: '6px 11px', borderRadius: 9999, background: 'rgba(255,197,61,0.15)', color: '#FFC53D', border: '1px solid rgba(255,197,61,0.3)' }}>RSVP</div>
               </div>
             </div>
           </div>
@@ -232,15 +232,15 @@ function UsernameClaimInput() {
   }
   return (
     <div className="w-full max-w-md">
-      <div style={{ border: `1px solid ${focused ? 'rgba(245,168,0,0.52)' : 'rgba(245,168,0,0.24)'}`, background: 'rgba(245,168,0,0.03)', transition: 'border-color 0.2s ease' }}>
+      <div style={{ border: `1.5px dashed ${focused ? 'rgba(255,197,61,0.65)' : 'rgba(255,197,61,0.35)'}`, background: '#FFFFFF', transition: 'border-color 0.2s ease' }}>
         {/* Header strip */}
-        <div className="flex items-center justify-between px-5 py-3" style={{ borderBottom: '1px solid rgba(245,168,0,0.14)', background: 'rgba(245,168,0,0.07)' }}>
-          <span className="font-mono text-[9px] font-bold uppercase tracking-[0.28em]" style={{ color: '#F5A800' }}>CLAIM YOUR PAGE</span>
-          <span className="font-mono text-[8px] font-bold uppercase tracking-[0.18em] px-2.5 py-1" style={{ background: '#F5A800', color: '#0B0A06' }}>FREE</span>
+        <div className="flex items-center justify-between px-5 py-3" style={{ borderBottom: '1px solid rgba(255,197,61,0.24)', background: 'rgba(255,197,61,0.12)' }}>
+          <span className="font-vib-stamp text-[9px] font-bold uppercase tracking-[0.28em]" style={{ color: '#D8432E' }}>CLAIM YOUR PAGE</span>
+          <span className="font-mono text-[8px] font-bold uppercase tracking-[0.18em] px-2.5 py-1" style={{ background: '#FFC53D', color: '#201A12' }}>FREE</span>
         </div>
         {/* URL input */}
-        <div className="flex items-stretch" style={{ borderBottom: '1px solid rgba(245,168,0,0.14)' }}>
-          <span className="flex items-center font-mono text-[11px] font-bold shrink-0" style={{ color: '#F5A800', borderRight: '1px solid rgba(245,168,0,0.14)', padding: '14px 16px', whiteSpace: 'nowrap', background: 'rgba(245,168,0,0.05)' }}>
+        <div className="flex items-stretch" style={{ borderBottom: '1px solid rgba(255,197,61,0.24)' }}>
+          <span className="flex items-center font-mono text-[11px] font-bold shrink-0" style={{ color: '#D8432E', borderRight: '1px solid rgba(255,197,61,0.24)', padding: '14px 16px', whiteSpace: 'nowrap', background: 'rgba(255,197,61,0.08)' }}>
             wheninmycity.com/
           </span>
           <input
@@ -251,15 +251,15 @@ function UsernameClaimInput() {
             onFocus={() => setFocused(true)}
             onBlur={() => setFocused(false)}
             placeholder="yourname"
-            className="flex-1 bg-transparent outline-none font-mono text-[16px] text-white placeholder-[#4A4830]"
-            style={{ padding: '14px 16px', minWidth: 0, caretColor: '#F5A800' }}
+            className="flex-1 bg-transparent outline-none font-mono text-[16px] text-vib-ink placeholder-[#B8AC94]"
+            style={{ padding: '14px 16px', minWidth: 0, caretColor: '#D8432E' }}
           />
         </div>
         {/* CTA */}
         <button
           onClick={handleClaim}
           className="w-full inline-flex items-center justify-center gap-2.5 py-4 font-mono text-[11px] font-bold tracking-[0.2em] uppercase transition-all hover:brightness-110 active:scale-[0.99]"
-          style={{ background: '#F5A800', color: '#0B0A06', borderRadius: 0 }}
+          style={{ background: '#FFC53D', color: '#201A12', borderRadius: 0 }}
         >
           GET YOUR FREE PAGE
           <span className="material-symbols-outlined" style={{ fontSize: '17px' }}>arrow_forward</span>
@@ -267,8 +267,8 @@ function UsernameClaimInput() {
       </div>
       <div className="flex items-center gap-5 mt-3 px-1">
         {['ALWAYS FREE', '75–90% YOURS', '5 MIN SETUP'].map((label) => (
-          <span key={label} className="flex items-center gap-1.5 font-mono text-[8.5px] tracking-[0.12em]" style={{ color: 'rgba(245,168,0,0.55)' }}>
-            <span className="w-1 h-1 rounded-full flex-shrink-0" style={{ background: '#F5A800', opacity: 0.8 }} />
+          <span key={label} className="flex items-center gap-1.5 font-mono text-[8.5px] tracking-[0.12em]" style={{ color: 'rgba(216,67,46,0.7)' }}>
+            <span className="w-1 h-1 rounded-full flex-shrink-0" style={{ background: '#FFC53D', opacity: 0.9 }} />
             {label}
           </span>
         ))}
@@ -300,7 +300,7 @@ function TicketChrome({ index, tearP }: { index: number; tearP: MotionValue<numb
         zIndex: 18, pointerEvents: 'none',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <span style={{ fontFamily: 'monospace', fontSize: 7.5, fontWeight: 700, letterSpacing: '0.26em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.30)' }}>WHEN IN MY CITY</span>
+          <span style={{ fontFamily: 'monospace', fontSize: 7.5, fontWeight: 700, letterSpacing: '0.26em', textTransform: 'uppercase', color: 'rgba(32,26,18,0.35)' }}>WHEN IN MY CITY</span>
           <span style={{ fontFamily: 'monospace', fontSize: 7.5, fontWeight: 500, letterSpacing: '0.20em', textTransform: 'uppercase', color: `${meta.accent}55`, marginLeft: 12 }}>· {meta.type}</span>
         </div>
         <span style={{ fontFamily: 'monospace', fontSize: 7.5, fontWeight: 700, letterSpacing: '0.26em', textTransform: 'uppercase', color: `${meta.accent}70` }}>{meta.serial}</span>
@@ -324,7 +324,7 @@ function TicketChrome({ index, tearP }: { index: number; tearP: MotionValue<numb
           position: 'absolute', bottom: STUB_H,
           [side]: 0, transform: side === 'left' ? 'translate(-50%, 50%)' : 'translate(50%, 50%)',
           width: 26, height: 26, borderRadius: '50%',
-          background: '#010109',
+          background: '#F3E8D6',
           border: `1px solid ${meta.accent}50`,
           boxShadow: `inset 0 2px 6px rgba(0,0,0,0.95), 0 0 8px ${meta.accent}30`,
           zIndex: 25, pointerEvents: 'none',
@@ -371,7 +371,7 @@ function HeroStamp({ pmX, pmY, revealDelay, fast }: { pmX: MotionValue<number>; 
       style={{ right: -60, top: '50%', marginTop: -280, width: 560, height: 560, x: pmX, y: pmY }}
     >
       <motion.div
-        style={{ width: '100%', height: '100%', rotate: -12 }}
+        style={{ width: '100%', height: '100%', rotate: -12, isolation: 'isolate', background: '#FFFFFF' }}
         initial={{ scale: 0.65, opacity: 0 }}
         animate={{ scale: 1, opacity: 0.32 }}
         transition={{
@@ -379,14 +379,14 @@ function HeroStamp({ pmX, pmY, revealDelay, fast }: { pmX: MotionValue<number>; 
           opacity: { type: 'tween', duration: 0.08, delay: stampDelay + 0.06 },
         }}
       >
-        {/* White logo — contrast boosted so grain erosion reads clearly */}
+        {/* Ink-dark logo — contrast boosted so grain erosion reads clearly */}
         <div style={{
           position: 'absolute', inset: 0,
           backgroundImage: "url('/logo.png')",
           backgroundSize: '494% auto',
           backgroundPosition: '49.96% 50.02%',
           backgroundRepeat: 'no-repeat',
-          filter: 'invert(1) contrast(1.5)',
+          filter: 'contrast(1.5)',
         }} />
         {/* Coarse grain layer — multiply erodes large patches of white ink */}
         <div style={{
@@ -425,7 +425,7 @@ function AhmedabadPostmarkDecal({ revealDelay, fast }: { revealDelay: number; fa
     <motion.div
       aria-hidden
       className="absolute pointer-events-none select-none hidden md:block"
-      style={{ right: 36, bottom: '13%', width: 176, height: 176 }}
+      style={{ right: 36, bottom: '13%', width: 176, height: 176, isolation: 'isolate', background: '#FFFFFF', borderRadius: '50%' }}
       initial={{ scale: 0.55, opacity: 0, rotate: 9 }}
       animate={{ scale: 1, opacity: 0.22, rotate: 9 }}
       transition={{
@@ -459,14 +459,14 @@ function HeroFace({ revealDelay, fast, badgeX, badgeY, pmX, pmY, onMouseMove }: 
   return (
     <div className="flex flex-col h-full" onMouseMove={onMouseMove}>
       {/* Postal strip */}
-      <motion.div className="relative px-6 md:px-14 py-2 shrink-0" style={{ background: 'rgba(255,255,255,0.02)', borderBottom: '1px solid rgba(255,255,255,0.04)' }}
+      <motion.div className="relative px-6 md:px-14 py-2 shrink-0" style={{ background: 'rgba(32,26,18,0.03)', borderBottom: '1px solid rgba(32,26,18,0.06)' }}
         initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: fast ? 0.3 : 0.55, ease: E, delay: d0 }}>
-        <div className="flex items-center gap-6 font-mono text-[9px] tracking-[0.22em] uppercase text-[#5C5A72]">
+        <div className="flex items-center gap-6 font-mono text-[9px] tracking-[0.22em] uppercase text-vib-text-3">
           <span>FROM: WHEN IN MY CITY</span>
           <span className="hidden md:block">· TO: TIER-2 INDIA</span>
           <span className="hidden lg:block">· CLASS: FIRST CULTURE</span>
           <span className="ml-auto flex items-center gap-2">
-            <span className="w-1.5 h-1.5 rounded-full bg-[#E8705A]" style={{ animation: 'wimc-bloom-pulse 2s ease-in-out infinite' }} />
+            <span className="w-1.5 h-1.5 rounded-full bg-vib-sunset" style={{ animation: 'wimc-bloom-pulse 2s ease-in-out infinite' }} />
             POSTING NOW
           </span>
         </div>
@@ -474,10 +474,10 @@ function HeroFace({ revealDelay, fast, badgeX, badgeY, pmX, pmY, onMouseMove }: 
 
       {/* Ambient blobs */}
       <div aria-hidden className="absolute inset-0 overflow-hidden pointer-events-none select-none">
-        <div style={{ position: 'absolute', top: '10%', left: '55%', width: 700, height: 700, borderRadius: '50%', background: 'radial-gradient(circle, rgba(232,112,90,0.07) 0%, transparent 65%)', animation: 'wimc-blob 20s ease-in-out infinite' }} />
-        <div style={{ position: 'absolute', top: '40%', left: '72%', width: 450, height: 450, borderRadius: '50%', background: 'radial-gradient(circle, rgba(245,168,0,0.05) 0%, transparent 65%)', animation: 'wimc-blob 25s ease-in-out infinite', animationDelay: '-8s' }} />
+        <div style={{ position: 'absolute', top: '10%', left: '55%', width: 700, height: 700, borderRadius: '50%', background: 'radial-gradient(circle, rgba(255,107,53,0.07) 0%, transparent 65%)', animation: 'wimc-blob 20s ease-in-out infinite' }} />
+        <div style={{ position: 'absolute', top: '40%', left: '72%', width: 450, height: 450, borderRadius: '50%', background: 'radial-gradient(circle, rgba(255,197,61,0.05) 0%, transparent 65%)', animation: 'wimc-blob 25s ease-in-out infinite', animationDelay: '-8s' }} />
         {/* Large "01" watermark */}
-        <div style={{ position: 'absolute', right: '6%', top: '50%', transform: 'translateY(-50%)', fontFamily: 'var(--font-syne)', fontSize: 'clamp(200px, 28vw, 380px)', fontWeight: 900, lineHeight: 1, color: 'rgba(232,112,90,0.028)', letterSpacing: '-0.06em', userSelect: 'none', pointerEvents: 'none' }}>01</div>
+        <div style={{ position: 'absolute', right: '6%', top: '50%', transform: 'translateY(-50%)', fontFamily: 'var(--font-syne)', fontSize: 'clamp(200px, 28vw, 380px)', fontWeight: 900, lineHeight: 1, color: 'rgba(255,107,53,0.05)', letterSpacing: '-0.06em', userSelect: 'none', pointerEvents: 'none' }}>01</div>
       </div>
 
       {/* Hero body */}
@@ -491,12 +491,12 @@ function HeroFace({ revealDelay, fast, badgeX, badgeY, pmX, pmY, onMouseMove }: 
 
           <h1 className="font-display font-black tracking-[-0.045em] leading-[0.86] mb-10" style={{ fontSize: 'clamp(52px, 9vw, 112px)' }}>
             {([
-              { text: 'Culture lives', style: { color: '#ffffff' } },
-              { text: 'offline.',      style: { backgroundImage: 'linear-gradient(110deg, #E8705A 0%, #F5A800 60%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' } },
-              { text: 'We keep it',    style: { color: '#7878A0' } },
-              { text: 'connected.',   style: { color: '#ffffff' } },
+              { text: 'Culture lives', style: { color: '#201A12' } },
+              { text: 'offline.',      style: { color: '#FF6B35' } },
+              { text: 'We keep it',    style: { color: '#8A8070' } },
+              { text: 'connected.',   style: { color: '#201A12' } },
             ] as const).map(({ text, style }, i) => (
-              <motion.span key={text} className="block" style={style}
+              <motion.span key={text} className={`block${text === 'offline.' ? ' font-vib-script' : ''}`} style={style}
                 initial={{ opacity: 0, y: fast ? 22 : 44 }} animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: dur, ease: E, delay: d0 + hDel[i] }}>
                 {text}
@@ -507,19 +507,19 @@ function HeroFace({ revealDelay, fast, badgeX, badgeY, pmX, pmY, onMouseMove }: 
           <motion.div className="flex flex-col md:flex-row gap-8 md:gap-16 md:items-end"
             initial={{ opacity: 0, y: fast ? 14 : 24 }} animate={{ opacity: 1, y: 0 }}
             transition={{ duration: fast ? 0.35 : 0.78, ease: E, delay: d0 + (fast ? 0.28 : 0.65) }}>
-            <p className="text-base md:text-[17px] leading-relaxed text-[#9896B0] max-w-md">
+            <p className="text-base md:text-[17px] leading-relaxed text-vib-text-2 max-w-md">
               WIMC is where India&apos;s Tier-2 cities build their offline culture — connecting creators who perform, Venues (local spaces) that host, and communities who show up.
             </p>
             <div className="flex flex-col gap-3 shrink-0">
-              <Link href="/signin?next=/onboarding" className="inline-flex items-center gap-2 px-6 py-3 text-sm font-bold tracking-wide text-[#07070A] bg-white hover:bg-[#E8E7F0] transition-colors" style={{ borderRadius: 0 }}>
+              <Link href="/signin?next=/onboarding" className="inline-flex items-center gap-2 px-6 py-3 text-sm font-bold tracking-wide text-white bg-vib-sunset hover:brightness-110 transition-all" style={{ borderRadius: 0 }}>
                 Start for free <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>arrow_forward</span>
               </Link>
-              <Link href="/explore" className="inline-flex items-center gap-2 px-6 py-3 font-mono text-[11px] tracking-[0.12em] uppercase text-[#9896B0] hover:text-white transition-colors" style={{ border: '1px solid rgba(255,255,255,0.09)', borderRadius: 0 }}>
+              <Link href="/explore" className="inline-flex items-center gap-2 px-6 py-3 font-mono text-[11px] tracking-[0.12em] uppercase text-vib-text-2 hover:text-vib-ink transition-colors" style={{ border: '1px solid rgba(32,26,18,0.16)', borderRadius: 0 }}>
                 Browse events <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>arrow_forward</span>
               </Link>
               <Link
                 href="/vishrut_797"
-                className="inline-flex items-center gap-2 font-mono text-[11px] uppercase tracking-widest text-white/40 hover:text-white/70 transition-colors border-b border-white/20 hover:border-white/40 pb-[2px] self-start"
+                className="inline-flex items-center gap-2 font-mono text-[11px] uppercase tracking-widest text-vib-ink/40 hover:text-vib-ink/70 transition-colors border-b border-vib-ink/20 hover:border-vib-ink/40 pb-[2px] self-start"
                 style={{ borderRadius: 0 }}
               >
                 <span className="material-symbols-outlined" style={{ fontSize: '14px' }}>open_in_new</span>
@@ -545,12 +545,12 @@ function HeroFace({ revealDelay, fast, badgeX, badgeY, pmX, pmY, onMouseMove }: 
       </div>
 
       {/* Cities marquee */}
-      <div className="shrink-0 overflow-hidden py-2" style={{ background: '#050508', borderTop: '1px solid rgba(255,255,255,0.04)' }}>
+      <div className="shrink-0 overflow-hidden py-2" style={{ background: '#F3E8D6', borderTop: '1px solid rgba(32,26,18,0.06)' }}>
         <div className="flex items-center whitespace-nowrap marquee-normal" style={{ width: 'max-content' }}>
           {marquee.map((city, i) => (
             <span key={i} className="flex items-center gap-3 mx-4">
-              <span className="font-mono text-[9px] font-bold tracking-[0.25em] uppercase text-[#5C5A72]">{city}</span>
-              <span className="w-1 h-1 rounded-full" style={{ background: 'rgba(232,112,90,0.35)' }} />
+              <span className="font-mono text-[9px] font-bold tracking-[0.25em] uppercase text-vib-text-3">{city}</span>
+              <span className="w-1 h-1 rounded-full" style={{ background: 'rgba(255,107,53,0.5)' }} />
             </span>
           ))}
         </div>
@@ -566,15 +566,15 @@ function ShowcaseFace({ revealDelay, fast }: { revealDelay: number; fast: boolea
   return (
     <div className="relative flex h-full overflow-hidden">
       <div aria-hidden className="absolute inset-0 overflow-hidden pointer-events-none">
-        {/* Stronger amber glow */}
-        <div style={{ position: 'absolute', top: '-10%', right: '-8%', width: 720, height: 720, borderRadius: '50%', background: 'radial-gradient(circle, rgba(245,168,0,0.11) 0%, transparent 60%)', animation: 'wimc-blob 22s ease-in-out infinite' }} />
-        <div style={{ position: 'absolute', bottom: '-5%', left: '5%', width: 420, height: 420, borderRadius: '50%', background: 'radial-gradient(circle, rgba(232,112,90,0.06) 0%, transparent 65%)', animation: 'wimc-blob 17s ease-in-out infinite', animationDelay: '-7s' }} />
+        {/* Stronger gold glow */}
+        <div style={{ position: 'absolute', top: '-10%', right: '-8%', width: 720, height: 720, borderRadius: '50%', background: 'radial-gradient(circle, rgba(255,197,61,0.14) 0%, transparent 60%)', animation: 'wimc-blob 22s ease-in-out infinite' }} />
+        <div style={{ position: 'absolute', bottom: '-5%', left: '5%', width: 420, height: 420, borderRadius: '50%', background: 'radial-gradient(circle, rgba(255,107,53,0.07) 0%, transparent 65%)', animation: 'wimc-blob 17s ease-in-out infinite', animationDelay: '-7s' }} />
         {/* Diagonal boarding-pass stripes on right half */}
-        <div style={{ position: 'absolute', top: 0, right: 0, bottom: 0, width: '48%', backgroundImage: 'repeating-linear-gradient(-45deg, transparent, transparent 20px, rgba(245,168,0,0.014) 20px, rgba(245,168,0,0.014) 22px)', pointerEvents: 'none' }} />
+        <div style={{ position: 'absolute', top: 0, right: 0, bottom: 0, width: '48%', backgroundImage: 'repeating-linear-gradient(-45deg, transparent, transparent 20px, rgba(32,26,18,0.02) 20px, rgba(32,26,18,0.02) 22px)', pointerEvents: 'none' }} />
         {/* Large "02" watermark */}
-        <div style={{ position: 'absolute', right: '6%', top: '50%', transform: 'translateY(-50%)', fontFamily: 'var(--font-syne)', fontSize: 'clamp(200px, 28vw, 380px)', fontWeight: 900, lineHeight: 1, color: 'rgba(245,168,0,0.028)', letterSpacing: '-0.06em', userSelect: 'none', pointerEvents: 'none' }}>02</div>
+        <div style={{ position: 'absolute', right: '6%', top: '50%', transform: 'translateY(-50%)', fontFamily: 'var(--font-syne)', fontSize: 'clamp(200px, 28vw, 380px)', fontWeight: 900, lineHeight: 1, color: 'rgba(255,197,61,0.07)', letterSpacing: '-0.06em', userSelect: 'none', pointerEvents: 'none' }}>02</div>
         {/* Stamp watermark — lower left */}
-        <div aria-hidden style={{ position: 'absolute', left: 10, bottom: 10, width: 260, height: 260, backgroundImage: "url('/logo.png')", backgroundSize: '494% auto', backgroundPosition: '49.96% 50.02%', backgroundRepeat: 'no-repeat', filter: 'invert(1)', opacity: 0.055, transform: 'rotate(-12deg)', pointerEvents: 'none', userSelect: 'none' }} />
+        <div aria-hidden style={{ position: 'absolute', left: 10, bottom: 10, width: 260, height: 260, backgroundImage: "url('/logo.png')", backgroundSize: '494% auto', backgroundPosition: '49.96% 50.02%', backgroundRepeat: 'no-repeat', opacity: 0.06, transform: 'rotate(-12deg)', pointerEvents: 'none', userSelect: 'none' }} />
       </div>
 
       <div className="relative flex-1 px-6 py-4 md:px-14 flex flex-col justify-center">
@@ -588,14 +588,14 @@ function ShowcaseFace({ revealDelay, fast }: { revealDelay: number; fast: boolea
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ duration: fast ? 0.28 : 0.55, ease: E, delay: d0 + hDel[0] }}
               >
-                <div style={{ width: 24, height: 1, background: '#F5A800', opacity: 0.7 }} />
-                <span className="font-mono text-[9px] font-bold uppercase tracking-[0.28em]" style={{ color: '#F5A800' }}>YOUR CREATOR PAGE</span>
+                <div style={{ width: 24, height: 1, background: '#FFC53D', opacity: 0.9 }} />
+                <span className="font-vib-stamp text-[9px] font-bold uppercase tracking-[0.28em]" style={{ color: '#D8432E' }}>YOUR CREATOR PAGE</span>
               </motion.div>
 
               {/* Headline */}
               <div className="mb-7">
                 <motion.h2
-                  className="font-display font-black tracking-[-0.045em] leading-[0.88] block text-white"
+                  className="font-display font-black tracking-[-0.045em] leading-[0.88] block text-vib-ink"
                   style={{ fontSize: 'clamp(40px, 5.5vw, 74px)' }}
                   initial={{ opacity: 0, y: fast ? 18 : 36 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -605,7 +605,7 @@ function ShowcaseFace({ revealDelay, fast }: { revealDelay: number; fast: boolea
                 </motion.h2>
                 <motion.h2
                   className="font-display font-black tracking-[-0.045em] leading-[0.88] block"
-                  style={{ fontSize: 'clamp(40px, 5.5vw, 74px)', backgroundImage: 'linear-gradient(110deg, #F5A800 10%, #E8705A 90%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}
+                  style={{ fontSize: 'clamp(40px, 5.5vw, 74px)', color: '#FF6B35' }}
                   initial={{ opacity: 0, y: fast ? 18 : 36 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: dur, ease: E, delay: d0 + hDel[2] }}
@@ -639,11 +639,11 @@ function RolesFace({ revealDelay, fast }: { revealDelay: number; fast: boolean }
   return (
     <div className="relative flex flex-col h-full overflow-hidden">
       <div aria-hidden className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div style={{ position: 'absolute', top: '20%', left: '45%', width: 650, height: 650, borderRadius: '50%', background: 'radial-gradient(circle, rgba(93,217,208,0.04) 0%, transparent 65%)', animation: 'wimc-blob 28s ease-in-out infinite' }} />
+        <div style={{ position: 'absolute', top: '20%', left: '45%', width: 650, height: 650, borderRadius: '50%', background: 'radial-gradient(circle, rgba(79,184,232,0.06) 0%, transparent 65%)', animation: 'wimc-blob 28s ease-in-out infinite' }} />
         {/* Large "03" watermark */}
-        <div style={{ position: 'absolute', right: '6%', top: '50%', transform: 'translateY(-50%)', fontFamily: 'var(--font-syne)', fontSize: 'clamp(200px, 28vw, 380px)', fontWeight: 900, lineHeight: 1, color: 'rgba(93,217,208,0.028)', letterSpacing: '-0.06em', userSelect: 'none', pointerEvents: 'none' }}>03</div>
+        <div style={{ position: 'absolute', right: '6%', top: '50%', transform: 'translateY(-50%)', fontFamily: 'var(--font-syne)', fontSize: 'clamp(200px, 28vw, 380px)', fontWeight: 900, lineHeight: 1, color: 'rgba(44,74,140,0.06)', letterSpacing: '-0.06em', userSelect: 'none', pointerEvents: 'none' }}>03</div>
         {/* Stamp watermark — upper right corner */}
-        <div aria-hidden style={{ position: 'absolute', right: 16, top: 16, width: 200, height: 200, backgroundImage: "url('/logo.png')", backgroundSize: '494% auto', backgroundPosition: '49.96% 50.02%', backgroundRepeat: 'no-repeat', filter: 'invert(1)', opacity: 0.055, transform: 'rotate(10deg)', pointerEvents: 'none', userSelect: 'none' }} />
+        <div aria-hidden style={{ position: 'absolute', right: 16, top: 16, width: 200, height: 200, backgroundImage: "url('/logo.png')", backgroundSize: '494% auto', backgroundPosition: '49.96% 50.02%', backgroundRepeat: 'no-repeat', opacity: 0.06, transform: 'rotate(10deg)', pointerEvents: 'none', userSelect: 'none' }} />
       </div>
 
       <div className="relative flex-1 px-6 py-6 md:px-14 flex flex-col justify-center overflow-hidden">
@@ -651,41 +651,41 @@ function RolesFace({ revealDelay, fast }: { revealDelay: number; fast: boolean }
           <motion.div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-6"
             initial={{ opacity: 0, y: fast ? 14 : 28 }} animate={{ opacity: 1, y: 0 }}
             transition={{ duration: fast ? 0.32 : 0.7, ease: E, delay: revealDelay }}>
-            <h2 className="font-display font-black tracking-[-0.045em] leading-[0.88] text-white" style={{ fontSize: 'clamp(36px, 6vw, 72px)' }}>
+            <h2 className="font-display font-black tracking-[-0.045em] leading-[0.88] text-vib-ink" style={{ fontSize: 'clamp(36px, 6vw, 72px)' }}>
               Choose<br />your role.
             </h2>
-            <p className="text-sm leading-relaxed max-w-xs" style={{ color: '#9896B0' }}>
+            <p className="text-sm leading-relaxed max-w-xs" style={{ color: '#58503F' }}>
               Two paths, one platform. Whether you make the culture or make the space — WIMC has a home for you.
             </p>
           </motion.div>
 
           <div className="grid md:grid-cols-2 gap-4">
             <motion.div initial={{ opacity: 0, x: fast ? -22 : -48 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: dur, ease: E, delay: revealDelay + 0.07 }}>
-              <Link href="/signin?next=/onboarding" className="group block overflow-hidden transition-all duration-300 hover:-translate-y-1" style={{ outline: '1px solid rgba(232,112,90,0.22)', borderRadius: 0 }}>
-                <div className="relative overflow-hidden px-7 pt-7 pb-8 md:px-9" style={{ background: '#E8705A', minHeight: '140px' }}>
-                  <div aria-hidden className="absolute bottom-[-16px] right-[-8px] font-display font-black leading-none select-none pointer-events-none" style={{ fontSize: 'clamp(100px, 14vw, 180px)', color: 'rgba(255,255,255,0.09)', letterSpacing: '-0.06em' }}>01</div>
-                  <div className="absolute top-4 right-5 text-right" style={{ opacity: 0.45 }}>
-                    <div style={{ fontFamily: 'monospace', fontSize: 7, fontWeight: 700, letterSpacing: '0.3em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.75)' }}>INDIA</div>
-                    <div style={{ fontFamily: 'var(--font-syne)', fontSize: 26, fontWeight: 900, color: 'white', lineHeight: 1 }}>₹01</div>
+              <Link href="/signin?next=/onboarding" className="group block overflow-hidden transition-all duration-300 hover:-translate-y-1" style={{ outline: '1px solid rgba(255,107,53,0.3)', borderRadius: 0 }}>
+                <div className="relative overflow-hidden px-7 pt-7 pb-8 md:px-9" style={{ background: '#FFFFFF', minHeight: '140px', borderBottom: '2px dashed rgba(255,107,53,0.4)' }}>
+                  <div aria-hidden className="absolute bottom-[-16px] right-[-8px] font-display font-black leading-none select-none pointer-events-none" style={{ fontSize: 'clamp(100px, 14vw, 180px)', color: 'rgba(255,107,53,0.08)', letterSpacing: '-0.06em' }}>01</div>
+                  <div className="absolute top-4 right-5 text-right" style={{ opacity: 0.7 }}>
+                    <div style={{ fontFamily: 'monospace', fontSize: 7, fontWeight: 700, letterSpacing: '0.3em', textTransform: 'uppercase', color: 'rgba(32,26,18,0.5)' }}>INDIA</div>
+                    <div style={{ fontFamily: 'var(--font-syne)', fontSize: 26, fontWeight: 900, color: '#FF6B35', lineHeight: 1 }}>₹01</div>
                   </div>
                   <div className="relative flex items-center justify-between mb-4">
-                    <span className="font-mono text-[10px] font-bold uppercase tracking-[0.24em] text-white/60">For Makers</span>
-                    <div className="w-7 h-7 border border-white/30 flex items-center justify-center">
-                      <span className="material-symbols-outlined text-white" style={{ fontSize: '14px' }}>arrow_forward</span>
+                    <span className="font-mono text-[10px] font-bold uppercase tracking-[0.24em] text-vib-ink/60">For Makers</span>
+                    <div className="w-7 h-7 border border-vib-ink/20 flex items-center justify-center">
+                      <span className="material-symbols-outlined text-vib-sunset" style={{ fontSize: '14px' }}>arrow_forward</span>
                     </div>
                   </div>
-                  <h3 className="relative font-display font-black text-white leading-[0.84] tracking-[-0.045em]" style={{ fontSize: 'clamp(34px, 5vw, 60px)' }}>Your<br />stage.</h3>
+                  <h3 className="relative font-display font-black text-vib-ink leading-[0.84] tracking-[-0.045em]" style={{ fontSize: 'clamp(34px, 5vw, 60px)' }}>Your<br />stage.</h3>
                 </div>
-                <div className="px-7 py-4 md:px-9 flex flex-col gap-3" style={{ background: '#100908' }}>
-                  <p className="text-[13px] leading-relaxed" style={{ color: '#9896B0' }}>Host ticketed events, build your link-in-bio, sell tickets with UPI — and keep 75–90% of everything you earn.</p>
+                <div className="px-7 py-4 md:px-9 flex flex-col gap-3" style={{ background: '#FBF3E7' }}>
+                  <p className="text-[13px] leading-relaxed" style={{ color: '#58503F' }}>Host ticketed events, build your link-in-bio, sell tickets with UPI — and keep 75–90% of everything you earn.</p>
                   <ul className="space-y-1.5">
                     {MAKER_FEATURES.map((f) => (
-                      <li key={f} className="flex items-center gap-3 text-[12px]" style={{ color: '#9896B0' }}>
-                        <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: '#E8705A' }} />{f}
+                      <li key={f} className="flex items-center gap-3 text-[12px]" style={{ color: '#58503F' }}>
+                        <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: '#FF6B35' }} />{f}
                       </li>
                     ))}
                   </ul>
-                  <div className="inline-flex items-center gap-2 px-4 py-2 text-sm font-bold" style={{ background: '#E8705A', color: 'white', borderRadius: 0, alignSelf: 'flex-start' }}>
+                  <div className="inline-flex items-center gap-2 px-4 py-2 text-sm font-bold" style={{ background: '#FF6B35', color: 'white', borderRadius: 0, alignSelf: 'flex-start' }}>
                     Start for free <span className="material-symbols-outlined" style={{ fontSize: '15px' }}>arrow_forward</span>
                   </div>
                 </div>
@@ -693,31 +693,31 @@ function RolesFace({ revealDelay, fast }: { revealDelay: number; fast: boolean }
             </motion.div>
 
             <motion.div initial={{ opacity: 0, x: fast ? 22 : 48 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: dur, ease: E, delay: revealDelay + 0.14 }}>
-              <Link href="/signin?next=%2Fonboarding%3Fpersona%3Dvenue" className="group block overflow-hidden transition-all duration-300 hover:-translate-y-1" style={{ outline: '1px solid rgba(93,217,208,0.18)', borderRadius: 0 }}>
-                <div className="relative overflow-hidden px-7 pt-7 pb-8 md:px-9" style={{ background: '#5DD9D0', minHeight: '140px' }}>
-                  <div aria-hidden className="absolute bottom-[-16px] right-[-8px] font-display font-black leading-none select-none pointer-events-none" style={{ fontSize: 'clamp(100px, 14vw, 180px)', color: 'rgba(0,0,0,0.07)', letterSpacing: '-0.06em' }}>02</div>
-                  <div className="absolute top-4 right-5 text-right" style={{ opacity: 0.4 }}>
-                    <div style={{ fontFamily: 'monospace', fontSize: 7, fontWeight: 700, letterSpacing: '0.3em', textTransform: 'uppercase', color: 'rgba(0,0,0,0.6)' }}>INDIA</div>
-                    <div style={{ fontFamily: 'var(--font-syne)', fontSize: 26, fontWeight: 900, color: '#07070A', lineHeight: 1 }}>₹02</div>
+              <Link href="/signin?next=%2Fonboarding%3Fpersona%3Dvenue" className="group block overflow-hidden transition-all duration-300 hover:-translate-y-1" style={{ outline: '1px solid rgba(79,184,232,0.35)', borderRadius: 0 }}>
+                <div className="relative overflow-hidden px-7 pt-7 pb-8 md:px-9" style={{ background: '#FFFFFF', minHeight: '140px', borderBottom: '2px dashed rgba(79,184,232,0.5)' }}>
+                  <div aria-hidden className="absolute bottom-[-16px] right-[-8px] font-display font-black leading-none select-none pointer-events-none" style={{ fontSize: 'clamp(100px, 14vw, 180px)', color: 'rgba(31,138,112,0.08)', letterSpacing: '-0.06em' }}>02</div>
+                  <div className="absolute top-4 right-5 text-right" style={{ opacity: 0.7 }}>
+                    <div style={{ fontFamily: 'monospace', fontSize: 7, fontWeight: 700, letterSpacing: '0.3em', textTransform: 'uppercase', color: 'rgba(32,26,18,0.5)' }}>INDIA</div>
+                    <div style={{ fontFamily: 'var(--font-syne)', fontSize: 26, fontWeight: 900, color: '#1F8A70', lineHeight: 1 }}>₹02</div>
                   </div>
                   <div className="relative flex items-center justify-between mb-4">
-                    <span className="font-mono text-[10px] font-bold uppercase tracking-[0.24em] text-[#07070A]/50">For Venues</span>
-                    <div className="w-7 h-7 border border-[#07070A]/20 flex items-center justify-center">
-                      <span className="material-symbols-outlined text-[#07070A]" style={{ fontSize: '14px' }}>arrow_forward</span>
+                    <span className="font-mono text-[10px] font-bold uppercase tracking-[0.24em] text-vib-ink/60">For Venues</span>
+                    <div className="w-7 h-7 border border-vib-ink/20 flex items-center justify-center">
+                      <span className="material-symbols-outlined text-vib-teal" style={{ fontSize: '14px' }}>arrow_forward</span>
                     </div>
                   </div>
-                  <h3 className="relative font-display font-black text-[#07070A] leading-[0.84] tracking-[-0.045em]" style={{ fontSize: 'clamp(34px, 5vw, 60px)' }}>Open<br />your doors.</h3>
+                  <h3 className="relative font-display font-black text-vib-ink leading-[0.84] tracking-[-0.045em]" style={{ fontSize: 'clamp(34px, 5vw, 60px)' }}>Open<br />your doors.</h3>
                 </div>
-                <div className="px-7 py-4 md:px-9 flex flex-col gap-3" style={{ background: '#07100F' }}>
-                  <p className="text-[13px] leading-relaxed" style={{ color: '#9896B0' }}>List your café, rooftop, studio, or gallery. Let creators come to you with real bookings.</p>
+                <div className="px-7 py-4 md:px-9 flex flex-col gap-3" style={{ background: '#F3E8D6' }}>
+                  <p className="text-[13px] leading-relaxed" style={{ color: '#58503F' }}>List your café, rooftop, studio, or gallery. Let creators come to you with real bookings.</p>
                   <ul className="space-y-1.5">
                     {VENUE_FEATURES.map((f) => (
-                      <li key={f} className="flex items-center gap-3 text-[12px]" style={{ color: '#9896B0' }}>
-                        <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: '#5DD9D0' }} />{f}
+                      <li key={f} className="flex items-center gap-3 text-[12px]" style={{ color: '#58503F' }}>
+                        <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: '#4FB8E8' }} />{f}
                       </li>
                     ))}
                   </ul>
-                  <div className="inline-flex items-center gap-2 px-4 py-2 text-sm font-bold" style={{ background: '#5DD9D0', color: '#07070A', borderRadius: 0, alignSelf: 'flex-start' }}>
+                  <div className="inline-flex items-center gap-2 px-4 py-2 text-sm font-bold" style={{ background: '#4FB8E8', color: '#201A12', borderRadius: 0, alignSelf: 'flex-start' }}>
                     List your Venue <span className="material-symbols-outlined" style={{ fontSize: '15px' }}>arrow_forward</span>
                   </div>
                 </div>
@@ -728,17 +728,17 @@ function RolesFace({ revealDelay, fast }: { revealDelay: number; fast: boolean }
       </div>
 
       {/* Footer inside ticket 3 — kept lean to maximise card area */}
-      <div className="relative px-6 md:px-14 shrink-0" style={{ borderTop: '1px solid rgba(255,255,255,0.06)', background: '#05050A', padding: '7px 56px' }}>
+      <div className="relative px-6 md:px-14 shrink-0" style={{ borderTop: '1px solid rgba(32,26,18,0.08)', background: '#F3E8D6', padding: '7px 56px' }}>
         <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <WimcWordmark color="white" height={18} />
-            <span className="font-mono text-[8px] tracking-[0.25em] uppercase hidden sm:block" style={{ color: '#3C3A52' }}>wheninmycity.com</span>
+            <WimcWordmark color="black" height={18} />
+            <span className="font-mono text-[8px] tracking-[0.25em] uppercase hidden sm:block" style={{ color: '#8A8070' }}>wheninmycity.com</span>
           </div>
-          <div className="flex items-center gap-x-4" style={{ color: '#5C5A72' }}>
-            <Link href="/explore" className="font-mono text-[9px] tracking-[0.14em] uppercase hover:text-[#9896B0] transition-colors">Explore</Link>
-            <Link href="/signin?next=/onboarding" className="font-mono text-[9px] tracking-[0.14em] uppercase hover:text-[#9896B0] transition-colors hidden sm:block">Creators</Link>
-            <Link href="/signin?next=%2Fonboarding%3Fpersona%3Dvenue" className="font-mono text-[9px] tracking-[0.14em] uppercase hover:text-[#9896B0] transition-colors hidden sm:block">Venues</Link>
-            <Link href="/signin" className="font-mono text-[9px] tracking-[0.14em] uppercase hover:text-[#9896B0] transition-colors">Sign in</Link>
+          <div className="flex items-center gap-x-4" style={{ color: '#8A8070' }}>
+            <Link href="/explore" className="font-mono text-[9px] tracking-[0.14em] uppercase hover:text-[#58503F] transition-colors">Explore</Link>
+            <Link href="/signin?next=/onboarding" className="font-mono text-[9px] tracking-[0.14em] uppercase hover:text-[#58503F] transition-colors hidden sm:block">Creators</Link>
+            <Link href="/signin?next=%2Fonboarding%3Fpersona%3Dvenue" className="font-mono text-[9px] tracking-[0.14em] uppercase hover:text-[#58503F] transition-colors hidden sm:block">Venues</Link>
+            <Link href="/signin" className="font-mono text-[9px] tracking-[0.14em] uppercase hover:text-[#58503F] transition-colors">Sign in</Link>
             <span className="font-mono text-[9px] tracking-[0.14em] uppercase">© 2025</span>
           </div>
         </div>
@@ -784,7 +784,7 @@ function ProgressDots({ active, onDotClick }: { active: number; onDotClick: (i: 
     <div style={{ position: 'absolute', bottom: STUB_H + 18, right: 20, display: 'flex', flexDirection: 'column', gap: 7, zIndex: 40 }}>
       {[0,1,2].map((i) => (
         <button key={i} onClick={() => onDotClick(i)}
-          style={{ width: 3, height: i === active ? 22 : 8, borderRadius: 2, background: i === active ? TICKET_META[i].accent : 'rgba(255,255,255,0.2)', border: 'none', cursor: 'pointer', padding: 0, transition: 'all 0.35s cubic-bezier(0.22,1,0.36,1)' }} />
+          style={{ width: 3, height: i === active ? 22 : 8, borderRadius: 2, background: i === active ? TICKET_META[i].accent : 'rgba(32,26,18,0.18)', border: 'none', cursor: 'pointer', padding: 0, transition: 'all 0.35s cubic-bezier(0.22,1,0.36,1)' }} />
       ))}
     </div>
   )
@@ -963,7 +963,7 @@ export default function LandingPage() {
   }, [active, doTear])
 
   return (
-    <div className="bg-[#07070A] text-[#F0EFF8]" style={{ height: '100dvh', overflow: 'hidden', position: 'relative' }}>
+    <div className="bg-vib-cream text-vib-ink" style={{ height: '100dvh', overflow: 'hidden', position: 'relative' }}>
 
       {/* Noise grain */}
       <div aria-hidden className="fixed inset-0 z-0 pointer-events-none select-none opacity-[0.028]"
@@ -971,43 +971,43 @@ export default function LandingPage() {
 
       {/* Nav */}
       <motion.nav className="relative z-50 flex items-center justify-between px-6 md:px-14"
-        style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', background: 'rgba(7,7,10,0.92)', backdropFilter: 'blur(14px)', WebkitBackdropFilter: 'blur(14px)', height: NAV_H }}
+        style={{ borderBottom: '1px solid rgba(32,26,18,0.08)', background: 'rgba(251,243,231,0.92)', backdropFilter: 'blur(14px)', WebkitBackdropFilter: 'blur(14px)', height: NAV_H }}
         initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, ease: E }}>
         <Link href="/" aria-label="When in My City" style={{ display: 'flex', alignItems: 'center', textDecoration: 'none' }}>
-            <Image src="/logo-stamp.png" alt="When in My City" width={88} height={88} style={{ width: 88, height: 88, flexShrink: 0, filter: 'invert(1)' }} priority />
+            <Image src="/logo-stamp.png" alt="When in My City" width={88} height={88} style={{ width: 88, height: 88, flexShrink: 0 }} priority />
           </Link>
         <div className="flex items-center gap-1">
-          <Link href="/mission" className="hidden md:flex items-center justify-center w-24 font-mono text-[10px] tracking-[0.15em] uppercase text-[#5C5A72] hover:text-[#9896B0] transition-colors">Mission</Link>
-          <Link href="/growth"  className="hidden md:flex items-center justify-center w-24 font-mono text-[10px] tracking-[0.15em] uppercase text-[#5C5A72] hover:text-[#9896B0] transition-colors">Growth</Link>
-          <Link href="/explore" className="hidden md:flex items-center justify-center w-24 font-mono text-[10px] tracking-[0.15em] uppercase text-[#5C5A72] hover:text-[#9896B0] transition-colors">Explore</Link>
+          <Link href="/mission" className="hidden md:flex items-center justify-center w-24 font-mono text-[10px] tracking-[0.15em] uppercase text-vib-text-3 hover:text-vib-text-2 transition-colors">Mission</Link>
+          <Link href="/growth"  className="hidden md:flex items-center justify-center w-24 font-mono text-[10px] tracking-[0.15em] uppercase text-vib-text-3 hover:text-vib-text-2 transition-colors">Growth</Link>
+          <Link href="/explore" className="hidden md:flex items-center justify-center w-24 font-mono text-[10px] tracking-[0.15em] uppercase text-vib-text-3 hover:text-vib-text-2 transition-colors">Explore</Link>
           <div className="relative group hidden md:flex items-center justify-center w-28">
-            <button className="flex items-center gap-1 font-mono text-[10px] tracking-[0.15em] uppercase text-[#5C5A72] group-hover:text-[#9896B0] transition-colors cursor-default select-none">
+            <button className="flex items-center gap-1 font-mono text-[10px] tracking-[0.15em] uppercase text-vib-text-3 group-hover:text-vib-text-2 transition-colors cursor-default select-none">
               Discover <span style={{ fontSize: 7, marginTop: 1 }}>▾</span>
             </button>
             <div className="absolute top-full left-1/2 -translate-x-1/2 pt-2 hidden group-hover:block z-[100]">
-              <div style={{ background: '#0D0C1A', border: '1px solid rgba(255,255,255,0.1)', minWidth: 180 }}>
-                <Link href="/hall-of-lights" className="flex items-center gap-2.5 px-4 py-2.5 font-mono text-[10px] tracking-[0.12em] uppercase text-[#5C5A72] hover:text-[#F5A800] hover:bg-[#F5A800]/05 transition-colors" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-                  <span className="material-symbols-outlined" style={{ fontSize: 13, color: '#F5A800' }}>auto_awesome</span>
+              <div style={{ background: '#FFFFFF', border: '1px solid rgba(32,26,18,0.12)', minWidth: 180, boxShadow: '0 16px 40px rgba(32,26,18,0.12)' }}>
+                <Link href="/hall-of-lights" className="flex items-center gap-2.5 px-4 py-2.5 font-mono text-[10px] tracking-[0.12em] uppercase text-vib-text-3 hover:text-[#D8432E] hover:bg-vib-gold/10 transition-colors" style={{ borderBottom: '1px solid rgba(32,26,18,0.08)' }}>
+                  <span className="material-symbols-outlined" style={{ fontSize: 13, color: '#D8432E' }}>auto_awesome</span>
                   Hall of Lights
                 </Link>
-                <Link href="/map-of-legends" className="flex items-center gap-2.5 px-4 py-2.5 font-mono text-[10px] tracking-[0.12em] uppercase text-[#5C5A72] hover:text-[#5DD9D0] hover:bg-[#5DD9D0]/05 transition-colors">
-                  <span className="material-symbols-outlined" style={{ fontSize: 13, color: '#5DD9D0' }}>location_city</span>
+                <Link href="/map-of-legends" className="flex items-center gap-2.5 px-4 py-2.5 font-mono text-[10px] tracking-[0.12em] uppercase text-vib-text-3 hover:text-[#1F8A70] hover:bg-vib-sky/10 transition-colors">
+                  <span className="material-symbols-outlined" style={{ fontSize: 13, color: '#1F8A70' }}>location_city</span>
                   Map of Legends
                 </Link>
               </div>
             </div>
           </div>
           <div className="w-4" />
-          <Link href="/signin" className="px-5 py-2 font-mono text-[11px] font-bold tracking-[0.15em] uppercase bg-white text-[#07070A] hover:bg-[#E8E7F0] transition-colors" style={{ borderRadius: 0 }}>Login</Link>
+          <Link href="/signin" className="px-5 py-2 font-mono text-[11px] font-bold tracking-[0.15em] uppercase bg-vib-ink text-vib-cream hover:bg-vib-ink/85 transition-colors" style={{ borderRadius: 0 }}>Login</Link>
         </div>
       </motion.nav>
 
-      {/* Ticket stage — dark desk surface visible around ticket edges */}
-      <div style={{ position: 'absolute', top: NAV_H, left: 0, right: 0, bottom: 0, padding: '14px 20px 20px', background: '#010109', display: 'flex' }}>
+      {/* Ticket stage — cream desk surface visible around ticket edges */}
+      <div style={{ position: 'absolute', top: NAV_H, left: 0, right: 0, bottom: 0, padding: '14px 20px 20px', background: '#F3E8D6', display: 'flex' }}>
 
         {/* Physical ticket — rounded corners + shadow make it look like a real object.
             overflow:hidden clips punch-holes to half-circles at the edges (correct real-ticket look). */}
-        <div ref={ticketRef} style={{ position: 'relative', flex: 1, borderRadius: 22, overflow: 'hidden', boxShadow: '0 32px 80px rgba(0,0,0,0.75), 0 0 0 1px rgba(255,255,255,0.08), inset 0 1px 0 rgba(255,255,255,0.04)' }}>
+        <div ref={ticketRef} style={{ position: 'relative', flex: 1, borderRadius: 22, overflow: 'hidden', boxShadow: '0 32px 80px rgba(32,26,18,0.18), 0 0 0 1px rgba(32,26,18,0.08), inset 0 1px 0 rgba(255,255,255,0.6)' }}>
 
           {/* ── Preview ticket ── */}
           {previewTarget !== null && (tearDirRef.current < 0 ? (
@@ -1052,7 +1052,7 @@ export default function LandingPage() {
           {active === 0 && tearState === 'idle' && previewTarget === null && (
             <motion.div className="absolute bottom-10 left-1/2 -translate-x-1/2 pointer-events-none" style={{ zIndex: 30 }}
               initial={{ opacity: 0 }} animate={{ opacity: 0.4 }} transition={{ delay: 2.8, duration: 1 }}>
-              <motion.span className="material-symbols-outlined text-white/30" style={{ fontSize: 22 }}
+              <motion.span className="material-symbols-outlined text-vib-ink/30" style={{ fontSize: 22 }}
                 animate={{ y: [0, 5, 0] }} transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut' }}>
                 keyboard_arrow_down
               </motion.span>

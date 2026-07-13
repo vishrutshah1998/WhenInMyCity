@@ -10,6 +10,7 @@ import { V2_CREATOR_TYPES } from '@/types/onboarding'
 import { recommendScheme } from '@/lib/theme/hsv'
 import ProfilePreview from '../_components/ProfilePreview'
 import { getCategoryColour } from '@/lib/onboarding/design-tokens'
+import { ArtifactStyles, ScaledStage, CreatorPoster, DEFAULT_MOOD, isPosterMood, type PosterMood } from '@/components/onboarding/artifacts'
 
 type CreatorTypeV2 = typeof V2_CREATOR_TYPES[number]
 
@@ -169,6 +170,7 @@ export default function C8CombinedPage() {
   const [socialLinks,      setSocialLinks]     = useState<Record<string, string>>({})
   const [selectedPreset,   setSelectedPreset]  = useState<EditorialPreset>(EDITORIAL_PRESETS[0])
   const [recommendedName,  setRecommendedName] = useState('')
+  const [posterMood,       setPosterMood]      = useState<PosterMood>(DEFAULT_MOOD)
 
   const [isSaving,  setIsSaving]  = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
@@ -244,6 +246,16 @@ export default function C8CombinedPage() {
       setRecommendedName(rec.name)
       writeThemePreview(rec)
 
+      // Restore a previously chosen poster mood (e.g. user went back from C8b)
+      try {
+        const themeRaw = sessionStorage.getItem(SK.c_theme_json)
+        const savedMood = themeRaw ? (JSON.parse(themeRaw) as Record<string, unknown>).posterMood : undefined
+        if (isPosterMood(savedMood)) setPosterMood(savedMood)
+      } catch {}
+
+      const savedAvatarUrl = sessionStorage.getItem(SK.c_avatar_url)
+      if (savedAvatarUrl) setAvatarPreviewUrl(savedAvatarUrl)
+
       // Pad interest tags to minimum 3
       const paddedTags = tagsArr.length >= 3
         ? tagsArr
@@ -293,7 +305,12 @@ export default function C8CombinedPage() {
     fd.append('file', file)
     const result = await uploadOnboardingAvatar(fd)
     setAvatarUploading(false)
-    if (result.error) setAvatarError(result.error)
+    if (result.error) {
+      setAvatarError(result.error)
+    } else if (result.url) {
+      setAvatarPreviewUrl(result.url)
+      try { sessionStorage.setItem(SK.c_avatar_url, result.url) } catch {}
+    }
   }
 
   function handleDone() {
@@ -308,7 +325,7 @@ export default function C8CombinedPage() {
       if (trimmedBio) sessionStorage.setItem(SK.c_bio, trimmedBio)
       sessionStorage.setItem(SK.c_social_handles, JSON.stringify(socialLinks))
       sessionStorage.setItem(SK.c_colorscheme, selectedPreset.colorScheme)
-      sessionStorage.setItem(SK.c_theme_json, JSON.stringify(presetToThemeJson(selectedPreset)))
+      sessionStorage.setItem(SK.c_theme_json, JSON.stringify({ ...presetToThemeJson(selectedPreset), posterMood }))
     } catch {}
 
     router.push('/onboarding/creator/C8b')
@@ -516,6 +533,57 @@ export default function C8CombinedPage() {
           </div>
         </section>
 
+        {/* ── Poster mood — separate from "Choose your vibe" above: that grid
+            picks the public profile page's theme (colorScheme/font/background);
+            this picks the flat-color mood of the event-poster reveal artifact.
+            No mapping exists between the two, so it's its own small section
+            rather than a 13th tile in that grid. Persists to
+            page_theme.posterMood (see migration 056), reused wherever the
+            poster renders later. ── */}
+        <section style={{ padding: '0 24px', marginBottom: 24 }}>
+          <ArtifactStyles />
+          <p style={{ fontFamily: "'DM Sans', sans-serif", fontWeight: 600, fontSize: 11, color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '0.1em', margin: '0 0 10px' }}>
+            Poster mood
+          </p>
+          <div style={{ display: 'flex', gap: 14 }}>
+            {(['moody', 'editorial', 'vivid'] as const).map(m => {
+              const active = posterMood === m
+              return (
+                <button
+                  key={m}
+                  type="button"
+                  onClick={() => setPosterMood(m)}
+                  style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+                >
+                  <div style={{
+                    width: 60, borderRadius: 8, overflow: 'hidden',
+                    border: `2px solid ${active ? accent : 'rgba(255,255,255,0.15)'}`,
+                    boxShadow: active ? `0 0 0 3px ${accent}30` : 'none',
+                    transition: 'border-color 120ms, box-shadow 120ms',
+                  }}>
+                    <ScaledStage width={480} height={720} maxWidth={56}>
+                      <CreatorPoster
+                        displayName={displayName || 'Your name'}
+                        city={city || 'Your city'}
+                        tags={[]}
+                        photoUrl={avatarPreviewUrl}
+                        handle={username || 'you'}
+                        mood={m}
+                      />
+                    </ScaledStage>
+                  </div>
+                  <span style={{
+                    fontFamily: "'DM Sans', sans-serif", fontSize: 10, textTransform: 'capitalize',
+                    color: active ? '#F0EFF8' : 'rgba(255,255,255,0.45)',
+                  }}>
+                    {m}
+                  </span>
+                </button>
+              )
+            })}
+          </div>
+        </section>
+
         {/* ── Socials (if platforms selected in C7) ────────────────────── */}
         {platforms.length > 0 && (
           <section style={{ padding: '0 24px', marginBottom: 24 }}>
@@ -570,7 +638,7 @@ export default function C8CombinedPage() {
         padding: '0 24px',
         background: 'linear-gradient(to top, #1A2744 60%, transparent 100%)',
       }}>
-        <button type="button" onClick={() => router.push('/onboarding/creator/C6')}
+        <button type="button" onClick={() => router.push('/onboarding/creator/C7')}
           style={{ background: 'none', border: 'none', fontFamily: "'DM Sans', sans-serif", fontSize: 15, color: 'rgba(255,255,255,0.30)', cursor: 'pointer', padding: 0 }}>
           ← Back
         </button>

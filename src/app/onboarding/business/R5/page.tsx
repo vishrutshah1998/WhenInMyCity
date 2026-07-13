@@ -6,6 +6,8 @@ import { SK, clearNewOnboardingKeys } from '@/lib/onboarding/session-keys'
 import { updatePersonas } from '@/lib/onboarding/update-personas'
 import { completeBusinessOnboarding } from '@/app/actions/persona-complete'
 import { createClient } from '@/lib/supabase/client'
+import { ArtifactStyles, ScaledStage, BrandCard } from '@/components/onboarding/artifacts'
+import { profileUrl } from '@/lib/profile-url'
 
 const ACCENT = '#F5A800'
 const CORAL  = '#E8705A'
@@ -103,6 +105,7 @@ export default function R5Page() {
   const [bName,          setBName]          = useState('')
   const [bCity,          setBCity]          = useState('')
   const [bSlug,          setBSlug]          = useState('')
+  const [bLogoUrl,       setBLogoUrl]       = useState<string | null>(null)
   const [catLabel,       setCatLabel]       = useState('')
   const [rCategories,    setRCategories]    = useState('')
   const [isWide,         setIsWide]         = useState(true)
@@ -130,6 +133,7 @@ const name    = sessionStorage.getItem(SK.b_name) ?? ''
     setBCity(sessionStorage.getItem(SK.b_city) ?? '')
     setRCategories(cats)
     setBSlug(sessionStorage.getItem(SK.b_slug) ?? name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, ''))
+    setBLogoUrl(sessionStorage.getItem(SK.b_logo_url))
     setCatLabel(CAT_META[cats] ?? cats)
     setPendingRedirect(sessionStorage.getItem('wimc_post_onboarding_redirect'))
     let wa = '', mail = '', ig = '', bioText = ''
@@ -356,90 +360,17 @@ const name    = sessionStorage.getItem(SK.b_name) ?? ''
               </p>
             )}
 
-            {/* Notice board ad */}
-            <div style={{
-              position: 'relative', width: '100%', maxWidth: 360, marginBottom: 40,
-              animation: 'r5-fade-up 0.6s ease 0.55s both', transform: 'rotate(1.5deg)',
-            }}>
-              {/* Thumbtack */}
-              <div style={{
-                position: 'absolute', top: -8, left: '50%', transform: 'translateX(-50%)',
-                width: 14, height: 14, borderRadius: '50%',
-                background: '#3A3A3A', boxShadow: '0 2px 6px rgba(0,0,0,0.6)',
-                zIndex: 20, border: '1px solid #222',
-              }} />
-
-              <div style={{
-                background: '#FAF7F0', boxShadow: `10px 10px 0px 0px ${ACCENT}`,
-                border: '1px solid rgba(26,39,68,0.20)', overflow: 'hidden', position: 'relative',
-              }}>
-                {/* VERIFIED stamp */}
-                <div style={{
-                  position: 'absolute', inset: 0,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  pointerEvents: 'none', zIndex: 10,
-                }}>
-                  <div style={{
-                    border: `5px solid ${ACCENT}`, padding: '8px 20px',
-                    display: 'flex', flexDirection: 'column', alignItems: 'center',
-                    background: 'rgba(250,247,240,0.90)',
-                    boxShadow: '0 12px 30px rgba(0,0,0,0.25)',
-                    animation: 'r5-stamp-ad 0.5s cubic-bezier(0.175,0.885,0.32,1.275) 0.9s both',
-                  }}>
-                    <span style={{ fontFamily: OUTFIT, fontWeight: 900, fontSize: 40, color: ACCENT, lineHeight: 1 }}>VERIFIED</span>
-                    <span style={{ fontFamily: MONO, fontSize: 9, color: ACCENT, marginTop: 4, letterSpacing: '0.3em' }}>BRAND GATEWAY</span>
-                  </div>
-                </div>
-
-                {/* Brand header box */}
-                <div style={{ padding: '14px 16px 10px', borderBottom: `3px solid ${ACCENT}` }}>
-                  <div style={{ border: `2px solid ${ACCENT}`, padding: '8px 12px', display: 'inline-block', marginBottom: 8 }}>
-                    <p style={{ fontFamily: OUTFIT, fontWeight: 900, fontSize: 20, color: NAVY, textTransform: 'uppercase', letterSpacing: '-0.01em', lineHeight: 1, margin: 0 }}>
-                      {bName}
-                    </p>
-                    {catLabel && (
-                      <div style={{ fontFamily: MONO, fontSize: 8, color: ACCENT, textTransform: 'uppercase', letterSpacing: '0.12em', marginTop: 3, fontWeight: 700 }}>
-                        {catLabel.toUpperCase()}
-                      </div>
-                    )}
-                  </div>
-                  <p style={{ fontFamily: MONO, fontSize: 10, color: 'rgba(26,39,68,0.55)', lineHeight: 1.5, margin: 0 }}>
-                    Connecting with creators &amp;<br />
-                    culture enthusiasts
-                    {bCity ? <> in <span style={{ color: ACCENT, fontWeight: 700 }}>{bCity.toUpperCase()}</span></> : ''}
-                  </p>
-                </div>
-
-                {/* Contact row */}
-                <div style={{ padding: '8px 16px 6px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ fontFamily: MONO, fontSize: 8, color: 'rgba(26,39,68,0.40)', textTransform: 'uppercase', letterSpacing: '0.10em' }}>FIND US ON WIMC</span>
-                  <span style={{ fontFamily: MONO, fontSize: 8, color: ACCENT, letterSpacing: '0.05em' }}>wimc.in/...</span>
-                </div>
-
-                {/* Tear strips */}
-                <div style={{ borderTop: '1px dashed rgba(26,39,68,0.40)', display: 'flex', height: 38, overflow: 'hidden' }}>
-                  {Array.from({ length: 8 }, (_, i) => (
-                    <div key={i} style={{
-                      flex: 1,
-                      borderRight: i < 7 ? '1px dashed rgba(26,39,68,0.28)' : 'none',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
-                      background: i % 2 === 0 ? `${ACCENT}08` : 'transparent',
-                    }}>
-                      <span style={{
-                        fontFamily: MONO, fontSize: 6, color: ACCENT,
-                        textTransform: 'uppercase', letterSpacing: '0.04em',
-                        writingMode: 'vertical-rl', transform: 'rotate(180deg)',
-                        whiteSpace: 'nowrap', fontWeight: 700, lineHeight: 1,
-                      }}>
-                        {bName ? bName.slice(0, 5).toUpperCase() : 'WIMC'}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Accent underline */}
-              <div style={{ height: 3, background: ACCENT, animation: 'r5-line-in 0.6s ease 1.2s both' }} />
+            {/* Brand business card artifact */}
+            <div style={{ width: '100%', marginBottom: 40 }}>
+              <ArtifactStyles />
+              <ScaledStage width={360} height={210} maxWidth={340}>
+                <BrandCard
+                  name={bName}
+                  tagline={bio || null}
+                  profileUrl={`wheninmycity.com${profileUrl(bCity, bSlug)}`}
+                  logoUrl={bLogoUrl}
+                />
+              </ScaledStage>
             </div>
 
             {/* Separator */}

@@ -5,13 +5,18 @@ import { useRouter } from 'next/navigation'
 import { SK, clearNewOnboardingKeys } from '@/lib/onboarding/session-keys'
 import { completeExplorerOnboarding } from '@/app/actions/persona-complete'
 import { updatePersonas } from '@/lib/onboarding/update-personas'
-import RubberStamp from '@/components/ui/RubberStamp'
+import { createClient } from '@/lib/supabase/client'
+import { ArtifactStyles, ScaledStage, ExplorerTicket, formatMemberSince } from '@/components/onboarding/artifacts'
+import { INTEREST_TAGS } from '@/lib/constants/interests'
+
+function categoryLabel(cat: string): string {
+  return cat.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+}
 
 const ACCENT = '#9B8FFF'
 const NAVY   = '#1A2744'
 const DM     = "'DM Sans', sans-serif"
 const ABRIL  = "var(--font-abril), 'Abril Fatface', serif"
-const OUTFIT = "'Outfit', sans-serif"
 
 const KEYFRAMES = `
 @keyframes e7-pulse  { 0%,100%{opacity:1} 50%{opacity:0.4} }
@@ -29,6 +34,10 @@ export default function E7Page() {
   const [submitError,     setSubmitError]     = useState<string | null>(null)
   const [isLeaving,       setIsLeaving]       = useState(false)
   const [pendingRedirect, setPendingRedirect] = useState<string | null>(null)
+  const [accountId,       setAccountId]       = useState('')
+  const [favoriteCategory, setFavoriteCategory] = useState<string | null>(null)
+  const [joinedAt,        setJoinedAt]        = useState<Date | null>(null)
+  const [avatarUrl,       setAvatarUrl]       = useState<string | null>(null)
 
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -40,16 +49,18 @@ export default function E7Page() {
     setExplorerName(sessionStorage.getItem(SK.e_name) || '')
     setCityName(sessionStorage.getItem(SK.e_city) || 'Your City')
     setPendingRedirect(sessionStorage.getItem('wimc_post_onboarding_redirect'))
+    setAvatarUrl(sessionStorage.getItem(SK.e_avatar_url))
 
     async function save() {
       try {
+        const interestIds = JSON.parse(sessionStorage.getItem(SK.e_interests) || '[]') as string[]
         await completeExplorerOnboarding({
           displayName:           sessionStorage.getItem(SK.e_name)         || '',
           username:              sessionStorage.getItem(SK.e_username)      || '',
           city:                  sessionStorage.getItem(SK.e_city)         || '',
           neighbourhood:         sessionStorage.getItem(SK.e_neighbourhood) || null,
           explorerScene:         sessionStorage.getItem(SK.e_scene)        || '',
-          interestTags:          JSON.parse(sessionStorage.getItem(SK.e_interests) || '[]') as string[],
+          interestTags:          interestIds,
           preferredFormats:      JSON.parse(sessionStorage.getItem(SK.e_formats)   || '[]') as string[],
           priceRangeMaxPaise:    Number(sessionStorage.getItem(SK.e_price_max) ?? '1000') * 100,
           notificationPreferences: {
@@ -59,7 +70,16 @@ export default function E7Page() {
           explorerCreatorIntent: sessionStorage.getItem(SK.e_intent)
             ? [sessionStorage.getItem(SK.e_intent)!]
             : [],
+          avatarUrl: sessionStorage.getItem(SK.e_avatar_url) || null,
         })
+
+        const topTag = INTEREST_TAGS.find(t => t.id === interestIds[0])
+        setFavoriteCategory(topTag ? categoryLabel(topTag.category) : null)
+        setJoinedAt(new Date())
+        createClient().auth.getUser().then(({ data: { user } }) => {
+          if (user) setAccountId(user.id)
+        }).catch(() => {})
+
         setPhase('revealed')
       } catch (err) {
         setSubmitError(err instanceof Error ? err.message : 'Something went wrong. Please try again.')
@@ -148,44 +168,19 @@ export default function E7Page() {
           gap: 0,
         }}>
 
-          {/* Explorer boarding pass card */}
-          <div style={{ position: 'relative', width: '100%', marginBottom: 36, animation: 'e7-fade-up 0.6s ease 0.1s both' }}>
-            {/* RubberStamp */}
-            <div style={{ position: 'absolute', top: 12, right: 12, zIndex: 20 }}>
-              <RubberStamp text={"EXPLORER\nPASS\nISSUED"} color={ACCENT} size={56} rotate={12} opacity={0.85} animate />
-            </div>
-
-            <div style={{ background: '#111116', border: `1px solid ${ACCENT}30`, padding: 28, position: 'relative', textAlign: 'left' }}>
-              {/* Badge */}
-              <div style={{ display: 'inline-block', background: ACCENT, padding: '3px 12px', marginBottom: 16 }}>
-                <span style={{ fontFamily: DM, fontWeight: 600, fontSize: 10, color: NAVY, textTransform: 'uppercase', letterSpacing: '0.1em' }}>
-                  Explorer pass issued
-                </span>
-              </div>
-
-              {/* Name */}
-              <div style={{ fontFamily: OUTFIT, fontWeight: 900, fontSize: 32, color: '#ffffff', textTransform: 'uppercase', lineHeight: 1, marginBottom: 8 }}>
-                {explorerName || 'Explorer'}
-              </div>
-              <div style={{ fontFamily: DM, fontSize: 13, color: 'rgba(255,255,255,0.40)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
-                {cityName} · Culture Explorer
-              </div>
-
-              {/* Tear line */}
-              <div style={{
-                margin: '20px 0', height: 2,
-                background: `repeating-linear-gradient(90deg, ${ACCENT}, ${ACCENT} 3px, transparent 3px, transparent 6px)`,
-              }} />
-
-              {/* Stat placeholders */}
-              <div style={{ display: 'flex', gap: 8 }}>
-                {['0 events saved', '0 creators followed'].map((s, i) => (
-                  <div key={i} style={{ background: '#07070A', padding: '6px 10px', flex: 1 }}>
-                    <span style={{ fontFamily: DM, fontSize: 11, color: 'rgba(255,255,255,0.30)' }}>{s}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
+          {/* Explorer membership ticket artifact */}
+          <div style={{ width: '100%', marginBottom: 36 }}>
+            <ArtifactStyles />
+            <ScaledStage width={720} height={320} maxWidth={340}>
+              <ExplorerTicket
+                displayName={explorerName || 'Explorer'}
+                photoUrl={avatarUrl}
+                city={cityName}
+                memberSinceLabel={formatMemberSince(joinedAt)}
+                favoriteCategory={favoriteCategory}
+                accountId={accountId || explorerName}
+              />
+            </ScaledStage>
           </div>
 
           {/* Headline */}

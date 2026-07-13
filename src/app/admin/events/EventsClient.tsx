@@ -14,9 +14,9 @@ const STATUS_TABS = [
 ]
 
 const STATUS_COLORS: Record<string, string> = {
-  published: '#22c55e',
+  published: 'var(--wimc-success)',
   draft:     'var(--wimc-amber)',
-  completed: '#3b82f6',
+  completed: 'var(--wimc-neel)',
   cancelled: 'var(--wimc-coral)',
 }
 

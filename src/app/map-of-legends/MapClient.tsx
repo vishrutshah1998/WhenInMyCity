@@ -24,10 +24,10 @@ function VenuePlaceholder({ name }: { name: string }) {
   return (
     <div style={{
       width: '100%', height: 160,
-      background: 'linear-gradient(135deg, rgba(77,210,177,0.15) 0%, rgba(168,85,247,0.1) 100%)',
+      background: 'linear-gradient(135deg, rgba(31,138,112,0.16) 0%, rgba(107,78,255,0.12) 100%)',
       display: 'grid', placeItems: 'center',
       fontFamily: 'var(--font-syne)', fontWeight: 900,
-      fontSize: 36, color: 'rgba(77,210,177,0.5)',
+      fontSize: 36, color: 'rgba(31,138,112,0.45)',
     }}>
       {initials}
     </div>
@@ -39,13 +39,13 @@ function StatPill({ icon, value, label }: { icon: string; value: string; label: 
     <div style={{
       display: 'flex', alignItems: 'center', gap: 5,
       padding: '5px 10px', borderRadius: 8,
-      background: 'var(--wimc-bg-overlay)',
-      border: '1px solid var(--wimc-border-subtle)',
+      background: '#F3E8D6',
+      border: '1px solid rgba(32,26,18,0.08)',
       flexShrink: 0,
     }}>
-      <span className="material-symbols-outlined" style={{ fontSize: 13, color: 'var(--wimc-teal)' }}>{icon}</span>
+      <span className="material-symbols-outlined" style={{ fontSize: 13, color: '#1F8A70' }}>{icon}</span>
       <span style={{ fontFamily: 'var(--font-jetbrains-mono)', fontSize: 12, fontWeight: 700 }}>{value}</span>
-      <span style={{ fontSize: 11, color: 'var(--wimc-text-secondary)' }}>{label}</span>
+      <span style={{ fontSize: 11, color: '#58503F' }}>{label}</span>
     </div>
   )
 }
@@ -57,8 +57,8 @@ function VenueCard({ venue }: { venue: LegendaryVenue }) {
     <Link href={`/venue/${venue.slug}`} style={{ textDecoration: 'none' }}>
       <div
         style={{
-          background: 'var(--wimc-bg-elevated)',
-          border: '1px solid var(--wimc-border-default)',
+          background: '#FFFFFF',
+          border: '1.5px dashed rgba(32,26,18,0.15)',
           borderRadius: 18, overflow: 'hidden',
           display: 'flex', flexDirection: 'column',
           transition: 'border-color 200ms, transform 200ms',
@@ -66,12 +66,12 @@ function VenueCard({ venue }: { venue: LegendaryVenue }) {
         }}
         onMouseEnter={(e) => {
           const el = e.currentTarget as HTMLElement
-          el.style.borderColor = 'rgba(77,210,177,0.5)'
+          el.style.borderColor = '#1F8A70'
           el.style.transform = 'translateY(-2px)'
         }}
         onMouseLeave={(e) => {
           const el = e.currentTarget as HTMLElement
-          el.style.borderColor = 'var(--wimc-border-default)'
+          el.style.borderColor = 'rgba(32,26,18,0.15)'
           el.style.transform = 'translateY(0)'
         }}
       >
@@ -93,13 +93,13 @@ function VenueCard({ venue }: { venue: LegendaryVenue }) {
             position: 'absolute', top: 10, left: 10,
             display: 'flex', alignItems: 'center', gap: 5,
             padding: '4px 10px', borderRadius: 9999,
-            background: 'rgba(10,10,11,0.82)', backdropFilter: 'blur(8px)',
-            border: '1px solid rgba(77,210,177,0.4)',
+            background: 'rgba(251,243,231,0.94)', backdropFilter: 'blur(8px)',
+            border: '1px dashed rgba(31,138,112,0.55)',
           }}>
-            <span className="material-symbols-outlined" style={{ fontSize: 12, color: 'var(--wimc-teal)' }}>
+            <span className="material-symbols-outlined" style={{ fontSize: 12, color: '#1F8A70' }}>
               workspace_premium
             </span>
-            <span style={{ fontSize: 10, fontWeight: 800, color: 'var(--wimc-teal)', letterSpacing: '0.08em' }}>
+            <span style={{ fontSize: 10, fontWeight: 800, color: '#1F8A70', letterSpacing: '0.08em' }}>
               LEGENDARY
             </span>
           </div>
@@ -109,9 +109,9 @@ function VenueCard({ venue }: { venue: LegendaryVenue }) {
             <div style={{
               position: 'absolute', top: 10, right: 10,
               padding: '4px 10px', borderRadius: 9999,
-              background: 'rgba(10,10,11,0.82)', backdropFilter: 'blur(8px)',
-              border: '1px solid rgba(232,87,42,0.4)',
-              fontSize: 10, fontWeight: 800, color: 'var(--wimc-coral)',
+              background: 'rgba(251,243,231,0.94)', backdropFilter: 'blur(8px)',
+              border: '1px dashed rgba(216,67,46,0.55)',
+              fontSize: 10, fontWeight: 800, color: '#D8432E',
             }}>
               🔥 Trending
             </div>
@@ -126,12 +126,12 @@ function VenueCard({ venue }: { venue: LegendaryVenue }) {
             <div style={{ fontFamily: 'var(--font-syne)', fontWeight: 700, fontSize: 16, marginBottom: 4 }}>
               {venue.name}
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--wimc-text-secondary)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#58503F' }}>
               <span className="material-symbols-outlined" style={{ fontSize: 13 }}>location_on</span>
               {venue.neighbourhood ?? venue.cityName}
               {venue.capacityMax && (
                 <>
-                  <span style={{ color: 'var(--wimc-border-default)' }}>·</span>
+                  <span style={{ color: 'rgba(32,26,18,0.12)' }}>·</span>
                   <span>Up to {venue.capacityMax}</span>
                 </>
               )}
@@ -141,7 +141,7 @@ function VenueCard({ venue }: { venue: LegendaryVenue }) {
           {/* Description */}
           {venue.description && (
             <p style={{
-              fontSize: 13, color: 'var(--wimc-text-secondary)', lineHeight: 1.5,
+              fontSize: 13, color: '#58503F', lineHeight: 1.5,
               margin: 0,
               display: '-webkit-box', WebkitLineClamp: 2,
               WebkitBoxOrient: 'vertical', overflow: 'hidden',
@@ -160,11 +160,11 @@ function VenueCard({ venue }: { venue: LegendaryVenue }) {
           {/* Footer row */}
           <div style={{
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            paddingTop: 10, borderTop: '1px solid var(--wimc-border-subtle)',
-            fontSize: 12, color: 'var(--wimc-text-secondary)',
+            paddingTop: 10, borderTop: '1px solid rgba(32,26,18,0.08)',
+            fontSize: 12, color: '#58503F',
           }}>
             <span>
-              <strong style={{ color: 'var(--wimc-text-primary)' }}>{venue.totalEventsHosted}</strong>
+              <strong style={{ color: '#201A12' }}>{venue.totalEventsHosted}</strong>
               {' '}events hosted
             </span>
             {since && (
@@ -204,27 +204,27 @@ export default function MapClient({ venues }: Props) {
   const visibleCities = cityFilter === 'all' ? cities : cities.filter((c) => c === cityFilter)
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--wimc-bg-base)' }}>
+    <div style={{ minHeight: '100vh', background: '#FBF3E7', color: '#201A12' }}>
 
       {/* ── Nav ──────────────────────────────────────────────────────────────── */}
       <nav style={{
         position: 'sticky', top: 0, zIndex: 40,
-        background: 'rgba(10,10,11,0.92)', backdropFilter: 'blur(12px)',
-        borderBottom: '1px solid var(--wimc-border-subtle)',
+        background: 'rgba(251,243,231,0.92)', backdropFilter: 'blur(12px)',
+        borderBottom: '1px solid rgba(32,26,18,0.08)',
         padding: '0 32px', height: 60,
         display: 'flex', alignItems: 'center', gap: 16,
       }}>
         <Link href="/" style={{ display: 'flex', alignItems: 'center', textDecoration: 'none' }}>
-          <WimcWordmark color="#E8705A" height={20} />
+          <WimcWordmark color="#FF6B35" height={20} />
         </Link>
-        <span style={{ color: 'var(--wimc-border-default)' }}>·</span>
-        <span style={{ fontFamily: 'var(--font-syne)', fontWeight: 600, fontSize: 14, color: 'var(--wimc-teal)' }}>
+        <span style={{ color: 'rgba(32,26,18,0.12)' }}>·</span>
+        <span style={{ fontFamily: 'var(--font-syne)', fontWeight: 600, fontSize: 14, color: '#1F8A70' }}>
           Map of Legends
         </span>
         <div style={{ flex: 1 }} />
         <Link href="/signin" style={{
           padding: '6px 16px', borderRadius: 8, fontSize: 12.5, fontWeight: 600,
-          background: 'var(--wimc-coral)', color: '#fff', textDecoration: 'none',
+          background: '#FF6B35', color: '#fff', textDecoration: 'none',
           fontFamily: 'var(--font-syne)',
         }}>
           Join WIMC
@@ -238,10 +238,10 @@ export default function MapClient({ venues }: Props) {
           <div style={{
             display: 'inline-flex', alignItems: 'center', gap: 8, marginBottom: 20,
             padding: '5px 16px', borderRadius: 9999,
-            background: 'rgba(77,210,177,0.1)', border: '1px solid rgba(77,210,177,0.3)',
+            background: 'rgba(31,138,112,0.1)', border: '1px dashed rgba(31,138,112,0.35)',
           }}>
-            <span className="material-symbols-outlined" style={{ fontSize: 14, color: 'var(--wimc-teal)' }}>workspace_premium</span>
-            <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--wimc-teal)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+            <span className="material-symbols-outlined" style={{ fontSize: 14, color: '#1F8A70' }}>workspace_premium</span>
+            <span style={{ fontFamily: 'var(--font-dm-serif)', fontSize: 11, fontWeight: 700, color: '#1F8A70', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
               Legendary Venues
             </span>
           </div>
@@ -253,13 +253,13 @@ export default function MapClient({ venues }: Props) {
           }}>
             Map of{' '}
             <span style={{
-              backgroundImage: 'linear-gradient(110deg, var(--wimc-teal) 0%, #a855f7 70%)',
+              backgroundImage: 'linear-gradient(110deg, #1F8A70 0%, #6B4EFF 70%)',
               WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
             }}>
               Legends
             </span>
           </h1>
-          <p style={{ fontSize: 16, color: 'var(--wimc-text-secondary)', maxWidth: 480, margin: '0 auto 24px', lineHeight: 1.6 }}>
+          <p style={{ fontSize: 16, color: '#58503F', maxWidth: 480, margin: '0 auto 24px', lineHeight: 1.6 }}>
             The Venues where culture doesn&apos;t just happen — it stays.
             Ranked by the people who keep coming back.
           </p>
@@ -272,10 +272,10 @@ export default function MapClient({ venues }: Props) {
               { value: venues.filter((a) => a.isTrending).length, label: 'Trending now' },
             ].map(({ value, label }) => (
               <div key={label} style={{ textAlign: 'center' }}>
-                <div style={{ fontFamily: 'var(--font-syne)', fontWeight: 900, fontSize: 26, color: 'var(--wimc-teal)' }}>
+                <div style={{ fontFamily: 'var(--font-syne)', fontWeight: 900, fontSize: 26, color: '#1F8A70' }}>
                   {value}
                 </div>
-                <div style={{ fontSize: 12, color: 'var(--wimc-text-secondary)', marginTop: 2 }}>{label}</div>
+                <div style={{ fontSize: 12, color: '#58503F', marginTop: 2 }}>{label}</div>
               </div>
             ))}
           </div>
@@ -289,9 +289,9 @@ export default function MapClient({ venues }: Props) {
               style={{
                 padding: '6px 14px', borderRadius: 9999, fontSize: 12.5, fontWeight: 600,
                 cursor: 'pointer', fontFamily: 'var(--font-dm-sans)',
-                border: `1.5px solid ${cityFilter === 'all' ? 'var(--wimc-teal)' : 'var(--wimc-border-subtle)'}`,
-                background: cityFilter === 'all' ? 'rgba(77,210,177,0.12)' : 'transparent',
-                color: cityFilter === 'all' ? 'var(--wimc-teal)' : 'var(--wimc-text-secondary)',
+                border: `1.5px dashed ${cityFilter === 'all' ? '#1F8A70' : 'rgba(32,26,18,0.15)'}`,
+                background: cityFilter === 'all' ? 'rgba(31,138,112,0.12)' : 'transparent',
+                color: cityFilter === 'all' ? '#1F8A70' : '#58503F',
                 transition: 'all 150ms',
               }}
             >
@@ -307,9 +307,9 @@ export default function MapClient({ venues }: Props) {
                   style={{
                     padding: '6px 14px', borderRadius: 9999, fontSize: 12.5, fontWeight: 600,
                     cursor: 'pointer', fontFamily: 'var(--font-dm-sans)',
-                    border: `1.5px solid ${active ? 'var(--wimc-teal)' : 'var(--wimc-border-subtle)'}`,
-                    background: active ? 'rgba(77,210,177,0.12)' : 'transparent',
-                    color: active ? 'var(--wimc-teal)' : 'var(--wimc-text-secondary)',
+                    border: `1.5px dashed ${active ? '#1F8A70' : 'rgba(32,26,18,0.15)'}`,
+                    background: active ? 'rgba(31,138,112,0.12)' : 'transparent',
+                    color: active ? '#1F8A70' : '#58503F',
                     transition: 'all 150ms',
                   }}
                 >
@@ -322,7 +322,7 @@ export default function MapClient({ venues }: Props) {
 
         {/* ── City sections ──────────────────────────────────────────────────── */}
         {venues.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '80px 24px', color: 'var(--wimc-text-secondary)', fontSize: 15 }}>
+          <div style={{ textAlign: 'center', padding: '80px 24px', color: '#58503F', fontSize: 15 }}>
             No Legendary Venues yet — every institution starts somewhere.
           </div>
         ) : (
@@ -341,7 +341,7 @@ export default function MapClient({ venues }: Props) {
                       {first.cityName}
                     </h2>
                     <span style={{
-                      fontSize: 13, color: 'var(--wimc-text-secondary)',
+                      fontSize: 13, color: '#58503F',
                       fontFamily: 'var(--font-jetbrains-mono)',
                     }}>
                       {group.length} legendary venue{group.length !== 1 ? 's' : ''}

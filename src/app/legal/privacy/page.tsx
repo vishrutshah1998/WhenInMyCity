@@ -1,12 +1,10 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
+import { PRIVACY_EFFECTIVE_DATE } from './constants'
 
 export const metadata: Metadata = {
   title: 'Privacy Notice | When In My City',
 }
-
-// Last-reviewed date is embedded here so the settings page can display it.
-export const PRIVACY_EFFECTIVE_DATE = '1 July 2026'
 
 // ── Layout constants ──────────────────────────────────────────────────────────
 

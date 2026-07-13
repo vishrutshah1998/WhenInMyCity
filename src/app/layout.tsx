@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import {
   Inter, Plus_Jakarta_Sans, Dancing_Script, Playfair_Display,
   Space_Grotesk, Archivo_Black, Outfit, DM_Sans, JetBrains_Mono,
-  Abril_Fatface, Barlow_Condensed,
+  Abril_Fatface, Barlow_Condensed, Caveat, DM_Serif_Display,
 } from 'next/font/google'
 import './globals.css'
 import '../../styles/venue-tokens.css'
@@ -48,6 +48,16 @@ const barlowCondensed = Barlow_Condensed({
   variable: '--font-barlow',
 })
 
+// ── Vibrant marketing reskin fonts (/, /growth, /mission, /hall-of-lights, /map-of-legends) ──
+const caveat = Caveat({
+  subsets: ['latin'], weight: ['500', '700'],
+  variable: '--font-caveat',
+})
+const dmSerifDisplay = DM_Serif_Display({
+  subsets: ['latin'], weight: '400', style: ['normal', 'italic'],
+  variable: '--font-dm-serif',
+})
+
 export const metadata: Metadata = {
   title: 'When In My City',
   description: 'Creator-led offline experiences for Tier-2 India',
@@ -59,6 +69,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     playfair.variable, spaceGrotesk.variable, archivoBlack.variable,
     outfit.variable, dmSans.variable, jetbrainsMono.variable,
     abrilFatface.variable, barlowCondensed.variable,
+    caveat.variable, dmSerifDisplay.variable,
   ].join(' ')
 
   return (

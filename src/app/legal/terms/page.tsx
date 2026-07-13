@@ -1,11 +1,10 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
+import { TERMS_EFFECTIVE_DATE } from './constants'
 
 export const metadata: Metadata = {
   title: 'Terms of Use | When In My City',
 }
-
-export const TERMS_EFFECTIVE_DATE = '1 July 2026'
 
 const prose: React.CSSProperties = {
   fontSize:   14,

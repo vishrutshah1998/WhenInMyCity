@@ -222,7 +222,7 @@ function TicketCard({ ticket }: { ticket: MyTicket }) {
       }}>
         {!past && (
           <Link
-            href={`/events/${ticket.eventSlug}/checkin?token=${ticket.qrToken}`}
+            href="/explore/tickets"
             style={{
               display:     'inline-flex', alignItems: 'center', gap: 4,
               padding:     '4px 11px', background: LAVENDER, color: '#07070A',

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { createEvent, publishEvent } from '@/app/actions/events'
 import { uploadEventCover } from '@/app/actions/upload'
 import { WimcWordmark } from '@/components/WimcWordmark'
+import { useIsMobile } from '@/hooks/useIsMobile'
 import type { CreateEventInput, TicketTier } from '@/types/events'
 import type { UserTier } from '@/types/database'
 
@@ -89,6 +90,7 @@ function getFirstDayOfMonth(y: number, m: number) { return new Date(y, m, 1).get
 // ── Calendar overlay ──────────────────────────────────────────────────────────
 
 function CalendarOverlay({ onConfirm, onClose }: { onConfirm: (d: Date) => void; onClose: () => void }) {
+  const isMobile = useIsMobile()
   const today = new Date()
   const [month, setMonth] = useState(today.getMonth())
   const [year,  setYear ] = useState(today.getFullYear())
@@ -100,9 +102,14 @@ function CalendarOverlay({ onConfirm, onClose }: { onConfirm: (d: Date) => void;
   ]
 
   return (
-    <div className="fixed inset-0 bg-black/50 z-[100] flex items-end justify-start"
+    <div className={`fixed inset-0 bg-black/50 z-[100] flex items-end ${isMobile ? 'justify-center' : 'justify-start'}`}
          onClick={e => { if (e.target === e.currentTarget) onClose() }}>
-      <div className="bg-[#FAF7F0] w-[40%] border-t-2 border-r-2 border-[#1A2744] p-8" style={{ animation: 'slideUp 200ms ease-out' }}>
+      <div
+        className={isMobile
+          ? 'bg-[#FAF7F0] w-full border-t-2 border-[#1A2744] p-5'
+          : 'bg-[#FAF7F0] w-[40%] border-t-2 border-r-2 border-[#1A2744] p-8'}
+        style={{ animation: 'slideUp 200ms ease-out' }}
+      >
         <div className="flex items-center justify-between mb-6">
           <span style={{ fontFamily: 'var(--font-barlow)' }} className="text-[#1A2744] text-[24px] font-bold uppercase tracking-wide">SELECT DATE</span>
           <button onClick={onClose} className="text-[#1A2744] hover:rotate-90 transition-transform duration-200 text-[24px] leading-none">×</button>
@@ -131,7 +138,7 @@ function CalendarOverlay({ onConfirm, onClose }: { onConfirm: (d: Date) => void;
             return (
               <button key={day} disabled={isPast} onClick={() => !isPast && setPicked(thisDate)}
                       style={{ fontFamily: 'var(--font-jetbrains-mono)' }}
-                      className={['w-10 h-10 flex items-center justify-center text-[13px] transition-colors',
+                      className={[isMobile ? 'w-full aspect-square' : 'w-10 h-10', 'flex items-center justify-center text-[13px] transition-colors',
                         isPicked ? 'bg-[#E8705A] text-white' : isToday ? 'border border-[#E8705A] text-[#E8705A]' : isPast ? 'text-[#1A2744]/20 cursor-not-allowed' : 'text-[#1A2744] hover:bg-[#1A2744]/5'].join(' ')}>
                 {day}
               </button>
@@ -151,13 +158,19 @@ function CalendarOverlay({ onConfirm, onClose }: { onConfirm: (d: Date) => void;
 // ── Time overlay ──────────────────────────────────────────────────────────────
 
 function TimeOverlay({ onConfirm, onClose }: { onConfirm: (h: number, m: number) => void; onClose: () => void }) {
+  const isMobile = useIsMobile()
   const [hour,   setHour  ] = useState(21)
   const [minute, setMinute] = useState(0)
 
   return (
-    <div className="fixed inset-0 bg-black/50 z-[100] flex items-end justify-start"
+    <div className={`fixed inset-0 bg-black/50 z-[100] flex items-end ${isMobile ? 'justify-center' : 'justify-start'}`}
          onClick={e => { if (e.target === e.currentTarget) onClose() }}>
-      <div className="bg-[#FAF7F0] w-[40%] border-t-2 border-r-2 border-[#1A2744] p-8" style={{ animation: 'slideUp 200ms ease-out' }}>
+      <div
+        className={isMobile
+          ? 'bg-[#FAF7F0] w-full border-t-2 border-[#1A2744] p-5'
+          : 'bg-[#FAF7F0] w-[40%] border-t-2 border-r-2 border-[#1A2744] p-8'}
+        style={{ animation: 'slideUp 200ms ease-out' }}
+      >
         <div className="flex items-center justify-between mb-6">
           <span style={{ fontFamily: 'var(--font-barlow)' }} className="text-[#1A2744] text-[24px] font-bold uppercase tracking-wide">SELECT TIME</span>
           <button onClick={onClose} className="text-[#1A2744] hover:rotate-90 transition-transform duration-200 text-[24px] leading-none">×</button>

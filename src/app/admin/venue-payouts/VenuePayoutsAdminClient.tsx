@@ -15,8 +15,8 @@ const STATUS_TABS = [
 
 const STATUS_COLORS: Record<string, string> = {
   pending:  'var(--wimc-amber)',
-  approved: '#3b82f6',
-  paid:     '#22c55e',
+  approved: 'var(--wimc-neel)',
+  paid:     'var(--wimc-success)',
   rejected: 'var(--wimc-coral)',
 }
 
@@ -69,8 +69,8 @@ export default function VenuePayoutsAdminClient({ payouts, currentStatus }: Prop
               style={{
                 padding: '8px 16px', fontSize: 13, fontWeight: 600,
                 border: 'none', background: 'none', cursor: 'pointer',
-                color: active ? '#5DD9D0' : 'var(--wimc-text-secondary)',
-                borderBottom: active ? '2px solid #5DD9D0' : '2px solid transparent',
+                color: active ? 'var(--wimc-teal)' : 'var(--wimc-text-secondary)',
+                borderBottom: active ? '2px solid var(--wimc-teal)' : '2px solid transparent',
                 marginBottom: -1,
                 transition: 'color 150ms',
               }}
@@ -150,7 +150,7 @@ function VenuePayoutCard({
         </div>
 
         <div style={{ textAlign: 'right', flexShrink: 0 }}>
-          <div style={{ fontSize: 20, fontWeight: 800, color: '#5DD9D0', fontFamily: 'var(--font-jetbrains-mono)' }}>
+          <div style={{ fontSize: 20, fontWeight: 800, color: 'var(--wimc-teal)', fontFamily: 'var(--font-jetbrains-mono)' }}>
             ₹{venueRs}
           </div>
           <div style={{ fontSize: 11, color: 'var(--wimc-text-muted)' }}>
@@ -223,7 +223,7 @@ function VenuePayoutCard({
               disabled={isProcessing}
               style={{
                 padding: '7px 16px', borderRadius: 7, fontSize: 12, fontWeight: 700,
-                background: '#3b82f6', color: '#fff', border: 'none', cursor: 'pointer',
+                background: 'var(--wimc-neel)', color: '#fff', border: 'none', cursor: 'pointer',
                 opacity: isProcessing ? 0.6 : 1,
               }}
             >
@@ -237,7 +237,7 @@ function VenuePayoutCard({
               disabled={isProcessing}
               style={{
                 padding: '7px 16px', borderRadius: 7, fontSize: 12, fontWeight: 700,
-                background: '#22c55e', color: '#fff', border: 'none', cursor: 'pointer',
+                background: 'var(--wimc-success)', color: '#fff', border: 'none', cursor: 'pointer',
                 opacity: isProcessing ? 0.6 : 1,
               }}
             >
@@ -250,8 +250,8 @@ function VenuePayoutCard({
             disabled={isProcessing}
             style={{
               padding: '7px 16px', borderRadius: 7, fontSize: 12, fontWeight: 700,
-              background: 'transparent', color: '#5DD9D0',
-              border: '1px solid #5DD9D0', cursor: 'pointer',
+              background: 'transparent', color: 'var(--wimc-teal)',
+              border: '1px solid var(--wimc-teal)', cursor: 'pointer',
               opacity: isProcessing ? 0.6 : 1,
             }}
           >

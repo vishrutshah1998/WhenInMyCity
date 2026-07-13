@@ -281,7 +281,7 @@ export default async function VenueDashboardPage() {
 
       <PersonaSwitcherPills personas={personas} currentPersona="venue" variant="dark" />
       <DashPageLink
-        url={`${process.env.NEXT_PUBLIC_APP_URL ?? 'https://wheninmycity.com'}/venue/${venue.slug}`}
+        url={`${process.env.NEXT_PUBLIC_APP_URL ?? 'https://www.wheninmycity.com'}/venue/${venue.slug}`}
         variant="dark"
       />
 

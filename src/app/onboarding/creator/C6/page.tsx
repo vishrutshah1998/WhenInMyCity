@@ -63,14 +63,14 @@ export default function C6Page() {
   function handleContinue() {
     if (advancing) return
     setAdvancing(true)
-    router.push('/onboarding/creator/C8')
+    router.push('/onboarding/creator/C7')
   }
 
   function handleSkip() {
     if (advancing) return
     setAdvancing(true)
     try { sessionStorage.setItem(SK.c_platforms, '[]') } catch {}
-    router.push('/onboarding/creator/C8')
+    router.push('/onboarding/creator/C7')
   }
 
   const canProceed = selected.length > 0

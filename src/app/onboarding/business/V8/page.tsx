@@ -6,6 +6,7 @@ import { SK, clearNewOnboardingKeys } from '@/lib/onboarding/session-keys'
 import { updatePersonas } from '@/lib/onboarding/update-personas'
 import { completeVenueOnboarding, type CompleteVenueInput } from '@/app/actions/venue-onboarding'
 import { createClient } from '@/lib/supabase/client'
+import { ArtifactStyles, ScaledStage, VenuePoster } from '@/components/onboarding/artifacts'
 
 const ACCENT  = '#5DD9D0'
 const CORAL   = '#E8705A'
@@ -14,7 +15,6 @@ const MONO    = "var(--font-jetbrains-mono), 'JetBrains Mono', monospace"
 const BARLOW  = "var(--font-barlow), 'Barlow Condensed', sans-serif"
 const ABRIL   = "var(--font-abril), 'Abril Fatface', serif"
 const DM      = "'DM Sans', sans-serif"
-const OUTFIT  = "'Outfit', sans-serif"
 
 // Maps V4 UI tile IDs → server-valid venue_type enum values (mirrors V4/page.tsx)
 const TYPE_TO_VALID: Record<string, CompleteVenueInput['venue_type'][number]> = {
@@ -105,6 +105,10 @@ export default function V8Page() {
   const [focusIg,        setFocusIg]        = useState(false)
   const [focusBio,       setFocusBio]       = useState(false)
   const [pendingRedirect, setPendingRedirect] = useState<string | null>(null)
+  const [venueAddress,   setVenueAddress]   = useState('')
+  const [venuePhotoUrl,  setVenuePhotoUrl]  = useState<string | null>(null)
+  const [venueTags,      setVenueTags]      = useState<string[]>([])
+  const [hostName,       setHostName]       = useState<string | null>(null)
 
   // Reveal state (post-submit) — overlays the left panel only
   const [revealState, setRevealState] = useState<'editing' | 'revealed'>('editing')
@@ -120,6 +124,17 @@ export default function V8Page() {
     setBCity(sessionStorage.getItem(SK.b_city) ?? '')
     setBSlug(sessionStorage.getItem(SK.v_slug) ?? '')
     setPendingRedirect(sessionStorage.getItem('wimc_post_onboarding_redirect'))
+    setVenueAddress(sessionStorage.getItem(SK.v_address) ?? '')
+
+    try {
+      const rawTypes = JSON.parse(sessionStorage.getItem(SK.v_types) || '[]') as string[]
+      setVenueTags(rawTypes.map(t => t.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())))
+    } catch {}
+
+    try {
+      const photos = JSON.parse(sessionStorage.getItem(SK.v_google_photos) || '[]') as string[]
+      if (photos[0]) setVenuePhotoUrl(photos[0])
+    } catch {}
 
     let wa = '', mail = '', ig = '', bioText = ''
     try {
@@ -155,16 +170,19 @@ export default function V8Page() {
     if (ig)      setInstagram(ig)
     if (bioText) setBio(bioText)
 
-    if (!wa || !mail) {
-      createClient().auth.getUser().then(({ data: { user } }) => {
-        if (!user) return
-        if (!wa && user.phone) {
-          const digits = user.phone.replace(/\D/g, '').slice(-10)
-          if (digits.length === 10) setWhatsapp(digits)
-        }
-        if (!mail && user.email) setEmail(user.email)
-      }).catch(() => {})
-    }
+    createClient().auth.getUser().then(({ data: { user } }) => {
+      if (!user) return
+      if (!wa && user.phone) {
+        const digits = user.phone.replace(/\D/g, '').slice(-10)
+        if (digits.length === 10) setWhatsapp(digits)
+      }
+      if (!mail && user.email) setEmail(user.email)
+      // No dedicated "host name" field is collected during venue onboarding —
+      // fall back to the auth account's OAuth full name (e.g. Google sign-in)
+      // rather than fabricating one; VenuePoster omits the row entirely if null.
+      const fullName = (user.user_metadata as Record<string, unknown> | undefined)?.full_name
+      if (typeof fullName === 'string' && fullName.trim()) setHostName(fullName.trim())
+    }).catch(() => {})
   }, [router])
 
   async function handleSuggestBio() {
@@ -361,79 +379,21 @@ export default function V8Page() {
           {bName}
         </h1>
 
-        {/* Notice-board card */}
-        <div style={{
-          position: 'relative', width: '100%', maxWidth: 320, marginBottom: 36,
-          animation: 'v8-fade-up 0.6s cubic-bezier(0.175,0.885,0.32,1.275) 0.4s both',
-        }}>
-          {/* Thumbtack */}
-          <div style={{
-            position: 'absolute', top: -8, left: '50%', transform: 'translateX(-50%)',
-            width: 13, height: 13, borderRadius: '50%',
-            background: '#3A3A3A', boxShadow: '0 2px 6px rgba(0,0,0,0.6)',
-            zIndex: 20, border: '1px solid #222',
-          }} />
-
-          <div style={{
-            background: '#FAF7F0',
-            boxShadow: `8px 8px 0px 0px ${ACCENT}`,
-            overflow: 'hidden', position: 'relative',
-          }}>
-            {/* Card header bar */}
-            <div style={{
-              background: ACCENT, padding: '9px 18px',
-              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            }}>
-              <span style={{ fontFamily: MONO, fontSize: 9, color: NAVY, letterSpacing: '0.18em', textTransform: 'uppercase', fontWeight: 700 }}>
-                SPACE FOR HIRE
-              </span>
-              <span style={{ fontSize: 14 }}>🏛️</span>
-            </div>
-
-            {/* Body */}
-            <div style={{ padding: '16px 20px', position: 'relative' }}>
-              {/* LISTED stamp */}
-              <div style={{
-                position: 'absolute', inset: 0,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                pointerEvents: 'none', zIndex: 10,
-              }}>
-                <div style={{
-                  border: `4px solid ${ACCENT}`, padding: '5px 18px',
-                  background: 'rgba(250,247,240,0.92)',
-                  boxShadow: '0 8px 20px rgba(0,0,0,0.18)',
-                  animation: 'v8-stamp-in 0.5s cubic-bezier(0.175,0.885,0.32,1.275) 0.75s both',
-                }}>
-                  <span style={{ fontFamily: OUTFIT, fontWeight: 900, fontSize: 30, color: ACCENT, lineHeight: 1, display: 'block' }}>LISTED</span>
-                  <span style={{ fontFamily: MONO, fontSize: 8, color: ACCENT, letterSpacing: '0.3em', display: 'block', marginTop: 2 }}>VENUE PROFILE</span>
-                </div>
-              </div>
-
-              <p style={{ fontFamily: OUTFIT, fontWeight: 900, fontSize: 20, color: NAVY, textTransform: 'uppercase', lineHeight: 1, margin: '0 0 12px' }}>
-                {bName}
-              </p>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                {[
-                  { emoji: '📍', value: bCity },
-                ].filter(r => r.value).map((row, i) => (
-                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <span style={{ fontSize: 11 }}>{row.emoji}</span>
-                    <span style={{ fontFamily: MONO, fontSize: 10, color: NAVY, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                      {row.value}
-                    </span>
-                  </div>
-                ))}
-              </div>
-              <div style={{ height: 1, background: 'rgba(26,39,68,0.12)', margin: '10px 0' }} />
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontFamily: MONO, fontSize: 7.5, color: 'rgba(26,39,68,0.45)', textTransform: 'uppercase', letterSpacing: '0.12em' }}>BOOK VIA WIMC</span>
-                <div style={{ background: ACCENT, padding: '2px 7px', fontFamily: MONO, fontSize: 7.5, color: NAVY, fontWeight: 700, letterSpacing: '0.10em', textTransform: 'uppercase' }}>
-                  CULTURE PARTNER
-                </div>
-              </div>
-            </div>
-          </div>
-          <div style={{ height: 3, background: ACCENT, animation: 'v8-line-in 0.5s ease 1.1s both' }} />
+        {/* Venue notice/bulletin poster artifact — scaled to fit the boxed left
+            panel (V8 is not FULL_BLEED; the 42vw/340px-min containment comes
+            from onboarding/layout.tsx, not from this page). */}
+        <div style={{ width: '100%', marginBottom: 36 }}>
+          <ArtifactStyles />
+          <ScaledStage width={480} height={720} maxWidth={260}>
+            <VenuePoster
+              name={bName}
+              photoUrl={venuePhotoUrl}
+              tags={venueTags}
+              address={venueAddress}
+              hostName={hostName}
+              profileUrl={`wheninmycity.com/venue/${bSlug}`}
+            />
+          </ScaledStage>
         </div>
 
         {/* CTA */}

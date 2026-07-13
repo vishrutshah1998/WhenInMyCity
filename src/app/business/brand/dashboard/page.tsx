@@ -161,7 +161,7 @@ export default async function BrandDashboardPage() {
 
         {/* ── Page link with copy / share / QR ── */}
         <DashPageLink
-          url={`${process.env.NEXT_PUBLIC_APP_URL ?? 'https://wheninmycity.com'}/${citySlug}/${profile.username}`}
+          url={`${process.env.NEXT_PUBLIC_APP_URL ?? 'https://www.wheninmycity.com'}/${citySlug}/${profile.username}`}
           variant="dark"
         />
 

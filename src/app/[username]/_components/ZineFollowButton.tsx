@@ -39,8 +39,8 @@ export default function ZineFollowButton({
     'transition-all stamp-thump cursor-pointer',
     fullWidth ? 'w-full py-4 px-6' : 'px-8 py-4',
     following
-      ? 'bg-[#5DD9D0] text-[#1A2744]'
-      : 'bg-[#E8705A] text-white',
+      ? 'bg-ds-teal text-[#1A2744]'
+      : 'bg-ds-coral text-white',
     isPending ? 'opacity-60 pointer-events-none' : '',
   ].filter(Boolean).join(' ')
 

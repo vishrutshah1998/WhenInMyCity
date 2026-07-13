@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { SK } from '@/lib/onboarding/session-keys'
 import { generateUsernameFromName } from '@/app/actions/onboarding'
@@ -253,7 +253,7 @@ function C2RightPanel({
   )
 }
 
-export default function C2Page() {
+function C2Content() {
   const router       = useRouter()
   const searchParams = useSearchParams()
   const isAddMode    = searchParams.get('mode') === 'add'
@@ -524,5 +524,13 @@ export default function C2Page() {
         .ob-c2-left input::placeholder { color: rgba(255,255,255,0.20); }
       `}</style>
     </div>
+  )
+}
+
+export default function C2Page() {
+  return (
+    <Suspense>
+      <C2Content />
+    </Suspense>
   )
 }

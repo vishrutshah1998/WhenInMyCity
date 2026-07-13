@@ -97,7 +97,7 @@ export default function VenuesClient({ venues: initial }: Props) {
                       {venue.is_verified && (
                         <span style={{
                           fontSize: 10, fontWeight: 600, padding: '1px 7px', borderRadius: 9999,
-                          background: '#3b82f622', color: '#3b82f6',
+                          background: 'rgba(59,107,204,0.12)', color: 'var(--wimc-neel)',
                         }}>
                           ✓ Verified
                         </span>
@@ -159,8 +159,8 @@ export default function VenuesClient({ venues: initial }: Props) {
                       style={{
                         padding: '6px 14px', borderRadius: 7, fontSize: 12, fontWeight: 600,
                         border: '1px solid var(--wimc-border-subtle)',
-                        background: venue.is_verified ? '#3b82f611' : 'var(--wimc-bg-base)',
-                        color: venue.is_verified ? '#3b82f6' : 'var(--wimc-text-secondary)',
+                        background: venue.is_verified ? 'rgba(59,107,204,0.07)' : 'var(--wimc-bg-base)',
+                        color: venue.is_verified ? 'var(--wimc-neel)' : 'var(--wimc-text-secondary)',
                         cursor: 'pointer',
                         opacity: toggling === venue.id + '-verified' ? 0.5 : 1,
                         transition: 'all 150ms',

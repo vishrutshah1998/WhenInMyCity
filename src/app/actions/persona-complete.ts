@@ -19,6 +19,7 @@ interface ExplorerPayload {
   priceRangeMaxPaise: number
   notificationPreferences: { whatsapp: boolean; digest_frequency: 'daily' | 'weekly' | 'never' }
   explorerCreatorIntent: string[]
+  avatarUrl?: string | null
 }
 
 export async function completeExplorerOnboarding(payload: ExplorerPayload) {
@@ -42,6 +43,7 @@ export async function completeExplorerOnboarding(payload: ExplorerPayload) {
       preferred_formats:        payload.preferredFormats,
       price_range_max_paise:    payload.priceRangeMaxPaise,
       notification_preferences: payload.notificationPreferences,
+      ...(payload.avatarUrl ? { avatar_url: payload.avatarUrl } : {}),
     }, { onConflict: 'auth_user_id' })
 
   if (explorerError) throw new Error(explorerError.message)

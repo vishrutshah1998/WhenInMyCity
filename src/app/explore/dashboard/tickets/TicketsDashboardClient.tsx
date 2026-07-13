@@ -51,7 +51,7 @@ function TicketCard({ ticket, past }: { ticket: MyTicket; past: boolean }) {
         <div style={{ borderTop: '1px dashed rgba(26,39,68,0.15)', paddingTop: 8, display: 'flex', gap: 12, alignItems: 'center' }}>
           {!past && (
             <Link
-              href={`/events/${ticket.eventSlug}/checkin?token=${ticket.qrToken}`}
+              href="/explore/tickets"
               style={{
                 display: 'inline-flex', alignItems: 'center', gap: 5,
                 padding: '5px 12px',

@@ -4,10 +4,10 @@ import { usePathname, useSearchParams } from 'next/navigation'
 import { Suspense } from 'react'
 
 const NAV_ITEMS = [
-  { href: '/explore',              label: 'EXPLORE',  icon: 'explore',             activeColor: '#E8705A' },
-  { href: '/explore?tab=events',   label: 'EVENTS',   icon: 'confirmation_number', activeColor: '#E8705A' },
-  { href: '/explore?tab=creators', label: 'CREATORS', icon: 'person_search',       activeColor: '#9B8FFF' },
-  { href: '/explore?tab=venues',   label: 'VENUES',   icon: 'location_on',         activeColor: '#5DD9D0' },
+  { href: '/explore',              label: 'EXPLORE',  icon: 'explore',             activeClass: 'text-ds-coral' },
+  { href: '/explore?tab=events',   label: 'EVENTS',   icon: 'confirmation_number', activeClass: 'text-ds-coral' },
+  { href: '/explore?tab=creators', label: 'CREATORS', icon: 'person_search',       activeClass: 'text-[#9B8FFF]' },
+  { href: '/explore?tab=venues',   label: 'VENUES',   icon: 'location_on',         activeClass: 'text-ds-teal' },
 ] as const
 
 function BottomNavInner() {
@@ -31,8 +31,8 @@ function BottomNavInner() {
   return (
     <nav className="fixed bottom-0 w-full h-14 bg-[#F5ECD7] border-t-2 border-dashed border-[#57423e] z-50 flex items-center">
       {NAV_ITEMS.map(item => {
-        const active = isActive(item.href)
-        const color  = active ? item.activeColor : 'rgba(26,39,68,0.4)'
+        const active     = isActive(item.href)
+        const colorClass = active ? item.activeClass : 'text-[rgba(26,39,68,0.4)]'
         return (
           <Link
             key={item.href}
@@ -40,18 +40,12 @@ function BottomNavInner() {
             className="flex-1 flex flex-col items-center justify-center pt-1 transition-all"
           >
             <span
-              className="material-symbols-outlined text-[22px]"
-              style={{
-                color,
-                fontVariationSettings: active ? "'FILL' 1" : "'FILL' 0",
-              }}
+              className={`material-symbols-outlined text-[22px] ${colorClass}`}
+              style={{ fontVariationSettings: active ? "'FILL' 1" : "'FILL' 0" }}
             >
               {item.icon}
             </span>
-            <span
-              className="font-mono text-[9px] uppercase mt-0.5 font-bold"
-              style={{ color }}
-            >
+            <span className={`font-mono text-[9px] uppercase mt-0.5 font-bold ${colorClass}`}>
               {item.label}
             </span>
           </Link>

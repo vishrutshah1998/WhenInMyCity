@@ -15,20 +15,20 @@ const TIER_META = {
   lantern: {
     label: 'Lantern',
     icon: 'light_mode',
-    color: 'var(--wimc-amber)',
-    bg: 'rgba(245,168,0,0.15)',
-    border: 'rgba(245,168,0,0.35)',
-    borderHover: 'rgba(245,168,0,0.65)',
-    gradient: 'linear-gradient(135deg, rgba(245,168,0,0.1) 0%, rgba(232,87,42,0.06) 100%)',
+    color: '#D8432E',
+    bg: 'rgba(216,67,46,0.12)',
+    border: 'rgba(216,67,46,0.35)',
+    borderHover: 'rgba(216,67,46,0.65)',
+    gradient: 'linear-gradient(135deg, rgba(216,67,46,0.08) 0%, rgba(255,107,53,0.05) 100%)',
   },
   beacon: {
     label: 'Beacon',
     icon: 'workspace_premium',
-    color: '#a855f7',
-    bg: 'rgba(168,85,247,0.15)',
-    border: 'rgba(168,85,247,0.35)',
-    borderHover: 'rgba(168,85,247,0.65)',
-    gradient: 'linear-gradient(135deg, rgba(168,85,247,0.1) 0%, rgba(232,87,42,0.06) 100%)',
+    color: '#6B4EFF',
+    bg: 'rgba(107,78,255,0.12)',
+    border: 'rgba(107,78,255,0.35)',
+    borderHover: 'rgba(107,78,255,0.65)',
+    gradient: 'linear-gradient(135deg, rgba(107,78,255,0.08) 0%, rgba(255,107,53,0.05) 100%)',
   },
 } as const
 
@@ -46,9 +46,9 @@ function paise(p: number): string {
 function StarRating({ rating }: { rating: number }) {
   const filled = Math.round(rating)
   return (
-    <span style={{ fontSize: 12, color: 'var(--wimc-amber)', letterSpacing: 1 }}>
+    <span style={{ fontSize: 12, color: '#201A12', letterSpacing: 1 }}>
       {'★'.repeat(Math.min(filled, 5))}{'☆'.repeat(Math.max(0, 5 - filled))}
-      <span style={{ marginLeft: 5, color: 'var(--wimc-text-secondary)', fontFamily: 'var(--font-jetbrains-mono)' }}>
+      <span style={{ marginLeft: 5, color: '#58503F', fontFamily: 'var(--font-jetbrains-mono)' }}>
         {rating.toFixed(1)}
       </span>
     </span>
@@ -83,8 +83,8 @@ function CreatorCard({ creator, cohort = false }: { creator: ShowcasedCreator; c
     <Link href={`/${cityToSlug(creator.cityId)}/${creator.username}?src=platform_discovery`} style={{ textDecoration: 'none' }}>
       <div
         style={{
-          background: cohort ? meta.gradient : 'var(--wimc-bg-elevated)',
-          border: `1px solid ${cohort ? meta.border : 'var(--wimc-border-default)'}`,
+          background: cohort ? meta.gradient : '#FFFFFF',
+          border: `1.5px dashed ${cohort ? meta.border : 'rgba(32,26,18,0.12)'}`,
           borderRadius: 18, padding: 20,
           display: 'flex', flexDirection: 'column', gap: 16,
           transition: 'border-color 200ms, transform 200ms',
@@ -92,12 +92,12 @@ function CreatorCard({ creator, cohort = false }: { creator: ShowcasedCreator; c
         }}
         onMouseEnter={(e) => {
           const el = e.currentTarget as HTMLElement
-          el.style.borderColor = cohort ? meta.borderHover : 'var(--wimc-coral)'
+          el.style.borderColor = cohort ? meta.borderHover : '#FF6B35'
           el.style.transform = 'translateY(-2px)'
         }}
         onMouseLeave={(e) => {
           const el = e.currentTarget as HTMLElement
-          el.style.borderColor = cohort ? meta.border : 'var(--wimc-border-default)'
+          el.style.borderColor = cohort ? meta.border : 'rgba(32,26,18,0.12)'
           el.style.transform = 'translateY(0)'
         }}
       >
@@ -106,15 +106,15 @@ function CreatorCard({ creator, cohort = false }: { creator: ShowcasedCreator; c
           <CreatorAvatar creator={creator} />
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap' }}>
-              <span style={{ fontFamily: 'var(--font-syne)', fontWeight: 700, fontSize: 15 }}>
+              <span style={{ fontFamily: 'var(--font-syne)', fontWeight: 700, fontSize: 15, color: '#201A12' }}>
                 {creator.displayName}
               </span>
               {creator.isFoundingMaker && (
                 <span style={{
                   fontSize: 9, fontWeight: 800, letterSpacing: '0.07em',
                   padding: '2px 6px', borderRadius: 9999, textTransform: 'uppercase',
-                  background: 'rgba(245,168,0,0.15)', color: 'var(--wimc-amber)',
-                  border: '1px solid rgba(245,168,0,0.3)',
+                  background: 'rgba(216,67,46,0.12)', color: '#D8432E',
+                  border: '1px solid rgba(216,67,46,0.3)',
                 }}>
                   Founding
                 </span>
@@ -122,15 +122,15 @@ function CreatorCard({ creator, cohort = false }: { creator: ShowcasedCreator; c
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4, flexWrap: 'wrap' }}>
               <span style={{
-                fontSize: 11, color: 'var(--wimc-text-secondary)',
+                fontSize: 11, color: '#58503F',
                 fontFamily: 'var(--font-jetbrains-mono)', textTransform: 'capitalize',
               }}>
                 {creator.creatorType.replace(/_/g, ' ')}
               </span>
-              <span style={{ color: 'var(--wimc-border-default)', fontSize: 10 }}>·</span>
+              <span style={{ color: 'rgba(32,26,18,0.25)', fontSize: 10 }}>·</span>
               <span style={{
                 fontSize: 11, fontFamily: 'var(--font-jetbrains-mono)',
-                color: cohort ? meta.color : 'var(--wimc-text-secondary)',
+                color: cohort ? meta.color : '#58503F',
               }}>
                 {creator.cityName}
               </span>
@@ -162,11 +162,11 @@ function CreatorCard({ creator, cohort = false }: { creator: ShowcasedCreator; c
             { label: 'Revenue', value: creator.cumGmvPaise > 0 ? paise(creator.cumGmvPaise) : '—' },
           ].map(({ label, value }) => (
             <div key={label} style={{
-              background: 'var(--wimc-bg-overlay)', borderRadius: 10,
+              background: '#F3E8D6', borderRadius: 10,
               padding: '8px 10px', textAlign: 'center',
             }}>
-              <div style={{ fontFamily: 'var(--font-syne)', fontWeight: 800, fontSize: 16 }}>{value}</div>
-              <div style={{ fontSize: 10, color: 'var(--wimc-text-secondary)', marginTop: 2, textTransform: 'uppercase', letterSpacing: '0.07em' }}>
+              <div style={{ fontFamily: 'var(--font-syne)', fontWeight: 800, fontSize: 16, color: '#201A12' }}>{value}</div>
+              <div style={{ fontSize: 10, color: '#58503F', marginTop: 2, textTransform: 'uppercase', letterSpacing: '0.07em' }}>
                 {label}
               </div>
             </div>
@@ -211,32 +211,32 @@ export default function HallClient({ creators, viewerCity, viewerTier }: Props) 
   const lanternCount = creators.filter((c) => c.userTier === 'lantern').length
 
   const card: React.CSSProperties = {
-    background: 'var(--wimc-bg-base)',
+    background: '#FBF3E7',
   }
   void card
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--wimc-bg-base)' }}>
+    <div style={{ minHeight: '100vh', background: '#FBF3E7', color: '#201A12' }}>
 
       {/* ── Nav ──────────────────────────────────────────────────────────────── */}
       <nav style={{
         position: 'sticky', top: 0, zIndex: 40,
-        background: 'rgba(10,10,11,0.92)', backdropFilter: 'blur(12px)',
-        borderBottom: '1px solid var(--wimc-border-subtle)',
+        background: 'rgba(251,243,231,0.9)', backdropFilter: 'blur(12px)',
+        borderBottom: '1px solid rgba(32,26,18,0.08)',
         padding: '0 32px', height: 60,
         display: 'flex', alignItems: 'center', gap: 16,
       }}>
         <Link href="/" style={{ display: 'flex', alignItems: 'center', textDecoration: 'none' }}>
-          <WimcWordmark color="#E8705A" height={20} />
+          <WimcWordmark color="#FF6B35" height={20} />
         </Link>
-        <span style={{ color: 'var(--wimc-border-default)' }}>·</span>
-        <span style={{ fontFamily: 'var(--font-syne)', fontWeight: 600, fontSize: 14, color: '#a855f7' }}>
+        <span style={{ color: 'rgba(32,26,18,0.25)' }}>·</span>
+        <span style={{ fontFamily: 'var(--font-syne)', fontWeight: 600, fontSize: 14, color: '#6B4EFF' }}>
           Hall of Lights
         </span>
         <div style={{ flex: 1 }} />
         <Link href="/signin" style={{
           padding: '6px 16px', borderRadius: 8, fontSize: 12.5, fontWeight: 600,
-          background: 'var(--wimc-coral)', color: '#fff', textDecoration: 'none',
+          background: '#FF6B35', color: '#fff', textDecoration: 'none',
           fontFamily: 'var(--font-syne)',
         }}>
           Join WIMC
@@ -247,6 +247,13 @@ export default function HallClient({ creators, viewerCity, viewerTier }: Props) 
 
         {/* ── Header ─────────────────────────────────────────────────────────── */}
         <div style={{ marginBottom: 48, textAlign: 'center' }}>
+          <div style={{
+            fontFamily: 'var(--font-dm-serif)', fontSize: 12, letterSpacing: '0.18em',
+            textTransform: 'uppercase', color: '#8A8070', marginBottom: 12,
+          }}>
+            Certified by City Collective
+          </div>
+
           <div style={{ display: 'flex', justifyContent: 'center', gap: 10, marginBottom: 20 }}>
             {(['lantern', 'beacon'] as const).map((tier) => {
               const m = TIER_META[tier]
@@ -254,7 +261,7 @@ export default function HallClient({ creators, viewerCity, viewerTier }: Props) 
                 <div key={tier} style={{
                   display: 'inline-flex', alignItems: 'center', gap: 6,
                   padding: '5px 14px', borderRadius: 9999,
-                  background: m.bg, border: `1px solid ${m.border}`,
+                  background: m.bg, border: `1.5px dashed ${m.border}`,
                 }}>
                   <span className="material-symbols-outlined" style={{ fontSize: 14, color: m.color }}>{m.icon}</span>
                   <span style={{ fontSize: 11, fontWeight: 700, color: m.color, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
@@ -268,30 +275,31 @@ export default function HallClient({ creators, viewerCity, viewerTier }: Props) 
           <h1 style={{
             fontFamily: 'var(--font-syne)', fontWeight: 900,
             fontSize: 'clamp(32px, 6vw, 64px)', lineHeight: 0.92,
-            letterSpacing: '-0.03em', margin: '0 0 16px',
+            letterSpacing: '-0.03em', margin: '0 0 16px', color: '#201A12',
           }}>
             Hall of{' '}
             <span style={{
-              backgroundImage: 'linear-gradient(110deg, #a855f7 0%, #F5A800 70%)',
+              backgroundImage: 'linear-gradient(110deg, #6B4EFF 0%, #D8432E 70%)',
               WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
             }}>
               Lights
             </span>
           </h1>
-          <p style={{ fontSize: 16, color: 'var(--wimc-text-secondary)', maxWidth: 520, margin: '0 auto', lineHeight: 1.6 }}>
+          <p style={{ fontSize: 16, color: '#58503F', maxWidth: 520, margin: '0 auto', lineHeight: 1.6 }}>
             Lanterns who light the stage. Beacons who built the culture.
-            Every name here earned it.
+            Every name here{' '}
+            <span style={{ fontFamily: 'var(--font-caveat)', fontSize: 20, color: '#FF6B35' }}>earned it.</span>
           </p>
 
           {/* Summary counts */}
           <div style={{ display: 'flex', justifyContent: 'center', gap: 24, marginTop: 24 }}>
             {[
-              { label: 'Beacons',  value: beaconCount,  color: '#a855f7' },
-              { label: 'Lanterns', value: lanternCount, color: 'var(--wimc-amber)' },
+              { label: 'Beacons',  value: beaconCount,  color: '#6B4EFF' },
+              { label: 'Lanterns', value: lanternCount, color: '#D8432E' },
             ].map(({ label, value, color }) => (
               <div key={label} style={{ textAlign: 'center' }}>
                 <div style={{ fontFamily: 'var(--font-syne)', fontWeight: 900, fontSize: 28, color }}>{value}</div>
-                <div style={{ fontSize: 12, color: 'var(--wimc-text-secondary)', marginTop: 2 }}>{label}</div>
+                <div style={{ fontSize: 12, color: '#58503F', marginTop: 2 }}>{label}</div>
               </div>
             ))}
           </div>
@@ -301,9 +309,9 @@ export default function HallClient({ creators, viewerCity, viewerTier }: Props) 
         {cohort.length > 0 && (
           <div style={{ marginBottom: 48 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 }}>
-              <span className="material-symbols-outlined" style={{ fontSize: 18, color: TIER_META[viewerTier as 'lantern' | 'beacon']?.color ?? '#a855f7' }}>group</span>
-              <h2 style={{ fontFamily: 'var(--font-syne)', fontWeight: 700, fontSize: 17, margin: 0 }}>Your Cohort</h2>
-              <span style={{ fontSize: 12, color: 'var(--wimc-text-secondary)', fontFamily: 'var(--font-jetbrains-mono)' }}>
+              <span className="material-symbols-outlined" style={{ fontSize: 18, color: TIER_META[viewerTier as 'lantern' | 'beacon']?.color ?? '#6B4EFF' }}>group</span>
+              <h2 style={{ fontFamily: 'var(--font-syne)', fontWeight: 700, fontSize: 17, margin: 0, color: '#201A12' }}>Your Cohort</h2>
+              <span style={{ fontSize: 12, color: '#58503F', fontFamily: 'var(--font-jetbrains-mono)' }}>
                 Lantern &amp; Beacon creators in your city
               </span>
             </div>
@@ -322,7 +330,7 @@ export default function HallClient({ creators, viewerCity, viewerTier }: Props) 
             { id: 'lantern', label: `Lantern (${lanternCount})` },
           ] as { id: 'all' | 'beacon' | 'lantern'; label: string }[]).map(({ id, label }) => {
             const active = tierFilter === id
-            const color = id === 'beacon' ? '#a855f7' : id === 'lantern' ? 'var(--wimc-amber)' : 'var(--wimc-text-secondary)'
+            const color = id === 'beacon' ? '#6B4EFF' : id === 'lantern' ? '#D8432E' : '#58503F'
             return (
               <button
                 key={id}
@@ -330,9 +338,9 @@ export default function HallClient({ creators, viewerCity, viewerTier }: Props) 
                 style={{
                   padding: '6px 14px', borderRadius: 9999, fontSize: 12.5, fontWeight: 600,
                   cursor: 'pointer', fontFamily: 'var(--font-dm-sans)',
-                  border: `1.5px solid ${active ? color : 'var(--wimc-border-subtle)'}`,
-                  background: active ? (id === 'beacon' ? 'rgba(168,85,247,0.12)' : id === 'lantern' ? 'rgba(245,168,0,0.12)' : 'var(--wimc-bg-overlay)') : 'transparent',
-                  color: active ? color : 'var(--wimc-text-secondary)',
+                  border: `1.5px solid ${active ? color : 'rgba(32,26,18,0.08)'}`,
+                  background: active ? (id === 'beacon' ? 'rgba(107,78,255,0.12)' : id === 'lantern' ? 'rgba(216,67,46,0.12)' : '#F3E8D6') : 'transparent',
+                  color: active ? color : '#58503F',
                   transition: 'all 150ms',
                 }}
               >
@@ -342,7 +350,7 @@ export default function HallClient({ creators, viewerCity, viewerTier }: Props) 
           })}
 
           {/* Divider */}
-          {cities.length > 1 && <span style={{ width: 1, background: 'var(--wimc-border-subtle)', margin: '0 4px' }} />}
+          {cities.length > 1 && <span style={{ width: 1, background: 'rgba(32,26,18,0.08)', margin: '0 4px' }} />}
 
           {/* City filter */}
           {cities.length > 1 && [{ id: 'all', name: 'All cities' }, ...cities].map((c) => {
@@ -354,9 +362,9 @@ export default function HallClient({ creators, viewerCity, viewerTier }: Props) 
                 style={{
                   padding: '6px 14px', borderRadius: 9999, fontSize: 12.5, fontWeight: 600,
                   cursor: 'pointer', fontFamily: 'var(--font-dm-sans)',
-                  border: `1.5px solid ${active ? 'var(--wimc-coral)' : 'var(--wimc-border-subtle)'}`,
-                  background: active ? 'rgba(232,87,42,0.1)' : 'transparent',
-                  color: active ? 'var(--wimc-coral)' : 'var(--wimc-text-secondary)',
+                  border: `1.5px solid ${active ? '#FF6B35' : 'rgba(32,26,18,0.08)'}`,
+                  background: active ? 'rgba(255,107,53,0.1)' : 'transparent',
+                  color: active ? '#FF6B35' : '#58503F',
                   transition: 'all 150ms',
                 }}
               >
@@ -368,7 +376,7 @@ export default function HallClient({ creators, viewerCity, viewerTier }: Props) 
 
         {/* ── Creator grid ───────────────────────────────────────────────────── */}
         {filtered.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '80px 24px', color: 'var(--wimc-text-secondary)', fontSize: 15 }}>
+          <div style={{ textAlign: 'center', padding: '80px 24px', color: '#58503F', fontSize: 15 }}>
             No creators here yet — be the first.
           </div>
         ) : (

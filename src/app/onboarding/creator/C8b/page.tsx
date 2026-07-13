@@ -8,6 +8,7 @@ import { completeOnboarding } from '@/app/actions/onboarding'
 import { INTEREST_TAGS } from '@/lib/constants/interests'
 import { V2_CREATOR_TYPES } from '@/types/onboarding'
 import { getCategoryColour } from '@/lib/onboarding/design-tokens'
+import { ArtifactStyles, ScaledStage, CreatorPoster, DEFAULT_MOOD, type PosterMood } from '@/components/onboarding/artifacts'
 
 type CreatorTypeV2 = typeof V2_CREATOR_TYPES[number]
 function isValidCreatorType(v: string): v is CreatorTypeV2 {
@@ -20,7 +21,6 @@ const NAVY  = '#1A2744'
 const MONO  = "var(--font-jetbrains-mono), 'JetBrains Mono', monospace"
 const BARLOW = "var(--font-barlow), 'Barlow Condensed', sans-serif"
 const ABRIL = "var(--font-abril), 'Abril Fatface', serif"
-const BARCODE_WIDTHS = [2,1,3,1,2,1,1,2,3,1,2,1,2,1,3,1,2,1,1,2]
 
 const REVEAL_KEYFRAMES = `
 @keyframes c8b-spin { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
@@ -200,8 +200,15 @@ export default function C8bSectionsPage() {
   const [isAddMode,       setIsAddMode]       = useState(false)
   const [isLeaving,       setIsLeaving]       = useState(false)
   const [pendingRedirect, setPendingRedirect] = useState<string | null>(null)
+  const [interestTagIds,  setInterestTagIds]  = useState<string[]>([])
+  const [mood,            setMood]            = useState<PosterMood>(DEFAULT_MOOD)
+  const [avatarUrl,       setAvatarUrl]       = useState<string | null>(null)
 
   const accent = getCategoryColour(category)
+  const tagLabels = interestTagIds
+    .map(id => INTEREST_TAGS.find(t => t.id === id)?.label)
+    .filter((v): v is string => Boolean(v))
+    .slice(0, 3)
 
   useEffect(() => {
     const rawCat = sessionStorage.getItem(SK.c_category) || ''
@@ -222,6 +229,23 @@ export default function C8bSectionsPage() {
     setCity(sessionStorage.getItem(SK.c_city) || '')
     setIsAddMode(sessionStorage.getItem('wimc_ob_mode') === 'add')
     setPendingRedirect(sessionStorage.getItem('wimc_post_onboarding_redirect'))
+
+    try {
+      const raw: unknown[] = JSON.parse(sessionStorage.getItem(SK.c_interests) || '[]')
+      setInterestTagIds(raw.map(i =>
+        typeof i === 'string' ? i : (typeof i === 'object' && i !== null && 'tag' in i ? String((i as {tag:unknown}).tag) : '')
+      ).filter(Boolean))
+    } catch {}
+
+    try {
+      const themeRaw = sessionStorage.getItem(SK.c_theme_json)
+      const parsed = themeRaw ? JSON.parse(themeRaw) as Record<string, unknown> : null
+      const savedMood = parsed?.posterMood
+      if (savedMood === 'moody' || savedMood === 'editorial' || savedMood === 'vivid') setMood(savedMood)
+    } catch {}
+
+    setAvatarUrl(sessionStorage.getItem(SK.c_avatar_url))
+
     setLoaded(true)
   }, [router])
 
@@ -265,6 +289,7 @@ export default function C8bSectionsPage() {
 
     let pageThemeJson: Record<string, unknown> | undefined
     try { if (themeRaw) pageThemeJson = JSON.parse(themeRaw) } catch {}
+    pageThemeJson = { ...(pageThemeJson ?? {}), posterMood: mood }
 
     const ct: CreatorTypeV2 = isValidCreatorType(creatorType) ? creatorType : 'exploring'
 
@@ -405,87 +430,19 @@ export default function C8bSectionsPage() {
               </p>
             )}
 
-            {/* Ticket card */}
-            <div style={{
-              position: 'relative', width: '100%', maxWidth: 360, marginBottom: 40,
-              animation: 'ticket-in 0.7s cubic-bezier(0.175,0.885,0.32,1.275) 0.55s both',
-            }}>
-              <div style={{
-                background: '#FAF7F0', border: '1px solid rgba(0,0,0,0.18)',
-                boxShadow: `10px 10px 0px 0px ${accent}`, overflow: 'hidden', position: 'relative',
-              }}>
-                {/* Header bar */}
-                <div style={{
-                  height: 36, background: CORAL,
-                  display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 20px',
-                }}>
-                  <span style={{ fontFamily: MONO, fontSize: 10, color: '#FAF7F0', letterSpacing: '0.22em', textTransform: 'uppercase', fontWeight: 700 }}>
-                    WIMC PRESENTS
-                  </span>
-                  <span style={{ fontSize: 14, color: '#FAF7F0' }}>★</span>
-                </div>
-
-                {/* Body */}
-                <div style={{ padding: '18px 24px 14px', position: 'relative' }}>
-                  {/* LIVE stamp */}
-                  <div style={{
-                    position: 'absolute', inset: 0,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    pointerEvents: 'none', zIndex: 10,
-                  }}>
-                    <div style={{
-                      border: `5px solid ${CORAL}`, padding: '6px 20px',
-                      display: 'flex', flexDirection: 'column', alignItems: 'center',
-                      background: 'rgba(250,247,240,0.90)',
-                      boxShadow: '0 10px 24px rgba(0,0,0,0.20)',
-                      animation: 'ticket-stamp-in 0.5s cubic-bezier(0.175,0.885,0.32,1.275) 0.9s both',
-                    }}>
-                      <span style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 900, fontSize: 38, color: CORAL, lineHeight: 1 }}>LIVE</span>
-                      <span style={{ fontFamily: MONO, fontSize: 9, color: CORAL, marginTop: 3, letterSpacing: '0.3em' }}>CREATOR PAGE</span>
-                    </div>
-                  </div>
-
-                  <p style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 900, fontSize: 26, color: NAVY, textTransform: 'uppercase', letterSpacing: '-0.02em', lineHeight: 1, margin: '0 0 12px' }}>
-                    {displayName}
-                  </p>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px 20px' }}>
-                    {[
-                      { label: 'GENRE', value: category },
-                      { label: 'CITY',  value: city },
-                    ].map(({ label, value }) => (
-                      <div key={label}>
-                        <p style={{ fontFamily: MONO, fontSize: 9, color: 'rgba(26,39,68,0.40)', textTransform: 'uppercase', margin: '0 0 2px' }}>{label}</p>
-                        <span style={{ fontFamily: BARLOW, fontWeight: 700, fontSize: 14, textTransform: 'uppercase', color: accent }}>
-                          {value || '—'}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Tear perforation */}
-                <div style={{ position: 'relative', height: 16, display: 'flex', alignItems: 'center' }}>
-                  <div style={{ position: 'absolute', left: -8, width: 16, height: 16, background: NAVY, borderRadius: 999, zIndex: 10 }} />
-                  <div style={{ flex: 1, height: 1, margin: '0 8px', background: 'repeating-linear-gradient(90deg, rgba(26,39,68,0.35) 0px, rgba(26,39,68,0.35) 4px, transparent 4px, transparent 8px)' }} />
-                  <div style={{ position: 'absolute', right: -8, width: 16, height: 16, background: NAVY, borderRadius: 999, zIndex: 10 }} />
-                </div>
-
-                {/* Stub */}
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 24px', background: `${CORAL}0D` }}>
-                  <div>
-                    <div style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 900, fontSize: 10, color: CORAL, letterSpacing: '0.06em', textTransform: 'uppercase' }}>★ ADMIT ONE ★</div>
-                    <div style={{ fontFamily: MONO, fontSize: 8, color: 'rgba(26,39,68,0.38)', marginTop: 2 }}>SERIAL #WIMC-C-2025</div>
-                  </div>
-                  <div style={{ display: 'flex', gap: 1, alignItems: 'flex-end', height: 22, background: 'rgba(26,39,68,0.05)', padding: 3 }}>
-                    {BARCODE_WIDTHS.map((w, i) => (
-                      <div key={i} style={{ width: w * 1.5, height: '100%', backgroundColor: 'rgba(26,39,68,0.45)' }} />
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              {/* Accent underline */}
-              <div style={{ height: 3, background: CORAL, animation: 'ticket-line-in 0.6s ease 1.2s both' }} />
+            {/* Event poster artifact */}
+            <div style={{ width: '100%', marginBottom: 40 }}>
+              <ArtifactStyles />
+              <ScaledStage width={480} height={720} maxWidth={300}>
+                <CreatorPoster
+                  displayName={displayName}
+                  city={city}
+                  tags={tagLabels}
+                  photoUrl={avatarUrl}
+                  handle={username}
+                  mood={mood}
+                />
+              </ScaledStage>
             </div>
 
             {/* Separator */}

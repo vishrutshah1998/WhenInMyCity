@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { SK } from '@/lib/onboarding/session-keys'
 import { ExplorerPass } from '@/components/onboarding/BoardingPassArtifact'
@@ -13,7 +13,7 @@ function slugify(name: string): string {
   return name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '')
 }
 
-export default function E2Page() {
+function E2Content() {
   const router       = useRouter()
   const searchParams = useSearchParams()
   const isAddMode    = searchParams.get('mode') === 'add'
@@ -124,5 +124,13 @@ export default function E2Page() {
         </button>
       </footer>
     </>
+  )
+}
+
+export default function E2Page() {
+  return (
+    <Suspense>
+      <E2Content />
+    </Suspense>
   )
 }

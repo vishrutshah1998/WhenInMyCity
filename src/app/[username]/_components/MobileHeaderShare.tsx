@@ -20,7 +20,7 @@ export default function MobileHeaderShare({ displayName, username, city }: Props
   return (
     <button
       onClick={handleShare}
-      className="text-[#1A2744]/60 hover:text-[#E8705A] transition-colors"
+      className="text-[#1A2744]/60 hover:text-ds-coral transition-colors"
     >
       <span className="material-symbols-outlined text-[20px]">share</span>
     </button>

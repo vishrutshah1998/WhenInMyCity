@@ -1,8 +1,9 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { SK } from '@/lib/onboarding/session-keys'
+import { uploadOnboardingAvatar } from '@/app/actions/onboarding'
 const ACCENT = '#9B8FFF'
 const NAVY   = '#1A2744'
 
@@ -16,6 +17,10 @@ const INTENT_OPTIONS = [
 export default function E6Page() {
   const router = useRouter()
   const [selectedIntent, setSelectedIntent] = useState<string>('')
+  const [avatarPreviewUrl, setAvatarPreviewUrl] = useState<string | null>(null)
+  const [avatarUploading,  setAvatarUploading]  = useState(false)
+  const [avatarError,      setAvatarError]      = useState<string | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -27,7 +32,26 @@ export default function E6Page() {
     }
     const savedIntent = sessionStorage.getItem(SK.e_intent)
     if (savedIntent) setSelectedIntent(savedIntent)
+    const savedAvatarUrl = sessionStorage.getItem(SK.e_avatar_url)
+    if (savedAvatarUrl) setAvatarPreviewUrl(savedAvatarUrl)
   }, [router])
+
+  async function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setAvatarUploading(true)
+    setAvatarError(null)
+    const fd = new FormData()
+    fd.append('file', file)
+    const result = await uploadOnboardingAvatar(fd)
+    setAvatarUploading(false)
+    if (result.error) {
+      setAvatarError(result.error)
+    } else if (result.url) {
+      setAvatarPreviewUrl(result.url)
+      try { sessionStorage.setItem(SK.e_avatar_url, result.url) } catch {}
+    }
+  }
 
   function handleContinue() {
     if (selectedIntent) {
@@ -57,6 +81,43 @@ export default function E6Page() {
         <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 15, color: '#9896B0', margin: '0 0 32px', maxWidth: 400 }}>
           Just a quick gut check — totally optional
         </p>
+
+        {/* ── Profile photo ────────────────────────────────────────────── */}
+        <section style={{ marginBottom: 28, maxWidth: 480 }}>
+          <p style={{ fontFamily: "'DM Sans', sans-serif", fontWeight: 600, fontSize: 11, color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '0.1em', margin: '0 0 10px' }}>
+            Profile photo (optional)
+          </p>
+          <input ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/webp,image/gif" onChange={handleAvatarChange} style={{ display: 'none' }} />
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={avatarUploading}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 14,
+              background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)',
+              padding: '12px 16px', cursor: 'pointer', width: '100%', boxSizing: 'border-box',
+            }}
+          >
+            <div style={{
+              width: 52, height: 52, borderRadius: '50%',
+              background: `${ACCENT}25`, display: 'flex', alignItems: 'center', justifyContent: 'center',
+              overflow: 'hidden', flexShrink: 0,
+            }}>
+              {avatarPreviewUrl
+                ? <img src={avatarPreviewUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                : <span className="material-symbols-outlined" style={{ fontSize: 22, color: ACCENT }}>
+                    {avatarUploading ? 'hourglass_empty' : 'photo_camera'}
+                  </span>
+              }
+            </div>
+            <div style={{ textAlign: 'left' }}>
+              <p style={{ fontFamily: "'DM Sans', sans-serif", fontWeight: 600, fontSize: 14, color: '#ffffff', margin: 0 }}>
+                {avatarUploading ? 'Uploading...' : avatarPreviewUrl ? 'Change photo' : 'Upload a photo'}
+              </p>
+              {avatarError && <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 12, color: '#FF6B6B', margin: '2px 0 0' }}>{avatarError}</p>}
+            </div>
+          </button>
+        </section>
 
         {/* TYPE B single-select tiles */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxWidth: 480 }}>

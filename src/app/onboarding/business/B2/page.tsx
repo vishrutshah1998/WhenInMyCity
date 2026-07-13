@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { SK } from '@/lib/onboarding/session-keys'
@@ -64,7 +64,7 @@ interface Prediction {
 
 type Phase = 'idle' | 'loadingDetails' | 'confirming' | 'prefetchingPhotos'
 
-export default function B2Page() {
+function B2Content() {
   const router       = useRouter()
   const searchParams = useSearchParams()
   const isAddMode    = searchParams.get('mode') === 'add'
@@ -599,5 +599,13 @@ export default function B2Page() {
         </button>
       </footer>
     </>
+  )
+}
+
+export default function B2Page() {
+  return (
+    <Suspense>
+      <B2Content />
+    </Suspense>
   )
 }

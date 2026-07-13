@@ -2,10 +2,11 @@ import { notFound } from 'next/navigation'
 import { getPublicSpotList } from '@/app/actions/spotLists'
 import SpotListPublicPage    from './SpotListPublicPage'
 
-interface Props { params: { slug: string } }
+interface Props { params: Promise<{ slug: string }> }
 
 export async function generateMetadata({ params }: Props) {
-  const list = await getPublicSpotList(params.slug)
+  const { slug } = await params
+  const list = await getPublicSpotList(slug)
   if (!list) return {}
   return {
     title:       `${list.title} — When In My City`,
@@ -14,7 +15,8 @@ export async function generateMetadata({ params }: Props) {
 }
 
 export default async function SpotListPage({ params }: Props) {
-  const list = await getPublicSpotList(params.slug)
+  const { slug } = await params
+  const list = await getPublicSpotList(slug)
   if (!list) notFound()
   return <SpotListPublicPage list={list} />
 }

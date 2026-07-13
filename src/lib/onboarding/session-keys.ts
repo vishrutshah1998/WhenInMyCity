@@ -20,6 +20,7 @@ export const SK = {
   c_colorscheme:    'wimc_ob_c_colorscheme',
   c_theme_json:     'wimc_ob_c_theme_json',
   c_final_username: 'wimc_ob_c_final_username',
+  c_avatar_url:     'wimc_ob_c_avatar_url',
 
   // Business shared
   b_name:       'wimc_ob_b_name',
@@ -86,6 +87,7 @@ export const SK = {
   e_notif_wa:     'wimc_ob_e_notif_wa',
   e_digest_freq:  'wimc_ob_e_digest_freq',
   e_intent:       'wimc_ob_e_intent',
+  e_avatar_url:   'wimc_ob_e_avatar_url',
 } as const
 
 export function clearNewOnboardingKeys(): void {

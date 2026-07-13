@@ -55,7 +55,7 @@ export default function ZineShareButton({
       <button
         onClick={handleShare}
         title={copied ? 'Copied!' : 'Share this page'}
-        className="fixed bottom-8 right-8 z-50 w-14 h-14 bg-[#E8705A] text-white border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-all flex items-center justify-center stamp-thump"
+        className="fixed bottom-8 right-8 z-50 w-14 h-14 bg-ds-coral text-white border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-all flex items-center justify-center stamp-thump"
       >
         <span className="material-symbols-outlined text-[20px]">
           {copied ? 'check' : 'link'}
@@ -68,7 +68,7 @@ export default function ZineShareButton({
     return (
       <button
         onClick={handleShare}
-        className="bg-[#E8705A] text-white px-4 py-2 border border-black active:translate-y-[1px] transition-transform stamp-thump"
+        className="bg-ds-coral text-white px-4 py-2 border border-black active:translate-y-[1px] transition-transform stamp-thump"
         style={{ fontFamily: 'var(--font-jetbrains-mono)' }}
       >
         <span className="text-[10px] font-bold uppercase tracking-widest">
@@ -82,7 +82,7 @@ export default function ZineShareButton({
   return (
     <button
       onClick={handleShare}
-      className="w-full bg-[#E8705A] text-white py-3 border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-all flex items-center justify-center gap-2 stamp-thump"
+      className="w-full bg-ds-coral text-white py-3 border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-all flex items-center justify-center gap-2 stamp-thump"
       style={{ fontFamily: 'var(--font-outfit, var(--font-syne))' }}
     >
       <span className="material-symbols-outlined text-[18px]">
