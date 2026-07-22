@@ -80,6 +80,8 @@ export const BLOCK_TIER_GATES: Record<BlockType, UserTier> = {
   digital_product: 'wanderer',
   waitlist:        'wanderer',
   fan_membership:  'wanderer',
+  shop_the_look:   'wanderer',
+  instagram_feed:  'wanderer',
 }
 
 // ---------------------------------------------------------------------------
@@ -141,6 +143,8 @@ export const BLOCK_FAMILIES: Record<BlockType, BlockFamily> = {
   digital_product: 'community',
   waitlist:        'community',
   fan_membership:  'community',
+  shop_the_look:   'community',
+  instagram_feed:  'social',
 }
 
 // ---------------------------------------------------------------------------
@@ -468,6 +472,22 @@ export const BLOCK_META: Record<BlockType, BlockMetaEntry> = {
     minimumTier:  'wanderer',
     isPremium:    false,
   },
+  shop_the_look: {
+    displayName:  'Shop the Look',
+    description:  'Tag products in a photo — link out or sell directly from your page',
+    icon:         'ShoppingBag',
+    family:       'community',
+    minimumTier:  'wanderer',
+    isPremium:    false,
+  },
+  instagram_feed: {
+    displayName:  'Instagram Feed',
+    description:  'Show your recent Instagram posts automatically — connect your account once',
+    icon:         'Instagram',
+    family:       'social',
+    minimumTier:  'wanderer',
+    isPremium:    false,
+  },
 }
 
 // ---------------------------------------------------------------------------
@@ -487,7 +507,7 @@ export const PERSONA_BLOCK_SETS: Record<PersonaKey, BlockType[]> = {
     'testimonial', 'podcast_episode', 'substack_preview', 'event_series', 'collab_invite',
     'white_label_event', 'whatsapp_community', 'music_player', 'booking_request',
     'press_feature', 'twitter_embed', 'awards_badges', 'digital_product', 'waitlist',
-    'fan_membership',
+    'fan_membership', 'shop_the_look', 'instagram_feed',
   ],
   brand: [
     'announcement', 'marquee_text', 'stats_grid', 'image_gallery', 'text_bio',

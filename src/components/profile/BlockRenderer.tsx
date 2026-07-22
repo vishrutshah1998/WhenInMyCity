@@ -4,6 +4,8 @@ import React, { useEffect, useMemo, useRef, useState } from 'react'
 import Image from 'next/image'
 import type { PageBlock, SocialLinkConfig, YoutubeEmbedConfig, TextBioConfig, ImageGalleryConfig, CustomLinkConfig, InstagramEmbedConfig, QuoteBlockConfig, MarqueeTextConfig, StatsGridConfig } from '@/types/database'
 import type { ProfileTheme } from '@/types/theme'
+import { InstagramEmbedWidget } from './InstagramEmbedWidget'
+import { InstagramFeedPreview } from './InstagramFeedPreview'
 
 // ---------------------------------------------------------------------------
 // Platform icons (inline SVG paths) for social links
@@ -15,6 +17,8 @@ const PLATFORM_ICONS: Record<string, string> = {
   twitter:   'M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.73-8.835L1.254 2.25H8.08l4.253 5.622zm-1.161 17.52h1.833L7.084 4.126H5.117z',
   tiktok:    'M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.15 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z',
   spotify:   'M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z',
+  apple_music: 'M23.994 6.124a9.23 9.23 0 00-.24-2.19c-.317-1.31-1.062-2.31-2.18-3.043a5.022 5.022 0 00-1.877-.726a10.496 10.496 0 00-1.564-.15c-.04-.003-.083-.01-.124-.013H5.986c-.152.01-.303.017-.455.026-.747.043-1.49.123-2.193.4-1.336.53-2.3 1.452-2.865 2.78-.192.448-.292.925-.363 1.408-.056.392-.088.785-.1 1.18 0 .032-.007.062-.01.093v12.223c.01.14.017.283.027.424.05.815.154 1.624.497 2.373.65 1.42 1.738 2.353 3.234 2.801.42.127.856.187 1.293.228.555.053 1.11.06 1.667.06h11.03a12.5 12.5 0 001.57-.1c.822-.106 1.596-.35 2.295-.81a5.046 5.046 0 001.88-2.207c.186-.42.293-.87.37-1.324.113-.675.138-1.358.137-2.04-.002-3.8 0-7.595-.003-11.393zm-6.423 3.99v5.712c0 .417-.058.827-.244 1.206-.29.59-.76.962-1.388 1.14-.35.1-.706.157-1.07.173-.95.045-1.773-.6-1.943-1.536a1.88 1.88 0 011.038-2.022c.323-.16.67-.25 1.018-.324.378-.082.758-.153 1.134-.24.274-.063.457-.23.51-.516a.904.904 0 00.02-.193c0-1.815 0-3.63-.002-5.443a.725.725 0 00-.026-.185c-.04-.15-.15-.243-.304-.234-.16.01-.318.035-.475.066-.76.15-1.52.303-2.28.456l-2.325.47-1.374.278c-.016.003-.032.01-.048.013-.277.077-.377.203-.39.49-.002.042 0 .086 0 .13-.002 2.602 0 5.204-.003 7.805 0 .42-.047.836-.215 1.227-.278.64-.77 1.04-1.434 1.233-.35.1-.71.16-1.075.172-.96.036-1.755-.6-1.92-1.544-.14-.812.23-1.685 1.154-2.075.357-.15.73-.232 1.108-.31.287-.06.575-.116.86-.177.383-.083.583-.323.6-.714v-.15c0-2.96 0-5.922.002-8.882 0-.123.013-.25.042-.37.07-.285.273-.448.546-.518.255-.066.515-.112.774-.165.733-.15 1.466-.296 2.2-.444l2.27-.46c.67-.134 1.34-.27 2.01-.403.22-.043.442-.088.663-.106.31-.025.523.17.554.482.008.073.012.148.012.223.002 1.91.002 3.822 0 5.732z',
+  youtube_music: 'M12 0C5.376 0 0 5.376 0 12s5.376 12 12 12 12-5.376 12-12S18.624 0 12 0zm0 19.104c-3.924 0-7.104-3.18-7.104-7.104S8.076 4.896 12 4.896s7.104 3.18 7.104 7.104-3.18 7.104-7.104 7.104zm0-13.332c-3.432 0-6.228 2.796-6.228 6.228S8.568 18.228 12 18.228s6.228-2.796 6.228-6.228S15.432 5.772 12 5.772zM9.684 15.54V8.46L15.816 12l-6.132 3.54z',
   linkedin:  'M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z',
   other:     'M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71',
 }
@@ -137,17 +141,10 @@ function InstagramBlock({ config }: { config: InstagramEmbedConfig }) {
       </div>
     )
   }
-  return (
-    <div className="w-full rounded-xl overflow-hidden bg-black/20 p-4 flex items-center gap-3">
-      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-600 via-pink-500 to-yellow-400 flex items-center justify-center shrink-0">
-        <svg viewBox="0 0 24 24" className="w-5 h-5 fill-white"><path d={PLATFORM_ICONS.instagram}/></svg>
-      </div>
-      <div>
-        <p className="text-sm font-bold" style={{ color: 'var(--pp-text)' }}>Instagram Post</p>
-        <p className="text-xs truncate max-w-[200px]" style={{ color: 'var(--pp-text-muted)' }}>{config.post_url}</p>
-      </div>
-    </div>
-  )
+  // Studio preview renders the actual configured post's live embed — more
+  // honest feedback than a fixed example, and embed.js works fine here since
+  // this preview pane isn't rendered inside a cross-origin iframe.
+  return <InstagramEmbedWidget postUrl={config.post_url} />
 }
 
 function QuoteBlockRenderer({ config, accent }: { config: QuoteBlockConfig; accent: string }) {
@@ -248,10 +245,10 @@ function AnnouncementRenderer({ config, accent }: { config: { text?: string; cta
   )
 }
 
-function RsvpLinkRenderer({ config, accent }: { config: { label?: string; description?: string; icon_emoji?: string }; accent: string }) {
+function RsvpLinkRenderer({ config, accent }: { config: { label?: string; description?: string; emoji?: string; icon_emoji?: string }; accent: string }) {
   return (
     <div className="w-full flex items-center gap-4 px-5 py-4 rounded-xl" style={{ background: 'rgba(255,255,255,0.06)' }}>
-      <span className="text-xl shrink-0">{config.icon_emoji || '🎟'}</span>
+      <span className="text-xl shrink-0">{config.emoji ?? config.icon_emoji ?? '🎟'}</span>
       <div className="flex-1 min-w-0">
         <p className="font-bold text-sm truncate" style={{ color: 'var(--pp-text)' }}>{config.label || 'RSVP Link'}</p>
         {config.description && <p className="text-xs truncate" style={{ color: 'var(--pp-text-muted)' }}>{config.description}</p>}
@@ -732,9 +729,11 @@ interface BlockRendererProps {
   theme: ProfileTheme
   isPreview?: boolean
   isHighlighted?: boolean
+  /** All of this profile's blocks — used by blocks (e.g. shop_the_look) that reference sibling blocks. */
+  allBlocks?: PageBlock[]
 }
 
-const BlockRenderer = React.memo(function BlockRenderer({ block, theme, isPreview = false, isHighlighted = false }: BlockRendererProps) {
+const BlockRenderer = React.memo(function BlockRenderer({ block, theme, isPreview = false, isHighlighted = false, allBlocks = [] }: BlockRendererProps) {
   const ref = useRef<HTMLDivElement>(null)
   const accent = useMemo(() => ACCENT_COLORS[theme.colorScheme], [theme.colorScheme])
 
@@ -764,6 +763,8 @@ const BlockRenderer = React.memo(function BlockRenderer({ block, theme, isPrevie
       case 'instagram_embed':
       case 'instagram_post':
         return <InstagramBlock config={cfg as InstagramEmbedConfig} />
+      case 'instagram_feed':
+        return <InstagramFeedPreview profileId={block.profile_id} />
       case 'quote_block':
         return <QuoteBlockRenderer config={cfg as QuoteBlockConfig} accent={accent} />
       case 'marquee_text':
@@ -777,7 +778,7 @@ const BlockRenderer = React.memo(function BlockRenderer({ block, theme, isPrevie
       case 'announcement':
         return <AnnouncementRenderer config={cfg as { text?: string; cta_label?: string; background_style?: string; show_countdown?: boolean }} accent={accent} />
       case 'rsvp_link':
-        return <RsvpLinkRenderer config={cfg as { label?: string; description?: string; icon_emoji?: string }} accent={accent} />
+        return <RsvpLinkRenderer config={cfg as { label?: string; description?: string; emoji?: string; icon_emoji?: string }} accent={accent} />
       case 'spotify_now_playing':
         return <SpotifyRenderer config={cfg as { fallback_track_title?: string; fallback_track_artist?: string; spotify_user_id?: string }} accent={accent} />
       case 'podcast_episode':
@@ -847,7 +848,10 @@ const BlockRenderer = React.memo(function BlockRenderer({ block, theme, isPrevie
         const cats = bcfg.categories ?? []
         return (
           <div className="w-full rounded-2xl p-5 flex flex-col gap-3" style={{ background: 'rgba(255,255,255,0.06)' }}>
-            <p className="font-bold text-sm" style={{ color: 'var(--pp-text)' }}>{bcfg.label || 'Book me for your event'}</p>
+            <div className="flex items-center justify-between gap-3">
+              <p className="font-bold text-sm" style={{ color: 'var(--pp-text)' }}>{bcfg.label || 'Book me for your event'}</p>
+              <span className="shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-lg uppercase tracking-wide" style={{ background: `${accent}20`, color: accent }}>Open</span>
+            </div>
             {cats.length > 0 && (
               <div className="flex flex-wrap gap-1.5">
                 {cats.slice(0, 3).map((c) => (
@@ -936,6 +940,39 @@ const BlockRenderer = React.memo(function BlockRenderer({ block, theme, isPrevie
                 ))}
               </div>
             ))}
+          </div>
+        )
+      }
+
+      case 'shop_the_look': {
+        const sc = cfg as { title?: string; items?: Array<{ id: string; image_url: string; name: string; link_type: 'external' | 'internal_product'; external_url?: string; price_display?: string; internal_block_id?: string }> }
+        const items = sc.items ?? []
+        if (!items.length) return null
+        return (
+          <div className="w-full flex flex-col gap-3">
+            {sc.title && <p className="font-bold text-sm" style={{ color: 'var(--pp-text)' }}>{sc.title}</p>}
+            <div className="grid grid-cols-2 gap-3">
+              {items.map((item) => {
+                let priceLabel = item.price_display
+                if (item.link_type === 'internal_product') {
+                  const sourceBlock = allBlocks.find((b) => b.id === item.internal_block_id && b.block_type === 'digital_product' && b.is_visible)
+                  if (!sourceBlock) return null
+                  const pc = sourceBlock.config as unknown as { price_paise?: number }
+                  priceLabel = pc.price_paise ? `₹${(pc.price_paise / 100).toLocaleString('en-IN')}` : undefined
+                }
+                return (
+                  <div key={item.id} className="rounded-xl overflow-hidden" style={{ background: 'rgba(255,255,255,0.06)' }}>
+                    <div className="w-full aspect-square relative bg-black/20">
+                      {item.image_url && <Image src={item.image_url} alt={item.name} fill className="object-cover" unoptimized />}
+                    </div>
+                    <div className="p-2.5 flex flex-col gap-0.5">
+                      <p className="text-xs font-bold truncate" style={{ color: 'var(--pp-text)' }}>{item.name}</p>
+                      {priceLabel && <p className="text-xs" style={{ color: accent }}>{priceLabel}</p>}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
           </div>
         )
       }

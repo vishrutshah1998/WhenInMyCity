@@ -70,6 +70,8 @@ const DEFAULT_CONFIGS: Record<BlockType, unknown> = {
   digital_product:     { title: '', description: '', price_paise: 9900, file_url: '' },
   waitlist:            { label: 'Join the waitlist', description: '' },
   fan_membership:      { tiers: [{ name: 'Supporter', price_label: '₹99/mo', benefits: ['Early access to events', 'Behind-the-scenes content'] }], heading: 'Join my community' },
+  shop_the_look:       { title: 'Shop the Look', items: [] },
+  instagram_feed:      {},
 }
 
 // ---------------------------------------------------------------------------

@@ -6,6 +6,7 @@ import type { UserProfile, PageBlock, Event } from '@/types/database'
 import type { ProfileTheme } from '@/types/theme'
 import { DEFAULT_PROFILE_THEME } from '@/types/theme'
 import BlockRenderer from '@/components/profile/BlockRenderer'
+import { CATEGORY_PILL_MAP } from '@/components/profile/PublicProfilePage'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -54,6 +55,25 @@ function fmtDate(iso: string) {
 
 function initial(name: string) { return (name ?? '?')[0].toUpperCase() }
 
+// ─── Shared category pill — same CATEGORY_PILL_MAP the real public page uses,
+// so the onboarding preview shows the exact same badge as the published page.
+function CategoryPill({ creatorType }: { creatorType: string }) {
+  const pill = CATEGORY_PILL_MAP[creatorType]
+  if (!pill) return null
+  return (
+    <span style={{
+      display: 'inline-flex', alignItems: 'center', gap: 4,
+      fontSize: 8, fontFamily: "'JetBrains Mono', monospace",
+      padding: '3px 8px', borderRadius: 999,
+      textTransform: 'uppercase', letterSpacing: '0.1em',
+      background: pill.background, color: pill.color,
+      flexShrink: 0,
+    }}>
+      {pill.emoji} {pill.label}
+    </span>
+  )
+}
+
 // ─── Shared mini WIMC header ──────────────────────────────────────────────────
 
 function MiniHeader({ accent, username, city, light }: { accent: string; username: string; city: string; light?: boolean }) {
@@ -89,7 +109,7 @@ function BlocksSection({ blocks, theme, accent, bg, text, textMuted, surface }: 
       '--pp-surface': surface,
     } as React.CSSProperties}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-        {visible.map(b => <BlockRenderer key={b.id} block={b} theme={theme} isPreview />)}
+        {visible.map(b => <BlockRenderer key={b.id} block={b} theme={theme} isPreview allBlocks={blocks} />)}
       </div>
     </div>
   )
@@ -137,8 +157,9 @@ function BoardingPassPreview({ profile, blocks, events, theme, accent }: SubProp
             <div style={{ fontSize: 36, fontWeight: 900, color: '#1A1108', lineHeight: 0.9, textTransform: 'uppercase', letterSpacing: '-0.04em' }}>
               {profile.display_name}
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 6 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 6, flexWrap: 'wrap' }}>
               <span style={{ fontSize: 10, fontFamily: MONO, color: 'rgba(26,17,8,0.4)' }}>@{profile.username}</span>
+              <CategoryPill creatorType={profile.creator_type} />
             </div>
           </div>
 
@@ -422,10 +443,7 @@ function MinimalPreview({ profile, blocks, events, theme, accent }: SubProps) {
           <p style={{ fontSize: 9, fontFamily: MONO, color: textMuted, marginTop: 3 }}>@{profile.username}</p>
         </div>
 
-        {/* Category pill */}
-        <span style={{ fontSize: 9, fontFamily: MONO, padding: '4px 12px', background: `${accent}15`, color: accent, border: `1px solid ${accent}30`, textTransform: 'uppercase', letterSpacing: '0.1em' }}>
-          {profile.city ?? 'Creator'}
-        </span>
+        <CategoryPill creatorType={profile.creator_type} />
 
         {profile.bio && (
           <p style={{ fontSize: 11, color: textMuted, textAlign: 'center', lineHeight: 1.5, maxWidth: 280, margin: 0 }}>{profile.bio}</p>

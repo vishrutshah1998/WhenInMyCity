@@ -112,6 +112,8 @@ export type BlockType =
   | 'digital_product'
   | 'waitlist'
   | 'fan_membership'
+  | 'shop_the_look'
+  | 'instagram_feed'
 
 export type EventStatus = 'draft' | 'published' | 'cancelled' | 'completed'
 
@@ -135,7 +137,7 @@ export interface PageTheme {
 // ---------------------------------------------------------------------------
 
 export type SocialPlatform =
-  | 'instagram' | 'youtube' | 'spotify' | 'soundcloud' | 'jiosaavn'
+  | 'instagram' | 'youtube' | 'spotify' | 'apple_music' | 'youtube_music' | 'soundcloud' | 'jiosaavn'
   | 'twitter' | 'x' | 'tiktok' | 'twitch' | 'podcast'
   | 'linkedin' | 'behance' | 'dribbble' | 'github'
   | 'website' | 'whatsapp' | 'googlemaps' | 'zomato' | 'shopify'
@@ -157,6 +159,10 @@ export interface YoutubeEmbedConfig {
 export interface InstagramEmbedConfig {
   post_url: string           // full instagram.com post URL
 }
+
+// instagram_feed — no per-instance config; entirely derived from the
+// creator's profile-level Instagram Connect state.
+export type InstagramFeedConfig = Record<string, never>
 
 export interface TextBioConfig {
   body: string               // markdown or plain text
@@ -217,9 +223,11 @@ export interface MusicPlayerConfig {
 }
 
 export interface BookingRequestConfig {
-  label:        string
-  description?: string
-  categories:   string[]
+  label:            string
+  description?:     string
+  categories:       string[]
+  slots_total?:     number
+  status_override?: 'open' | 'closed' | 'waitlist' | null
 }
 
 export interface PressFeatureConfig {
@@ -270,6 +278,21 @@ export interface FanMembershipConfig {
   heading?: string
 }
 
+export interface ShopItem {
+  id:                string
+  image_url:         string
+  name:              string
+  link_type:         'external' | 'internal_product'
+  external_url?:     string
+  price_display?:    string
+  internal_block_id?: string
+}
+
+export interface ShopTheLookConfig {
+  title?: string
+  items:  ShopItem[]
+}
+
 export type BlockConfig =
   | SocialLinkConfig
   | YoutubeEmbedConfig
@@ -288,6 +311,8 @@ export type BlockConfig =
   | DigitalProductConfig
   | WaitlistConfig
   | FanMembershipConfig
+  | ShopTheLookConfig
+  | InstagramFeedConfig
 
 // ---------------------------------------------------------------------------
 // Database interface — mirrors Supabase generated output conventions
@@ -364,6 +389,15 @@ export interface Database {
           website_url: string | null
           // Multi-persona support (migration 035)
           personas: string[]
+          // Media kit shareable link (migration 059)
+          media_kit_token: string | null
+          // Instagram Connect (migration 060)
+          instagram_connected: boolean
+          instagram_access_token_encrypted: string | null
+          instagram_token_expires_at: string | null
+          instagram_account_type: string | null
+          instagram_last_refresh_attempt_at: string | null
+          instagram_user_id: string | null
           created_at: string
           updated_at: string
         }
@@ -423,6 +457,13 @@ export interface Database {
           contact_email?: string | null
           website_url?: string | null
           personas?: string[]
+          media_kit_token?: string | null
+          instagram_connected?: boolean
+          instagram_access_token_encrypted?: string | null
+          instagram_token_expires_at?: string | null
+          instagram_account_type?: string | null
+          instagram_last_refresh_attempt_at?: string | null
+          instagram_user_id?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -482,6 +523,13 @@ export interface Database {
           contact_email?: string | null
           website_url?: string | null
           personas?: string[]
+          media_kit_token?: string | null
+          instagram_connected?: boolean
+          instagram_access_token_encrypted?: string | null
+          instagram_token_expires_at?: string | null
+          instagram_account_type?: string | null
+          instagram_last_refresh_attempt_at?: string | null
+          instagram_user_id?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -964,6 +1012,34 @@ export interface Database {
           publication_url?: string
           posts?: Json
           cached_at?: string
+        }
+        Relationships: []
+      }
+
+      instagram_thumbnail_cache: {
+        Row: {
+          id: string
+          post_url: string
+          thumbnail_url: string
+          cached_at: string
+          profile_id: string | null
+          sort_order: number
+        }
+        Insert: {
+          id?: string
+          post_url: string
+          thumbnail_url: string
+          cached_at?: string
+          profile_id?: string | null
+          sort_order?: number
+        }
+        Update: {
+          id?: string
+          post_url?: string
+          thumbnail_url?: string
+          cached_at?: string
+          profile_id?: string | null
+          sort_order?: number
         }
         Relationships: []
       }
@@ -1783,6 +1859,7 @@ export interface Database {
           event_type:       string | null
           message:          string | null
           status:           string
+          accepted_at:      string | null
           created_at:       string
         }
         Insert: {
@@ -1794,6 +1871,7 @@ export interface Database {
           event_type?:      string | null
           message?:         string | null
           status?:          string
+          accepted_at?:     string | null
           created_at?:      string
         }
         Update: {
@@ -1805,6 +1883,7 @@ export interface Database {
           event_type?:      string | null
           message?:         string | null
           status?:          string
+          accepted_at?:     string | null
           created_at?:      string
         }
         Relationships: [
@@ -1903,6 +1982,14 @@ export interface Database {
         Args: { p_profile_id: string }
         Returns: string | null
       }
+      encrypt_instagram_token: {
+        Args: { p_token: string }
+        Returns: string
+      }
+      get_decrypted_instagram_token: {
+        Args: { p_profile_id: string }
+        Returns: string | null
+      }
       update_event_rating_aggregate: {
         Args: { event_id_param: string }
         Returns: undefined
@@ -1966,6 +2053,7 @@ export type ExplorerEventHistory = Tables<'explorer_event_history'>
 export type BlockAnalytic        = Tables<'block_analytics'>
 export type MakerSubscriber      = Tables<'maker_subscribers'>
 export type SubstackCache        = Tables<'substack_cache'>
+export type InstagramThumbnailCache = Tables<'instagram_thumbnail_cache'>
 export type Notification         = Tables<'notifications'>
 export type PayoutRequest        = Tables<'payout_requests'>
 export type BookingInquiry       = Tables<'booking_inquiries'>

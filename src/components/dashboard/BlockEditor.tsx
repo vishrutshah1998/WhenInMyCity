@@ -1,10 +1,12 @@
 'use client'
 
-import React, { useState, useRef, useMemo } from 'react'
+import React, { useState, useRef, useMemo, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import Image from 'next/image'
 import { uploadGalleryImage, addBlock, updateBlock, saveSupportTipBlock, toggleBlockVisibility } from '@/app/actions/blocks'
+import { searchVenuesForPicker, getVenueSummariesByIds, type VenuePickerSummary } from '@/app/actions/venue'
 import { PERSONA_BLOCK_SETS, type PersonaKey } from '@/lib/constants/blocks'
+import { InstagramFeedPreview } from '@/components/profile/InstagramFeedPreview'
 import type {
   BlockType,
   PageBlock,
@@ -20,6 +22,7 @@ import type {
   QuoteBlockConfig,
   MarqueeTextConfig,
   StatsGridConfig,
+  ShopItem,
 } from '@/types/database'
 
 // ---------------------------------------------------------------------------
@@ -73,6 +76,8 @@ const BLOCK_TYPES: { type: BlockType; label: string; icon: string; description: 
   { type: 'digital_product',     label: 'Digital Product',    icon: 'download',           description: 'Sell a download from your page'    },
   { type: 'waitlist',            label: 'Waitlist',           icon: 'format_list_numbered',description: 'Collect email sign-ups'            },
   { type: 'fan_membership',      label: 'Fan Membership',     icon: 'workspace_premium',  description: 'Showcase your membership tiers'    },
+  { type: 'shop_the_look',       label: 'Shop the Look',      icon: 'shopping_bag',       description: 'Tag products in a photo'           },
+  { type: 'instagram_feed',      label: 'Instagram Feed',     icon: 'grid_on',            description: 'Your recent posts, live'           },
 ]
 
 // ---------------------------------------------------------------------------
@@ -82,10 +87,10 @@ const BLOCK_TYPES: { type: BlockType; label: string; icon: string; description: 
 const BLOCK_CATEGORIES: { id: string; label: string; icon: string; types: BlockType[] | null }[] = [
   { id: 'all',       label: 'All',       icon: 'apps',            types: null },
   { id: 'basics',    label: 'Basics',    icon: 'text_fields',     types: ['text_bio', 'social_link', 'social_links_row', 'custom_link', 'image_gallery', 'quote_block', 'stats_grid', 'marquee_text'] },
-  { id: 'media',     label: 'Media',     icon: 'play_circle',     types: ['youtube_embed', 'instagram_embed', 'instagram_post', 'spotify_now_playing', 'podcast_episode', 'substack_preview', 'music_player', 'twitter_embed'] },
+  { id: 'media',     label: 'Media',     icon: 'play_circle',     types: ['youtube_embed', 'instagram_embed', 'instagram_post', 'instagram_feed', 'spotify_now_playing', 'podcast_episode', 'substack_preview', 'music_player', 'twitter_embed'] },
   { id: 'events',    label: 'Events',    icon: 'calendar_today',  types: ['event_listing', 'event_calendar', 'past_events_gallery', 'event_series', 'rsvp_link', 'announcement'] },
   { id: 'community', label: 'Community', icon: 'group',           types: ['newsletter_signup', 'testimonial', 'community_stats', 'collab_invite', 'whatsapp_community', 'booking_request'] },
-  { id: 'monetise',  label: 'Monetise',  icon: 'payments',        types: ['support_tip', 'digital_product', 'waitlist', 'fan_membership', 'white_label_event'] },
+  { id: 'monetise',  label: 'Monetise',  icon: 'payments',        types: ['support_tip', 'digital_product', 'waitlist', 'fan_membership', 'white_label_event', 'shop_the_look'] },
   { id: 'identity',  label: 'Identity',  icon: 'badge',           types: ['creator_type_badge', 'city_community', 'venue_partnership', 'press_feature', 'awards_badges'] },
 ]
 
@@ -151,6 +156,8 @@ const BlockIcon = React.memo(function BlockIcon({ blockType }: { blockType: Bloc
     digital_product:     'download',
     waitlist:            'format_list_numbered',
     fan_membership:      'workspace_premium',
+    shop_the_look:       'shopping_bag',
+    instagram_feed:      'grid_on',
   }
   const icon = iconMap[blockType] ?? 'link'
   return (
@@ -284,7 +291,7 @@ const SocialLinkForm = React.memo(function SocialLinkForm({
   const [title, setTitle]       = useState(initial.title ?? '')
   const [url, setUrl]           = useState(initial.url ?? '')
 
-  const platforms = ['instagram', 'youtube', 'twitter', 'spotify', 'linkedin', 'other'] as const
+  const platforms = ['instagram', 'youtube', 'twitter', 'spotify', 'apple_music', 'youtube_music', 'linkedin', 'other'] as const
 
   return (
     <div className="space-y-4">
@@ -302,7 +309,7 @@ const SocialLinkForm = React.memo(function SocialLinkForm({
                   : 'bg-surface-container-high text-on-surface-variant hover:text-on-surface'
               }`}
             >
-              {p}
+              {p.replace(/_/g, ' ')}
             </button>
           ))}
         </div>
@@ -1033,7 +1040,7 @@ function SocialLinksRowForm({ initial, onSave, onCancel, isSaving }: SimpleFormP
   const [links, setLinks] = useState<Array<{ platform: string; url: string }>>(
     cfg.links?.length ? cfg.links : [{ platform: 'instagram', url: '' }]
   )
-  const platforms = ['instagram', 'youtube', 'twitter', 'spotify', 'linkedin', 'tiktok', 'website', 'other']
+  const platforms = ['instagram', 'youtube', 'twitter', 'spotify', 'apple_music', 'youtube_music', 'linkedin', 'tiktok', 'website', 'other']
   function updateLink(i: number, field: 'platform' | 'url', val: string) {
     setLinks(prev => prev.map((l, idx) => idx === i ? { ...l, [field]: val } : l))
   }
@@ -1052,7 +1059,7 @@ function SocialLinksRowForm({ initial, onSave, onCancel, isSaving }: SimpleFormP
               {platforms.map(p => (
                 <button key={p} type="button" onClick={() => updateLink(i, 'platform', p)}
                   className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold capitalize transition-all ${link.platform === p ? 'bg-primary text-on-primary' : 'bg-surface-container-highest text-on-surface-variant hover:text-on-surface'}`}>
-                  {p}
+                  {p.replace(/_/g, ' ')}
                 </button>
               ))}
             </div>
@@ -1394,16 +1401,124 @@ function WhiteLabelEventForm({ initial, onSave, onCancel, isSaving }: SimpleForm
   )
 }
 
+const VENUE_PARTNERSHIP_MAX = 3
+
 function VenuePartnershipForm({ initial, onSave, onCancel, isSaving }: SimpleFormProps) {
   const cfg = initial as { venue_ids?: string[]; display_style?: string }
-  const [rawIds,        setRawIds]        = useState((cfg.venue_ids ?? []).join('\n'))
+  const [selected,      setSelected]      = useState<VenuePickerSummary[]>([])
+  const [loadingInitial, setLoadingInitial] = useState((cfg.venue_ids ?? []).length > 0)
   const [displayStyle,  setDisplayStyle]  = useState<'cards'|'row'>((cfg.display_style as 'cards'|'row') ?? 'cards')
+  const [query,         setQuery]         = useState('')
+  const [results,       setResults]       = useState<VenuePickerSummary[]>([])
+  const [searching,     setSearching]     = useState(false)
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // Hydrate chips from the previously-saved venue_ids on mount.
+  useEffect(() => {
+    const ids = cfg.venue_ids ?? []
+    if (ids.length === 0) { setLoadingInitial(false); return }
+    let cancelled = false
+    getVenueSummariesByIds(ids).then(({ venues }) => {
+      if (cancelled) return
+      // Preserve the saved order; drop ids whose venue no longer resolves.
+      const byId = new Map(venues.map(v => [v.id, v]))
+      setSelected(ids.map(id => byId.get(id)).filter((v): v is VenuePickerSummary => !!v))
+      setLoadingInitial(false)
+    })
+    return () => { cancelled = true }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+    if (query.trim().length < 2) { setResults([]); setSearching(false); return }
+    setSearching(true)
+    debounceRef.current = setTimeout(async () => {
+      const { venues } = await searchVenuesForPicker(query)
+      setResults(venues)
+      setSearching(false)
+    }, 300)
+    return () => { if (debounceRef.current) clearTimeout(debounceRef.current) }
+  }, [query])
+
+  function addVenue(v: VenuePickerSummary) {
+    if (selected.length >= VENUE_PARTNERSHIP_MAX) return
+    if (selected.some(s => s.id === v.id)) return
+    setSelected(prev => [...prev, v])
+    setQuery('')
+    setResults([])
+  }
+
+  function removeVenue(id: string) {
+    setSelected(prev => prev.filter(v => v.id !== id))
+  }
+
+  const atCap = selected.length >= VENUE_PARTNERSHIP_MAX
+  const selectedIds = new Set(selected.map(v => v.id))
+
   return (
     <div className="space-y-4">
       <div>
-        <label className={labelCls}>Venue / venue IDs (one per line)</label>
-        <textarea value={rawIds} onChange={e => setRawIds(e.target.value)} rows={3} placeholder="Paste venue IDs from your dashboard" className={`${inputCls} resize-none font-mono text-xs`} />
-        <p className="text-xs text-on-surface-variant mt-1">Find venue IDs in your Venues dashboard</p>
+        <label className={labelCls}>Venue partners</label>
+
+        {selected.length > 0 && (
+          <div className="space-y-2 mb-2">
+            {selected.map(v => (
+              <div key={v.id} className="flex items-center gap-2 p-2 rounded-lg bg-surface-container-low border border-white/5">
+                <div className="relative w-9 h-9 rounded-md overflow-hidden bg-surface-container-highest shrink-0">
+                  {v.cover_image_url && <Image src={v.cover_image_url} alt={v.name} fill className="object-cover" />}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-semibold text-on-surface truncate">{v.name}</p>
+                  <p className="text-[10px] text-on-surface-variant truncate">{v.city}</p>
+                </div>
+                <button type="button" onClick={() => removeVenue(v.id)} className="text-xs text-error hover:underline shrink-0">Remove</button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {loadingInitial ? (
+          <p className="text-xs text-on-surface-variant">Loading selected venues…</p>
+        ) : atCap ? (
+          <p className="text-xs text-on-surface-variant">Maximum {VENUE_PARTNERSHIP_MAX} venues reached — remove one to add another.</p>
+        ) : (
+          <div className="relative">
+            <input
+              type="text"
+              value={query}
+              onChange={e => setQuery(e.target.value)}
+              placeholder="Search venues by name…"
+              className={inputCls}
+            />
+            {(searching || results.length > 0) && query.trim().length >= 2 && (
+              <div className="absolute z-10 mt-1 w-full rounded-lg bg-surface-container-high border border-white/10 shadow-lg max-h-56 overflow-y-auto">
+                {searching ? (
+                  <p className="text-xs text-on-surface-variant px-3 py-2">Searching…</p>
+                ) : results.filter(v => !selectedIds.has(v.id)).length === 0 ? (
+                  <p className="text-xs text-on-surface-variant px-3 py-2">No venues found.</p>
+                ) : (
+                  results.filter(v => !selectedIds.has(v.id)).map(v => (
+                    <button
+                      key={v.id}
+                      type="button"
+                      onClick={() => addVenue(v)}
+                      className="flex items-center gap-2 w-full px-3 py-2 text-left hover:bg-surface-container-highest transition-colors"
+                    >
+                      <div className="relative w-8 h-8 rounded-md overflow-hidden bg-surface-container-highest shrink-0">
+                        {v.cover_image_url && <Image src={v.cover_image_url} alt={v.name} fill className="object-cover" />}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-xs font-semibold text-on-surface truncate">{v.name}</p>
+                        <p className="text-[10px] text-on-surface-variant truncate">{v.city}</p>
+                      </div>
+                    </button>
+                  ))
+                )}
+              </div>
+            )}
+          </div>
+        )}
       </div>
       <div>
         <label className={labelCls}>Display style</label>
@@ -1417,7 +1532,7 @@ function VenuePartnershipForm({ initial, onSave, onCancel, isSaving }: SimpleFor
         </div>
       </div>
       <EditFormActions
-        onSave={() => onSave({ venue_ids: rawIds.split('\n').map(s => s.trim()).filter(Boolean), display_style: displayStyle })}
+        onSave={() => onSave({ venue_ids: selected.map(v => v.id), display_style: displayStyle })}
         onCancel={onCancel} isSaving={isSaving}
       />
     </div>
@@ -1481,10 +1596,12 @@ function MusicPlayerForm({ initial, onSave, onCancel, isSaving }: SimpleFormProp
 }
 
 function BookingRequestForm({ initial, onSave, onCancel, isSaving }: SimpleFormProps) {
-  const cfg = initial as { label?: string; description?: string; categories?: string[] }
+  const cfg = initial as { label?: string; description?: string; categories?: string[]; slots_total?: number; status_override?: 'open' | 'closed' | 'waitlist' | null }
   const [label,       setLabel]       = useState(cfg.label ?? 'Book me for your event')
   const [description, setDescription] = useState(cfg.description ?? '')
   const [rawCats,     setRawCats]     = useState((cfg.categories ?? ['Corporate Events', 'Private Parties', 'Festivals', 'Weddings', 'College Fests']).join('\n'))
+  const [slotsTotal,     setSlotsTotal]     = useState(cfg.slots_total != null ? String(cfg.slots_total) : '')
+  const [statusOverride, setStatusOverride] = useState<'auto' | 'open' | 'closed' | 'waitlist'>(cfg.status_override ?? 'auto')
   return (
     <div className="space-y-4">
       <div><label className={labelCls}>Heading</label><input type="text" value={label} onChange={e => setLabel(e.target.value)} placeholder="Book me for your event" className={inputCls} /></div>
@@ -1494,8 +1611,28 @@ function BookingRequestForm({ initial, onSave, onCancel, isSaving }: SimpleFormP
         <textarea value={rawCats} onChange={e => setRawCats(e.target.value)} rows={5} className={`${inputCls} resize-none font-mono text-xs`} />
         <p className="text-xs text-on-surface-variant mt-1">Shown as selector chips on the form</p>
       </div>
+      <div>
+        <label className={labelCls}>Monthly booking slots (optional)</label>
+        <input type="number" min={0} value={slotsTotal} onChange={e => setSlotsTotal(e.target.value)} placeholder="e.g. 4" className={inputCls} />
+        <p className="text-xs text-on-surface-variant mt-1">Once this many accepted bookings are reached this month, the badge switches to Closed</p>
+      </div>
+      <div>
+        <label className={labelCls}>Availability override</label>
+        <select value={statusOverride} onChange={e => setStatusOverride(e.target.value as typeof statusOverride)} className={inputCls}>
+          <option value="auto">Auto (based on slots)</option>
+          <option value="open">Force Open</option>
+          <option value="closed">Force Closed</option>
+          <option value="waitlist">Force Waitlist</option>
+        </select>
+      </div>
       <EditFormActions
-        onSave={() => onSave({ label, description: description || undefined, categories: rawCats.split('\n').map(s => s.trim()).filter(Boolean) })}
+        onSave={() => onSave({
+          label,
+          description: description || undefined,
+          categories: rawCats.split('\n').map(s => s.trim()).filter(Boolean),
+          slots_total: slotsTotal.trim() ? Number(slotsTotal) : undefined,
+          status_override: statusOverride === 'auto' ? null : statusOverride,
+        })}
         onCancel={onCancel} isSaving={isSaving}
       />
     </div>
@@ -1777,6 +1914,219 @@ function FanMembershipForm({ initial, onSave, onCancel, isSaving }: SimpleFormPr
   )
 }
 
+type ShopTheLookFormItem = {
+  id:                 string
+  image_url:          string
+  name:               string
+  link_type:          'external' | 'internal_product'
+  external_url:       string
+  price_display:      string
+  internal_block_id:  string
+}
+
+function ShopTheLookForm({ initial, blocks, onSave, onCancel, isSaving }: SimpleFormProps & { blocks: PageBlock[] }) {
+  const cfg = initial as { title?: string; items?: ShopItem[] }
+  const [title, setTitle] = useState(cfg.title ?? 'Shop the Look')
+  const [items, setItems] = useState<ShopTheLookFormItem[]>(
+    (cfg.items ?? []).map(it => ({
+      id:                it.id,
+      image_url:         it.image_url,
+      name:              it.name,
+      link_type:         it.link_type,
+      external_url:      it.external_url ?? '',
+      price_display:     it.price_display ?? '',
+      internal_block_id: it.internal_block_id ?? '',
+    }))
+  )
+  const [showUrl,     setShowUrl]     = useState<boolean[]>(() => items.map((it) => !!it.image_url && !it.image_url.startsWith('blob:')))
+  const [uploading,   setUploading]   = useState<boolean[]>(() => items.map(() => false))
+  const [uploadError, setUploadError] = useState<(string | null)[]>(() => items.map(() => null))
+
+  const digitalProducts = blocks.filter((b) => b.block_type === 'digital_product')
+
+  function syncUiArrays(newLength: number) {
+    setShowUrl((prev) => { const next = [...prev]; while (next.length < newLength) next.push(false); return next.slice(0, newLength) })
+    setUploading((prev) => { const next = [...prev]; while (next.length < newLength) next.push(false); return next.slice(0, newLength) })
+    setUploadError((prev) => { const next = [...prev]; while (next.length < newLength) next.push(null); return next.slice(0, newLength) })
+  }
+
+  function updateItem(i: number, field: keyof ShopTheLookFormItem, val: string) {
+    setItems((prev) => prev.map((it, idx) => idx === i ? { ...it, [field]: val } : it))
+  }
+
+  function addItem() {
+    if (items.length >= 6) return
+    setItems((prev) => [...prev, { id: crypto.randomUUID(), image_url: '', name: '', link_type: 'external', external_url: '', price_display: '', internal_block_id: '' }])
+    syncUiArrays(items.length + 1)
+  }
+
+  function removeItem(i: number) {
+    setItems((prev) => prev.filter((_, idx) => idx !== i))
+    syncUiArrays(items.length - 1)
+  }
+
+  async function handleFileChange(index: number, file: File | null) {
+    if (!file) return
+    setUploading((prev) => prev.map((v, i) => i === index ? true : v))
+    setUploadError((prev) => prev.map((v, i) => i === index ? null : v))
+    const formData = new FormData()
+    formData.append('file', file)
+    const result = await uploadGalleryImage(formData)
+    setUploading((prev) => prev.map((v, i) => i === index ? false : v))
+    if (result.error || !result.url) {
+      setUploadError((prev) => prev.map((v, i) => i === index ? (result.error ?? 'Upload failed.') : v))
+    } else {
+      updateItem(index, 'image_url', result.url)
+    }
+  }
+
+  return (
+    <div className="space-y-4">
+      <div><label className={labelCls}>Section title (optional)</label><input type="text" value={title} onChange={e => setTitle(e.target.value)} placeholder="Shop the Look" className={inputCls} /></div>
+
+      <div className="space-y-3">
+        <label className={labelCls}>Items</label>
+        {items.map((it, i) => {
+          const isUploading = uploading[i] ?? false
+          const showUrlInput = showUrl[i] ?? false
+          const slotError = uploadError[i] ?? null
+
+          return (
+            <div key={it.id} className="p-3 rounded-lg bg-surface-container-low border border-white/5 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-on-surface-variant">Item {i + 1}</span>
+                <button type="button" onClick={() => removeItem(i)} className="text-xs text-error hover:underline">Remove</button>
+              </div>
+
+              {/* Image slot */}
+              {it.image_url ? (
+                <div className="space-y-2">
+                  <div className="relative w-full aspect-square max-w-[120px] rounded-lg overflow-hidden bg-surface-container-highest">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={it.image_url} alt="" className="w-full h-full object-cover" />
+                    <button type="button" onClick={() => { updateItem(i, 'image_url', ''); setShowUrl((prev) => prev.map((v, idx) => idx === i ? false : v)) }}
+                      className="absolute top-1 right-1 w-6 h-6 rounded-full bg-black/60 text-white flex items-center justify-center hover:bg-black/80 transition-colors">
+                      <span className="material-symbols-outlined text-sm">close</span>
+                    </button>
+                  </div>
+                  <label className="flex items-center gap-1.5 w-fit cursor-pointer text-xs font-semibold text-on-surface-variant hover:text-primary transition-colors">
+                    <span className="material-symbols-outlined text-sm">swap_horiz</span>
+                    Change image
+                    <input type="file" accept="image/jpeg,image/png,image/webp,image/gif" className="sr-only" onChange={(e) => handleFileChange(i, e.target.files?.[0] ?? null)} />
+                  </label>
+                </div>
+              ) : showUrlInput ? (
+                <div className="space-y-2">
+                  <input type="url" value={it.image_url} onChange={(e) => updateItem(i, 'image_url', e.target.value)} placeholder="https://..." className={inputCls} autoFocus />
+                  <button type="button" onClick={() => setShowUrl((prev) => prev.map((v, idx) => idx === i ? false : v))} className="flex items-center gap-1 text-xs font-semibold text-on-surface-variant hover:text-primary transition-colors">
+                    <span className="material-symbols-outlined text-sm">arrow_back</span>
+                    Upload instead
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <label className={`relative flex flex-col items-center justify-center gap-2 w-full py-5 rounded-xl border-2 border-dashed transition-all cursor-pointer ${isUploading ? 'border-primary/40 bg-primary/5' : 'border-outline-variant hover:border-primary hover:bg-primary/5'}`}>
+                    {isUploading ? (
+                      <>
+                        <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                        <span className="text-xs text-on-surface-variant">Uploading…</span>
+                      </>
+                    ) : (
+                      <>
+                        <span className="material-symbols-outlined text-2xl text-on-surface-variant">upload_file</span>
+                        <p className="text-xs text-on-surface-variant">Click to upload image</p>
+                      </>
+                    )}
+                    <input type="file" accept="image/jpeg,image/png,image/webp,image/gif" className="sr-only" disabled={isUploading} onChange={(e) => handleFileChange(i, e.target.files?.[0] ?? null)} />
+                  </label>
+                  {slotError && <p className="text-xs text-error">{slotError}</p>}
+                  <button type="button" onClick={() => setShowUrl((prev) => prev.map((v, idx) => idx === i ? true : v))} className="text-xs text-on-surface-variant hover:text-primary transition-colors underline underline-offset-2">
+                    Or paste an image URL
+                  </button>
+                </div>
+              )}
+
+              <input type="text" value={it.name} onChange={e => updateItem(i, 'name', e.target.value)} placeholder="Product name" className={inputCls} />
+
+              {/* Link type toggle */}
+              <div className="flex gap-2">
+                {(['external', 'internal_product'] as const).map((lt) => (
+                  <button
+                    key={lt}
+                    type="button"
+                    onClick={() => updateItem(i, 'link_type', lt)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                      it.link_type === lt ? 'bg-primary text-on-primary' : 'bg-surface-container-high text-on-surface-variant hover:text-on-surface'
+                    }`}
+                  >
+                    {lt === 'external' ? 'External link' : 'My digital product'}
+                  </button>
+                ))}
+              </div>
+
+              {it.link_type === 'external' ? (
+                <>
+                  <input type="url" value={it.external_url} onChange={e => updateItem(i, 'external_url', e.target.value)} placeholder="https://…" className={inputCls} />
+                  <input type="text" value={it.price_display} onChange={e => updateItem(i, 'price_display', e.target.value)} placeholder="₹999 (optional)" className={inputCls} />
+                </>
+              ) : (
+                digitalProducts.length === 0 ? (
+                  <p className="text-xs text-on-surface-variant">Add a Digital Product block first to link one here.</p>
+                ) : (
+                  <select value={it.internal_block_id} onChange={e => updateItem(i, 'internal_block_id', e.target.value)} className={inputCls}>
+                    <option value="">Select a digital product…</option>
+                    {digitalProducts.map((b) => {
+                      const pc = b.config as unknown as { title?: string }
+                      return <option key={b.id} value={b.id}>{pc.title || 'Untitled product'}</option>
+                    })}
+                  </select>
+                )
+              )}
+            </div>
+          )
+        })}
+        {items.length < 6 && (
+          <button type="button" onClick={addItem} className="text-xs font-semibold text-primary hover:underline flex items-center gap-1">
+            <span className="material-symbols-outlined text-sm">add</span>
+            Add item
+          </button>
+        )}
+      </div>
+
+      <EditFormActions
+        onSave={() => onSave({
+          title: title.trim() || undefined,
+          items: items
+            .filter(it => it.image_url.trim() && it.name.trim())
+            .map(it => ({
+              id:                 it.id,
+              image_url:          it.image_url.trim(),
+              name:               it.name.trim(),
+              link_type:          it.link_type,
+              external_url:       it.link_type === 'external' ? (it.external_url.trim() || undefined) : undefined,
+              price_display:      it.link_type === 'external' ? (it.price_display.trim() || undefined) : undefined,
+              internal_block_id:  it.link_type === 'internal_product' ? (it.internal_block_id || undefined) : undefined,
+            })),
+        })}
+        onCancel={onCancel} isSaving={isSaving}
+      />
+    </div>
+  )
+}
+
+function InstagramFeedForm({ block, onCancel }: { block: PageBlock; onCancel: () => void }) {
+  return (
+    <div className="space-y-4">
+      <InstagramFeedPreview profileId={block.profile_id} />
+      <p className="text-sm text-on-surface-variant">
+        Shows your recent Instagram posts automatically — no configuration needed.{' '}
+        <a href="/dashboard/profile/settings" className="underline font-semibold">Manage your Instagram connection</a>
+      </p>
+      <button type="button" onClick={onCancel} className="text-sm font-semibold text-on-surface-variant hover:text-on-surface transition-colors">Close</button>
+    </div>
+  )
+}
+
 function NoConfigInfoBox({ message, onCancel }: { message: string; onCancel: () => void }) {
   return (
     <div className="space-y-4">
@@ -1814,11 +2164,13 @@ function EditFormActions({ onSave, onCancel, isSaving }: { onSave: () => void; o
 
 const BlockEditPanel = React.memo(function BlockEditPanel({
   block,
+  blocks,
   events,
   onSaved,
   onCancel,
 }: {
   block: PageBlock
+  blocks: PageBlock[]
   events: Event[]
   onSaved: (updated: PageBlock) => void
   onCancel: () => void
@@ -1892,6 +2244,8 @@ const BlockEditPanel = React.memo(function BlockEditPanel({
       {block.block_type === 'digital_product' && <DigitalProductForm {...sp} />}
       {block.block_type === 'waitlist'         && <WaitlistForm       {...sp} />}
       {block.block_type === 'fan_membership'   && <FanMembershipForm  {...sp} />}
+      {block.block_type === 'shop_the_look'    && <ShopTheLookForm    {...sp} blocks={blocks} />}
+      {block.block_type === 'instagram_feed'   && <InstagramFeedForm  block={block} onCancel={onCancel} />}
     </div>
   )
 })
@@ -2211,6 +2565,7 @@ const BlockEditor = React.memo(function BlockEditor({ blocks, events, onBlocksCh
             {isEditing && (
               <BlockEditPanel
                 block={block}
+                blocks={blocks}
                 events={events}
                 onSaved={handleBlockSaved}
                 onCancel={() => setEditingBlockId(null)}

@@ -3,6 +3,12 @@ import type { Metadata } from 'next'
 import { getVenuePublicPage } from '@/app/actions/venue'
 import { getBrandPublicPage } from '@/app/actions/persona-complete'
 import { getCreatorPosts, type CreatorPostWithReactions } from '@/app/actions/posts'
+import { getSubstackPosts } from '@/app/actions/blocks'
+import type { SubstackPost } from '@/lib/validators/blocks'
+import { getPublicTestimonials } from '@/app/actions/explorer'
+import { getPastEventsWithAttendance } from '@/app/actions/events'
+import { getBookingCapacityStatus, type BookingCapacityStatus } from '@/app/actions/booking'
+import type { BookingRequestConfig } from '@/types/database'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { resolveTheme } from '@/types/theme'
@@ -170,6 +176,81 @@ export default async function CitySlugPage({
         .order('position'),
     ])
 
+    const blockTypesPresent = new Set((blocksRaw ?? []).map((b) => b.block_type))
+
+    let substackPosts: Record<string, SubstackPost[]> = {}
+    if (blockTypesPresent.has('substack_preview')) {
+      const publicationUrls = Array.from(new Set(
+        (blocksRaw ?? [])
+          .filter((b) => b.block_type === 'substack_preview')
+          .map((b) => (b.config as { publication_url?: string }).publication_url)
+          .filter((url): url is string => !!url)
+      ))
+      const postsByUrl = await Promise.all(publicationUrls.map((url) => getSubstackPosts(url)))
+      substackPosts = Object.fromEntries(publicationUrls.map((url, i) => [url, postsByUrl[i]]))
+    }
+
+    // instagram_embed/instagram_post/instagram_feed all render client-side via
+    // self-fetching components (InstagramEmbedWidget / InstagramFeedPreview) —
+    // no server-side data needed for any of them.
+
+    const testimonials = blockTypesPresent.has('testimonial')
+      ? await getPublicTestimonials(profile.id)
+      : []
+
+    const pastEventsWithAttendance = blockTypesPresent.has('past_events_gallery')
+      ? await getPastEventsWithAttendance(profile.id)
+      : []
+
+    let bookingCapacity: BookingCapacityStatus | null = null
+    if (blockTypesPresent.has('booking_request')) {
+      const bookingBlock = (blocksRaw ?? []).find((b) => b.block_type === 'booking_request')
+      if (bookingBlock) {
+        bookingCapacity = await getBookingCapacityStatus(profile.id, bookingBlock.config as unknown as BookingRequestConfig)
+      }
+    }
+
+    let shopTheLookProducts: Record<string, { title: string; price_paise: number; cover_image_url?: string | null }> = {}
+    if (blockTypesPresent.has('shop_the_look')) {
+      const internalIds = Array.from(new Set(
+        (blocksRaw ?? [])
+          .filter((b) => b.block_type === 'shop_the_look')
+          .flatMap((b) => (b.config as { items?: Array<{ link_type: string; internal_block_id?: string }> }).items ?? [])
+          .filter((item) => item.link_type === 'internal_product' && item.internal_block_id)
+          .map((item) => item.internal_block_id as string)
+      ))
+      if (internalIds.length > 0) {
+        const { data: productBlocks } = await supabase
+          .from('page_blocks')
+          .select('id, config')
+          .eq('block_type', 'digital_product')
+          .eq('is_visible', true)
+          .in('id', internalIds)
+        shopTheLookProducts = Object.fromEntries(
+          (productBlocks ?? []).map((b) => {
+            const pc = b.config as { title?: string; price_paise?: number; cover_image_url?: string }
+            return [b.id, { title: pc.title ?? 'Digital Product', price_paise: pc.price_paise ?? 0, cover_image_url: pc.cover_image_url ?? null }]
+          })
+        )
+      }
+    }
+
+    let venueData: Record<string, { id: string; name: string; address: string; city: string; cover_image_url: string | null; slug: string }> = {}
+    if (blockTypesPresent.has('venue_partnership')) {
+      const venueIds = Array.from(new Set(
+        (blocksRaw ?? [])
+          .filter((b) => b.block_type === 'venue_partnership')
+          .flatMap((b) => (b.config as { venue_ids?: string[] }).venue_ids ?? [])
+      ))
+      if (venueIds.length > 0) {
+        const { data: venueRows } = await supabase
+          .from('venue_profiles')
+          .select('id, name, address, city, cover_image_url, slug')
+          .in('id', venueIds)
+        venueData = Object.fromEntries((venueRows ?? []).map((v) => [v.id, v]))
+      }
+    }
+
     let isFollowing = false
     let posts: CreatorPostWithReactions[] = []
 
@@ -267,6 +348,12 @@ export default async function CitySlugPage({
         blocks={blocks}
         upcomingEvents={upcomingEvents}
         calendarEvents={upcomingEvents}
+        pastEvents={pastEventsWithAttendance}
+        testimonials={testimonials}
+        substackPosts={substackPosts}
+        bookingCapacity={bookingCapacity}
+        shopTheLookProducts={shopTheLookProducts}
+        venueData={venueData}
         theme={theme}
         isFollowing={isFollowing}
         isOwner={isOwner}

@@ -26,7 +26,7 @@ const httpsUrl = (optional = false) => {
 
 const SocialPlatformSchema = z.enum([
   'instagram', 'youtube', 'twitter', 'linkedin', 'whatsapp',
-  'spotify', 'substack', 'patreon', 'pinterest', 'threads', 'website',
+  'spotify', 'apple_music', 'youtube_music', 'substack', 'patreon', 'pinterest', 'threads', 'website',
 ])
 
 export type SocialPlatform = z.infer<typeof SocialPlatformSchema>
@@ -232,6 +232,14 @@ export const InstagramEmbedConfigSchema = z.object({
 })
 
 export type InstagramEmbedConfigV = z.infer<typeof InstagramEmbedConfigSchema>
+
+/**
+ * instagram_feed — no per-instance config; entirely derived from the
+ * creator's profile-level Instagram Connect state.
+ */
+export const InstagramFeedConfigSchema = z.object({})
+
+export type InstagramFeedConfigV = z.infer<typeof InstagramFeedConfigSchema>
 
 /**
  * image_gallery — grid or carousel of images.
@@ -456,6 +464,7 @@ export const BLOCK_CONFIG_SCHEMAS: Partial<Record<BlockType, z.ZodTypeAny>> = {
   youtube_embed:       YoutubeEmbedConfigSchema,
   instagram_embed:     InstagramEmbedConfigSchema,
   instagram_post:      InstagramEmbedConfigSchema,
+  instagram_feed:      InstagramFeedConfigSchema,
   spotify_now_playing: SpotifyNowPlayingConfigSchema,
   newsletter_signup:   NewsletterSignupConfigSchema,
   // Events

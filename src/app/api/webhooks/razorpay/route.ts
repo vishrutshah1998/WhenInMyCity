@@ -210,10 +210,18 @@ async function handlePaymentCaptured(
     .select('id, payment_status, amount_paid, platform_fee_paise, maker_payout_paise, venue_fee_paise')
     .eq('razorpay_order_id', orderId)
 
-  if (fetchError || !orderRows?.length) {
+  if (fetchError) {
     console.error('[webhook:payment.captured] failed to load order rows', {
-      orderId, paymentId, error: fetchError?.message,
+      orderId, paymentId, error: fetchError.message,
     })
+    return
+  }
+
+  if (!orderRows?.length) {
+    // Not an RSVP order — check whether it's a digital-product purchase
+    // (DigitalProductBlock / ShopTheLookBlock both create orders through
+    // initiateDigitalPurchase, which shares this order-id pattern).
+    await handleDigitalPurchaseCaptured(admin, orderId, paymentId, amount)
     return
   }
 
@@ -369,6 +377,109 @@ async function handlePaymentFailed(
     paymentId,
     ticketsReleased: updated?.length ?? 0,
   })
+
+  if (!updated?.length) {
+    // Not an RSVP order — check whether it's a digital-product purchase.
+    await handleDigitalPurchaseFailed(admin, orderId, paymentId)
+  }
+}
+
+/**
+ * payment.captured (digital purchase branch) — mirrors what
+ * confirmDigitalPurchase does client-side (mark 'paid'), as a safety net for
+ * when the buyer's tab closes before that callback fires. See the
+ * `digital_purchases has no webhook reconciliation` entry in CLAUDE.md.
+ */
+async function handleDigitalPurchaseCaptured(
+  admin: AdminClient,
+  orderId: string,
+  paymentId: string,
+  amount: number,
+): Promise<void> {
+  const { data: purchase, error: fetchError } = await admin
+    .from('digital_purchases')
+    .select('id, status, amount_paise')
+    .eq('razorpay_order_id', orderId)
+    .maybeSingle()
+
+  if (fetchError) {
+    console.error('[webhook:payment.captured] failed to load digital_purchases row', {
+      orderId, paymentId, error: fetchError.message,
+    })
+    return
+  }
+
+  if (!purchase) {
+    // Neither an RSVP nor a known digital purchase order — most likely the
+    // Razorpay order was created but the digital_purchases insert failed
+    // right after (see the ORPHANED-order log in initiateDigitalPurchase).
+    console.info('[webhook:payment.captured] order not found in rsvps or digital_purchases', {
+      orderId, paymentId,
+    })
+    return
+  }
+
+  if (purchase.status === 'paid') {
+    // Already confirmed — either by confirmDigitalPurchase's client path or
+    // a prior delivery of this same webhook. No-op.
+    return
+  }
+
+  if (purchase.status !== 'pending') {
+    console.warn('[webhook:payment.captured] digital purchase not pending, skipping', {
+      orderId, paymentId, status: purchase.status,
+    })
+    return
+  }
+
+  if (purchase.amount_paise !== amount) {
+    console.warn('[webhook:payment.captured] digital purchase amount mismatch vs Razorpay', {
+      orderId, paymentId, expected: purchase.amount_paise, razorpayAmount: amount,
+    })
+  }
+
+  const { error: updateError } = await admin
+    .from('digital_purchases')
+    .update({ status: 'paid', razorpay_payment_id: paymentId })
+    .eq('id', purchase.id)
+    .eq('status', 'pending')   // idempotency guard against a race with confirmDigitalPurchase
+
+  if (updateError) {
+    console.error('[webhook:payment.captured] digital_purchases update failed', {
+      orderId, paymentId, error: updateError.message,
+    })
+    return
+  }
+
+  console.info('[webhook:payment.captured] digital purchase confirmed', { orderId, paymentId })
+}
+
+/**
+ * payment.failed (digital purchase branch) — marks a pending purchase as
+ * failed so the buyer isn't left staring at an infinite loading state.
+ */
+async function handleDigitalPurchaseFailed(
+  admin: AdminClient,
+  orderId: string,
+  paymentId: string,
+): Promise<void> {
+  const { data: updated, error } = await admin
+    .from('digital_purchases')
+    .update({ status: 'failed', razorpay_payment_id: paymentId })
+    .eq('razorpay_order_id', orderId)
+    .eq('status', 'pending')
+    .select('id')
+
+  if (error) {
+    console.error('[webhook:payment.failed] digital_purchases update failed', {
+      orderId, paymentId, error: error.message,
+    })
+    return
+  }
+
+  if (updated?.length) {
+    console.info('[webhook:payment.failed] digital purchase marked failed', { orderId, paymentId })
+  }
 }
 
 /**

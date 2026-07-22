@@ -15,6 +15,8 @@ export interface PublicTestimonial {
   reviewer_name: string
 }
 import { ClickTracker } from './ClickTracker'
+import { InstagramEmbedWidget } from './InstagramEmbedWidget'
+import { InstagramFeedPreview } from './InstagramFeedPreview'
 import type {
   SocialLinkConfig,
   YoutubeEmbedConfig,
@@ -44,6 +46,7 @@ import AwardsBadgesBlock from './AwardsBadgesBlock'
 import DigitalProductBlock from './DigitalProductBlock'
 import WaitlistBlock from './WaitlistBlock'
 import FanMembershipBlock from './FanMembershipBlock'
+import ShopTheLookBlock from './ShopTheLookBlock'
 import type { SubstackPost } from '@/lib/validators/blocks'
 import { WimcWordmark } from '@/components/WimcWordmark'
 
@@ -78,7 +81,7 @@ interface PastEventsGalleryConfig {
 }
 interface RsvpLinkConfig {
   url: string; label: string; description?: string
-  icon_emoji?: string; platform?: string
+  emoji?: string; icon_emoji?: string; platform?: string
 }
 interface PodcastEpisodeConfig {
   platform: 'spotify' | 'apple_podcasts' | 'anchor' | 'direct'
@@ -119,6 +122,7 @@ interface MusicPlayerConfig {
 }
 interface BookingRequestConfig {
   label: string; description?: string; categories: string[]
+  slots_total?: number; status_override?: 'open' | 'closed' | 'waitlist' | null
 }
 interface PressFeatureConfig {
   features: Array<{ outlet: string; url?: string; logo_url?: string }>
@@ -141,6 +145,15 @@ interface FanMembershipConfig {
   tiers: Array<{ name: string; price_label: string; benefits: string[]; is_featured?: boolean }>
   heading?: string
 }
+interface ShopTheLookConfig {
+  title?: string
+  items: Array<{
+    id: string; image_url: string; name: string
+    link_type: 'external' | 'internal_product'
+    external_url?: string; price_display?: string; internal_block_id?: string
+  }>
+}
+type ShopTheLookProduct = { title: string; price_paise: number; cover_image_url?: string | null }
 
 // ---------------------------------------------------------------------------
 // Aurora, theme, pattern helpers (unchanged)
@@ -369,15 +382,15 @@ function AuroraBackground({ scheme, style: auroraStyle = 'nebula' }: { scheme: P
 // Creator type labels + pill styles
 // ---------------------------------------------------------------------------
 
-function contrastColor(hex: string): string {
+export function contrastColor(hex: string): string {
   const n = parseInt(hex.replace('#', ''), 16)
   const lum = (0.299 * ((n >> 16) & 0xff) + 0.587 * ((n >> 8) & 0xff) + 0.114 * (n & 0xff)) / 255
   return lum > 0.55 ? '#1a1a1a' : '#ffffff'
 }
 
-type PillData = { emoji: string; label: string; background: string; color: string }
+export type PillData = { emoji: string; label: string; background: string; color: string }
 
-const CATEGORY_PILL_MAP: Record<string, PillData> = Object.fromEntries([
+export const CATEGORY_PILL_MAP: Record<string, PillData> = Object.fromEntries([
   ...CREATOR_CATEGORIES.map((c) => [
     c.id,
     { emoji: c.emoji, label: c.label, background: c.primaryColor, color: contrastColor(c.primaryColor) },
@@ -398,6 +411,8 @@ const SOCIAL_SVGS_24: Record<string, string> = {
   twitter:   'M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.73-8.835L1.254 2.25H8.08l4.253 5.622zm-1.161 17.52h1.833L7.084 4.126H5.117z',
   tiktok:    'M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.15 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z',
   spotify:   'M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z',
+  apple_music: 'M23.994 6.124a9.23 9.23 0 00-.24-2.19c-.317-1.31-1.062-2.31-2.18-3.043a5.022 5.022 0 00-1.877-.726a10.496 10.496 0 00-1.564-.15c-.04-.003-.083-.01-.124-.013H5.986c-.152.01-.303.017-.455.026-.747.043-1.49.123-2.193.4-1.336.53-2.3 1.452-2.865 2.78-.192.448-.292.925-.363 1.408-.056.392-.088.785-.1 1.18 0 .032-.007.062-.01.093v12.223c.01.14.017.283.027.424.05.815.154 1.624.497 2.373.65 1.42 1.738 2.353 3.234 2.801.42.127.856.187 1.293.228.555.053 1.11.06 1.667.06h11.03a12.5 12.5 0 001.57-.1c.822-.106 1.596-.35 2.295-.81a5.046 5.046 0 001.88-2.207c.186-.42.293-.87.37-1.324.113-.675.138-1.358.137-2.04-.002-3.8 0-7.595-.003-11.393zm-6.423 3.99v5.712c0 .417-.058.827-.244 1.206-.29.59-.76.962-1.388 1.14-.35.1-.706.157-1.07.173-.95.045-1.773-.6-1.943-1.536a1.88 1.88 0 011.038-2.022c.323-.16.67-.25 1.018-.324.378-.082.758-.153 1.134-.24.274-.063.457-.23.51-.516a.904.904 0 00.02-.193c0-1.815 0-3.63-.002-5.443a.725.725 0 00-.026-.185c-.04-.15-.15-.243-.304-.234-.16.01-.318.035-.475.066-.76.15-1.52.303-2.28.456l-2.325.47-1.374.278c-.016.003-.032.01-.048.013-.277.077-.377.203-.39.49-.002.042 0 .086 0 .13-.002 2.602 0 5.204-.003 7.805 0 .42-.047.836-.215 1.227-.278.64-.77 1.04-1.434 1.233-.35.1-.71.16-1.075.172-.96.036-1.755-.6-1.92-1.544-.14-.812.23-1.685 1.154-2.075.357-.15.73-.232 1.108-.31.287-.06.575-.116.86-.177.383-.083.583-.323.6-.714v-.15c0-2.96 0-5.922.002-8.882 0-.123.013-.25.042-.37.07-.285.273-.448.546-.518.255-.066.515-.112.774-.165.733-.15 1.466-.296 2.2-.444l2.27-.46c.67-.134 1.34-.27 2.01-.403.22-.043.442-.088.663-.106.31-.025.523.17.554.482.008.073.012.148.012.223.002 1.91.002 3.822 0 5.732z',
+  youtube_music: 'M12 0C5.376 0 0 5.376 0 12s5.376 12 12 12 12-5.376 12-12S18.624 0 12 0zm0 19.104c-3.924 0-7.104-3.18-7.104-7.104S8.076 4.896 12 4.896s7.104 3.18 7.104 7.104-3.18 7.104-7.104 7.104zm0-13.332c-3.432 0-6.228 2.796-6.228 6.228S8.568 18.228 12 18.228s6.228-2.796 6.228-6.228S15.432 5.772 12 5.772zM9.684 15.54V8.46L15.816 12l-6.132 3.54z',
   linkedin:  'M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z',
   other:     'M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71',
 }
@@ -587,42 +602,24 @@ function TextBioBlock({ block }: { block: PageBlock }) {
   )
 }
 
-const INSTAGRAM_GRADIENT_ICON = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0%25' y1='100%25' x2='100%25' y2='0%25'%3E%3Cstop offset='0%25' stop-color='%23f09433'/%3E%3Cstop offset='25%25' stop-color='%23e6683c'/%3E%3Cstop offset='50%25' stop-color='%23dc2743'/%3E%3Cstop offset='75%25' stop-color='%23cc2366'/%3E%3Cstop offset='100%25' stop-color='%23bc1888'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='24' height='24' rx='6' fill='url(%23g)'/%3E%3Cpath fill='white' d='M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z'/%3E%3C/svg%3E`
-
-function InstagramBlock({ block, thumbnail }: { block: PageBlock; thumbnail?: string | null }) {
+function InstagramBlock({ block }: { block: PageBlock }) {
   const cfg = block.config as unknown as InstagramEmbedConfig
   if (!cfg.post_url) return null
   return (
-    <section>
-      <a
-        href={cfg.post_url} target="_blank" rel="noopener noreferrer"
-        className="card-surface group relative block w-full rounded-2xl overflow-hidden bg-surface-container-high"
-      >
-        {thumbnail ? (
-          <div className="relative w-full aspect-square">
-            <Image src={thumbnail} alt="Instagram post" fill className="object-cover transition-transform duration-500 group-hover:scale-105" />
-            <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-transparent to-black/20" />
-          </div>
-        ) : (
-          <div className="w-full aspect-square flex flex-col items-center justify-center gap-3 bg-surface-container-high">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={INSTAGRAM_GRADIENT_ICON} alt="" className="w-12 h-12" />
-            <p className="text-sm font-semibold text-on-surface-variant">View on Instagram</p>
-          </div>
-        )}
-        <div className="absolute top-3 right-3 flex items-center gap-1.5 bg-black/50 backdrop-blur-sm rounded-full px-2.5 py-1.5">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={INSTAGRAM_GRADIENT_ICON} alt="Instagram" className="w-4 h-4 rounded-sm" />
-          <span className="text-white text-[11px] font-semibold">Instagram</span>
-        </div>
-        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-black/20">
-          <div className="bg-white/20 backdrop-blur-sm rounded-full px-4 py-2">
-            <span className="text-white text-sm font-semibold">View post</span>
-          </div>
-        </div>
-      </a>
+    <section className="w-full flex justify-center">
+      <InstagramEmbedWidget postUrl={cfg.post_url} />
     </section>
   )
+}
+
+function InstagramFeedBlock({ block }: { block: PageBlock }) {
+  // Self-fetching (via InstagramFeedPreview) rather than prop-threaded: it only
+  // ever reads the cache populated by the creator's own on-demand refresh
+  // (ProfileForm/getInstagramFeedStatus), never a live Meta call, so this is
+  // safe to call from every render surface — public page and all three Studio
+  // preview surfaces (CreatorPhonePreview, PreviewPanel desktop, StudioShell
+  // mobile fallback) alike — without threading extra props through each one.
+  return <InstagramFeedPreview profileId={block.profile_id} />
 }
 
 function QuoteBlock({ block }: { block: PageBlock }) {
@@ -943,7 +940,7 @@ function RsvpLinkBlock({ block }: { block: PageBlock }) {
         href={cfg.url} target="_blank" rel="noopener noreferrer"
         className="card-surface group flex items-center gap-4 w-full py-4 px-5 rounded-xl bg-surface-container-high hover:bg-surface-container-highest transition-all duration-200 active:scale-[0.98]"
       >
-        <span className="text-2xl shrink-0">{cfg.icon_emoji || '🎟'}</span>
+        <span className="text-2xl shrink-0">{cfg.emoji ?? cfg.icon_emoji ?? '🎟'}</span>
         <div className="flex-1 min-w-0">
           <p className="font-bold text-sm text-on-surface truncate">{cfg.label}</p>
           {cfg.description && (
@@ -1172,7 +1169,7 @@ function EventCalendarBlock({ block, events, discoverySource }: { block: PageBlo
   )
 }
 
-function PastEventsGalleryBlock({ block, events, discoverySource }: { block: PageBlock; events: Event[]; discoverySource: 'creator_link' | 'platform_discovery' }) {
+function PastEventsGalleryBlock({ block, events, discoverySource }: { block: PageBlock; events: (Event & { attendee_count?: number })[]; discoverySource: 'creator_link' | 'platform_discovery' }) {
   const cfg = block.config as unknown as PastEventsGalleryConfig
   if (events.length === 0) return null
 
@@ -1196,7 +1193,10 @@ function PastEventsGalleryBlock({ block, events, discoverySource }: { block: Pag
               )}
               <div className="flex-1 min-w-0">
                 <p className="font-semibold text-sm text-on-surface truncate group-hover:text-primary transition-colors">{ev.title}</p>
-                <p className="text-xs text-on-surface-variant" suppressHydrationWarning>{formatShortDate(ev.starts_at)}</p>
+                <p className="text-xs text-on-surface-variant" suppressHydrationWarning>
+                  {formatShortDate(ev.starts_at)}
+                  {cfg.show_attendee_count && ev.attendee_count != null && ` · ${ev.attendee_count} attended`}
+                </p>
               </div>
             </a>
           ))}
@@ -1225,7 +1225,10 @@ function PastEventsGalleryBlock({ block, events, discoverySource }: { block: Pag
             <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
             <div className="absolute bottom-0 left-0 right-0 p-3">
               <p className="text-white text-xs font-bold line-clamp-2 leading-snug">{ev.title}</p>
-              <p className="text-white/60 text-[10px] mt-0.5" suppressHydrationWarning>{formatShortDate(ev.starts_at)}</p>
+              <p className="text-white/60 text-[10px] mt-0.5" suppressHydrationWarning>
+                {formatShortDate(ev.starts_at)}
+                {cfg.show_attendee_count && ev.attendee_count != null && ` · ${ev.attendee_count} attended`}
+              </p>
             </div>
           </a>
         ))}
@@ -2352,13 +2355,14 @@ interface PublicProfilePageProps {
   blocks:               PageBlock[]
   upcomingEvents:       Event[]
   calendarEvents?:      Event[]
-  pastEvents?:          Event[]
+  pastEvents?:          (Event & { attendee_count?: number })[]
   seriesEvents?:        Event[]
-  instagramThumbnails?: Record<string, string>
   testimonials?:        PublicTestimonial[]
   substackPosts?:       Record<string, SubstackPost[]>
+  bookingCapacity?:     { slots_filled: number; effective_status: 'open' | 'closed' | 'waitlist' } | null
   decryptedUpiVpa?:     string | null
   venueData?:           Record<string, VenueSummary>
+  shopTheLookProducts?: Record<string, ShopTheLookProduct>
   theme?:               ProfileTheme
   isFollowing?:         boolean
   viewerIsExplorer?:    boolean
@@ -2380,11 +2384,12 @@ const PublicProfilePage = React.memo(function PublicProfilePage({
   calendarEvents = [],
   pastEvents = [],
   seriesEvents = [],
-  instagramThumbnails = {},
   testimonials = [],
   substackPosts = {},
+  bookingCapacity = null,
   decryptedUpiVpa = null,
   venueData = {},
+  shopTheLookProducts = {},
   theme,
   isFollowing = false,
   viewerIsExplorer = false,
@@ -2714,14 +2719,18 @@ const PublicProfilePage = React.memo(function PublicProfilePage({
                 </ClickTracker>
               )
             case 'instagram_embed':
-            case 'instagram_post': {
-              const cfg = block.config as unknown as InstagramEmbedConfig
+            case 'instagram_post':
               return (
                 <ClickTracker key={block.id} blockId={block.id} creatorId={profile.id}>
-                  <InstagramBlock block={block} thumbnail={instagramThumbnails[cfg.post_url ?? '']} />
+                  <InstagramBlock block={block} />
                 </ClickTracker>
               )
-            }
+            case 'instagram_feed':
+              return (
+                <ClickTracker key={block.id} blockId={block.id} creatorId={profile.id}>
+                  <InstagramFeedBlock block={block} />
+                </ClickTracker>
+              )
             case 'event_listing':
               return upcomingEvents.length > 0 ? (
                 <ClickTracker key={block.id} blockId={block.id} creatorId={profile.id}>
@@ -2986,6 +2995,7 @@ const PublicProfilePage = React.memo(function PublicProfilePage({
                   label={cfg.label}
                   description={cfg.description}
                   categories={cfg.categories ?? []}
+                  capacityStatus={bookingCapacity?.effective_status}
                 />
               )
             }
@@ -3060,6 +3070,18 @@ const PublicProfilePage = React.memo(function PublicProfilePage({
                   key={block.id}
                   tiers={cfg.tiers ?? []}
                   heading={cfg.heading}
+                  accent={accent}
+                />
+              )
+            }
+            case 'shop_the_look': {
+              const cfg = block.config as unknown as ShopTheLookConfig
+              return (
+                <ShopTheLookBlock
+                  key={block.id}
+                  title={cfg.title}
+                  items={cfg.items ?? []}
+                  products={shopTheLookProducts}
                   accent={accent}
                 />
               )
