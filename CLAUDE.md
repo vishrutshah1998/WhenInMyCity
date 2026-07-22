@@ -85,3 +85,48 @@ mobile breakpoint. Reuse these — do NOT add new dependencies for things alread
   the moment any authenticated non-admin client-side upload/download is added against this bucket.
   Recreate the four policies (scoped to `bucket_id = 'venue-covers'`) before adding that kind of
   access — do not assume RLS is already covering this bucket.
+- **`digital_purchases` has webhook reconciliation but no cron-based orphan sweep.** The Razorpay
+  webhook handler (`/api/webhooks/razorpay/route.ts`) now handles `payment.captured`/`payment.failed`
+  for `digital_purchases` too (falls through to it when an order id isn't found in `rsvps`), covering
+  both `DigitalProductBlock` and `ShopTheLookBlock` (they share `initiateDigitalPurchase`/
+  `confirmDigitalPurchase`). This closes the "tab closed before the client callback fires" gap for the
+  webhook path specifically. **What's still missing:** `rsvps` has a second safety net —
+  `/api/cron/reconcile-payments` sweeps `payment_status='pending'` rows older than 15 minutes and
+  asks Razorpay's API directly, catching cases where the webhook itself was never delivered (not just
+  delayed). No equivalent sweep exists for `digital_purchases`; a purchase whose webhook delivery is
+  lost entirely (not just delayed) will stay `pending` forever with no second chance. Deliberately not
+  built in this pass: crons are not currently executing in production, so adding one now would be
+  inert without anyone knowing — flagged here as a decision, not an oversight. Build it (mirroring the
+  RSVP sweep, keyed off `razorpay_payment_id` via `fetchPaymentStatus`) once crons are confirmed
+  running, or if this task is specifically scoped in.
+- **Digital-product purchase flow is duplicated, not shared, between `DigitalProductBlock.tsx` and
+  `ShopTheLookBlock.tsx`.** Both independently implement `initiateDigitalPurchase` →
+  `loadRazorpay` → open checkout → `confirmDigitalPurchase`. Kept separate because Shop the Look
+  needs per-item state (multiple products in one block) vs. `DigitalProductBlock`'s single-product
+  state — extracting a shared hook wasn't worth it for two call sites at the time. Any future fix to
+  this flow (the webhook gap above, error-message wording, retry behavior, etc.) must be applied to
+  both files or they will silently drift apart. Worth extracting into a shared hook if a third
+  purchase-flow consumer appears.
+- **Instagram Connect (migration 060/061) is code-complete but gated on Meta App provisioning —
+  same blocker class as the earlier Razorpay-creds gap.** `INSTAGRAM_APP_ID`/`INSTAGRAM_APP_SECRET`
+  do not exist anywhere in this repo or `.env.local`; no Meta Developer App has been created yet.
+  Until one exists (with the `instagram_business_basic` scope, App Review or tester accounts added),
+  the OAuth flow (`initiateInstagramConnect` → `/api/instagram/callback`) cannot be exercised at all.
+  Built and reasoned through by code trace only, **not yet verified live**:
+  - Account-type gating (`getInstagramAccountType` in `src/app/actions/instagram.ts`, called from
+    the callback route) rejects Personal accounts before ever persisting a token, based on Meta's
+    documented `graph.instagram.com/me?fields=account_type` response shape (`BUSINESS` /
+    `MEDIA_CREATOR` / `PERSONAL`). Needs a real Business/Creator test account **and** a real
+    Personal test account to confirm both paths actually behave as coded.
+  - On-demand token refresh (`refreshInstagramTokenIfNeeded`, called from Studio and profile
+    settings page loads — replaced the daily cron) is guarded by a 7-day-to-expiry window and a
+    6-hour retry backoff (`instagram_last_refresh_attempt_at`). The guard logic is straightforward,
+    but real 60-day token expiry/refresh behavior can only be verified by waiting out a real
+    connection's lifecycle — cannot be simulated.
+  - The `instagram_feed` block and single-post `instagram_embed`/`instagram_post` blocks (now
+    rendering via Instagram's real `embed.js` widget instead of a static fallback card, see
+    `InstagramEmbedWidget.tsx` / `InstagramFeedPreview.tsx`) have never been checked against a live
+    Instagram account's actual data or against Instagram's widget script rendering behavior in a
+    real browser.
+  Do not tell a creator this feature works, or point a real creator account at it, until a Meta
+  Developer App exists and both account types have been connected and observed end-to-end.
