@@ -77,7 +77,7 @@ export async function completeExplorerOnboarding(payload: ExplorerPayload) {
         block_type: 'text_bio' as const,
         position: 0,
         is_visible: true,
-        config: { text: '' },
+        config: { body: '' },
       },
       {
         profile_id: user.id,

@@ -633,6 +633,77 @@ export async function rateEvent(
 }
 
 // ---------------------------------------------------------------------------
+// getCreatorReviews / getPublicTestimonials
+// ---------------------------------------------------------------------------
+
+export interface CreatorReview {
+  rating:        number
+  review:        string | null
+  rated_at:      string | null
+  event_title:   string
+  reviewer_name: string
+}
+
+/**
+ * Returns every rated review (from explorer_event_history) across all of a
+ * creator's events, newest first. Shared by the Testimonials dashboard page
+ * and the public-profile testimonial block.
+ */
+export async function getCreatorReviews(creatorId: string): Promise<CreatorReview[]> {
+  const admin = createAdminClient()
+
+  const { data: events } = await admin
+    .from('events')
+    .select('id, title')
+    .eq('creator_id', creatorId)
+
+  const eventIds = (events ?? []).map((e) => e.id)
+  const eventMap = Object.fromEntries((events ?? []).map((e) => [e.id, e.title]))
+
+  if (eventIds.length === 0) return []
+
+  const { data: histories } = await admin
+    .from('explorer_event_history')
+    .select('rating, review, rated_at, event_id, explorer_id')
+    .in('event_id', eventIds)
+    .not('rating', 'is', null)
+    .order('rated_at', { ascending: false })
+
+  if (!histories?.length) return []
+
+  const explorerIds = histories.map((h) => h.explorer_id)
+  const { data: explorers } = await admin
+    .from('explorer_profiles')
+    .select('id, display_name')
+    .in('id', explorerIds)
+
+  const explorerMap = Object.fromEntries((explorers ?? []).map((e) => [e.id, e.display_name]))
+
+  return histories
+    .filter((h): h is typeof h & { rating: number } => h.rating !== null)
+    .map((h) => ({
+      rating:        h.rating,
+      review:        h.review,
+      rated_at:      h.rated_at,
+      event_title:   eventMap[h.event_id] ?? 'Unknown event',
+      reviewer_name: explorerMap[h.explorer_id] ?? 'Anonymous',
+    }))
+}
+
+/**
+ * Public-profile-shaped subset of a creator's reviews: only those with
+ * written text, trimmed to the fields the testimonial block renders.
+ */
+export async function getPublicTestimonials(
+  creatorId: string,
+): Promise<{ rating: number; review: string; reviewer_name: string }[]> {
+  const reviews = await getCreatorReviews(creatorId)
+  return reviews
+    .filter((r): r is CreatorReview & { review: string } => !!r.review)
+    .map((r) => ({ rating: r.rating, review: r.review, reviewer_name: r.reviewer_name }))
+}
+
+// ---------------------------------------------------------------------------
 // triggerPostEventRating
 // ---------------------------------------------------------------------------
 

@@ -65,6 +65,7 @@ export function readSnapshot() {
       c_category:     sessionStorage.getItem(SK.c_category)   || '',
       c_city:         sessionStorage.getItem(SK.c_city)       || '',
       c_subtypes:     JSON.parse(sessionStorage.getItem(SK.c_subtypes) || '[]') as string[],
+      c_subtype_rank: JSON.parse(sessionStorage.getItem(SK.c_subtype_rank) || '[]') as string[],
       c_interests:    JSON.parse(sessionStorage.getItem(SK.c_interests) || '[]') as string[],
       c_platforms:    JSON.parse(sessionStorage.getItem(SK.c_platforms) || '[]') as string[],
       c_bio:          sessionStorage.getItem(SK.c_bio)        || '',

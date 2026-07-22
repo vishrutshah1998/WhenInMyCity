@@ -692,6 +692,76 @@ export async function searchVenues(
 }
 
 // ---------------------------------------------------------------------------
+// searchVenuesForPicker
+// ---------------------------------------------------------------------------
+
+export type VenuePickerSummary = {
+  id: string
+  name: string
+  city: string
+  cover_image_url: string | null
+  slug: string
+}
+
+/**
+ * Lightweight name search over active Venues, for the Venue Partnership
+ * block editor's picker. Unlike `searchVenues()`, this is not tier-gated or
+ * city-scoped — any authenticated creator building their page can look up
+ * a Venue that's already on WIMC to feature it.
+ */
+export async function searchVenuesForPicker(
+  query: string,
+): Promise<{ venues: VenuePickerSummary[]; error: string | null }> {
+  await requireAuth()
+
+  const trimmed = query.trim()
+  if (trimmed.length < 2) return { venues: [], error: null }
+
+  const admin = createAdminClient()
+
+  const { data, error } = await admin
+    .from('venue_profiles')
+    .select('id, name, city, cover_image_url, slug')
+    .eq('is_active', true)
+    .ilike('name', `%${trimmed}%`)
+    .order('total_events_hosted', { ascending: false })
+    .limit(8)
+
+  if (error) {
+    console.error('[searchVenuesForPicker]', error.message)
+    return { venues: [], error: 'Search failed. Please try again.' }
+  }
+
+  return { venues: data ?? [], error: null }
+}
+
+/**
+ * Resolves a list of Venue IDs into picker summaries — used to hydrate the
+ * Venue Partnership editor with the venues already saved on a block.
+ */
+export async function getVenueSummariesByIds(
+  ids: string[],
+): Promise<{ venues: VenuePickerSummary[]; error: string | null }> {
+  await requireAuth()
+
+  if (ids.length === 0) return { venues: [], error: null }
+
+  const admin = createAdminClient()
+
+  const { data, error } = await admin
+    .from('venue_profiles')
+    .select('id, name, city, cover_image_url, slug')
+    .in('id', ids)
+
+  if (error) {
+    console.error('[getVenueSummariesByIds]', error.message)
+    return { venues: [], error: 'Failed to load selected venues.' }
+  }
+
+  return { venues: data ?? [], error: null }
+}
+
+// ---------------------------------------------------------------------------
 // sendProposal
 // ---------------------------------------------------------------------------
 

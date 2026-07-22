@@ -11,12 +11,18 @@ import {
   CroppedPhotoSlot, tornEdgeClipPath,
 } from './primitives'
 import { cityCode, initials } from './utils'
-import { POSTER_MOODS, type PosterMood } from './moods'
 import { profileUrl } from '@/lib/profile-url'
 
 const WIDTH = 480
 const HEIGHT = 720
 const PAGE_BG = '#EFE7D8' // matches the onboarding reveal screen background — punch holes read as true holes
+
+const m = {
+  bg: '#FF6B35', fg: '#FFFFFF', accent: '#201A12',
+  chipBg: 'rgba(255,255,255,0.20)', chipFg: '#FFFFFF',
+  sub: 'rgba(255,255,255,0.78)', dash: 'rgba(255,255,255,0.45)',
+  blob: 'rgba(255,255,255,0.18)', blob2: 'rgba(32,26,18,0.10)',
+}
 
 export function CreatorPoster({
   displayName,
@@ -24,17 +30,14 @@ export function CreatorPoster({
   tags,
   photoUrl,
   handle,
-  mood,
 }: {
   displayName: string
   city: string
   tags: string[]
   photoUrl?: string | null
   handle: string
-  mood: PosterMood
 }) {
-  const m = POSTER_MOODS[mood]
-  const textureVariant = mood === 'editorial' ? 'dark' : 'light'
+  const textureVariant = 'light'
   const nameLines = displayName.split(/\s+/).reduce<string[]>((lines, word) => {
     if (lines.length === 0) return [word]
     const first = lines[0]

@@ -11,6 +11,7 @@ import { getUnreadMessageCount } from '@/app/actions/hub'
 import Link from 'next/link'
 import { WimcWordmark } from '@/components/WimcWordmark'
 import { getCategoryColors } from '@/lib/constants/categories'
+import { isLocalPlus } from '@/lib/tier'
 import type { CreatorType } from '@/types/database'
 
 // Map journey persona to a default accent when no creator_type is set
@@ -40,7 +41,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
     ;(profile as { user_tier: string }).user_tier = 'local'
   }
 
-  const isHubEnabled = profile.user_tier === 'local' || profile.user_tier === 'lantern' || profile.user_tier === 'beacon'
+  const isHubEnabled = isLocalPlus(profile.user_tier)
 
   // Compute the per-category accent color for sidebar + CSS variable
   const accentColor = profile.user_role === 'explorer'

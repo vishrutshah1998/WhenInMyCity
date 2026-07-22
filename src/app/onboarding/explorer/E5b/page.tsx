@@ -77,9 +77,8 @@ export default function E5bPage() {
           color:      '#F0EFF8',
           lineHeight: 1.05,
           margin:     '0 0 8px',
-          maxWidth:   480,
         }}>
-          How do you like<br />to explore?
+          How do you like to explore?
         </h1>
         <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 15, color: '#9896B0', margin: '0 0 40px', maxWidth: 400 }}>
           We&apos;ll use this to match your event feed.

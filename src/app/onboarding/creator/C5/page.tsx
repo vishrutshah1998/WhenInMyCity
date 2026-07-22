@@ -5,18 +5,21 @@ import { useRouter } from 'next/navigation'
 import { SK } from '@/lib/onboarding/session-keys'
 import { getCategoryConfig } from '@/lib/constants/categories'
 import { getCategoryColour } from '@/lib/onboarding/design-tokens'
+import { getSubtypePopularity } from '@/app/actions/onboarding'
 import type { CreatorType } from '@/types/database'
 import { CreatorEventTicket } from '@/components/onboarding/BoardingPassArtifact'
 
+const NOT_YET = 'not_yet'
 
 export default function C5Page() {
   const router = useRouter()
-  const [selected,  setSelected]  = useState<string[]>([])
-  const [category,  setCategory]  = useState('')
-  const [accent,    setAccent]    = useState('#F5A800')
-  const [advancing, setAdvancing] = useState(false)
-  const [name,      setName]      = useState('')
-  const [city,      setCity]      = useState('')
+  const [selected,   setSelected]   = useState<string[]>([])
+  const [category,   setCategory]   = useState('')
+  const [accent,     setAccent]     = useState('#F5A800')
+  const [advancing,  setAdvancing]  = useState(false)
+  const [name,       setName]       = useState('')
+  const [city,       setCity]       = useState('')
+  const [popularity, setPopularity] = useState<Record<string, number>>({})
 
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -32,14 +35,36 @@ export default function C5Page() {
       const saved = JSON.parse(sessionStorage.getItem(SK.c_subtypes) || '[]') as string[]
       if (saved.length > 0) setSelected(saved)
     } catch {}
+    if (cat) {
+      getSubtypePopularity(cat).then(setPopularity).catch(() => {})
+    }
   }, [router])
 
-  const options = useMemo(
-    () => getCategoryConfig(category as CreatorType)?.subTypes ?? [],
+  const categoryLabel = useMemo(
+    () => getCategoryConfig(category as CreatorType)?.label,
     [category],
   )
 
-  const NOT_YET = 'not_yet'
+  // Real pick-frequency ranking (from getSubtypePopularity) — most-picked
+  // first. "Not hosting events yet" is a meta opt-out, not a genre, so it's
+  // always pinned last regardless of popularity. Falls back to definition
+  // order (all-zero counts) before the popularity fetch resolves or when
+  // user_profiles has no data yet for this category.
+  const options = useMemo(() => {
+    const base = getCategoryConfig(category as CreatorType)?.subTypes ?? []
+    const real = base.filter(o => o.id !== NOT_YET)
+    const meta = base.filter(o => o.id === NOT_YET)
+    const ranked = [...real].sort((a, b) => (popularity[b.id] ?? 0) - (popularity[a.id] ?? 0))
+    return [...ranked, ...meta]
+  }, [category, popularity])
+
+  // Mirror the ranked order into sessionStorage so C5RightPanel's bubble
+  // field can size the most-picked subtype as the biggest bubble too.
+  useEffect(() => {
+    if (options.length === 0) return
+    try { sessionStorage.setItem(SK.c_subtype_rank, JSON.stringify(options.map(o => o.id))) } catch {}
+    window.dispatchEvent(new Event('ob-snap-update'))
+  }, [options])
 
   function toggle(val: string) {
     setSelected(prev => {
@@ -87,9 +112,8 @@ export default function C5Page() {
           color:      '#F0EFF8',
           lineHeight: 1.05,
           margin:     '0 0 8px',
-          maxWidth:   480,
         }}>
-          What do you<br />specialise in?
+          {categoryLabel ? `What kind of ${categoryLabel} are you into?` : 'What do you specialise in?'}
         </h1>
         <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 15, color: '#9896B0', margin: '0 0 32px', maxWidth: 400 }}>
           Pick everything that applies

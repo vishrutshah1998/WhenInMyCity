@@ -357,7 +357,7 @@ export default function V6Page() {
         }}>
           More amenities = more creator bookings
         </p>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: 60, padding: '0 24px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: 72, padding: '0 24px' }}>
           <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
             <button
               type="button"

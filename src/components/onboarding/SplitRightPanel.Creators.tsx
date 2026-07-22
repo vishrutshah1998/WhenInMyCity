@@ -1,11 +1,24 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { getCategoryColour, PAPER } from '@/lib/onboarding/design-tokens'
 import { CREATOR_CATEGORIES } from '@/lib/constants/categories'
+import { INTEREST_TAGS, INTEREST_CATEGORY_COLORS, type InterestCategory } from '@/lib/constants/interests'
 import ProfilePreview from '@/app/onboarding/creator/_components/ProfilePreview'
 import { BARCODE, getCityCoords, type Snap } from './SplitRightPanel.shared'
+
+// ── Category name sizing — scales down so the longest word still fits on one
+// line within the card's ~340px content width (380px card − 20px padding × 2).
+// Shorter labels (e.g. "Music") keep the full 80px treatment; long ones
+// (e.g. "Art & Photography") shrink so nothing gets clipped by the card edge.
+function fitCategoryFontSize(label: string): number {
+  const longestWord = label
+    .split(/\s+/)
+    .reduce((max, word) => Math.max(max, word.length), 1)
+  const size = 340 / (longestWord * 0.75)
+  return Math.max(30, Math.min(80, Math.round(size)))
+}
 
 // ── C3FlipCard — mounts fresh per catId so each selection gets its own flip ───
 // Phase 'back': card is face-down (back visible). 60ms after mount → 'flipping'
@@ -86,9 +99,9 @@ function C3FlipCard({
           <div style={{ padding: '8px 20px 0', overflow: 'hidden' }}>
             <span style={{
               fontFamily: "var(--font-syne), 'Outfit', sans-serif",
-              fontWeight: 900, fontSize: 80, color: accent, lineHeight: 1,
+              fontWeight: 900, fontSize: fitCategoryFontSize(category), color: accent, lineHeight: 1,
               textTransform: 'uppercase', letterSpacing: '-0.02em',
-              display: 'block', wordBreak: 'break-word',
+              display: 'block', wordBreak: 'normal', overflowWrap: 'break-word',
             }}>
               {category.toUpperCase()}
             </span>
@@ -318,6 +331,22 @@ interface C4Theme {
   badge:      string
   cardRotate: string
 }
+
+// Blend a hex colour toward white/black — used to derive a postcard gradient
+// from the creator's single category accent, so C4's artwork colour always
+// matches the accent set in C3 instead of switching per city.
+function hexToRgb(hex: string): [number, number, number] {
+  const h = hex.replace('#', '')
+  const n = parseInt(h.length === 3 ? h.split('').map(c => c + c).join('') : h, 16)
+  return [(n >> 16) & 255, (n >> 8) & 255, n & 255]
+}
+function mix(hex: string, target: [number, number, number], amount: number): string {
+  const [r, g, b] = hexToRgb(hex)
+  const rgb = [r, g, b].map((c, i) => Math.round(c + (target[i] - c) * amount))
+  return '#' + rgb.map(v => Math.max(0, Math.min(255, v)).toString(16).padStart(2, '0')).join('')
+}
+const lighten = (hex: string, amount: number) => mix(hex, [255, 255, 255], amount)
+const darken  = (hex: string, amount: number) => mix(hex, [0, 0, 0], amount)
 
 function getC4Theme(city: string): C4Theme {
   const T: Record<string, C4Theme> = {
@@ -992,14 +1021,27 @@ function CityLandmark({ city }: { city: string }) {
 
 // ── C4 — City Postcard ────────────────────────────────────────────────────────
 export function C4RightPanel({ snap }: { snap: Snap }) {
-  const city  = snap.c_city
-  const t     = getC4Theme(city)
+  const city   = snap.c_city
+  const cityT  = getC4Theme(city)
   const mono  = "var(--font-jetbrains-mono),'JetBrains Mono',monospace"
   const barlow = "var(--font-barlow),'Barlow Condensed',sans-serif"
   const outfit = "var(--font-syne),'Outfit',sans-serif"
 
-  // Detect dark panel themes (Varanasi, Mumbai)
-  const isDark = t.panelBg.startsWith('#1') || t.panelBg.startsWith('#0')
+  // Colour always comes from the creator's chosen category (set in C3) so the
+  // accent stays consistent through the rest of the flow — only the postcard's
+  // content (tagline, landmark, stamp text, texture, tilt) stays city-specific.
+  const accent = getCategoryColour(snap.c_category)
+  const t: C4Theme = {
+    ...cityT,
+    ink:     '#1A2744',
+    accent,
+    artGrad: `linear-gradient(155deg, ${lighten(accent, 0.35)} 0%, ${accent} 55%, ${darken(accent, 0.35)} 100%)`,
+    stampBg: lighten(accent, 0.88),
+  }
+
+  // Panel backdrop is always the shared cream — only the postcard face itself
+  // carries the palette, so it always renders in its light-mode form.
+  const isDark = false
 
   const artBg = t.artPattern
     ? `${t.artPattern}, ${t.artGrad}`
@@ -1009,20 +1051,10 @@ export function C4RightPanel({ snap }: { snap: Snap }) {
     <div style={{
       width: '100%', height: '100%',
       position: 'relative',
-      backgroundColor: t.panelBg,
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       padding: '40px 48px 40px 40px',
       overflow: 'hidden',
     }}>
-
-      {/* Faint crosshatch on light panels */}
-      {!isDark && (
-        <div style={{
-          position: 'absolute', inset: 0, pointerEvents: 'none',
-          backgroundImage: 'linear-gradient(rgba(26,39,68,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(26,39,68,0.03) 1px,transparent 1px)',
-          backgroundSize: '28px 28px',
-        }} />
-      )}
 
       {/* Keyframes for card reveal animation */}
       <style>{`
@@ -1167,11 +1199,20 @@ export function C4RightPanel({ snap }: { snap: Snap }) {
 
 // ── C5 — Floating Bubbles on Dark ────────────────────────────────────────────
 export function C5RightPanel({ snap }: { snap: Snap }) {
-  const catId       = snap.c_category
-  const catConfig   = CREATOR_CATEGORIES.find(c => c.id === catId)
-  const accent      = '#F5A800'
-  const selected    = snap.c_subtypes
-  const allSubTypes = catConfig?.subTypes ?? []
+  const catId     = snap.c_category
+  const catConfig = CREATOR_CATEGORIES.find(c => c.id === catId)
+  const accent    = getCategoryColour(catId)
+  const selected  = snap.c_subtypes
+  const rawSubTypes = catConfig?.subTypes ?? []
+
+  // POSITIONS below is sized largest-first, so ordering subtypes by real pick
+  // frequency (snap.c_subtype_rank, written by C5's popularity fetch) makes
+  // the most-picked subtype land in the biggest slot. Falls back to
+  // definition order if the ranking hasn't loaded/written yet.
+  const rank = snap.c_subtype_rank
+  const allSubTypes = rank.length > 0
+    ? [...rawSubTypes].sort((a, b) => rank.indexOf(a.id) - rank.indexOf(b.id))
+    : rawSubTypes
 
   // Split at " & " and take first part; if still > 16 chars take first 2 words
   function bubbleLabel(label: string): string {
@@ -1197,15 +1238,7 @@ export function C5RightPanel({ snap }: { snap: Snap }) {
       width: '100%', height: '100%',
       position: 'relative',
       overflow: 'hidden',
-      backgroundColor: '#050508',
     }}>
-      {/* Grain texture */}
-      <div style={{
-        position: 'absolute', inset: 0, pointerEvents: 'none',
-        backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")`,
-        opacity: 0.03,
-      }} />
-
       {/* One slot per subType: lit bubble when selected, ghost ring when not */}
       {allSubTypes.map((sub, i) => {
         const cfg = POSITIONS[i]
@@ -1221,14 +1254,14 @@ export function C5RightPanel({ snap }: { snap: Snap }) {
               width: size, height: size,
               ...posStyle,
               borderRadius: '50%',
-              background: `radial-gradient(circle, ${accent}1A, ${accent}0D)`,
-              border: `1.5px solid ${accent}55`,
+              background: `radial-gradient(circle, ${accent}40, ${accent}20)`,
+              border: `2px solid ${accent}90`,
               display: 'flex', flexDirection: 'column',
               alignItems: 'center', justifyContent: 'center',
               backdropFilter: 'blur(12px)',
               animation: `float ${5 + i * 0.7}s ease-in-out infinite`,
               animationDelay: delay,
-              boxShadow: `0 0 ${Math.round(size * 0.25)}px ${accent}15`,
+              boxShadow: `0 0 ${Math.round(size * 0.25)}px ${accent}25`,
             }}>
               <span style={{ fontSize: emojiPx, lineHeight: 1 }}>{sub.emoji}</span>
               <p style={{
@@ -1236,7 +1269,7 @@ export function C5RightPanel({ snap }: { snap: Snap }) {
                 fontWeight: 900,
                 fontSize,
                 letterSpacing: '0.08em', textTransform: 'uppercase',
-                color: accent, margin: '6px 0 0',
+                color: '#1A2744', margin: '6px 0 0',
                 textAlign: 'center',
                 padding: `0 ${Math.round(size * 0.1)}px`,
                 lineHeight: 1.2,
@@ -1254,8 +1287,8 @@ export function C5RightPanel({ snap }: { snap: Snap }) {
             width: Math.round(size * 0.55), height: Math.round(size * 0.55),
             ...posStyle,
             borderRadius: '50%',
-            border: '1px solid rgba(255,255,255,0.05)',
-            opacity: 0.2,
+            border: '1px solid rgba(26,39,68,0.10)',
+            opacity: 0.6,
           }} />
         )
       })}
@@ -1269,12 +1302,12 @@ export function C5RightPanel({ snap }: { snap: Snap }) {
         <div style={{
           fontFamily: "var(--font-syne), 'Outfit', sans-serif",
           fontWeight: 900, lineHeight: 0.8,
-          fontSize: 180, opacity: 0.02, color: 'white', marginLeft: -80,
+          fontSize: 180, opacity: 0.04, color: '#1A2744', marginLeft: -80,
         }}>VIBE</div>
         <div style={{
           fontFamily: "var(--font-syne), 'Outfit', sans-serif",
           fontWeight: 900, lineHeight: 0.8,
-          fontSize: 180, opacity: 0.03, color: accent, marginLeft: 160,
+          fontSize: 180, opacity: 0.06, color: accent, marginLeft: 160,
         }}>CHECK</div>
       </div>
 
@@ -1293,7 +1326,7 @@ export function C5RightPanel({ snap }: { snap: Snap }) {
 
 // ── C6 — Floating Platform Bubbles (platform selection) ──────────────────────
 export function C6RightPanel({ snap }: { snap: Snap }) {
-  const accent   = '#F5A800'
+  const accent   = getCategoryColour(snap.c_category)
   const selected = snap.c_platforms
 
   // icon filenames match /public/platform-icons/{file}.svg
@@ -1312,62 +1345,77 @@ export function C6RightPanel({ snap }: { snap: Snap }) {
     github:     { gradient: 'linear-gradient(135deg,#333333,#1a1a1a)', glow: 'rgba(200,200,200,0.2)', icon: 'github'     },
   }
 
-  // 12 positions in a centered 3-column layout, well within the panel bounds
-  const POSITIONS: Array<{ size: number; delay: string; left: string; top: string }> = [
-    { left: '8%',  top: '6%',  size: 100, delay: '0s'    },
-    { left: '38%', top: '4%',  size: 84,  delay: '0.7s'  },
-    { left: '66%', top: '7%',  size: 92,  delay: '1.4s'  },
-    { left: '15%', top: '30%', size: 80,  delay: '2.1s'  },
-    { left: '46%', top: '28%', size: 96,  delay: '0.35s' },
-    { left: '70%', top: '32%', size: 74,  delay: '1.05s' },
-    { left: '6%',  top: '56%', size: 92,  delay: '1.75s' },
-    { left: '36%', top: '53%', size: 72,  delay: '0.52s' },
-    { left: '66%', top: '57%', size: 82,  delay: '1.22s' },
-    { left: '14%', top: '76%', size: 76,  delay: '2.45s' },
-    { left: '44%', top: '74%', size: 64,  delay: '0.88s' },
-    { left: '68%', top: '76%', size: 72,  delay: '1.60s' },
-  ]
+  // Bubbles are arranged on a ring centered in the panel — radius grows and
+  // size shrinks slightly as more platforms are selected, so the cluster
+  // always reads as centered rather than pinned to a fixed top-left grid.
+  function getBubbleLayout(count: number): Array<{ left: number; top: number; size: number; delay: string }> {
+    if (count === 0) return []
+    if (count === 1) return [{ left: 50, top: 50, size: 150, delay: '0s' }]
+
+    const radius = Math.min(34, 16 + count * 2)
+    const size   = Math.max(64, 118 - count * 6)
+    return Array.from({ length: count }, (_, i) => {
+      const angle = (2 * Math.PI * i) / count - Math.PI / 2
+      return {
+        left:  50 + radius * Math.cos(angle),
+        top:   50 + radius * Math.sin(angle),
+        size,
+        delay: `${((i * 0.35) % 2.4).toFixed(2)}s`,
+      }
+    })
+  }
+
+  const POSITIONS = getBubbleLayout(selected.length)
 
   return (
     <div style={{
       width: '100%', height: '100%',
       position: 'relative',
       overflow: 'hidden',
-      backgroundColor: '#0A0812',
     }}>
-      {/* Subtle dot grid bg */}
+      {/* Central hub — the ring the platform cluster orbits */}
       <div style={{
-        position: 'absolute', inset: 0,
-        backgroundImage: `radial-gradient(rgba(245,168,0,0.08) 1px, transparent 0)`,
-        backgroundSize: '32px 32px',
+        position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)',
+        width: '22%', aspectRatio: '1', minWidth: 90, maxWidth: 160,
+        borderRadius: '50%', border: `1px dashed ${accent}30`,
         pointerEvents: 'none',
       }} />
 
-      {/* Floating selected platform bubbles — all of them */}
+      {/* Floating selected platform bubbles — all of them, centered as a cluster.
+          Positioning (translate -50%/-50%) lives on the outer wrapper and the
+          float animation (which sets its own transform) lives on the inner
+          div, since animated transform keyframes fully replace an inline
+          transform rather than composing with it. */}
       {selected.map((platform, i) => {
         const meta = PLATFORM_META[platform] ?? PLATFORM_META.website
-        const pos  = POSITIONS[i % POSITIONS.length]
-        const { size, delay, ...posStyle } = pos
+        const pos  = POSITIONS[i]
+        if (!pos) return null
+        const { size, delay, left, top } = pos
         return (
           <div key={platform} style={{
             position: 'absolute', width: size, height: size,
-            ...posStyle,
-            borderRadius: '50%',
-            background: meta.gradient,
-            boxShadow: `0 0 60px -8px ${meta.glow}`,
-            border: '1px solid rgba(255,255,255,0.15)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            animation: 'float 4s ease-in-out infinite',
-            animationDelay: delay,
+            left: `${left}%`, top: `${top}%`,
+            transform: 'translate(-50%, -50%)',
           }}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={`/platform-icons/${meta.icon}.svg`}
-              width={Math.round(size * 0.42)}
-              height={Math.round(size * 0.42)}
-              alt={platform}
-              style={{ objectFit: 'contain', filter: 'brightness(0) invert(1)' }}
-            />
+            <div style={{
+              width: '100%', height: '100%',
+              borderRadius: '50%',
+              background: meta.gradient,
+              boxShadow: `0 0 60px -8px ${meta.glow}`,
+              border: '1px solid rgba(26,39,68,0.15)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              animation: 'float 4s ease-in-out infinite',
+              animationDelay: delay,
+            }}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={`/platform-icons/${meta.icon}.svg`}
+                width={Math.round(size * 0.42)}
+                height={Math.round(size * 0.42)}
+                alt={platform}
+                style={{ objectFit: 'contain', filter: 'brightness(0) invert(1)' }}
+              />
+            </div>
           </div>
         )
       })}
@@ -1388,12 +1436,12 @@ export function C6RightPanel({ snap }: { snap: Snap }) {
         position: 'absolute', bottom: 0, left: 0, width: '100%',
         padding: '12px 16px',
         display: 'flex', alignItems: 'center', gap: 8,
-        borderTop: '1px solid rgba(255,255,255,0.06)',
+        borderTop: '1px solid rgba(26,39,68,0.10)',
       }}>
         <div style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: accent, flexShrink: 0 }} />
         <span style={{
           fontFamily: "var(--font-jetbrains-mono), 'JetBrains Mono', monospace",
-          fontSize: 10, color: 'rgba(255,255,255,0.5)',
+          fontSize: 10, color: 'rgba(26,39,68,0.55)',
         }}>
           PLATFORMS_SELECTED: {selected.length}
         </span>
@@ -1402,84 +1450,162 @@ export function C6RightPanel({ snap }: { snap: Snap }) {
   )
 }
 
-// ── C7 — Floating Platform Bubbles ────────────────────────────────────────────
-export function C7RightPanel({ snap }: { snap: Snap }) {
-  const accent   = '#F5A800'
-  const selected = snap.c_platforms
-
-  const PLATFORM_STYLES: Record<string, { gradient: string; glow: string; icon: string }> = {
-    instagram:  { gradient: 'linear-gradient(135deg,#E1306C,#833AB4,#F56040)', glow: 'rgba(225,48,108,0.6)',  icon: 'photo_camera' },
-    youtube:    { gradient: 'linear-gradient(135deg,#FF0000,#CC0000)',          glow: 'rgba(255,0,0,0.4)',     icon: 'play_circle'  },
-    soundcloud: { gradient: 'linear-gradient(135deg,#FF3300,#FF8800)',          glow: 'rgba(255,51,0,0.6)',    icon: 'cloud'        },
-    spotify:    { gradient: 'linear-gradient(135deg,#1DB954,#159c46)',          glow: 'rgba(29,185,84,0.5)',   icon: 'music_note'   },
-    x:          { gradient: 'linear-gradient(135deg,#1DA1F2,#0d8fd9)',          glow: 'rgba(29,161,242,0.5)', icon: 'close'        },
-    website:    { gradient: 'linear-gradient(135deg,#5DD9D0,#3ab5ac)',          glow: 'rgba(93,217,208,0.5)', icon: 'language'     },
+// ── C7 — Floating Interest Bubbles, orbiting a central marker ─────────────────
+// Deterministic per-tag PRNG so a given tag's size/placement roll is stable
+// across re-renders — only newly (de)selected tags visibly move.
+function c7Hash(id: string): number {
+  let h = 0
+  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) | 0
+  return h
+}
+function c7Rand(seed: number): () => number {
+  let s = seed | 0
+  return () => {
+    s = (s + 0x6D2B79F5) | 0
+    let t = Math.imul(s ^ (s >>> 15), 1 | s)
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296
   }
+}
 
-  const bubblePositions: Array<{ size: number; delay: string; left?: string; top?: string; right?: string; bottom?: string }> = [
-    { left: '20%', top:    '30%', size: 128, delay: '0s'  },
-    { right: '25%', bottom: '25%', size: 160, delay: '1.5s' },
-    { left: '50%', top:    '15%', size: 96,  delay: '0.8s' },
-  ]
+interface C7Bubble { id: string; x: number; y: number; size: number }
+
+// Places one bubble per selected tag around the central marker, inside an
+// ellipse that fills the panel. Angle is drawn uniformly over the full circle
+// (so coverage is never biased to one side) and radius is biased outward from
+// a "keep-clear" zone around the centre so bubbles read as orbiting the marker
+// rather than scattered at random. Still rejection-samples for overlap, with
+// bubbles shrinking as the count grows and a grid fallback if space runs out.
+function layoutC7Bubbles(ids: string[], width: number, height: number, ringR: number): C7Bubble[] {
+  if (!width || !height || ids.length === 0) return []
+  const count    = ids.length
+  const baseSize = Math.max(40, Math.min(110, 560 / Math.sqrt(count + 3)))
+  const pad      = 14
+  const cx = width / 2, cy = height / 2
+  const rx = Math.max(1, width / 2 - pad)
+  const ry = Math.max(1, height / 2 - pad)
+  const placed: C7Bubble[] = []
+
+  ids.forEach(id => {
+    const rand    = c7Rand(c7Hash(id))
+    const size    = Math.round(baseSize * (0.78 + rand() * 0.5))
+    const minFrac = Math.min(0.92, (ringR + size / 2 + 16) / Math.max(rx, ry))
+    let   spot: { x: number; y: number } | null = null
+
+    for (let attempt = 0; attempt < 30 && !spot; attempt++) {
+      const angle = rand() * Math.PI * 2
+      const frac  = minFrac + rand() * (1 - minFrac)
+      const rawX  = cx + Math.cos(angle) * rx * frac
+      const rawY  = cy + Math.sin(angle) * ry * frac
+      const x     = Math.min(width  - size / 2 - pad, Math.max(size / 2 + pad, rawX))
+      const y     = Math.min(height - size / 2 - pad, Math.max(size / 2 + pad, rawY))
+      const collides = placed.some(p => {
+        const dx = p.x - x, dy = p.y - y
+        const minDist = (p.size + size) / 2 + 8
+        return dx * dx + dy * dy < minDist * minDist
+      })
+      if (!collides) spot = { x, y }
+    }
+    if (!spot) {
+      // Ran out of room — fall back to the least-crowded coarse grid cell so
+      // the bubble still lands somewhere sane instead of stacking exactly.
+      const cols = Math.max(1, Math.floor(width / (baseSize * 0.7)))
+      const idx  = placed.length
+      spot = {
+        x: Math.min(width  - size / 2 - pad, pad + size / 2 + (idx % cols) * (baseSize * 0.7)),
+        y: Math.min(height - size / 2 - pad, pad + size / 2 + Math.floor(idx / cols) * (baseSize * 0.7)),
+      }
+    }
+    placed.push({ id, x: spot.x, y: spot.y, size })
+  })
+
+  return placed
+}
+
+export function C7RightPanel({ snap }: { snap: Snap }) {
+  const selected = snap.c_interests
+  const accent   = getCategoryColour(snap.c_category)
+  const containerRef = useRef<HTMLDivElement>(null)
+  const [dims, setDims] = useState({ w: 0, h: 0 })
+
+  useEffect(() => {
+    const el = containerRef.current
+    if (!el) return
+    const update = () => setDims({ w: el.clientWidth, h: el.clientHeight })
+    update()
+    const ro = new ResizeObserver(update)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
+
+  const ringR = Math.min(dims.w, dims.h) * 0.17
+  const bubbles = useMemo(
+    () => layoutC7Bubbles(selected, dims.w, dims.h, ringR),
+    [selected, dims.w, dims.h, ringR],
+  )
 
   return (
-    <div style={{
+    <div ref={containerRef} style={{
       width: '100%', height: '100%',
       position: 'relative',
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
       overflow: 'hidden',
-      backgroundColor: '#0A0812',
     }}>
-      {/* Ghost grid bg */}
+      {/* Central marker — anchors the orbiting bubbles and carries the
+          creator's overall category accent (bubbles carry their own
+          per-interest-category accent, see below). */}
       <div style={{
-        position: 'absolute', inset: 0, opacity: 0.1,
-        display: 'grid',
-        gridTemplateColumns: 'repeat(4, 1fr)',
-        gridTemplateRows: 'repeat(3, 1fr)',
-        gap: 40, padding: 40,
+        position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)',
+        width: ringR * 2, height: ringR * 2,
+        borderRadius: '50%', border: `1px solid ${accent}30`,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        pointerEvents: 'none',
       }}>
-        {Array.from({ length: 12 }).map((_, i) => (
-          <div key={i} style={{ borderRadius: '50%', border: `1px solid ${accent}4D` }} />
-        ))}
+        <div style={{
+          position: 'absolute', inset: 10, borderRadius: '50%',
+          border: `1.5px dashed ${accent}40`,
+        }} />
+        <div style={{ textAlign: 'center' }}>
+          <div style={{
+            fontFamily: "var(--font-jetbrains-mono), 'JetBrains Mono', monospace",
+            fontWeight: 700, fontSize: 11, letterSpacing: '0.35em',
+            color: accent, marginBottom: 6,
+          }}>
+            SCENE
+          </div>
+          <div style={{
+            fontFamily: "var(--font-jetbrains-mono), 'JetBrains Mono', monospace",
+            fontSize: 9, letterSpacing: '0.1em', color: 'rgba(26,39,68,0.45)',
+          }}>
+            {selected.length} SYNCED
+          </div>
+        </div>
       </div>
 
-      {/* Floating selected platform bubbles */}
-      {selected.slice(0, 3).map((platform, i) => {
-        const s   = PLATFORM_STYLES[platform.toLowerCase()] ?? PLATFORM_STYLES.website
-        const pos = bubblePositions[i]
-        const { size, delay, ...posStyle } = pos
+      {/* Floating bubbles for every selected scene tag — one non-overlapping,
+          category-coloured slot per tag, orbiting the central marker above
+          (see layoutC7Bubbles). */}
+      {bubbles.map(b => {
+        const tag = INTEREST_TAGS.find(t => t.id === b.id)
+        if (!tag) return null
+        const color = INTEREST_CATEGORY_COLORS[tag.category as InterestCategory] ?? accent
         return (
-          <div key={platform} style={{
-            position: 'absolute', width: size, height: size,
-            ...posStyle,
+          <div key={b.id} style={{
+            position: 'absolute',
+            width: b.size, height: b.size,
+            left: b.x - b.size / 2, top: b.y - b.size / 2,
             borderRadius: '50%',
-            background: s.gradient,
-            boxShadow: `0 0 80px -10px ${s.glow}`,
-            border: '1px solid rgba(255,255,255,0.2)',
+            background: `radial-gradient(circle, ${color}45, ${color}20)`,
+            boxShadow: `0 0 40px -12px ${color}80`,
+            border: `2px solid ${color}90`,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
+            backdropFilter: 'blur(10px)',
             animation: 'float 4s ease-in-out infinite',
-            animationDelay: delay,
+            animationDelay: `${(c7Hash(b.id) % 20) / 10}s`,
           }}>
-            <span className="material-symbols-outlined" style={{ fontSize: size * 0.35, color: 'white' }}>
-              {s.icon}
-            </span>
+            <span style={{ fontSize: b.size * 0.34, lineHeight: 1 }}>{tag.emoji}</span>
           </div>
         )
       })}
-
-      {/* Decorative particles */}
-      <div style={{
-        position: 'absolute', left: '45%', top: '15%',
-        width: 8, height: 8, borderRadius: '50%',
-        backgroundColor: accent, filter: 'blur(2px)',
-        animation: 'float 3s ease-in-out infinite',
-      }} />
-      <div style={{
-        position: 'absolute', right: '15%', top: '45%',
-        width: 12, height: 12, borderRadius: '50%',
-        backgroundColor: `${accent}80`, filter: 'blur(4px)',
-        animation: 'float 5s ease-in-out infinite', animationDelay: '0.5s',
-      }} />
 
       {/* Watermark */}
       <div style={{
@@ -1487,7 +1613,7 @@ export function C7RightPanel({ snap }: { snap: Snap }) {
         fontFamily: "var(--font-syne), 'Outfit', sans-serif",
         fontWeight: 900, lineHeight: 1,
         userSelect: 'none', pointerEvents: 'none',
-        fontSize: 500, opacity: 0.03, color: accent,
+        fontSize: 500, opacity: 0.05, color: accent,
       }}>
         07
       </div>
@@ -1497,24 +1623,24 @@ export function C7RightPanel({ snap }: { snap: Snap }) {
         position: 'absolute', bottom: 0, left: 0, width: '100%',
         padding: '12px 16px',
         display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-        borderTop: '1px solid rgba(255,255,255,0.06)',
+        borderTop: '1px solid rgba(26,39,68,0.10)',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <div style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: accent }} />
           <span style={{
             fontFamily: "var(--font-jetbrains-mono), 'JetBrains Mono', monospace",
             fontSize: 10, opacity: 0.6,
-            color: 'rgba(255,255,255,0.6)',
+            color: 'rgba(26,39,68,0.60)',
           }}>
-            LINKING ASSETS...
+            MAPPING YOUR SCENE...
           </span>
         </div>
         <span style={{
           fontFamily: "var(--font-jetbrains-mono), 'JetBrains Mono', monospace",
           fontSize: 10, opacity: 0.4,
-          color: 'rgba(255,255,255,0.4)',
+          color: 'rgba(26,39,68,0.45)',
         }}>
-          {selected.length} / 5 SELECTED
+          {selected.length} SELECTED
         </span>
       </div>
     </div>

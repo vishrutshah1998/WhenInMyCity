@@ -19,11 +19,21 @@ const CATEGORY_LABELS: Record<string, string> = {
   food_culture: 'Food & Culture',
   outdoors:     'Outdoors',
 }
+const CATEGORY_ICONS: Record<string, string> = {
+  performance:  'theater_comedy',
+  arts:         'palette',
+  education:    'school',
+  lifestyle:    'self_improvement',
+  tech:         'business_center',
+  food_culture: 'restaurant',
+  outdoors:     'park',
+}
 
 export default function E5Page() {
   const router = useRouter()
-  const [selected,    setSelected]    = useState<string[]>([])
-  const [isAdvancing, setIsAdvancing] = useState(false)
+  const [selected,       setSelected]       = useState<string[]>([])
+  const [openCategories, setOpenCategories] = useState<Set<string>>(new Set([CATEGORY_ORDER[0]]))
+  const [isAdvancing,    setIsAdvancing]    = useState(false)
 
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -32,7 +42,13 @@ export default function E5Page() {
     if (!cityVal) { router.replace('/onboarding/explorer/E4'); return }
     try {
       const saved = JSON.parse(sessionStorage.getItem(SK.e_interests) || '[]') as string[]
-      if (saved.length > 0) setSelected(saved)
+      if (saved.length > 0) {
+        setSelected(saved)
+        const autoOpen = CATEGORY_ORDER.filter(cat =>
+          INTEREST_TAGS.some(tag => tag.category === cat && saved.includes(tag.id))
+        )
+        if (autoOpen.length > 0) setOpenCategories(new Set(autoOpen))
+      }
     } catch {}
   }, [router])
 
@@ -46,9 +62,22 @@ export default function E5Page() {
 
   function toggle(id: string) {
     setSelected(prev => {
-      if (prev.includes(id)) return prev.filter(t => t !== id)
-      if (prev.length >= MAX_TAGS) return prev
-      return [...prev, id]
+      let next: string[]
+      if (prev.includes(id)) next = prev.filter(t => t !== id)
+      else if (prev.length >= MAX_TAGS) next = prev
+      else next = [...prev, id]
+      try { sessionStorage.setItem(SK.e_interests, JSON.stringify(next)) } catch {}
+      window.dispatchEvent(new Event('ob-snap-update'))
+      return next
+    })
+  }
+
+  function toggleCategory(id: string) {
+    setOpenCategories(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
     })
   }
 
@@ -71,9 +100,8 @@ export default function E5Page() {
           color:      '#F0EFF8',
           lineHeight: 1.05,
           margin:     '0 0 8px',
-          maxWidth:   480,
         }}>
-          What do you<br />want to discover?
+          What do you want to discover?
         </h1>
         <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 15, color: '#9896B0', margin: '0 0 4px', maxWidth: 400 }}>
           Pick 3–5 things that pull you in.
@@ -82,54 +110,111 @@ export default function E5Page() {
           {selected.length}/{MAX_TAGS} selected{atLimit ? ' — limit reached' : ''}
         </p>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 28, maxWidth: 560 }}>
-          {CATEGORY_ORDER.filter(cat => grouped[cat]).map(cat => (
-            <div key={cat}>
-              <div style={{
-                fontFamily:    "var(--font-jetbrains-mono), 'JetBrains Mono', monospace",
-                fontSize:      9,
-                fontWeight:    700,
-                color:         ACCENT,
-                letterSpacing: '0.2em',
-                textTransform: 'uppercase',
-                marginBottom:  10,
-              }}>
-                {CATEGORY_LABELS[cat] ?? cat}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxWidth: 560 }}>
+          {CATEGORY_ORDER.filter(cat => grouped[cat]).map(cat => {
+            const isOpen   = openCategories.has(cat)
+            const catCount = grouped[cat].filter(tag => selected.includes(tag.id)).length
+            return (
+              <div key={cat} style={{ background: 'rgba(255,255,255,0.02)', border: `1px dashed ${ACCENT}20` }}>
+                <button
+                  type="button"
+                  onClick={() => toggleCategory(cat)}
+                  style={{
+                    width:        '100%',
+                    display:      'flex', alignItems: 'center', gap: 10,
+                    padding:      '10px 14px',
+                    background:   isOpen ? `${ACCENT}08` : 'transparent',
+                    border:       'none', cursor: 'pointer',
+                    borderBottom: isOpen ? `1px solid ${ACCENT}20` : 'none',
+                    transition:   'background 150ms',
+                  }}
+                >
+                  <span
+                    className="material-symbols-outlined"
+                    style={{
+                      fontSize:             16, lineHeight: 1,
+                      color:                catCount > 0 ? ACCENT : 'rgba(255,255,255,0.28)',
+                      fontVariationSettings: catCount > 0 ? "'FILL' 1" : "'FILL' 0",
+                      transition:           'all 150ms',
+                    }}
+                  >
+                    {CATEGORY_ICONS[cat] ?? 'category'}
+                  </span>
+                  <span style={{
+                    fontFamily:    "var(--font-jetbrains-mono), 'JetBrains Mono', monospace",
+                    fontSize:      9,
+                    fontWeight:    700,
+                    color:         catCount > 0 ? '#F0EFF8' : ACCENT,
+                    letterSpacing: '0.2em',
+                    textTransform: 'uppercase',
+                    flex:          1, textAlign: 'left',
+                    transition:    'color 150ms',
+                  }}>
+                    {CATEGORY_LABELS[cat] ?? cat}
+                  </span>
+                  {catCount > 0 && (
+                    <span style={{
+                      fontFamily: "var(--font-jetbrains-mono), 'JetBrains Mono', monospace",
+                      fontSize:   9,
+                      color:      ACCENT,
+                      background: `${ACCENT}20`,
+                      padding:    '2px 8px', borderRadius: 999,
+                      flexShrink: 0,
+                    }}>
+                      {catCount}
+                    </span>
+                  )}
+                  <span
+                    className="material-symbols-outlined"
+                    style={{
+                      fontSize:   16, lineHeight: 1,
+                      color:      'rgba(255,255,255,0.22)',
+                      transform:  isOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+                      transition: 'transform 200ms',
+                      flexShrink: 0,
+                    }}
+                  >
+                    expand_more
+                  </span>
+                </button>
+
+                {isOpen && (
+                  <div style={{ padding: '12px 14px', display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                    {grouped[cat].map(tag => {
+                      const isSel      = selected.includes(tag.id)
+                      const isDisabled = !isSel && atLimit
+                      return (
+                        <button
+                          key={tag.id}
+                          type="button"
+                          onClick={() => toggle(tag.id)}
+                          disabled={isDisabled}
+                          style={{
+                            padding:      '8px 14px',
+                            borderRadius: 9999,
+                            border:       `1px solid ${isSel ? ACCENT : 'rgba(155,143,255,0.25)'}`,
+                            background:   isSel ? 'rgba(155,143,255,0.15)' : 'transparent',
+                            color:        isSel ? ACCENT : isDisabled ? 'rgba(255,255,255,0.20)' : 'rgba(255,255,255,0.60)',
+                            fontFamily:   "'DM Sans', sans-serif",
+                            fontWeight:   500,
+                            fontSize:     13,
+                            cursor:       isDisabled ? 'not-allowed' : 'pointer',
+                            transition:   'all 150ms',
+                            display:      'flex',
+                            alignItems:   'center',
+                            gap:          5,
+                          }}
+                        >
+                          <span>{tag.emoji}</span>
+                          {tag.label}
+                        </button>
+                      )
+                    })}
+                  </div>
+                )}
               </div>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                {grouped[cat].map(tag => {
-                  const isSel     = selected.includes(tag.id)
-                  const isDisabled = !isSel && atLimit
-                  return (
-                    <button
-                      key={tag.id}
-                      type="button"
-                      onClick={() => toggle(tag.id)}
-                      disabled={isDisabled}
-                      style={{
-                        padding:      '8px 14px',
-                        borderRadius: 9999,
-                        border:       `1px solid ${isSel ? ACCENT : 'rgba(155,143,255,0.25)'}`,
-                        background:   isSel ? 'rgba(155,143,255,0.15)' : 'transparent',
-                        color:        isSel ? ACCENT : isDisabled ? 'rgba(255,255,255,0.20)' : 'rgba(255,255,255,0.60)',
-                        fontFamily:   "'DM Sans', sans-serif",
-                        fontWeight:   500,
-                        fontSize:     13,
-                        cursor:       isDisabled ? 'not-allowed' : 'pointer',
-                        transition:   'all 150ms',
-                        display:      'flex',
-                        alignItems:   'center',
-                        gap:          5,
-                      }}
-                    >
-                      <span>{tag.emoji}</span>
-                      {tag.label}
-                    </button>
-                  )
-                })}
-              </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
       </div>
 

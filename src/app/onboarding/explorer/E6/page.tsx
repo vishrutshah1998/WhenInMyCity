@@ -74,9 +74,8 @@ export default function E6Page() {
           color:      '#F0EFF8',
           lineHeight: 1.05,
           margin:     '0 0 8px',
-          maxWidth:   480,
         }}>
-          Would you consider<br />hosting an event?
+          Would you consider hosting an event?
         </h1>
         <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 15, color: '#9896B0', margin: '0 0 32px', maxWidth: 400 }}>
           Just a quick gut check — totally optional

@@ -12,7 +12,7 @@ import {
 import { notifyFollowersOfNewEvent, notifyNearbyExplorers } from '@/lib/notifications'
 import { sendWhatsAppMessage } from '@/lib/whatsapp'
 import { CreateEventSchema, type CreateEventInput } from '@/types/events'
-import type { Event, UserProfile } from '@/types/database'
+import type { Event, UserProfile, BookingRow } from '@/types/database'
 
 // ---------------------------------------------------------------------------
 // Internal slug helpers
@@ -350,6 +350,62 @@ export async function getCreatorEvents(creatorId: string): Promise<Event[]> {
   }
 
   return data ?? []
+}
+
+// ---------------------------------------------------------------------------
+// getCreatorEventsWithBookings / getPastEventsWithAttendance
+// ---------------------------------------------------------------------------
+
+function isPastEvent(e: Event): boolean {
+  return e.status === 'completed' || (e.status === 'published' && new Date(e.starts_at) <= new Date())
+}
+
+/**
+ * Fetches every event for a creator (any status) plus every captured RSVP
+ * across those events. Shared by the Events dashboard page and
+ * getPastEventsWithAttendance below.
+ */
+export async function getCreatorEventsWithBookings(
+  creatorId: string,
+): Promise<{ events: Event[]; bookings: BookingRow[] }> {
+  const supabase = await createClient()
+
+  const { data: events } = await supabase
+    .from('events')
+    .select('*')
+    .eq('creator_id', creatorId)
+    .order('starts_at', { ascending: false })
+
+  const eventIds = (events ?? []).map((e) => e.id)
+  const { data: bookingRows } = eventIds.length > 0
+    ? await supabase
+        .from('rsvps')
+        .select('id, event_id, attendee_name, payment_status, amount_paid, created_at')
+        .in('event_id', eventIds)
+        .eq('payment_status', 'captured')
+    : { data: [] }
+
+  return { events: events ?? [], bookings: (bookingRows ?? []) as unknown as BookingRow[] }
+}
+
+/**
+ * Returns a creator's past (completed, or published with a start date in the
+ * past) events with a captured-RSVP attendee count attached to each. Used by
+ * the public profile's past_events_gallery block.
+ */
+export async function getPastEventsWithAttendance(
+  creatorId: string,
+): Promise<(Event & { attendee_count: number })[]> {
+  const { events, bookings } = await getCreatorEventsWithBookings(creatorId)
+
+  const countByEvent: Record<string, number> = {}
+  for (const b of bookings) {
+    countByEvent[b.event_id] = (countByEvent[b.event_id] ?? 0) + 1
+  }
+
+  return events
+    .filter(isPastEvent)
+    .map((e) => ({ ...e, attendee_count: countByEvent[e.id] ?? 0 }))
 }
 
 // ---------------------------------------------------------------------------

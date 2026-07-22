@@ -589,6 +589,53 @@ export const CREATOR_DEFAULT_THEMES: Record<string, ProfileTheme> = {
     fontFamily: 'archivo-black',
     backgroundStyle: 'solid',
   },
+
+  // ── V3 creator categories (current CREATOR_CATEGORIES in categories.ts) ────
+  // Fuchsia aurora glow, performance energy — matches EXPLORER_SCENE_THEMES.dance below
+  dance: {
+    colorScheme: 'aurora',
+    fontFamily: 'archivo-black',
+    backgroundStyle: 'aurora',
+    auroraStyle: 'ripple',
+  },
+  // Warm off-white + sage green — wellness, calm
+  fitness_wellness: {
+    colorScheme: 'sage',
+    fontFamily: 'inter',
+    backgroundStyle: 'solid',
+  },
+  // Ink + burnt sienna — spice, warmth
+  food_culinary: {
+    colorScheme: 'sienna',
+    fontFamily: 'archivo-black',
+    backgroundStyle: 'solid',
+    noiseBg: true,
+  },
+  // Near-black warm-green — candlelit, meditative
+  spirituality: {
+    colorScheme: 'nightforest',
+    fontFamily: 'playfair',
+    backgroundStyle: 'solid',
+  },
+  // Deep navy + luminous cyan — maps, water, horizon
+  travel_adventure: {
+    colorScheme: 'ocean',
+    fontFamily: 'space-grotesk',
+    backgroundStyle: 'solid',
+  },
+  // Aged-paper light — writer / literary
+  literature_poetry: {
+    colorScheme: 'parchment',
+    fontFamily: 'playfair',
+    backgroundStyle: 'solid',
+  },
+  // Warm linen + clay — craft / pottery, tactile
+  crafts_making: {
+    colorScheme: 'terracotta',
+    fontFamily: 'inter',
+    backgroundStyle: 'solid',
+    noiseBg: true,
+  },
 }
 
 /**

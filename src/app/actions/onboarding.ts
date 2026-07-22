@@ -11,7 +11,8 @@ import {
   type Screen1Data,
   type Screen2Data,
 } from '@/types/onboarding'
-import type { SocialPlatform, Json, UserTier } from '@/types/database'
+import type { SocialPlatform, Json, UserTier, UserProfile, PageBlock, Event, CreatorType } from '@/types/database'
+import { resolveTheme, type ProfileTheme } from '@/types/theme'
 
 // ---------------------------------------------------------------------------
 // Internal helpers
@@ -58,6 +59,35 @@ export async function checkUsernameAvailable(
   }
 
   return { available: data === null }
+}
+
+// ---------------------------------------------------------------------------
+// getSubtypePopularity — public, no auth required. Real counts only — an
+// early/empty user_profiles table just yields {} and callers fall back to
+// definition order, never a fabricated ranking.
+// ---------------------------------------------------------------------------
+
+export async function getSubtypePopularity(category: string): Promise<Record<string, number>> {
+  if (!category) return {}
+
+  const admin = createAdminClient()
+  const { data, error } = await admin
+    .from('user_profiles')
+    .select('sub_types')
+    .eq('creator_type', category as CreatorType)
+
+  if (error || !data) {
+    if (error) console.error('[getSubtypePopularity]', error.message)
+    return {}
+  }
+
+  const counts: Record<string, number> = {}
+  for (const row of data) {
+    for (const subtype of row.sub_types ?? []) {
+      counts[subtype] = (counts[subtype] ?? 0) + 1
+    }
+  }
+  return counts
 }
 
 // ---------------------------------------------------------------------------
@@ -147,6 +177,14 @@ const DEFAULT_BLOCKS_BY_TYPE: Record<string, string[]> = {
   professional_portfolio: ['text_bio', 'social_links_row', 'creator_type_badge', 'event_listing'],
   community_impact:       ['text_bio', 'social_links_row', 'creator_type_badge', 'event_listing', 'community_stats'],
   exploring:              ['text_bio', 'social_links_row', 'event_listing'],
+  // V3 categories
+  dance:                  ['text_bio', 'social_links_row', 'creator_type_badge', 'event_listing'],
+  fitness_wellness:       ['text_bio', 'social_links_row', 'creator_type_badge', 'event_listing', 'community_stats'],
+  food_culinary:          ['text_bio', 'social_links_row', 'creator_type_badge', 'event_listing'],
+  spirituality:           ['text_bio', 'social_links_row', 'creator_type_badge', 'event_listing', 'community_stats'],
+  travel_adventure:       ['text_bio', 'social_links_row', 'creator_type_badge', 'event_listing'],
+  literature_poetry:      ['text_bio', 'social_links_row', 'creator_type_badge', 'event_listing'],
+  crafts_making:          ['text_bio', 'social_links_row', 'creator_type_badge', 'event_listing', 'booking_request'],
 }
 
 export async function completeOnboarding(
@@ -572,20 +610,40 @@ const SCHEME_PRESETS: Record<string, Json> = {
   aurora:   { colorScheme: 'aurora',   fontFamily: 'playfair',      backgroundStyle: 'aurora',   auroraStyle: 'nebula' },
   sage:     { colorScheme: 'sage',     fontFamily: 'inter',         backgroundStyle: 'solid' },
   mint:     { colorScheme: 'mint',     fontFamily: 'space-grotesk', backgroundStyle: 'solid' },
+  nightforest: { colorScheme: 'nightforest', fontFamily: 'playfair', backgroundStyle: 'solid' },
+  parchment:   { colorScheme: 'parchment',   fontFamily: 'playfair', backgroundStyle: 'solid' },
+  terracotta:  { colorScheme: 'terracotta',  fontFamily: 'inter',    backgroundStyle: 'solid', noiseBg: true },
 }
 
-// Default scheme per V2 creator type.
+// Default scheme per creator category. Covers both the legacy V2 taxonomy
+// (video_content, lifestyle_wellness, business_brand, professional_portfolio,
+// exploring — no longer selectable via onboarding, kept for old accounts)
+// and the current V3 CREATOR_CATEGORIES ids actually offered in C3
+// (music, comedy_theatre, dance, art_design, fitness_wellness, food_culinary,
+// teaching_coaching, spirituality, community_impact, travel_adventure,
+// literature_poetry, crafts_making). Every V3 id must have an entry here —
+// a miss silently falls back to 'default' regardless of category.
 const CREATOR_TYPE_DEFAULT_SCHEME: Record<string, string> = {
-  music:                  'indigo',
-  comedy_theatre:         'turmeric',
-  art_design:             'gulaal',
+  // V2 legacy
   video_content:          'steel',
-  teaching_coaching:      'pista',
   lifestyle_wellness:     'sienna',
   business_brand:         'sand',
   professional_portfolio: 'steel',
-  community_impact:       'forest',
   exploring:              'default',
+  // V3 — shared with legacy where the vibe already matched
+  music:                  'indigo',      // ink + electric indigo — performer energy
+  comedy_theatre:         'turmeric',    // ink + golden yellow — stage energy
+  art_design:             'gulaal',      // ink + gulaal red — tactile, visual
+  teaching_coaching:      'pista',       // ink + pista green — clean, grounded
+  community_impact:       'forest',      // dark green + jade — organic, civic
+  // V3 — new
+  dance:                  'aurora',      // fuchsia aurora glow — matches Explorer's own "dance" scene theme
+  fitness_wellness:       'sage',        // warm off-white + sage green — wellness (scheme's own description)
+  food_culinary:          'sienna',      // ink + burnt sienna — spice, warmth
+  spirituality:           'nightforest', // near-black warm-green — candlelit, meditative (scheme's own description)
+  travel_adventure:       'ocean',       // deep navy + luminous cyan — maps, water, horizon
+  literature_poetry:      'parchment',   // aged-paper light — writer/literary (scheme's own description)
+  crafts_making:          'terracotta',  // warm linen + clay — craft/pottery (scheme's own description)
 }
 
 function buildThemeFromScheme(colorScheme: string | undefined, creatorType: string): Json {
@@ -615,8 +673,39 @@ function platformLabel(platform: SocialPlatform): string {
   return PLATFORM_LABELS[platform] ?? 'Link'
 }
 
-export async function getAuthUserPhone(): Promise<{ phone: string | null }> {
+// ---------------------------------------------------------------------------
+// getOnboardingStudioBootstrap — same query shape as /dashboard/studio's
+// server component, but callable from the client-driven onboarding wizard
+// right after completeOnboarding() has created the profile + seeded blocks.
+// Also returns the auth user's phone/email so the client can pre-fill
+// WhatsApp / contact email from however the user actually signed up.
+// ---------------------------------------------------------------------------
+
+export async function getOnboardingStudioBootstrap(): Promise<
+  | { error: string; profile?: undefined; blocks?: undefined; events?: undefined; theme?: undefined; authPhone?: undefined; authEmail?: undefined }
+  | { error: null; profile: UserProfile; blocks: PageBlock[]; events: Event[]; theme: ProfileTheme; authPhone: string | null; authEmail: string | null }
+> {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  return { phone: user?.phone ?? null }
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  if (authError || !user) return { error: 'You must be signed in.' }
+
+  const admin = createAdminClient()
+  const [{ data: profile }, { data: blocks }, { data: events }] = await Promise.all([
+    admin.from('user_profiles').select('*').eq('id', user.id).maybeSingle(),
+    admin.from('page_blocks').select('*').eq('profile_id', user.id).order('position', { ascending: true }),
+    admin.from('events').select('*').eq('creator_id', user.id).eq('status', 'published').order('starts_at', { ascending: true }),
+  ])
+
+  if (!profile) return { error: 'Profile not found. Please try again.' }
+
+  const theme = resolveTheme(profile.page_theme, profile.creator_type ?? undefined)
+  return {
+    error: null,
+    profile: { ...profile, social_links: profile.social_links ?? null },
+    blocks: blocks ?? [],
+    events: events ?? [],
+    theme,
+    authPhone: user.phone ?? null,
+    authEmail: user.email ?? null,
+  }
 }

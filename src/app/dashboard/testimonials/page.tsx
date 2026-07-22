@@ -1,17 +1,11 @@
 import { requireProfile } from '@/lib/auth/requireAuth'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { getCreatorReviews, type CreatorReview } from '@/app/actions/explorer'
 
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
 
-interface ReviewRow {
-  rating:        number
-  review:        string | null
-  rated_at:      string | null
-  event_title:   string
-  reviewer_name: string
-}
+type ReviewRow = CreatorReview
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -41,47 +35,7 @@ function StarRow({ rating, size = 16 }: { rating: number; size?: number }) {
 
 export default async function TestimonialsPage() {
   const { profile } = await requireProfile()
-  const admin       = createAdminClient()
-
-  // Fetch all creator events
-  const { data: events } = await admin
-    .from('events')
-    .select('id, title')
-    .eq('creator_id', profile.id)
-
-  const eventIds   = (events ?? []).map((e) => e.id)
-  const eventMap   = Object.fromEntries((events ?? []).map((e) => [e.id, e.title]))
-
-  let reviews: ReviewRow[] = []
-
-  if (eventIds.length > 0) {
-    const { data: histories } = await admin
-      .from('explorer_event_history')
-      .select('rating, review, rated_at, event_id, explorer_id')
-      .in('event_id', eventIds)
-      .not('rating', 'is', null)
-      .order('rated_at', { ascending: false })
-
-    if (histories?.length) {
-      const explorerIds = histories.map((h) => h.explorer_id)
-      const { data: explorers } = await admin
-        .from('explorer_profiles')
-        .select('id, display_name')
-        .in('id', explorerIds)
-
-      const explorerMap = Object.fromEntries((explorers ?? []).map((e) => [e.id, e.display_name]))
-
-      reviews = histories
-        .filter((h): h is typeof h & { rating: number } => h.rating !== null)
-        .map((h) => ({
-          rating:        h.rating,
-          review:        h.review,
-          rated_at:      h.rated_at,
-          event_title:   eventMap[h.event_id] ?? 'Unknown event',
-          reviewer_name: explorerMap[h.explorer_id] ?? 'Anonymous',
-        }))
-    }
-  }
+  const reviews: ReviewRow[] = await getCreatorReviews(profile.id)
 
   // Summary stats
   const totalReviews = reviews.length

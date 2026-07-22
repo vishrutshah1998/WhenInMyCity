@@ -51,9 +51,8 @@ export default function C3Page() {
           color:      '#F0EFF8',
           lineHeight: 1.05,
           margin:     '0 0 8px',
-          maxWidth:   480,
         }}>
-          What do you<br />create?
+          What do you create?
         </h1>
         <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 15, color: '#9896B0', margin: '0 0 32px', maxWidth: 400 }}>
           Shapes your page colour and who discovers your work

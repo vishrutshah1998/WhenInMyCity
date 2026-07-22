@@ -617,20 +617,21 @@ export default function V8Page() {
       {/* ── Footer ── contained in left panel via layout's transform ──────────── */}
       <footer style={{
         position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 50,
-        height: 80, display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        height: 72, display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         padding: '0 24px',
-        background: '#1A274490',
-        borderTop: '1px dashed rgba(93,217,208,0.18)',
-        backdropFilter: 'blur(8px)',
+        background: `linear-gradient(to top, ${NAVY} 60%, transparent 100%)`,
       }}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-          <span style={{ fontFamily: MONO, fontSize: 9, color: 'rgba(255,255,255,0.30)', letterSpacing: '0.10em', textTransform: 'uppercase' }}>
-            STEP 06 / 06
-          </span>
-          <span style={{ fontFamily: MONO, fontSize: 9, color: ACCENT, letterSpacing: '0.10em', textTransform: 'uppercase' }}>
-            {isEnabled ? 'READY TO STAMP' : 'AWAITING EMAIL'}
-          </span>
-        </div>
+        <button
+          type="button"
+          onClick={() => router.push('/onboarding/business/V7')}
+          style={{
+            background: 'none', border: 'none',
+            fontFamily: DM, fontSize: 15, color: 'rgba(255,255,255,0.25)',
+            cursor: 'pointer', padding: 0,
+          }}
+        >
+          ← Back
+        </button>
 
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8 }}>
           {submitError && (
@@ -643,17 +644,14 @@ export default function V8Page() {
             </div>
           )}
           <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-            <button
-              type="button"
-              onClick={() => router.push('/onboarding/business/V7')}
-              style={{
-                background: 'none', border: 'none',
-                fontFamily: DM, fontSize: 14, color: 'rgba(255,255,255,0.25)',
-                cursor: 'pointer', padding: 0,
-              }}
-            >
-              ← Back
-            </button>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              <span style={{ fontFamily: MONO, fontSize: 9, color: 'rgba(255,255,255,0.30)', letterSpacing: '0.10em', textTransform: 'uppercase' }}>
+                STEP 06 / 06
+              </span>
+              <span style={{ fontFamily: MONO, fontSize: 9, color: ACCENT, letterSpacing: '0.10em', textTransform: 'uppercase' }}>
+                {isEnabled ? 'READY TO STAMP' : 'AWAITING EMAIL'}
+              </span>
+            </div>
             <button
               type="button"
               onClick={handleDone}

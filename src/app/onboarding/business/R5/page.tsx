@@ -733,11 +733,9 @@ const name    = sessionStorage.getItem(SK.b_name) ?? ''
 
       {/* ── Fixed footer ──────────────────────────────── */}
       <footer style={{
-        position:   'fixed', bottom: 0, left: 0, right: 0, zIndex: 50, height: 80,
+        position:   'fixed', bottom: 0, left: 0, right: 0, zIndex: 50, height: 72,
         display:    'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 24px',
-        background: '#07070A90',
-        borderTop:  '2px dashed #57423e',
-        backdropFilter: 'blur(8px)',
+        background: `linear-gradient(to top, ${NAVY} 60%, transparent 100%)`,
       }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
           <span style={{ fontFamily: MONO, fontSize: 10, color: `${ACCENT}99`, letterSpacing: '0.15em', textTransform: 'uppercase' as const }}>

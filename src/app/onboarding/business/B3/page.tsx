@@ -52,6 +52,13 @@ export default function B3Page() {
     router.push(next)
   }
 
+  function handleContinue() {
+    if (!selected || advancing) return
+    setAdvancing(true)
+    try { sessionStorage.setItem(SK.b_subpath, selected) } catch {}
+    router.push('/onboarding/business/B2')
+  }
+
   return (
     <>
       <div style={{ minHeight: '100%', overflowY: 'auto', paddingTop: 20, paddingBottom: 96, paddingLeft: 24, paddingRight: 24 }}>
@@ -182,7 +189,7 @@ export default function B3Page() {
 
       <footer style={{
         position:   'fixed', bottom: 0, left: 0, right: 0, height: 72, zIndex: 50,
-        display:    'flex', alignItems: 'center', padding: '0 24px',
+        display:    'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 24px',
         background: 'linear-gradient(to top, var(--ob-panel-bg, #1A2744) 60%, transparent 100%)',
       }}>
         <button
@@ -191,6 +198,27 @@ export default function B3Page() {
           style={{ background: 'none', border: 'none', fontFamily: DM, fontSize: 15, color: 'rgba(255,255,255,0.25)', cursor: 'pointer', padding: 0 }}
         >
           ← Back
+        </button>
+        <button
+          type="button"
+          onClick={handleContinue}
+          disabled={!selected || advancing}
+          style={{
+            background:    selected ? PATHS.find(p => p.id === selected)!.accent : 'rgba(255,255,255,0.08)',
+            color:         selected ? '#1A2744' : 'rgba(255,255,255,0.22)',
+            fontFamily:    BARLOW,
+            fontWeight:    700,
+            fontSize:      15,
+            letterSpacing: '0.08em',
+            textTransform: 'uppercase',
+            padding:       '12px 32px',
+            border:        'none',
+            boxShadow:     selected ? '8px 8px 0px 0px #000000' : 'none',
+            cursor:        selected && !advancing ? 'pointer' : 'not-allowed',
+            transition:    'all 150ms',
+          }}
+        >
+          Continue →
         </button>
       </footer>
     </>

@@ -34,8 +34,8 @@ const PERSONAS = [
     id:        'business' as const,
     num:       '02',
     emoji:     '🏢',
-    label:     'VENUE / VENUE',
-    subtitle:  'Cafés, rooftops, studios & creative spaces.',
+    label:     'BUSINESS',
+    subtitle:  'Brands, cafés, rooftops & creative spaces.',
     accent:    '#5DD9D0',
     next:      '/onboarding/business/B3',
     watermark: 'BUSINESS',
@@ -145,7 +145,7 @@ function S1Inner() {
 
       {/* ── LEFT PANEL ─────────────────────────────── */}
       <div className="ob-s1-left" style={{
-        width: '38%', minWidth: 300,
+        width: '42%', minWidth: 300,
         background: LEFT_BG,
         display: 'flex', flexDirection: 'column',
         borderRight: `1px dashed rgba(232,112,90,0.35)`,
@@ -219,12 +219,14 @@ function S1Inner() {
           </div>
         </div>
 
-        {/* Bottom bar */}
+        {/* Bottom bar — same 72px band / padding / gradient as every other
+            onboarding screen's footer, with Continue on the far right. */}
         <div style={{
+          height: 72, flexShrink: 0,
           borderTop: `1px dashed rgba(232,112,90,0.22)`,
-          padding: '12px 20px',
+          padding: '0 24px',
+          background: 'linear-gradient(to top, rgba(232,112,90,0.06) 60%, transparent 100%)',
           display: 'flex', alignItems: 'center', gap: 10,
-          flexShrink: 0,
         }}>
           <span className="material-symbols-outlined" style={{ fontSize: 15, color: 'rgba(255,255,255,0.28)' }}>person</span>
           <Link href="/signin" style={{ fontFamily: 'var(--font-dm-sans), sans-serif', fontSize: 10, color: 'rgba(255,255,255,0.32)', textDecoration: 'underline', textDecorationStyle: 'dashed', textUnderlineOffset: 3, whiteSpace: 'nowrap' }}>
@@ -262,7 +264,6 @@ function S1Inner() {
       <div className="ob-s1-right" style={{
         flex: 1,
         background: RIGHT_BG,
-        backgroundImage: PAPER.texture,
         position: 'relative', overflow: 'hidden',
       }}>
         {PERSONAS.map((p, i) => {

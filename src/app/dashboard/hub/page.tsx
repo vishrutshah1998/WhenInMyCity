@@ -2,6 +2,7 @@ import { requireProfile } from '@/lib/auth/requireAuth'
 import { getDiscoverCreators, getConnections } from '@/app/actions/hub'
 import { HubClient } from '@/components/dashboard/HubClient'
 import { HubLocked } from '@/components/dashboard/HubLocked'
+import { isLocalPlus } from '@/lib/tier'
 
 export const metadata = {
   title: 'Hub — WIMC',
@@ -11,7 +12,7 @@ export const metadata = {
 export default async function HubPage() {
   const { profile } = await requireProfile()
 
-  if (profile.user_tier === 'wanderer') {
+  if (!isLocalPlus(profile.user_tier)) {
     return <HubLocked profile={profile} />
   }
 

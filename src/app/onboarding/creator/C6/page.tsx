@@ -87,13 +87,14 @@ export default function C6Page() {
 
         <h1 style={{
           fontFamily: "var(--font-abril), 'Abril Fatface', serif",
-          fontSize:   'clamp(28px, 7vw, 42px)',
+          fontSize:   'clamp(24px, 6vw, 42px)',
           color:      '#F0EFF8',
           lineHeight: 1.05,
           margin:     '0 0 8px',
-          maxWidth:   480,
+          maxWidth:   640,
+          whiteSpace: 'nowrap',
         }}>
-          Where are you<br />creating?
+          Where are you creating?
         </h1>
         <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 15, color: '#9896B0', margin: '0 0 20px', maxWidth: 400 }}>
           Pick every platform you&apos;re active on

@@ -6,7 +6,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { ProfileThemeSchema } from '@/types/theme'
 import type { ProfileTheme } from '@/types/theme'
-import type { CreatorType } from '@/types/database'
+import type { CreatorType, Json } from '@/types/database'
 import { UsernameSchema } from '@/types/onboarding'
 
 // ---------------------------------------------------------------------------
@@ -250,6 +250,27 @@ export async function updateCreatorStudioContent(input: {
   if (error) {
     console.error('[updateCreatorStudioContent]', error.message)
     return { error: 'Failed to save changes.' }
+  }
+
+  const bioBody = input.bio.trim()
+  const { data: existingBioBlock } = await supabase
+    .from('page_blocks')
+    .select('id, config')
+    .eq('profile_id', user.id)
+    .eq('block_type', 'text_bio')
+    .maybeSingle()
+
+  if (existingBioBlock) {
+    const { error: blockError } = await supabase
+      .from('page_blocks')
+      .update({ config: { ...(existingBioBlock.config as Record<string, unknown>), body: bioBody } as Json })
+      .eq('id', existingBioBlock.id)
+    if (blockError) console.error('[updateCreatorStudioContent] text_bio update failed', blockError.message)
+  } else {
+    const { error: blockError } = await supabase
+      .from('page_blocks')
+      .insert({ profile_id: user.id, block_type: 'text_bio', position: 0, is_visible: true, config: { body: bioBody } as Json })
+    if (blockError) console.error('[updateCreatorStudioContent] text_bio insert failed', blockError.message)
   }
 
   if (updated?.username) revalidatePath(`/${updated.username}`)

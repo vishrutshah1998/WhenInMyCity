@@ -124,7 +124,7 @@ export default function R3Page() {
           lineHeight: 1.05,
           margin:     '0 0 28px',
         }}>
-          Choose your<br />vibe.
+          What's your brand's vibe?
         </h1>
 
         {/* 2×2 aesthetic grid */}
@@ -215,19 +215,19 @@ export default function R3Page() {
         display:    'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 24px',
         background: `linear-gradient(to top, ${NAVY} 60%, transparent 100%)`,
       }}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-          <span style={{ fontFamily: BARLOW, fontWeight: 600, fontSize: 10, color: 'rgba(255,255,255,0.30)', letterSpacing: '0.10em', textTransform: 'uppercase' }}>
-            NODE_ID: R003-BRAND
-          </span>
-          <span style={{ fontFamily: MONO, fontSize: 10, color: canProceed ? ACCENT : 'rgba(255,255,255,0.20)', letterSpacing: '0.10em', textTransform: 'uppercase' }}>
-            STATUS: {canProceed ? 'AESTHETIC_SET' : 'AWAITING_VIBE'}
-          </span>
-        </div>
+        <button type="button" onClick={() => router.push('/onboarding/business/R1')}
+          style={{ background: 'none', border: 'none', fontFamily: DM, fontSize: 15, color: 'rgba(255,255,255,0.25)', cursor: 'pointer', padding: 0 }}>
+          ← Back
+        </button>
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-          <button type="button" onClick={() => router.push('/onboarding/business/R1')}
-            style={{ background: 'none', border: 'none', fontFamily: DM, fontSize: 15, color: 'rgba(255,255,255,0.25)', cursor: 'pointer', padding: 0 }}>
-            ← Back
-          </button>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <span style={{ fontFamily: BARLOW, fontWeight: 600, fontSize: 10, color: 'rgba(255,255,255,0.30)', letterSpacing: '0.10em', textTransform: 'uppercase' }}>
+              NODE_ID: R003-BRAND
+            </span>
+            <span style={{ fontFamily: MONO, fontSize: 10, color: canProceed ? ACCENT : 'rgba(255,255,255,0.20)', letterSpacing: '0.10em', textTransform: 'uppercase' }}>
+              STATUS: {canProceed ? 'AESTHETIC_SET' : 'AWAITING_VIBE'}
+            </span>
+          </div>
           <button type="button" onClick={handleNext} disabled={!canProceed}
             style={{
               background:    canProceed ? ACCENT : 'rgba(255,255,255,0.08)',

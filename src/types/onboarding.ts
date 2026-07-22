@@ -21,17 +21,31 @@ export const UsernameSchema = z
     message: 'Username cannot start or end with an underscore',
   })
 
+// Despite the "V2" name (kept to avoid a wider rename), this is the full set
+// of creatorType values completeOnboarding() will accept — it must match
+// every id CREATOR_CATEGORIES (src/lib/constants/categories.ts) actually
+// offers in the current C3 onboarding screen, or a real category picked
+// there (e.g. 'dance') silently fails this validation and gets discarded.
 export const V2_CREATOR_TYPES = [
-  'music',
-  'comedy_theatre',
-  'art_design',
+  // Legacy V2 (kept for old accounts; C3 no longer offers these directly)
   'video_content',
-  'teaching_coaching',
   'lifestyle_wellness',
   'business_brand',
   'professional_portfolio',
-  'community_impact',
   'exploring',
+  // V3 — current CREATOR_CATEGORIES ids offered in C3
+  'music',
+  'comedy_theatre',
+  'dance',
+  'art_design',
+  'fitness_wellness',
+  'food_culinary',
+  'teaching_coaching',
+  'spirituality',
+  'community_impact',
+  'travel_adventure',
+  'literature_poetry',
+  'crafts_making',
 ] as const satisfies CreatorType[]
 
 export const CreatorTypeV2Schema = z.enum(V2_CREATOR_TYPES)

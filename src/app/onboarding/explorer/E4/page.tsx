@@ -57,6 +57,8 @@ export default function E4Page() {
     setSelectedCity(city)
     setSearchQuery(city.name)
     setShowDropdown(false)
+    try { sessionStorage.setItem(SK.e_city, city.name) } catch {}
+    window.dispatchEvent(new Event('ob-snap-update'))
   }
 
   function handleSearchChange(val: string) {
@@ -131,9 +133,8 @@ export default function E4Page() {
           color:      '#F0EFF8',
           lineHeight: 1.05,
           margin:     '0 0 8px',
-          maxWidth:   480,
         }}>
-          Which city are<br />you exploring?
+          Which city are you exploring?
         </h1>
         <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 15, color: '#9896B0', margin: '0 0 32px', maxWidth: 400 }}>
           Your city shapes your entire explore feed

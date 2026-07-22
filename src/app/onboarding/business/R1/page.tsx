@@ -263,19 +263,19 @@ export default function R1Page() {
         display:    'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 24px',
         background: `linear-gradient(to top, ${NAVY} 60%, transparent 100%)`,
       }}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-          <span style={{ fontFamily: BARLOW, fontWeight: 600, fontSize: 10, color: 'rgba(255,255,255,0.30)', letterSpacing: '0.10em', textTransform: 'uppercase' }}>
-            NODE_ID: R001-BRAND
-          </span>
-          <span style={{ fontFamily: MONO, fontSize: 10, color: canProceed ? ACCENT : 'rgba(255,255,255,0.20)', letterSpacing: '0.10em', textTransform: 'uppercase' }}>
-            STATUS: {canProceed ? 'NAME_CONFIRMED' : 'AWAITING_NAME'}
-          </span>
-        </div>
+        <button type="button" onClick={() => router.push('/onboarding/business/B2')}
+          style={{ background: 'none', border: 'none', fontFamily: DM, fontSize: 15, color: 'rgba(255,255,255,0.25)', cursor: 'pointer', padding: 0 }}>
+          ← Back
+        </button>
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-          <button type="button" onClick={() => router.push('/onboarding/business/B2')}
-            style={{ background: 'none', border: 'none', fontFamily: DM, fontSize: 15, color: 'rgba(255,255,255,0.25)', cursor: 'pointer', padding: 0 }}>
-            ← Back
-          </button>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <span style={{ fontFamily: BARLOW, fontWeight: 600, fontSize: 10, color: 'rgba(255,255,255,0.30)', letterSpacing: '0.10em', textTransform: 'uppercase' }}>
+              NODE_ID: R001-BRAND
+            </span>
+            <span style={{ fontFamily: MONO, fontSize: 10, color: canProceed ? ACCENT : 'rgba(255,255,255,0.20)', letterSpacing: '0.10em', textTransform: 'uppercase' }}>
+              STATUS: {canProceed ? 'NAME_CONFIRMED' : 'AWAITING_NAME'}
+            </span>
+          </div>
           <button type="button" onClick={handleNext} disabled={!canProceed}
             style={{
               background:    canProceed ? ACCENT : 'rgba(255,255,255,0.08)',

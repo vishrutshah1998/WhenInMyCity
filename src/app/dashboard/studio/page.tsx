@@ -3,6 +3,7 @@ import { requireProfile } from '@/lib/auth/requireAuth'
 import { createClient } from '@/lib/supabase/server'
 import StudioClient from './StudioClient'
 import { resolveTheme } from '@/types/theme'
+import { refreshInstagramTokenIfNeeded } from '@/app/actions/instagram'
 
 export default async function StudioPage({
   searchParams,
@@ -12,6 +13,10 @@ export default async function StudioPage({
   const { profile } = await requireProfile()
   const supabase = await createClient()
   const sp = await searchParams
+
+  // Best-effort, backoff-guarded — only actually calls Meta when the token is
+  // near expiry and hasn't been attempted recently. See refreshInstagramTokenIfNeeded.
+  await refreshInstagramTokenIfNeeded(profile.id)
 
   const [{ data: blocks }, { data: events }] = await Promise.all([
     supabase

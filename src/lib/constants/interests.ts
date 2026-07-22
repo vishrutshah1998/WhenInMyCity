@@ -23,6 +23,19 @@ export interface InterestTag {
   valueCluster: ValueCluster
 }
 
+// One accent per interest category — shared by the C7/E5 accordion picker
+// and its right-panel bubble field so a tag's chip and its bubble always
+// match colour.
+export const INTEREST_CATEGORY_COLORS: Record<InterestCategory, string> = {
+  performance:  '#E8705A',
+  arts:         '#5DD9D0',
+  education:    '#9B8FFF',
+  lifestyle:    '#F5A800',
+  tech:         '#845EF7',
+  food_culture: '#FF9F1C',
+  outdoors:     '#06D6A0',
+}
+
 /**
  * 30 curated interest tags shown during onboarding (step 2).
  * Users select 3–5 to describe the kinds of events they host or attend.

@@ -34,16 +34,10 @@ const STEP_MAP: Record<string, { total: number; current: number }> = {
   '/onboarding/business/R5': { total: 6, current: 6 },
 }
 
-function pathAccent(pathname: string): string {
-  if (pathname.startsWith('/onboarding/creator/C2')) return '#E8705A'   // coral
-  if (pathname.startsWith('/onboarding/creator/C3')) return '#E8705A'   // coral (dynamic in C3 itself)
-  if (pathname.startsWith('/onboarding/creator'))    return '#F5A800'   // amber — C4+
-  if (pathname.startsWith('/onboarding/explorer'))   return '#9B8FFF'   // lavender
-  if (pathname.startsWith('/onboarding/business/V')) return '#5DD9D0'   // teal
-  if (pathname.startsWith('/onboarding/business/R')) return '#F5A800'   // amber
-  if (pathname.startsWith('/onboarding/business'))   return '#5DD9D0'   // teal pre-fork
-  return '#E8705A'
-}
+// Step-progress chrome is deliberately persona/category-agnostic — a single
+// passive tone so it never fights with whatever accent the page content is
+// using (e.g. the creator's chosen category colour).
+const STEP_ACCENT = '#9896B0'
 
 // ── S1 and C2 own their full-viewport split — layout wraps everything else ───
 // Final steps (preview/confirmation pages) are also full-bleed so the left
@@ -52,7 +46,6 @@ const FULL_BLEED = new Set([
   '/onboarding',
   '/onboarding/creator/C2',
   '/onboarding/creator/C8',
-  '/onboarding/creator/C8b',
   '/onboarding/explorer/E7',
   '/onboarding/business/R5',
 ])
@@ -75,7 +68,6 @@ export default function OnboardingLayout({ children }: { children: React.ReactNo
   }
 
   const { total, current } = STEP_MAP[pathname] ?? { total: 0, current: 0 }
-  const accent = pathAccent(pathname)
 
   return (
     <div style={{ height: '100dvh', overflow: 'hidden', display: 'flex', background: RIGHT_BG }}>
@@ -133,9 +125,8 @@ export default function OnboardingLayout({ children }: { children: React.ReactNo
                       background:   isCompleted
                         ? 'rgba(255,255,255,0.20)'
                         : isCurrent
-                          ? accent
+                          ? STEP_ACCENT
                           : 'rgba(255,255,255,0.10)',
-                      boxShadow:    isCurrent ? `0 0 10px ${accent}80` : 'none',
                       transition:   'all 200ms',
                       flexShrink:   0,
                     }}
@@ -145,7 +136,7 @@ export default function OnboardingLayout({ children }: { children: React.ReactNo
               <span style={{
                 fontFamily:    "var(--font-barlow), 'Barlow Condensed', sans-serif",
                 fontSize:      10,
-                color:         accent,
+                color:         STEP_ACCENT,
                 letterSpacing: '0.10em',
                 marginLeft:    4,
               }}>
@@ -165,11 +156,10 @@ export default function OnboardingLayout({ children }: { children: React.ReactNo
       <div
         className="ob-layout-right"
         style={{
-          flex:            1,
-          background:      RIGHT_BG,
-          backgroundImage: PAPER.texture,
-          overflow:        'hidden',
-          position:        'relative',
+          flex:       1,
+          background: RIGHT_BG,
+          overflow:   'hidden',
+          position:   'relative',
         }}
       >
         <SplitRightPanel pathname={pathname} />

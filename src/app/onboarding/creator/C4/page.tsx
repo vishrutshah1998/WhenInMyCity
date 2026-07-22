@@ -130,9 +130,8 @@ export default function C4Page() {
           color:      '#F0EFF8',
           lineHeight: 0.95,
           margin:     '0 0 32px',
-          maxWidth:   480,
         }}>
-          Which city are<br />you repping?
+          Which city are you repping?
         </h1>
 
         <div style={{ maxWidth: 480 }}>

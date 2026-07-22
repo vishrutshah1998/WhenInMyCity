@@ -18,16 +18,10 @@ function C2RightPanel({
   displayName,
   slugDisplay,
   creatorCity,
-  canProceed,
-  ctaLoading,
-  onCta,
 }: {
   displayName: string
   slugDisplay: string
   creatorCity: string
-  canProceed: boolean
-  ctaLoading: boolean
-  onCta: () => void
 }) {
   const [offset, setOffset] = useState({ x: 0, y: 0 })
 
@@ -45,8 +39,6 @@ function C2RightPanel({
         flex: 1,
         background: RIGHT_BG,
         position: 'relative', overflow: 'hidden',
-        backgroundImage: 'linear-gradient(rgba(26,39,68,0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(26,39,68,0.05) 1px, transparent 1px)',
-        backgroundSize: '28px 28px',
         display: 'flex', flexDirection: 'column',
         alignItems: 'center', justifyContent: 'center',
       }}
@@ -210,34 +202,6 @@ function C2RightPanel({
         wheninmycity.com/{creatorCity ? `${creatorCity.toLowerCase()}/` : ''}{slugDisplay}
       </div>
 
-      {/* CTA button — bottom right */}
-      <div style={{
-        position: 'absolute', bottom: 28, right: 36,
-        zIndex: 10,
-      }}>
-        <button
-          type="button"
-          onClick={onCta}
-          disabled={!canProceed || ctaLoading}
-          style={{
-            background:   canProceed && !ctaLoading ? CORAL : 'rgba(232,112,90,0.25)',
-            color:        canProceed && !ctaLoading ? '#ffffff' : 'rgba(232,112,90,0.45)',
-            fontFamily:   'var(--font-barlow), sans-serif',
-            fontWeight:   700, fontSize: 16,
-            letterSpacing: '0.08em', textTransform: 'uppercase',
-            padding:      '13px 28px',
-            border:       'none',
-            boxShadow:    canProceed && !ctaLoading ? '4px 4px 0px #1A2744' : 'none',
-            cursor:       canProceed && !ctaLoading ? 'pointer' : 'not-allowed',
-            display:      'flex', alignItems: 'center', gap: 8,
-            transition:   'all 140ms',
-          }}
-        >
-          {ctaLoading ? 'Building…' : 'CONTINUE'}
-          {!ctaLoading && <span>→</span>}
-        </button>
-      </div>
-
       {/* C2 watermark */}
       <div style={{
         position: 'absolute', bottom: -20, right: 20,
@@ -325,7 +289,7 @@ function C2Content() {
 
       {/* ── LEFT PANEL ───────────────────────────────── */}
       <div className="ob-c2-left" style={{
-        width: '40%', minWidth: 300,
+        width: '42%', minWidth: 300,
         background: LEFT_BG,
         display: 'flex', flexDirection: 'column',
         borderRight: `1px dashed rgba(232,112,90,0.32)`,
@@ -467,32 +431,32 @@ function C2Content() {
           </p>
         </div>
 
-        {/* ── Footer ─── */}
+        {/* ── Footer — same 72px band / padding as every other onboarding
+            screen's footer. Continue lives here (not floating in the right
+            panel) so its position stays consistent on desktop and mobile. */}
         <div style={{
+          height: 72, flexShrink: 0,
           borderTop: `1px dashed rgba(232,112,90,0.20)`,
-          padding: '12px 20px',
+          padding: '0 24px',
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          flexShrink: 0,
         }}>
           <button type="button" onClick={() => router.push('/onboarding')}
-            style={{ background: 'none', border: 'none', fontFamily: 'var(--font-dm-sans), sans-serif', fontSize: 12, color: 'rgba(255,255,255,0.28)', cursor: 'pointer', padding: 0 }}>
+            style={{ background: 'none', border: 'none', fontFamily: 'var(--font-dm-sans), sans-serif', fontSize: 15, color: 'rgba(255,255,255,0.28)', cursor: 'pointer', padding: 0 }}>
             ← Back
           </button>
-          {/* Mobile-only CTA — right panel is hidden on mobile so Continue lives here */}
           <button
             type="button"
-            className="ob-c2-left-cta"
             onClick={handleContinue}
             disabled={!canProceed || ctaLoading}
             style={{
               background:    canProceed && !ctaLoading ? CORAL : 'rgba(232,112,90,0.18)',
               color:         canProceed && !ctaLoading ? '#ffffff' : 'rgba(232,112,90,0.35)',
-              fontFamily:    'var(--font-dm-sans), sans-serif',
-              fontWeight:    700, fontSize: 13,
-              letterSpacing: '0.08em',
-              padding:       '9px 20px',
+              fontFamily:    "var(--font-barlow), 'Barlow Condensed', sans-serif",
+              fontWeight:    700, fontSize: 15,
+              letterSpacing: '0.08em', textTransform: 'uppercase',
+              padding:       '12px 32px',
               border:        'none',
-              boxShadow:     canProceed && !ctaLoading ? '3px 3px 0px #000000' : 'none',
+              boxShadow:     canProceed && !ctaLoading ? '8px 8px 0px 0px #000000' : 'none',
               cursor:        canProceed && !ctaLoading ? 'pointer' : 'not-allowed',
               transition:    'all 140ms',
             }}
@@ -507,9 +471,6 @@ function C2Content() {
         displayName={displayName}
         slugDisplay={slugDisplay}
         creatorCity={creatorCity}
-        canProceed={canProceed}
-        ctaLoading={ctaLoading}
-        onCta={handleContinue}
       />
 
       {/* Mobile: collapse to single column */}
@@ -517,9 +478,6 @@ function C2Content() {
         @media (max-width: 767px) {
           .ob-c2-right { display: none !important; }
           .ob-c2-left  { width: 100% !important; min-width: 0 !important; }
-        }
-        @media (min-width: 768px) {
-          .ob-c2-left-cta { display: none !important; }
         }
         .ob-c2-left input::placeholder { color: rgba(255,255,255,0.20); }
       `}</style>

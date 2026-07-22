@@ -11,6 +11,7 @@ export const SK = {
   c_category:   'wimc_ob_c_category',
   c_city:       'wimc_ob_c_city',
   c_subtypes:     'wimc_ob_c_subtypes',
+  c_subtype_rank: 'wimc_ob_c_subtype_rank', // subtype IDs ordered by real popularity, most-picked first
   c_offline_acts: 'wimc_ob_c_offline_acts',
   c_interests:    'wimc_ob_c_interests',
   c_platforms:      'wimc_ob_c_platforms',

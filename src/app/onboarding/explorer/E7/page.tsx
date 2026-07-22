@@ -229,16 +229,19 @@ export default function E7Page() {
         </div>
       </div>
 
-      {/* Footer: back only */}
+      {/* Footer: back only — same 72px band as every other screen's footer,
+          Back anchored to the same far-left slot (this reveal screen has no
+          "next step" CTA to pair it with; the primary action above is a
+          terminal action, not a step-to-step Continue). */}
       <footer style={{
-        position: 'fixed', bottom: 0, left: 0, right: 0, height: 56, zIndex: 50,
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        position: 'fixed', bottom: 0, left: 0, right: 0, height: 72, zIndex: 50,
+        display: 'flex', alignItems: 'center', justifyContent: 'flex-start', padding: '0 24px',
         background: `linear-gradient(to top, ${NAVY} 60%, transparent 100%)`,
       }}>
         <button
           type="button"
           onClick={() => router.push('/onboarding/explorer/E6')}
-          style={{ background: 'none', border: 'none', fontFamily: DM, fontSize: 14, color: 'rgba(255,255,255,0.25)', cursor: 'pointer', padding: 0 }}
+          style={{ background: 'none', border: 'none', fontFamily: DM, fontSize: 15, color: 'rgba(255,255,255,0.25)', cursor: 'pointer', padding: 0 }}
         >
           ← Back
         </button>
