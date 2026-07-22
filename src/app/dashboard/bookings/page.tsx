@@ -14,7 +14,7 @@ export default async function BookingsPage() {
       .order('starts_at', { ascending: false }),
     supabase
       .from('booking_inquiries')
-      .select('id, requester_name, requester_email, event_type, message, status, created_at')
+      .select('id, requester_name, requester_email, event_type, message, status, accepted_at, created_at')
       .eq('creator_id', profile.id)
       .order('created_at', { ascending: false }),
   ])

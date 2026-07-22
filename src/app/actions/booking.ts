@@ -5,6 +5,7 @@ import { requireAuth } from '@/lib/auth/requireAuth'
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 import { createNotification } from '@/app/actions/notifications'
+import type { BookingRequestConfig } from '@/types/database'
 
 const InquirySchema = z.object({
   creatorId:      z.string().uuid(),
@@ -95,4 +96,81 @@ export async function updateInquiryStatus(
 
   revalidatePath('/dashboard/bookings')
   return { success: true }
+}
+
+const ToggleAcceptedSchema = z.object({
+  inquiryId: z.string().uuid(),
+})
+
+export async function toggleInquiryAccepted(
+  inquiryId: string,
+): Promise<{ success: boolean; error?: string; accepted_at?: string | null }> {
+  const { user } = await requireAuth()
+
+  const parsed = ToggleAcceptedSchema.safeParse({ inquiryId })
+  if (!parsed.success) return { success: false, error: 'Invalid input.' }
+
+  const admin = createAdminClient()
+
+  // Verify this inquiry belongs to the authenticated creator before updating
+  const { data: inquiry } = await admin
+    .from('booking_inquiries')
+    .select('creator_id, accepted_at')
+    .eq('id', parsed.data.inquiryId)
+    .maybeSingle()
+
+  if (!inquiry || inquiry.creator_id !== user.id) {
+    return { success: false, error: 'Not found.' }
+  }
+
+  const nextAcceptedAt = inquiry.accepted_at ? null : new Date().toISOString()
+
+  const { error } = await admin
+    .from('booking_inquiries')
+    .update({ accepted_at: nextAcceptedAt })
+    .eq('id', parsed.data.inquiryId)
+
+  if (error) {
+    console.error('[toggleInquiryAccepted]', error.message)
+    return { success: false, error: 'Failed to update.' }
+  }
+
+  revalidatePath('/dashboard/bookings')
+  return { success: true, accepted_at: nextAcceptedAt }
+}
+
+// ---------------------------------------------------------------------------
+// Booking capacity — derived from accepted inquiries in the current calendar
+// month, for the public-facing booking_request block badge.
+// ---------------------------------------------------------------------------
+
+export type BookingCapacityStatus = {
+  slots_filled: number
+  effective_status: 'open' | 'closed' | 'waitlist'
+}
+
+export async function getBookingCapacityStatus(
+  creatorId: string,
+  config: BookingRequestConfig,
+): Promise<BookingCapacityStatus> {
+  const admin = createAdminClient()
+
+  const startOfMonth = new Date()
+  startOfMonth.setDate(1)
+  startOfMonth.setHours(0, 0, 0, 0)
+
+  const { count } = await admin
+    .from('booking_inquiries')
+    .select('id', { count: 'exact', head: true })
+    .eq('creator_id', creatorId)
+    .not('accepted_at', 'is', null)
+    .gte('accepted_at', startOfMonth.toISOString())
+
+  const slots_filled = count ?? 0
+
+  const effective_status: 'open' | 'closed' | 'waitlist' =
+    config.status_override ??
+    (config.slots_total != null && slots_filled >= config.slots_total ? 'closed' : 'open')
+
+  return { slots_filled, effective_status }
 }

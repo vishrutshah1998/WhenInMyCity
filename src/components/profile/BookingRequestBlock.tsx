@@ -4,14 +4,21 @@ import { useState, type FormEvent } from 'react'
 import { submitBookingInquiry } from '@/app/actions/booking'
 
 interface BookingRequestBlockProps {
-  blockId:      string
-  creatorId:    string
-  label:        string
-  description?: string
-  categories:   string[]
+  blockId:         string
+  creatorId:       string
+  label:           string
+  description?:    string
+  categories:      string[]
+  capacityStatus?: 'open' | 'closed' | 'waitlist'
 }
 
-export default function BookingRequestBlock({ blockId, creatorId, label, description, categories }: BookingRequestBlockProps) {
+const CAPACITY_BADGE: Record<'open' | 'closed' | 'waitlist', { label: string; className: string }> = {
+  open:     { label: 'Open',     className: 'bg-primary/15 text-primary' },
+  closed:   { label: 'Closed',   className: 'bg-error/15 text-error' },
+  waitlist: { label: 'Waitlist', className: 'bg-tertiary/15 text-tertiary' },
+}
+
+export default function BookingRequestBlock({ blockId, creatorId, label, description, categories, capacityStatus }: BookingRequestBlockProps) {
   const [name,      setName]      = useState('')
   const [email,     setEmail]     = useState('')
   const [eventType, setEventType] = useState(categories[0] ?? '')
@@ -57,9 +64,16 @@ export default function BookingRequestBlock({ blockId, creatorId, label, descrip
   return (
     <section className="card-surface bg-surface-container-high rounded-2xl p-5 flex flex-col gap-4">
       <div className="flex flex-col gap-1">
-        <span className="material-symbols-outlined text-primary text-2xl" style={{ fontVariationSettings: "'FILL' 1" }}>
-          event_available
-        </span>
+        <div className="flex items-start justify-between gap-3">
+          <span className="material-symbols-outlined text-primary text-2xl" style={{ fontVariationSettings: "'FILL' 1" }}>
+            event_available
+          </span>
+          {capacityStatus && (
+            <span className={`shrink-0 text-[11px] font-bold px-2.5 py-1 rounded-lg uppercase tracking-wide ${CAPACITY_BADGE[capacityStatus].className}`}>
+              {CAPACITY_BADGE[capacityStatus].label}
+            </span>
+          )}
+        </div>
         <h3 className="font-headline font-bold text-lg text-on-surface">{label}</h3>
         {description && <p className="text-xs text-on-surface-variant leading-relaxed">{description}</p>}
       </div>

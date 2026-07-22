@@ -3,7 +3,7 @@
 import { useState, useTransition } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
-import { updateInquiryStatus } from '@/app/actions/booking'
+import { updateInquiryStatus, toggleInquiryAccepted } from '@/app/actions/booking'
 
 interface SlimEvent {
   id: string
@@ -29,6 +29,7 @@ interface SlimInquiry {
   event_type: string | null
   message: string | null
   status: string
+  accepted_at: string | null
   created_at: string
 }
 
@@ -213,6 +214,7 @@ const NEXT_STATUSES: Record<string, Array<'read' | 'replied' | 'declined'>> = {
 function InquiryCard({ inquiry: initial }: { inquiry: SlimInquiry }) {
   const [inq, setInq] = useState(initial)
   const [isPending, startTransition] = useTransition()
+  const [isAcceptPending, startAcceptTransition] = useTransition()
 
   function handleStatus(status: 'read' | 'replied' | 'declined') {
     const prev = inq
@@ -223,8 +225,18 @@ function InquiryCard({ inquiry: initial }: { inquiry: SlimInquiry }) {
     })
   }
 
+  function handleToggleAccepted() {
+    const prev = inq
+    setInq((i) => ({ ...i, accepted_at: i.accepted_at ? null : new Date().toISOString() }))
+    startAcceptTransition(async () => {
+      const result = await toggleInquiryAccepted(inq.id)
+      if (!result.success) setInq(prev)
+    })
+  }
+
   const meta = STATUS_META[inq.status] ?? STATUS_META.new
   const nextActions = NEXT_STATUSES[inq.status] ?? []
+  const isAccepted = !!inq.accepted_at
 
   return (
     <div style={{
@@ -243,6 +255,25 @@ function InquiryCard({ inquiry: initial }: { inquiry: SlimInquiry }) {
           </div>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+          <button
+            onClick={handleToggleAccepted}
+            disabled={isAcceptPending}
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: 4,
+              fontSize: 11, fontWeight: 700, fontFamily: 'var(--font-jetbrains-mono)',
+              padding: '3px 10px', borderRadius: 9999, cursor: isAcceptPending ? 'default' : 'pointer',
+              textTransform: 'uppercase', letterSpacing: '0.5px',
+              border: `1px solid ${isAccepted ? 'var(--wimc-teal)' : 'var(--wimc-border-default)'}`,
+              background: isAccepted ? 'var(--wimc-teal)' : 'transparent',
+              color: isAccepted ? '#fff' : 'var(--wimc-text-secondary)',
+              opacity: isAcceptPending ? 0.7 : 1,
+            }}
+          >
+            <span className="material-symbols-outlined" style={{ fontSize: 13, fontVariationSettings: isAccepted ? "'FILL' 1" : "'FILL' 0" }}>
+              {isAccepted ? 'check_circle' : 'radio_button_unchecked'}
+            </span>
+            {isAccepted ? 'Accepted' : 'Accept'}
+          </button>
           <span style={{
             fontSize: 11, fontWeight: 700, fontFamily: 'var(--font-jetbrains-mono)',
             padding: '3px 8px', borderRadius: 9999,
