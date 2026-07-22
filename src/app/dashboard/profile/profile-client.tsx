@@ -2,9 +2,10 @@
 
 import { useState, useTransition, useRef, useMemo, useEffect, useCallback } from 'react'
 import Image from 'next/image'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { updateProfile, uploadAvatar, deleteAccount, updateColorScheme } from '@/app/actions/profile'
 import { checkUsernameAvailable } from '@/app/actions/onboarding'
+import { initiateInstagramConnect, disconnectInstagram } from '@/app/actions/instagram'
 import { signOut } from '@/app/actions/auth'
 import type { CreatorType } from '@/types/database'
 import { createClient } from '@/lib/supabase/client'
@@ -29,6 +30,15 @@ const PLATFORM_LABELS: Record<string, string> = {
   github: 'GitHub', website: 'Website', whatsapp: 'WhatsApp',
   googlemaps: 'Google Maps', zomato: 'Zomato / Swiggy', shopify: 'Shopify',
   telegram: 'Telegram', meetup: 'Meetup', substack: 'Substack', other: 'Link',
+}
+
+const INSTAGRAM_ERROR_MESSAGES: Record<string, string> = {
+  instagram_not_configured:  'Instagram connect isn’t set up yet. Try again later.',
+  instagram_denied:          'Instagram access was declined.',
+  instagram_invalid:         'That connection attempt expired or was invalid. Please try again.',
+  instagram_personal_account: 'That’s a Personal Instagram account. Switch it to a Business or Creator account in the Instagram app, then try connecting again.',
+  instagram_token_failed:    'Couldn’t complete the Instagram connection. Please try again.',
+  instagram_save_failed:     'Connected, but saving the connection failed. Please try again.',
 }
 
 // ---------------------------------------------------------------------------
@@ -104,6 +114,12 @@ export default function ProfileForm() {
   // Social links — keyed by platform id
   const [socialInputs, setSocialInputs]           = useState<Record<string, string>>({})
   const [expandedPlatforms, setExpandedPlatforms] = useState<Set<string>>(new Set())
+
+  // Instagram Connect (OAuth, distinct from the plain social_links.instagram URL)
+  const [instagramConnected, setInstagramConnected] = useState(false)
+  const [instagramError, setInstagramError]         = useState<string | null>(null)
+  const [instagramPending, startInstagramTransition] = useTransition()
+  const searchParams = useSearchParams()
 
   // Color scheme
   const [colorScheme, setColorScheme]         = useState('default')
@@ -183,7 +199,7 @@ export default function ProfileForm() {
       if (user.phone) setAuthPhone(user.phone)
       supabase
         .from('user_profiles')
-        .select('display_name, bio, avatar_url, username, creator_type, city, neighbourhood, sub_types, offline_activities, interest_tags, social_links, show_city_mastery, page_theme, user_role, contact_email, website_url, explorer_scene, explorer_creator_intent, personas')
+        .select('display_name, bio, avatar_url, username, creator_type, city, neighbourhood, sub_types, offline_activities, interest_tags, social_links, show_city_mastery, page_theme, user_role, contact_email, website_url, explorer_scene, explorer_creator_intent, personas, instagram_connected')
         .eq('id', user.id)
         .single()
         .then(({ data, error }) => {
@@ -218,6 +234,8 @@ export default function ProfileForm() {
           // Social links — stored JSONB
           setSocialInputs((data.social_links as Record<string, string>) ?? {})
 
+          setInstagramConnected((data as { instagram_connected?: boolean }).instagram_connected ?? false)
+
           setShowCityMastery(data.show_city_mastery ?? false)
 
           // Contact & reach — fall back to Google OAuth email when empty
@@ -238,6 +256,13 @@ export default function ProfileForm() {
         })
     })
   }, [])
+
+  // ── Instagram Connect — OAuth result from the callback redirect ──────────
+  useEffect(() => {
+    const err = searchParams.get('error')
+    if (err) setInstagramError(err)
+    if (searchParams.get('instagram') === 'connected') setInstagramConnected(true)
+  }, [searchParams])
 
   // ── Category handlers ──────────────────────────────────────────────────────
   function handleCategorySelect(ct: V2CreatorType) {
@@ -319,6 +344,19 @@ export default function ProfileForm() {
     if (n !== savedUsername && n.length >= 3) {
       setUsernameCheckTimer(setTimeout(() => checkUsername(n), 600))
     }
+  }
+
+  // ── Instagram Connect handlers ─────────────────────────────────────────────
+  function handleInstagramDisconnect() {
+    setInstagramError(null)
+    startInstagramTransition(async () => {
+      const result = await disconnectInstagram()
+      if (result.error) {
+        setInstagramError(result.error)
+      } else {
+        setInstagramConnected(false)
+      }
+    })
   }
 
   // ── Social link handlers ───────────────────────────────────────────────────
@@ -900,6 +938,72 @@ export default function ProfileForm() {
 
       {/* ── Social links ───────────────────────────────────────────────── */}
       <Section title="Where else can people find you?">
+        {/* Instagram Connect — powers the live Instagram Feed block. Distinct
+            from the plain "Instagram" link below, which is just a profile URL. */}
+        <div style={{
+          display: 'flex', flexDirection: 'column', gap: 10,
+          padding: '14px 16px',
+          border: `1px solid ${instagramConnected ? 'rgba(16,185,129,0.3)' : 'var(--wimc-border-default)'}`,
+          backgroundColor: instagramConnected ? 'rgba(16,185,129,0.08)' : 'var(--wimc-bg-overlay)',
+        }}>
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="font-medium text-sm" style={{ color: 'var(--wimc-text-primary)', fontFamily: 'var(--font-dm-sans)' }}>
+                Connect Instagram
+              </p>
+              <p style={{ fontSize: 12, color: 'var(--wimc-text-secondary)', marginTop: 2 }}>
+                Powers your live Instagram Feed block. We only read your own recent posts — we never post on your behalf.
+              </p>
+            </div>
+            {instagramConnected ? (
+              <button
+                type="button"
+                onClick={handleInstagramDisconnect}
+                disabled={instagramPending}
+                style={{
+                  flexShrink: 0,
+                  background: 'transparent',
+                  border: 'none',
+                  color: 'var(--wimc-text-muted)',
+                  fontSize: 11,
+                  cursor: instagramPending ? 'not-allowed' : 'pointer',
+                  opacity: instagramPending ? 0.6 : 1,
+                  textDecoration: 'underline',
+                }}
+              >
+                {instagramPending ? 'Disconnecting…' : 'Disconnect'}
+              </button>
+            ) : (
+              <form action={initiateInstagramConnect}>
+                <button
+                  type="submit"
+                  style={{
+                    flexShrink: 0,
+                    background: 'var(--wimc-coral, #E8572A)',
+                    color: 'white',
+                    border: 'none',
+                    fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em',
+                    padding: '8px 14px', cursor: 'pointer',
+                  }}
+                >
+                  Connect
+                </button>
+              </form>
+            )}
+          </div>
+          {instagramConnected && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#10b981', flexShrink: 0 }} />
+              <span style={{ fontSize: 12, color: '#10b981', fontWeight: 600 }}>Connected</span>
+            </div>
+          )}
+          {instagramError && (
+            <p style={{ fontSize: 12, color: '#E8342A' }}>
+              {INSTAGRAM_ERROR_MESSAGES[instagramError] ?? instagramError}
+            </p>
+          )}
+        </div>
+
         {displayPlatforms.length === 0 ? (
           <p style={{ fontSize: 13, color: 'var(--wimc-text-secondary)', fontFamily: 'var(--font-dm-sans)' }}>Add your links below.</p>
         ) : (
