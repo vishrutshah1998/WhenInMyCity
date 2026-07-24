@@ -84,6 +84,47 @@ export async function initiateInstagramConnect(): Promise<void> {
 }
 
 /**
+ * Popup-mode variant of initiateInstagramConnect. A server action can't
+ * hand a URL back to window.open() after the fact (redirect() never
+ * returns), and window.open() itself must be called synchronously inside
+ * the click handler to avoid popup blockers — so this returns the
+ * authorize URL instead of redirecting, letting the caller open the popup
+ * first and then navigate it here once this resolves. State carries a
+ * third ":popup" segment (profileId:uuid:popup) so callback/route.ts knows
+ * to respond with a postMessage page instead of a full-page redirect;
+ * initiateInstagramConnect's 2-segment state and full-redirect behavior
+ * are untouched.
+ */
+export async function getInstagramPopupAuthorizeUrl(): Promise<{ url: string } | { error: string }> {
+  if (!process.env.INSTAGRAM_APP_ID) {
+    return { error: 'instagram_not_configured' }
+  }
+
+  const { user } = await requireAuth('/dashboard/profile/settings')
+
+  const state = `${user.id}:${crypto.randomUUID()}:popup`
+
+  const cookieStore = await cookies()
+  cookieStore.set('ig_oauth_state', state, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    maxAge: 600, // 10 minutes
+    path: '/',
+    sameSite: 'lax',
+  })
+
+  const params = new URLSearchParams({
+    client_id:     process.env.INSTAGRAM_APP_ID,
+    redirect_uri:  `${process.env.NEXT_PUBLIC_APP_URL}/api/instagram/callback`,
+    response_type: 'code',
+    scope:         'instagram_business_basic',
+    state,
+  })
+
+  return { url: `${AUTHORIZE_URL}?${params}` }
+}
+
+/**
  * Wipes all Instagram Connect state for a profile — token, expiry, account
  * type, and cached thumbnails. Shared by disconnectInstagram (user-initiated,
  * keyed by the authenticated user's own id) and the deauthorize/data-deletion

@@ -5,7 +5,8 @@ import Image from 'next/image'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { updateProfile, uploadAvatar, deleteAccount, updateColorScheme } from '@/app/actions/profile'
 import { checkUsernameAvailable } from '@/app/actions/onboarding'
-import { initiateInstagramConnect, disconnectInstagram } from '@/app/actions/instagram'
+import { initiateInstagramConnect, disconnectInstagram, getInstagramPopupAuthorizeUrl } from '@/app/actions/instagram'
+import { isInAppBrowser } from '@/lib/instagram/in-app-browser'
 import { signOut } from '@/app/actions/auth'
 import type { CreatorType } from '@/types/database'
 import { createClient } from '@/lib/supabase/client'
@@ -31,6 +32,13 @@ const PLATFORM_LABELS: Record<string, string> = {
   googlemaps: 'Google Maps', zomato: 'Zomato / Swiggy', shopify: 'Shopify',
   telegram: 'Telegram', meetup: 'Meetup', substack: 'Substack', other: 'Link',
 }
+
+// Generous ceiling for a real OAuth round trip in a popup (approve app,
+// possibly switch accounts in Instagram first) — the actual "done" signal
+// is the postMessage from callback/route.ts; this only guards against a
+// popup closed manually with nothing ever arriving, so the UI doesn't spin
+// forever.
+const INSTAGRAM_POPUP_TIMEOUT_MS = 3 * 60 * 1000
 
 const INSTAGRAM_ERROR_MESSAGES: Record<string, string> = {
   instagram_not_configured:  'Instagram connect isn’t set up yet. Try again later.',
@@ -119,6 +127,11 @@ export default function ProfileForm() {
   const [instagramConnected, setInstagramConnected] = useState(false)
   const [instagramError, setInstagramError]         = useState<string | null>(null)
   const [instagramPending, startInstagramTransition] = useTransition()
+  const [instagramConnecting, setInstagramConnecting] = useState(false)
+  const [, startInstagramConnectTransition] = useTransition()
+  const instagramFormRef          = useRef<HTMLFormElement>(null)
+  const instagramPopupIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const instagramPopupTimeoutRef  = useRef<ReturnType<typeof setTimeout> | null>(null)
   const searchParams = useSearchParams()
 
   // Color scheme
@@ -264,6 +277,37 @@ export default function ProfileForm() {
     if (searchParams.get('instagram') === 'connected') setInstagramConnected(true)
   }, [searchParams])
 
+  // ── Instagram Connect — OAuth result from the popup callback page ────────
+  // callback/route.ts posts { type: 'instagram-connect-result', status, error? }
+  // and closes itself; this updates the UI in place with no navigation.
+  // Strict origin check first — never trust payload shape before that.
+  useEffect(() => {
+    function clearPopupWatchers() {
+      if (instagramPopupIntervalRef.current) clearInterval(instagramPopupIntervalRef.current)
+      if (instagramPopupTimeoutRef.current) clearTimeout(instagramPopupTimeoutRef.current)
+      instagramPopupIntervalRef.current = null
+      instagramPopupTimeoutRef.current = null
+    }
+
+    function handleMessage(event: MessageEvent) {
+      if (event.origin !== window.location.origin) return
+      if (!event.data || event.data.type !== 'instagram-connect-result') return
+
+      clearPopupWatchers()
+      setInstagramConnecting(false)
+
+      if (event.data.status === 'connected') {
+        setInstagramError(null)
+        setInstagramConnected(true)
+      } else {
+        setInstagramError(typeof event.data.error === 'string' ? event.data.error : 'instagram_token_failed')
+      }
+    }
+
+    window.addEventListener('message', handleMessage)
+    return () => window.removeEventListener('message', handleMessage)
+  }, [])
+
   // ── Category handlers ──────────────────────────────────────────────────────
   function handleCategorySelect(ct: V2CreatorType) {
     if (ct !== creatorType) {
@@ -347,6 +391,70 @@ export default function ProfileForm() {
   }
 
   // ── Instagram Connect handlers ─────────────────────────────────────────────
+  function handleInstagramConnectClick(e: React.MouseEvent<HTMLButtonElement>) {
+    setInstagramError(null)
+
+    // Instagram's and Facebook's in-app WebViews block/no-op window.open() —
+    // let the click fall through to the form's normal full-page-redirect
+    // submission (initiateInstagramConnect), unchanged from today.
+    if (isInAppBrowser()) return
+
+    e.preventDefault()
+
+    if (instagramPopupIntervalRef.current) clearInterval(instagramPopupIntervalRef.current)
+    if (instagramPopupTimeoutRef.current) clearTimeout(instagramPopupTimeoutRef.current)
+
+    // window.open() must be called synchronously in the click handler, before
+    // any await, or browsers treat it as an unrequested popup and block it.
+    const popup = window.open(
+      'about:blank',
+      'instagram-oauth',
+      'width=500,height=650,menubar=no,toolbar=no,location=no,status=no',
+    )
+
+    if (!popup) {
+      // Blocked by the browser — fall back to today's full-page redirect
+      // rather than leaving the click dead.
+      instagramFormRef.current?.requestSubmit()
+      return
+    }
+
+    setInstagramConnecting(true)
+
+    startInstagramConnectTransition(async () => {
+      const result = await getInstagramPopupAuthorizeUrl()
+      if ('error' in result) {
+        popup.close()
+        setInstagramConnecting(false)
+        setInstagramError(result.error)
+        return
+      }
+      popup.location.href = result.url
+    })
+
+    instagramPopupIntervalRef.current = setInterval(() => {
+      try {
+        if (popup.closed) {
+          if (instagramPopupIntervalRef.current) clearInterval(instagramPopupIntervalRef.current)
+          if (instagramPopupTimeoutRef.current) clearTimeout(instagramPopupTimeoutRef.current)
+          instagramPopupIntervalRef.current = null
+          instagramPopupTimeoutRef.current = null
+          setInstagramConnecting(false)
+        }
+      } catch {
+        // Cross-origin access to `popup.closed` can be blocked by Instagram's
+        // COOP headers — the timeout below is the guaranteed fallback.
+      }
+    }, 500)
+
+    instagramPopupTimeoutRef.current = setTimeout(() => {
+      instagramPopupIntervalRef.current && clearInterval(instagramPopupIntervalRef.current)
+      instagramPopupIntervalRef.current = null
+      instagramPopupTimeoutRef.current = null
+      setInstagramConnecting(false)
+    }, INSTAGRAM_POPUP_TIMEOUT_MS)
+  }
+
   function handleInstagramDisconnect() {
     setInstagramError(null)
     startInstagramTransition(async () => {
@@ -953,6 +1061,7 @@ export default function ProfileForm() {
               </p>
               <p style={{ fontSize: 12, color: 'var(--wimc-text-secondary)', marginTop: 2 }}>
                 Powers your live Instagram Feed block. We only read your own recent posts — we never post on your behalf.
+                Needs a Business or Creator Instagram account (switch it in the Instagram app first if yours is Personal).
               </p>
             </div>
             {instagramConnected ? (
@@ -974,19 +1083,23 @@ export default function ProfileForm() {
                 {instagramPending ? 'Disconnecting…' : 'Disconnect'}
               </button>
             ) : (
-              <form action={initiateInstagramConnect}>
+              <form ref={instagramFormRef} action={initiateInstagramConnect}>
                 <button
                   type="submit"
+                  onClick={handleInstagramConnectClick}
+                  disabled={instagramConnecting}
                   style={{
                     flexShrink: 0,
                     background: 'var(--wimc-coral, #E8572A)',
                     color: 'white',
                     border: 'none',
                     fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em',
-                    padding: '8px 14px', cursor: 'pointer',
+                    padding: '8px 14px',
+                    cursor: instagramConnecting ? 'not-allowed' : 'pointer',
+                    opacity: instagramConnecting ? 0.6 : 1,
                   }}
                 >
-                  Connect
+                  {instagramConnecting ? 'Connecting…' : 'Connect'}
                 </button>
               </form>
             )}

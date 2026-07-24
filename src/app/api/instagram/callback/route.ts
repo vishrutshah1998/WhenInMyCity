@@ -27,15 +27,44 @@ export async function GET(request: NextRequest) {
 
   const settingsPage = new URL('/dashboard/profile/settings', origin)
 
-  if (oauthError) {
-    console.error('[instagram/callback] OAuth denied:', oauthError)
-    settingsPage.searchParams.set('error', 'instagram_denied')
+  // Popup mode is read off the raw (not-yet-CSRF-validated) state param —
+  // it only ever selects which response shape to send back (redirect vs.
+  // postMessage page), never a security decision, so it's fine to trust
+  // before the cookie check below. Real CSRF validation still requires the
+  // exact-match cookie comparison further down, untouched.
+  const isPopupMode = state?.split(':')[2] === 'popup'
+
+  function popupResultPage(result: { status: 'connected' } | { status: 'error'; error: string }) {
+    const payload = JSON.stringify({ type: 'instagram-connect-result', ...result })
+    const html = `<!doctype html>
+<html><body><script>
+  if (window.opener) {
+    window.opener.postMessage(${payload}, ${JSON.stringify(origin)});
+  }
+  window.close();
+</script></body></html>`
+    return new NextResponse(html, { headers: { 'Content-Type': 'text/html; charset=utf-8' } })
+  }
+
+  function respondError(errorCode: string) {
+    if (isPopupMode) return popupResultPage({ status: 'error', error: errorCode })
+    settingsPage.searchParams.set('error', errorCode)
     return NextResponse.redirect(settingsPage)
   }
 
-  if (!code || !state) {
-    settingsPage.searchParams.set('error', 'instagram_invalid')
+  function respondSuccess() {
+    if (isPopupMode) return popupResultPage({ status: 'connected' })
+    settingsPage.searchParams.set('instagram', 'connected')
     return NextResponse.redirect(settingsPage)
+  }
+
+  if (oauthError) {
+    console.error('[instagram/callback] OAuth denied:', oauthError)
+    return respondError('instagram_denied')
+  }
+
+  if (!code || !state) {
+    return respondError('instagram_invalid')
   }
 
   // ── CSRF check ──────────────────────────────────────────────────────────
@@ -45,20 +74,17 @@ export async function GET(request: NextRequest) {
 
   if (!storedState || storedState !== state) {
     console.error('[instagram/callback] state mismatch', { storedState, state })
-    settingsPage.searchParams.set('error', 'instagram_invalid')
-    return NextResponse.redirect(settingsPage)
+    return respondError('instagram_invalid')
   }
 
   const profileId = storedState.split(':')[0]
   if (!profileId) {
-    settingsPage.searchParams.set('error', 'instagram_invalid')
-    return NextResponse.redirect(settingsPage)
+    return respondError('instagram_invalid')
   }
 
   // ── Token exchange ───────────────────────────────────────────────────────
   if (!process.env.INSTAGRAM_APP_ID || !process.env.INSTAGRAM_APP_SECRET) {
-    settingsPage.searchParams.set('error', 'instagram_not_configured')
-    return NextResponse.redirect(settingsPage)
+    return respondError('instagram_not_configured')
   }
 
   let longLivedToken: string | null = null
@@ -81,8 +107,7 @@ export async function GET(request: NextRequest) {
     if (!shortLivedRes.ok) {
       const body = await shortLivedRes.text()
       console.error('[instagram/callback] code exchange failed', shortLivedRes.status, body)
-      settingsPage.searchParams.set('error', 'instagram_token_failed')
-      return NextResponse.redirect(settingsPage)
+      return respondError('instagram_token_failed')
     }
 
     const shortLivedData = await shortLivedRes.json() as { access_token: string; user_id: string }
@@ -99,8 +124,7 @@ export async function GET(request: NextRequest) {
     if (!longLivedRes.ok) {
       const body = await longLivedRes.text()
       console.error('[instagram/callback] long-lived exchange failed', longLivedRes.status, body)
-      settingsPage.searchParams.set('error', 'instagram_token_failed')
-      return NextResponse.redirect(settingsPage)
+      return respondError('instagram_token_failed')
     }
 
     const longLivedData = await longLivedRes.json() as { access_token: string; expires_in: number }
@@ -108,13 +132,11 @@ export async function GET(request: NextRequest) {
     expiresIn = longLivedData.expires_in
   } catch (err) {
     console.error('[instagram/callback] fetch error', err)
-    settingsPage.searchParams.set('error', 'instagram_token_failed')
-    return NextResponse.redirect(settingsPage)
+    return respondError('instagram_token_failed')
   }
 
   if (!longLivedToken) {
-    settingsPage.searchParams.set('error', 'instagram_token_failed')
-    return NextResponse.redirect(settingsPage)
+    return respondError('instagram_token_failed')
   }
 
   // ── Account-type gate ────────────────────────────────────────────────────
@@ -125,8 +147,7 @@ export async function GET(request: NextRequest) {
   const accountType = await getInstagramAccountType(longLivedToken)
 
   if (accountType !== 'BUSINESS' && accountType !== 'MEDIA_CREATOR') {
-    settingsPage.searchParams.set('error', 'instagram_personal_account')
-    return NextResponse.redirect(settingsPage)
+    return respondError('instagram_personal_account')
   }
 
   // ── Encrypt + persist ────────────────────────────────────────────────────
@@ -137,9 +158,14 @@ export async function GET(request: NextRequest) {
   })
 
   if (encryptError || !encrypted) {
-    console.error('[instagram/callback] encryption failed', encryptError?.message)
-    settingsPage.searchParams.set('error', 'instagram_save_failed')
-    return NextResponse.redirect(settingsPage)
+    console.error('[instagram/callback] encryption failed', {
+      profileId,
+      message: encryptError?.message,
+      code: encryptError?.code,
+      details: encryptError?.details,
+      hint: encryptError?.hint,
+    })
+    return respondError('instagram_save_failed')
   }
 
   const { error: dbError } = await admin
@@ -155,9 +181,14 @@ export async function GET(request: NextRequest) {
     .eq('id', profileId)
 
   if (dbError) {
-    console.error('[instagram/callback] db update failed', dbError.message)
-    settingsPage.searchParams.set('error', 'instagram_save_failed')
-    return NextResponse.redirect(settingsPage)
+    console.error('[instagram/callback] db update failed', {
+      profileId,
+      message: dbError.message,
+      code: dbError.code,
+      details: dbError.details,
+      hint: dbError.hint,
+    })
+    return respondError('instagram_save_failed')
   }
 
   // Populate the instagram_feed block's media cache immediately rather than
@@ -166,6 +197,5 @@ export async function GET(request: NextRequest) {
   // successful connection (the next on-demand refresh will retry).
   await syncInstagramMedia(profileId)
 
-  settingsPage.searchParams.set('instagram', 'connected')
-  return NextResponse.redirect(settingsPage)
+  return respondSuccess()
 }
