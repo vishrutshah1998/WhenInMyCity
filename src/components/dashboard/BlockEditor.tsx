@@ -2451,6 +2451,7 @@ const BlockEditor = React.memo(function BlockEditor({ blocks, events, onBlocksCh
   const [editingBlockId, setEditingBlockId] = useState<string | null>(null)
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null)
   const [isAdding,      setIsAdding]      = useState(false)
+  const [addError,      setAddError]      = useState<string | null>(null)
   const dragIndexRef = useRef<number | null>(null)
 
   function handleToggle(block: PageBlock, isVisible: boolean) {
@@ -2461,9 +2462,13 @@ const BlockEditor = React.memo(function BlockEditor({ blocks, events, onBlocksCh
   async function handleAdd(blockType: BlockType) {
     setShowAddModal(false)
     setIsAdding(true)
+    setAddError(null)
     const { block: newBlock, error } = await addBlock(blockType)
     setIsAdding(false)
-    if (error || !newBlock) return
+    if (error || !newBlock) {
+      setAddError(error ?? 'Failed to add block.')
+      return
+    }
     onBlocksChange([...blocks, newBlock])
     setEditingBlockId(newBlock.id)
   }
@@ -2576,6 +2581,7 @@ const BlockEditor = React.memo(function BlockEditor({ blocks, events, onBlocksCh
       })}
 
       {/* Add block button */}
+      {addError && <p className="text-xs text-error text-center">{addError}</p>}
       <button
         onClick={() => setShowAddModal(true)}
         disabled={isAdding}
