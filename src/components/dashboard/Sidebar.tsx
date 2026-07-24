@@ -402,8 +402,8 @@ export default function Sidebar({
           <NavLink item={COMMUNITY_ITEM} active={isActive(COMMUNITY_ITEM)} collapsed={c} />
         )}
         <NavLink
-          item={{ href: '/hall-of-lights', icon: 'auto_awesome', label: 'Hall of Lights', sublabel: 'Top creators' }}
-          active={isActive({ href: '/hall-of-lights', icon: 'auto_awesome', label: 'Hall of Lights' })}
+          item={{ href: '/dashboard/hall-of-lights', icon: 'auto_awesome', label: 'Hall of Lights', sublabel: 'Top creators' }}
+          active={isActive({ href: '/dashboard/hall-of-lights', icon: 'auto_awesome', label: 'Hall of Lights' })}
           collapsed={c}
         />
         {c && (

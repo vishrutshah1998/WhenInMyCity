@@ -81,7 +81,7 @@ const BENEFITS: {
   },
   {
     label: 'Beacon Mentorship & Hall of Lights',
-    desc: <>Beacons are matched with Lanterns to coach. After 3 years: Lantern Mentor distinction. After 5 years: permanent <Link href="/hall-of-lights" className="underline hover:text-[#F5A800]">Hall of Lights</Link> city listing.</>,
+    desc: <>Beacons are matched with Lanterns to coach. After 3 years: Lantern Mentor distinction. After 5 years: permanent <Link href="/dashboard/hall-of-lights" className="underline hover:text-[#F5A800]">Hall of Lights</Link> city listing.</>,
     tier: 'beacon', dotColor: '#E8342A', tierColor: '#E8342A', tierBg: 'rgba(232,52,42,0.1)',
   },
 ]

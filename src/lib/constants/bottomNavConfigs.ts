@@ -76,7 +76,7 @@ export const creatorBottomNavConfig: BottomNavConfig = {
     { href: '/dashboard/venues',    icon: 'apartment',         label: 'Venues' },
     { href: '/dashboard/hub',       icon: 'hub',               label: 'Creator Hub' },
     { href: '/dashboard/community', icon: 'diversity_3',       label: 'My Circles' },
-    { href: '/hall-of-lights',      icon: 'auto_awesome',      label: 'Hall of Lights' },
+    { href: '/dashboard/hall-of-lights', icon: 'auto_awesome', label: 'Hall of Lights' },
     { href: '/dashboard/tier',      icon: 'workspace_premium', label: 'Tier Progress' },
   ],
   accent:  'var(--wimc-accent)',
