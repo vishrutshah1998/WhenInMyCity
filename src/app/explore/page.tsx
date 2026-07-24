@@ -10,7 +10,7 @@ import ExploreClient, {
 export default async function ExplorePage({
   searchParams,
 }: {
-  searchParams: Promise<{ tab?: string; city?: string }>
+  searchParams: Promise<{ tab?: string; city?: string; when?: string }>
 }) {
   const admin      = createAdminClient()
   const userClient = await createClient()
@@ -18,20 +18,58 @@ export default async function ExplorePage({
   const sp = await searchParams
   const tab  = sp.tab  ?? 'all'
   const city = sp.city ?? 'Ahmedabad'
+  const when = sp.when ?? 'all'
 
-  const now = new Date().toISOString()
+  const now     = new Date()
+  const nowIso  = now.toISOString()
   const eventsLimit = tab === 'events' ? 8 : 4
 
-  const [eventsRes, creatorsRes, venuesRes] = await Promise.all([
+  // Date-range boundaries for the TONIGHT / WEEKEND / THIS WEEK filters, computed
+  // in IST (Asia/Kolkata) since events are India-only — the server clock is UTC.
+  const IST_OFFSET_MS = 5.5 * 60 * 60 * 1000
+  const istNow = new Date(now.getTime() + IST_OFFSET_MS)
+  const startOfTodayUTC = new Date(Date.UTC(istNow.getUTCFullYear(), istNow.getUTCMonth(), istNow.getUTCDate()) - IST_OFFSET_MS)
+  const startOfTomorrowUTC = new Date(startOfTodayUTC.getTime() + 86400000)
+  const dow = new Date(startOfTodayUTC.getTime() + IST_OFFSET_MS).getUTCDay() // 0=Sun..6=Sat, IST calendar day
+  // "Weekend" = Sat+Sun of the current/upcoming weekend; if today is already Sat/Sun, start is today.
+  const daysToWeekendStart = dow === 0 ? -1 : (6 - dow) % 7
+  const startOfWeekendUTC = new Date(startOfTodayUTC.getTime() + daysToWeekendStart * 86400000)
+  const endOfWeekendUTC   = new Date(startOfWeekendUTC.getTime() + 2 * 86400000)
+  // "This week" runs through the end of the current ISO week (Sunday night IST).
+  const daysUntilNextMonday = ((8 - dow) % 7) || 7
+  const endOfWeekUTC = new Date(startOfTodayUTC.getTime() + daysUntilNextMonday * 86400000)
+
+  let eventsQuery = admin
+    .from('events')
+    .select(
+      'id, title, starts_at, ticket_price, capacity, slug, venue_name, creator_id, creator:user_profiles!inner(display_name, username, creator_type, city)',
+    )
+    .eq('status', 'published')
+    .gt('starts_at', nowIso)
+    .ilike('creator.city', city)
+    .order('starts_at', { ascending: true })
+    .limit(80)
+
+  if (when === 'tonight') {
+    eventsQuery = eventsQuery.lt('starts_at', startOfTomorrowUTC.toISOString())
+  } else if (when === 'weekend') {
+    eventsQuery = eventsQuery
+      .gte('starts_at', startOfWeekendUTC.toISOString())
+      .lt('starts_at', endOfWeekendUTC.toISOString())
+  } else if (when === 'week') {
+    eventsQuery = eventsQuery.lt('starts_at', endOfWeekUTC.toISOString())
+  }
+
+  const countBase = () =>
     admin
       .from('events')
-      .select(
-        'id, title, starts_at, ticket_price, capacity, slug, venue_name, creator_id, creator:user_profiles(display_name, username, creator_type, city)',
-      )
+      .select('id, creator:user_profiles!inner(city)', { count: 'exact', head: true })
       .eq('status', 'published')
-      .gt('starts_at', now)
-      .order('starts_at', { ascending: true })
-      .limit(80),
+      .gt('starts_at', nowIso)
+      .ilike('creator.city', city)
+
+  const [eventsRes, creatorsRes, venuesRes, tonightCountRes, weekendCountRes, weekCountRes, allCountRes] = await Promise.all([
+    eventsQuery,
 
     admin
       .from('user_profiles')
@@ -46,7 +84,19 @@ export default async function ExplorePage({
       .eq('city', city)
       .eq('is_active', true)
       .limit(6),
+
+    countBase().lt('starts_at', startOfTomorrowUTC.toISOString()),
+    countBase().gte('starts_at', startOfWeekendUTC.toISOString()).lt('starts_at', endOfWeekendUTC.toISOString()),
+    countBase().lt('starts_at', endOfWeekUTC.toISOString()),
+    countBase(),
   ])
+
+  const eventCounts = {
+    tonight: tonightCountRes.count ?? 0,
+    weekend: weekendCountRes.count ?? 0,
+    week:    weekCountRes.count ?? 0,
+    all:     allCountRes.count ?? 0,
+  }
 
   type RawEvent = {
     id: string
@@ -80,9 +130,7 @@ export default async function ExplorePage({
     is_verified: boolean
   }
 
-  const rawEvents = ((eventsRes.data ?? []) as unknown as RawEvent[])
-    .filter(e => !city || e.creator?.city?.toLowerCase() === city.toLowerCase())
-    .slice(0, eventsLimit)
+  const rawEvents = ((eventsRes.data ?? []) as unknown as RawEvent[]).slice(0, eventsLimit)
 
   const events: ExploreEvent[] = rawEvents.map(e => ({
     id:           e.id,
@@ -165,6 +213,8 @@ export default async function ExplorePage({
     <ExploreClient
       tab={tab}
       city={city}
+      when={when}
+      eventCounts={eventCounts}
       events={events}
       creators={creators}
       venues={venues}

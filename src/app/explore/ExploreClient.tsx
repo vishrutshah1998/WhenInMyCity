@@ -58,9 +58,18 @@ export interface SubscribedPost {
   } | null
 }
 
+export interface EventCounts {
+  tonight: number
+  weekend: number
+  week:    number
+  all:     number
+}
+
 interface Props {
   tab:                string
   city:               string
+  when?:              string
+  eventCounts?:       EventCounts
   events:             ExploreEvent[]
   creators:           ExploreCreator[]
   venues:             ExploreVenue[]
@@ -96,7 +105,8 @@ function initial(name: string) {
 
 // ─── Crosshatch page background ───────────────────────────────────────────────
 
-function makePageBg(baseColor: string): React.CSSProperties {
+function makePageBg(baseColor: string, flat = false): React.CSSProperties {
+  if (flat) return { backgroundColor: baseColor }
   return {
     backgroundColor: baseColor,
     backgroundImage: 'radial-gradient(#1A1108 0.5px, transparent 0.5px)',
@@ -513,7 +523,21 @@ function SectionHeader({
 
 // ─── Desktop Filter Rail ──────────────────────────────────────────────────────
 
-function FilterRail() {
+function FilterRail({
+  when, eventCounts, tab, city, basePath,
+}: {
+  when:        string
+  eventCounts: EventCounts
+  tab:         string
+  city:        string
+  basePath:    string
+}) {
+  const whatsOn: { label: string; when: string; count: number }[] = [
+    { label: 'TONIGHT',      when: 'tonight', count: eventCounts.tonight },
+    { label: 'WEEKEND',      when: 'weekend', count: eventCounts.weekend },
+    { label: 'THIS WEEK',    when: 'week',    count: eventCounts.week },
+    { label: 'ALL UPCOMING', when: 'all',     count: eventCounts.all },
+  ]
   return (
     <aside className="hidden lg:flex flex-col gap-8 sticky top-32">
       {/* What's On */}
@@ -522,20 +546,19 @@ function FilterRail() {
           WHAT&apos;S ON
         </div>
         <div className="space-y-0.5">
-          {[
-            { label: 'TONIGHT', count: 4 },
-            { label: 'WEEKEND', count: 12 },
-            { label: 'THIS WEEK', count: 28, active: true },
-            { label: 'ALL UPCOMING', count: 42 },
-          ].map(item => (
-            <div key={item.label} className="flex justify-between items-center cursor-pointer group py-2">
-              <span className={`font-sans text-[13px] font-semibold group-hover:text-[#E8705A] transition-colors ${item.active ? 'text-[#E8705A] font-bold' : 'text-ed-ink'}`}>
+          {whatsOn.map(item => (
+            <Link
+              key={item.label}
+              href={`${basePath}?tab=${tab}&city=${city}&when=${item.when}`}
+              className="flex justify-between items-center cursor-pointer group py-2"
+            >
+              <span className={`font-sans text-[13px] font-semibold group-hover:text-[#E8705A] transition-colors ${item.when === when ? 'text-[#E8705A] font-bold' : 'text-ed-ink'}`}>
                 {item.label}
               </span>
               <span className="font-mono text-[11px] bg-ed-ink/10 px-1 text-ed-ink/60">
                 {item.count}
               </span>
-            </div>
+            </Link>
           ))}
         </div>
       </div>
@@ -689,13 +712,19 @@ function SubscribedPostsSection({ posts }: { posts: SubscribedPost[] }) {
 // ─── ALL tab content ──────────────────────────────────────────────────────────
 
 function AllTabContent({
-  events, creators, venues, subscribedPosts = [], city = '',
+  events, creators, venues, subscribedPosts = [], city = '', inDashboard = false,
+  when = 'all', eventCounts = { tonight: 0, weekend: 0, week: 0, all: 0 }, tab = 'all', basePath = '/explore',
 }: {
   events:          ExploreEvent[]
   creators:        ExploreCreator[]
   venues:          ExploreVenue[]
   subscribedPosts: SubscribedPost[]
   city?:           string
+  inDashboard?:    boolean
+  when?:           string
+  eventCounts?:    EventCounts
+  tab?:            string
+  basePath?:       string
 }) {
   const featuredEvent = events[0]
 
@@ -705,7 +734,7 @@ function AllTabContent({
       <div className="max-w-[1440px] mx-auto px-4 lg:px-6 pt-6 pb-0">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-6 lg:ml-[calc((2/12*100%)_+_1.5rem)]">
           <Link
-            href="/hall-of-lights"
+            href={inDashboard ? '/dashboard/hall-of-lights' : '/hall-of-lights'}
             className="flex items-center gap-3 p-4 transition-colors hover:brightness-110"
             style={{
               background: '#1A1108',
@@ -754,7 +783,7 @@ function AllTabContent({
       <div className="hidden lg:grid lg:grid-cols-12 lg:gap-6 max-w-[1440px] mx-auto p-6">
         {/* Filter rail */}
         <div className="col-span-2">
-          <FilterRail />
+          <FilterRail when={when} eventCounts={eventCounts} tab={tab} city={city} basePath={basePath} />
         </div>
 
         {/* Feed */}
@@ -1033,23 +1062,37 @@ function MobileFeaturedCard({ event }: { event: ExploreEvent }) {
 
 // ─── EVENTS tab ───────────────────────────────────────────────────────────────
 
-const DATE_FILTERS  = ['TONIGHT', 'THIS WEEKEND', 'THIS WEEK', 'ALL'] as const
+const DATE_FILTERS = [
+  { label: 'TONIGHT',      when: 'tonight' },
+  { label: 'THIS WEEKEND', when: 'weekend' },
+  { label: 'THIS WEEK',    when: 'week' },
+  { label: 'ALL',          when: 'all' },
+] as const
 const CAT_FILTERS   = ['MUSIC', 'ART & CULTURE', 'FOOD & BEV', 'TECH', 'WELLNESS'] as const
 
-function EventsTabContent({ events }: { events: ExploreEvent[] }) {
+function EventsTabContent({
+  events, when = 'all', tab = 'events', city, basePath = '/explore',
+}: {
+  events:    ExploreEvent[]
+  when?:     string
+  tab?:      string
+  city:      string
+  basePath?: string
+}) {
   return (
     <div className="max-w-[1440px] mx-auto p-6">
       {/* Filter row */}
       <div className="flex flex-col gap-4 mb-10 border-b-2 border-dashed border-ed-ink/10 pb-6">
         <div className="flex items-center gap-3 flex-wrap">
           <span className="font-mono text-[10px] text-ed-ink/50 uppercase mr-2">Timeframe /</span>
-          {DATE_FILTERS.map((f, i) => (
-            <button
-              key={f}
-              className={`px-4 py-2 border-2 font-mono text-[10px] uppercase font-bold transition-all ${i === 3 ? 'bg-[#E8705A] text-white border-[#E8705A]' : 'border-dashed border-ed-ink/20 text-ed-ink/50 hover:bg-ed-ink/5'}`}
+          {DATE_FILTERS.map(f => (
+            <Link
+              key={f.label}
+              href={`${basePath}?tab=${tab}&city=${city}&when=${f.when}`}
+              className={`px-4 py-2 border-2 font-mono text-[10px] uppercase font-bold transition-all ${f.when === when ? 'bg-[#E8705A] text-white border-[#E8705A]' : 'border-dashed border-ed-ink/20 text-ed-ink/50 hover:bg-ed-ink/5'}`}
             >
-              {f}
-            </button>
+              {f.label}
+            </Link>
           ))}
         </div>
         <div className="flex items-center gap-3 flex-wrap">
@@ -1744,29 +1787,41 @@ const TABS = [
   { id: 'venues',   label: 'VENUES',    icon: 'location_on',         activeColor: 'bg-[#5DD9D0] text-ed-ink font-bold'  },
 ] as const
 
-function TabBar({ activeTab, city, basePath = '/explore', stickyTop = 'top-[64px]' }: { activeTab: string; city: string; basePath?: string; stickyTop?: string }) {
+function TabBar({ activeTab, city, count = 0, basePath = '/explore', stickyTop = 'top-[64px]', inDashboard = false }: { activeTab: string; city: string; count?: number; basePath?: string; stickyTop?: string; inDashboard?: boolean }) {
+  const shellClass = inDashboard
+    ? 'backdrop-blur border-b h-12 flex justify-between items-center'
+    : 'bg-ed-chalk-2/95 backdrop-blur border-b-2 border-dashed border-ed-ink/15 h-12 flex justify-between items-center'
+  const shellStyle = inDashboard
+    ? { background: 'var(--wimc-bg-elevated)', borderColor: 'var(--wimc-border-default)' }
+    : undefined
   return (
-    <div className={`sticky ${stickyTop} z-[50] bg-ed-chalk-2/95 backdrop-blur border-b-2 border-dashed border-ed-ink/15 h-12 flex justify-between items-center`}>
+    <div className={`sticky ${stickyTop} z-[50] ${shellClass}`} style={shellStyle}>
       {/* Left tabs */}
       <div className="flex h-full">
         {TABS.map((t, i) => {
           const isActive = activeTab === t.id
+          const dividerClass = inDashboard ? 'border-l' : 'border-l-2 border-dashed'
           return (
             <Link
               key={t.id}
               href={`${basePath}?tab=${t.id}&city=${city}`}
-              className={`flex items-center gap-2 px-4 lg:px-6 font-mono text-[10px] tracking-[0.24em] uppercase h-full transition-colors ${i > 0 ? 'border-l-2 border-dashed border-ed-ink/15' : ''} ${isActive ? t.activeColor : 'text-ed-ink/60 hover:bg-ed-ink/5'}`}
+              className={`flex items-center gap-2 px-4 lg:px-6 font-mono text-[10px] tracking-[0.24em] uppercase h-full transition-colors ${i > 0 ? `${dividerClass} ${inDashboard ? '' : 'border-ed-ink/15'}` : ''} ${isActive ? t.activeColor : inDashboard ? 'hover:opacity-70' : 'text-ed-ink/60 hover:bg-ed-ink/5'}`}
+              style={i > 0 && inDashboard ? { borderColor: 'var(--wimc-border-default)' } : undefined}
             >
-              <span className="material-symbols-outlined text-[14px] hidden lg:inline">{t.icon}</span>
+              <span className="hidden lg:inline">
+                <span className="material-symbols-outlined text-[14px]">{t.icon}</span>
+              </span>
               {t.label}
             </Link>
           )
         })}
       </div>
       {/* Right meta — desktop only */}
-      <div className="hidden lg:block font-mono text-[10px] text-ed-ink/40 uppercase tracking-widest pr-6">
-        42 results in {city.toUpperCase()} // [23.0225° N, 72.5714° E]
-      </div>
+      {!inDashboard && (
+        <div className="hidden lg:block font-mono text-[10px] text-ed-ink/40 uppercase tracking-widest pr-6">
+          {count} results in {city.toUpperCase()} // [23.0225° N, 72.5714° E]
+        </div>
+      )}
     </div>
   )
 }
@@ -1859,6 +1914,8 @@ function MobileHeader({ city, setCity }: { city: string; setCity: (c: string) =>
 
 export default function ExploreClient({
   tab, city, events, creators, venues,
+  when                = 'all',
+  eventCounts         = { tonight: 0, weekend: 0, week: 0, all: 0 },
   subscribedPosts:   initialSubscribedPosts = [],
   followedCreatorIds = [],
   viewerUserId       = null,
@@ -1908,7 +1965,7 @@ export default function ExploreClient({
   }, [viewerUserId, followedCreatorIds])
 
   const basePath = basePathProp ?? (inDashboard ? '/dashboard/explore' : '/explore')
-  const bgColor  = inDashboard ? '#EDE7D6' : '#F7F2E8'
+  const bgColor  = inDashboard ? 'var(--wimc-bg-base)' : '#F7F2E8'
 
   function setCity(c: string) {
     router.push(`${basePath}?tab=${tab}&city=${encodeURIComponent(c)}`)
@@ -1924,12 +1981,12 @@ export default function ExploreClient({
           }
         `}</style>
 
-        <div className="min-h-screen" style={makePageBg(bgColor)}>
-          <TabBar activeTab={tab} city={city} basePath={basePath} stickyTop="top-0" />
+        <div className="min-h-[max(884px,100dvh)]" style={makePageBg(bgColor, true)}>
+          <TabBar activeTab={tab} city={city} basePath={basePath} stickyTop="top-0" inDashboard count={eventCounts.all} />
 
           <div className="pb-12">
-            {tab === 'all'      && <AllTabContent      events={events} creators={creators} venues={venues} subscribedPosts={subscribedPosts} city={city} />}
-            {tab === 'events'   && <EventsTabContent   events={events} />}
+            {tab === 'all'      && <AllTabContent      events={events} creators={creators} venues={venues} subscribedPosts={subscribedPosts} city={city} inDashboard when={when} eventCounts={eventCounts} tab={tab} basePath={basePath} />}
+            {tab === 'events'   && <EventsTabContent   events={events} when={when} tab={tab} city={city} basePath={basePath} />}
             {tab === 'creators' && <CreatorsTabContent creators={creators} />}
             {tab === 'venues'   && <VenuesTabContent venues={venues} city={city} />}
           </div>
@@ -1952,12 +2009,12 @@ export default function ExploreClient({
       <div className="fixed inset-0 z-[40] overflow-y-auto" style={makePageBg(bgColor)}>
         <DesktopHeader city={city} setCity={setCity} />
         <MobileHeader city={city} setCity={setCity} />
-        <TabBar activeTab={tab} city={city} basePath={basePath} />
+        <TabBar activeTab={tab} city={city} basePath={basePath} count={eventCounts.all} />
 
         {/* Content area */}
         <div className="pb-28 lg:pb-12">
-          {tab === 'all'      && <AllTabContent      events={events} creators={creators} venues={venues} subscribedPosts={subscribedPosts} />}
-          {tab === 'events'   && <EventsTabContent   events={events} />}
+          {tab === 'all'      && <AllTabContent      events={events} creators={creators} venues={venues} subscribedPosts={subscribedPosts} city={city} when={when} eventCounts={eventCounts} tab={tab} basePath={basePath} />}
+          {tab === 'events'   && <EventsTabContent   events={events} when={when} tab={tab} city={city} basePath={basePath} />}
           {tab === 'creators' && <CreatorsTabContent creators={creators} />}
           {tab === 'venues'   && <VenuesTabContent venues={venues} city={city} />}
         </div>
