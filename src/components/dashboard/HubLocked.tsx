@@ -33,30 +33,30 @@ export function HubLocked({ profile }: Props) {
 
   return (
     <div style={{
-      minHeight: '100vh', background: '#07070A',
+      minHeight: '100vh', background: 'var(--wimc-bg-base)',
       display: 'flex', flexDirection: 'column',
       alignItems: 'center', justifyContent: 'center',
       padding: 32,
     }}>
       <div style={{
         maxWidth: 480, width: '100%',
-        background: '#131317', border: '1px solid #57423e',
+        background: 'var(--wimc-bg-elevated)', border: '1px solid var(--wimc-border-default)',
         padding: 32, display: 'flex', flexDirection: 'column', gap: 24,
       }}>
 
         {/* ── Icon + title ─────────────────────────────────────────────────── */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
           <div style={{ position: 'relative', display: 'inline-flex', width: 56, height: 56 }}>
-            <span className="material-symbols-outlined" style={{ fontSize: 48, color: '#353438' }}>
+            <span className="material-symbols-outlined" style={{ fontSize: 48, color: 'var(--wimc-border-strong)' }}>
               hub
             </span>
             <div style={{
               position: 'absolute', top: -2, right: -2,
               width: 22, height: 22, borderRadius: '50%',
-              background: '#131317', border: '1px solid #57423e',
+              background: 'var(--wimc-bg-elevated)', border: '1px solid var(--wimc-border-default)',
               display: 'grid', placeItems: 'center',
             }}>
-              <span className="material-symbols-outlined" style={{ fontSize: 13, color: '#5DD9D0' }}>
+              <span className="material-symbols-outlined" style={{ fontSize: 13, color: 'var(--wimc-teal)' }}>
                 lock
               </span>
             </div>
@@ -64,20 +64,20 @@ export function HubLocked({ profile }: Props) {
 
           <div style={{
             fontFamily: 'var(--font-jetbrains-mono)', fontSize: 10,
-            color: '#5DD9D0', letterSpacing: '0.15em',
+            color: 'var(--wimc-teal)', letterSpacing: '0.15em',
             textTransform: 'uppercase', marginTop: 16,
           }}>
             HUB
           </div>
           <h2 style={{
             fontFamily: 'var(--font-syne)', fontWeight: 900, fontSize: 28,
-            color: '#F0EFF8', margin: '4px 0 0', lineHeight: 1.2,
+            color: 'var(--wimc-text-primary)', margin: '4px 0 0', lineHeight: 1.2,
           }}>
             Unlocks at Local
           </h2>
           <p style={{
             fontFamily: 'var(--font-dm-sans)', fontSize: 14,
-            color: '#9896B0', lineHeight: 1.6, margin: '10px 0 0',
+            color: 'var(--wimc-text-muted)', lineHeight: 1.6, margin: '10px 0 0',
           }}>
             The Hub is where creators connect, collaborate, and DM each other.
             Reach Local tier to unlock it.
@@ -85,13 +85,13 @@ export function HubLocked({ profile }: Props) {
         </div>
 
         {/* ── Divider ──────────────────────────────────────────────────────── */}
-        <div style={{ borderTop: '1px dashed #57423e' }} />
+        <div style={{ borderTop: '1px dashed var(--wimc-border-default)' }} />
 
         {/* ── Progress ─────────────────────────────────────────────────────── */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           <div style={{
             fontFamily: 'var(--font-jetbrains-mono)', fontSize: 10,
-            color: '#9896B0', textTransform: 'uppercase', letterSpacing: '0.15em',
+            color: 'var(--wimc-text-muted)', textTransform: 'uppercase', letterSpacing: '0.15em',
           }}>
             YOUR PROGRESS TO LOCAL
           </div>
@@ -99,16 +99,16 @@ export function HubLocked({ profile }: Props) {
           {/* Events attended */}
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontFamily: 'var(--font-dm-sans)', fontSize: 13, color: '#F0EFF8' }}>
+              <span style={{ fontFamily: 'var(--font-dm-sans)', fontSize: 13, color: 'var(--wimc-text-primary)' }}>
                 Events attended (90 days)
               </span>
-              <span style={{ fontFamily: 'var(--font-jetbrains-mono)', fontSize: 12, color: '#5DD9D0' }}>
+              <span style={{ fontFamily: 'var(--font-jetbrains-mono)', fontSize: 12, color: 'var(--wimc-teal)' }}>
                 {eventsAttended} / {eventsThreshold}
               </span>
             </div>
-            <div style={{ marginTop: 6, height: 6, background: '#1b1b1f', width: '100%' }}>
+            <div style={{ marginTop: 6, height: 6, background: 'var(--wimc-bg-raised)', width: '100%' }}>
               <div style={{
-                height: '100%', background: '#5DD9D0',
+                height: '100%', background: 'var(--wimc-teal)',
                 width: `${eventsProgress}%`,
                 transition: 'width 700ms ease',
               }} />
@@ -118,19 +118,19 @@ export function HubLocked({ profile }: Props) {
           {/* Review rate */}
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontFamily: 'var(--font-dm-sans)', fontSize: 13, color: '#F0EFF8' }}>
+              <span style={{ fontFamily: 'var(--font-dm-sans)', fontSize: 13, color: 'var(--wimc-text-primary)' }}>
                 Review rate
               </span>
               <span style={{
                 fontFamily: 'var(--font-jetbrains-mono)', fontSize: 12,
-                color: reviewMet ? '#5DD9D0' : '#9896B0',
+                color: reviewMet ? 'var(--wimc-teal)' : 'var(--wimc-text-muted)',
               }}>
                 {Math.round(reviewRate * 100)}% / {Math.round(reviewThreshold * 100)}%
               </span>
             </div>
-            <div style={{ marginTop: 6, height: 6, background: '#1b1b1f', width: '100%' }}>
+            <div style={{ marginTop: 6, height: 6, background: 'var(--wimc-bg-raised)', width: '100%' }}>
               <div style={{
-                height: '100%', background: '#5DD9D0',
+                height: '100%', background: 'var(--wimc-teal)',
                 width: `${reviewProgress}%`,
                 transition: 'width 700ms ease',
               }} />
@@ -139,13 +139,13 @@ export function HubLocked({ profile }: Props) {
         </div>
 
         {/* ── Divider ──────────────────────────────────────────────────────── */}
-        <div style={{ borderTop: '1px dashed #57423e' }} />
+        <div style={{ borderTop: '1px dashed var(--wimc-border-default)' }} />
 
         {/* ── What unlocks ─────────────────────────────────────────────────── */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           <div style={{
             fontFamily: 'var(--font-jetbrains-mono)', fontSize: 10,
-            color: '#9896B0', textTransform: 'uppercase', letterSpacing: '0.15em',
+            color: 'var(--wimc-text-muted)', textTransform: 'uppercase', letterSpacing: '0.15em',
           }}>
             WHAT UNLOCKS WITH HUB
           </div>
@@ -155,10 +155,10 @@ export function HubLocked({ profile }: Props) {
             { icon: 'chat_bubble', label: 'Direct message connected creators' },
           ].map(({ icon, label }) => (
             <div key={icon} style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
-              <span className="material-symbols-outlined" style={{ fontSize: 18, color: '#5DD9D0', flexShrink: 0 }}>
+              <span className="material-symbols-outlined" style={{ fontSize: 18, color: 'var(--wimc-teal)', flexShrink: 0 }}>
                 {icon}
               </span>
-              <span style={{ fontFamily: 'var(--font-dm-sans)', fontSize: 13, color: '#9896B0' }}>
+              <span style={{ fontFamily: 'var(--font-dm-sans)', fontSize: 13, color: 'var(--wimc-text-muted)' }}>
                 {label}
               </span>
             </div>
@@ -170,7 +170,7 @@ export function HubLocked({ profile }: Props) {
           onClick={() => router.push('/explore')}
           style={{
             width: '100%', padding: '12px 0',
-            background: '#5DD9D0', color: '#07070A',
+            background: 'var(--wimc-teal)', color: '#07070A',
             border: 'none', cursor: 'pointer',
             fontFamily: 'var(--font-jetbrains-mono)', fontSize: 12,
             fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.15em',
@@ -182,7 +182,7 @@ export function HubLocked({ profile }: Props) {
         {/* ── Footer ───────────────────────────────────────────────────────── */}
         <div style={{
           fontFamily: 'var(--font-jetbrains-mono)', fontSize: 9,
-          color: '#57423e', textAlign: 'center',
+          color: 'var(--wimc-text-secondary)', textAlign: 'center',
         }}>
           Tier is evaluated monthly. Events you attend now count toward Local.
         </div>

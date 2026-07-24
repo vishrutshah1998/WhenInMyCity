@@ -10,14 +10,14 @@ import {
 import type { DiscoverCreator, HubConnection, HubMessage } from '@/app/actions/hub'
 
 // ── Design tokens ────────────────────────────────────────────────────────────
-const BG      = '#07070A'
-const CARD    = '#131317'
-const ELEVATED = '#1b1b1f'
-const BORDER  = '#57423e'
-const TEAL    = '#5DD9D0'
-const TEXT    = '#F0EFF8'
-const MUTED   = '#9896B0'
-const FAINT   = '#57423e'
+const BG      = 'var(--wimc-bg-base)'
+const CARD    = 'var(--wimc-bg-elevated)'
+const ELEVATED = 'var(--wimc-bg-raised)'
+const BORDER  = 'var(--wimc-border-default)'
+const TEAL    = 'var(--wimc-teal)'
+const TEXT    = 'var(--wimc-text-primary)'
+const MUTED   = 'var(--wimc-text-muted)'
+const FAINT   = 'var(--wimc-text-secondary)'
 
 type Tab = 'discover' | 'requests' | 'messages'
 
@@ -242,7 +242,7 @@ export function HubClient({ currentUserId, discover, connections }: Props) {
         <div style={{ padding: 32 }}>
           {discover.length === 0 ? (
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '60px 0', gap: 12 }}>
-              <span className="material-symbols-outlined" style={{ fontSize: 48, color: '#353438' }}>hub</span>
+              <span className="material-symbols-outlined" style={{ fontSize: 48, color: 'var(--wimc-border-strong)' }}>hub</span>
               <p style={{ color: MUTED, fontFamily: 'var(--font-dm-sans)', fontSize: 14, margin: 0 }}>
                 No new creators in your city yet.
               </p>
@@ -325,7 +325,7 @@ export function HubClient({ currentUserId, discover, connections }: Props) {
                           fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em',
                           padding: '8px 16px', border: 'none',
                           cursor: requested ? 'not-allowed' : 'pointer',
-                          background: requested ? 'rgba(255,255,255,0.08)' : TEAL,
+                          background: requested ? 'var(--wimc-bg-overlay)' : TEAL,
                           color: requested ? MUTED : '#07070A',
                           transition: 'background 150ms',
                         }}
@@ -472,7 +472,7 @@ export function HubClient({ currentUserId, discover, connections }: Props) {
                       borderLeft: isActive ? `2px solid ${TEAL}` : '2px solid transparent',
                       cursor: 'pointer', textAlign: 'left', transition: 'background 150ms',
                     }}
-                    onMouseEnter={(e) => { if (!isActive) (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.03)' }}
+                    onMouseEnter={(e) => { if (!isActive) (e.currentTarget as HTMLElement).style.background = 'var(--wimc-bg-hover)' }}
                     onMouseLeave={(e) => { if (!isActive) (e.currentTarget as HTMLElement).style.background = 'transparent' }}
                   >
                     <div style={{ position: 'relative', flexShrink: 0 }}>
@@ -513,7 +513,7 @@ export function HubClient({ currentUserId, discover, connections }: Props) {
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
             {!selectedConn ? (
               <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12 }}>
-                <span className="material-symbols-outlined" style={{ fontSize: 48, color: '#353438' }}>chat_bubble</span>
+                <span className="material-symbols-outlined" style={{ fontSize: 48, color: 'var(--wimc-border-strong)' }}>chat_bubble</span>
                 <span style={{ color: MUTED, fontFamily: 'var(--font-dm-sans)', fontSize: 14 }}>
                   Select a conversation
                 </span>
@@ -619,7 +619,7 @@ export function HubClient({ currentUserId, discover, connections }: Props) {
                     style={{
                       padding: 12, border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center',
                       cursor: draft.trim() && !sending ? 'pointer' : 'not-allowed',
-                      background: draft.trim() ? TEAL : 'rgba(255,255,255,0.05)',
+                      background: draft.trim() ? TEAL : 'var(--wimc-bg-hover)',
                       color: draft.trim() ? '#07070A' : MUTED,
                       transition: 'background 150ms', flexShrink: 0,
                     }}
