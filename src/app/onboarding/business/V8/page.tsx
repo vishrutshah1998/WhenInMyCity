@@ -165,18 +165,34 @@ export default function V8Page() {
         if (handles.instagram) ig = handles.instagram.replace(/^@/, '')
       } catch {}
     }
+    // Google Places (captured back in B2 when the address was confirmed) often
+    // already has the venue's own listed phone number — prefer that over the
+    // owner's personal sign-in phone, which Google OAuth doesn't provide anyway.
+    if (!wa) {
+      const googlePhone = sessionStorage.getItem(SK.v_phone) || ''
+      const digits = googlePhone.replace(/\D/g, '').slice(-10)
+      if (digits.length === 10) wa = digits
+    }
     if (wa)      setWhatsapp(wa)
     if (mail)    setEmail(mail)
     if (ig)      setInstagram(ig)
     if (bioText) setBio(bioText)
+    // Persist fallback-derived values immediately so the right-panel preview
+    // reflects them without requiring the user to touch the field first.
+    if (wa || mail || ig || bioText) syncContact(wa, mail, ig, bioText)
 
     createClient().auth.getUser().then(({ data: { user } }) => {
       if (!user) return
+      let nextWa = wa, nextMail = mail
+      // Google OAuth sign-in does not populate a verified `user.phone` on the
+      // Supabase auth record, so this branch rarely fires for Google users —
+      // the v_phone (Google Places) fallback above is what actually covers them.
       if (!wa && user.phone) {
         const digits = user.phone.replace(/\D/g, '').slice(-10)
-        if (digits.length === 10) setWhatsapp(digits)
+        if (digits.length === 10) { setWhatsapp(digits); nextWa = digits }
       }
-      if (!mail && user.email) setEmail(user.email)
+      if (!mail && user.email) { setEmail(user.email); nextMail = user.email }
+      if (nextWa !== wa || nextMail !== mail) syncContact(nextWa, nextMail, ig, bioText)
       // No dedicated "host name" field is collected during venue onboarding —
       // fall back to the auth account's OAuth full name (e.g. Google sign-in)
       // rather than fabricating one; VenuePoster omits the row entirely if null.

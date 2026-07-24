@@ -93,6 +93,7 @@ export function readSnapshot() {
       v_google_name:     sessionStorage.getItem(SK.v_google_name)     || '',
       v_slug:            sessionStorage.getItem(SK.v_slug)            || '',
       v_amenities:       JSON.parse(sessionStorage.getItem(SK.v_amenities) || '[]') as string[],
+      v_google_photos:   JSON.parse(sessionStorage.getItem(SK.v_google_photos) || '[]') as string[],
       v_editorial:     sessionStorage.getItem(SK.v_editorial)      || '',
       r_categories:    sessionStorage.getItem(SK.r_categories)     || '',
       r_aesthetic:     sessionStorage.getItem(SK.r_aesthetic)      || '',
