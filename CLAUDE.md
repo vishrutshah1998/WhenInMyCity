@@ -130,3 +130,57 @@ mobile breakpoint. Reuse these — do NOT add new dependencies for things alread
     real browser.
   Do not tell a creator this feature works, or point a real creator account at it, until a Meta
   Developer App exists and both account types have been connected and observed end-to-end.
+  - **Instagram Login (Instagram API with Instagram Login, `instagram_business_basic` scope) has no
+    account picker — it authorizes whichever Instagram account is currently active in the browser/app
+    session at the moment `initiateInstagramConnect` redirects to `api.instagram.com/oauth/authorize`.**
+    Confirmed live (2026-07-23) by tracing a real attempt: if the active session account is Personal,
+    Meta itself intercepts the request *before* any consent/"Allow" screen and forces a
+    "Change to professional account?" interstitial — this happens entirely on Meta's domain, before
+    WIMC's code runs at all. If the creator then uses Instagram's own account switcher (not part of
+    the OAuth redirect chain) to jump to a different, already-professional account, the original
+    `client_id`/`redirect_uri`/`state` query params are dropped entirely and they land on a plain
+    `instagram.com/accounts/edit/` page — a dead end with no way back into the consent screen except
+    returning to WIMC and clicking "Connect" again. On mobile this is more acute: `instagram.com`/
+    `api.instagram.com` are near-certainly Universal Links (iOS) / App Links (Android), so tapping
+    Connect with the Instagram app installed will likely deep-link into the native app, which applies
+    the same single-active-session rule — if the app's currently active account (very often the
+    creator's personal daily-use account, or an explorer's own account if they're not the intended
+    connector) isn't Business/Creator, they hit the identical wall. There is no code-level fix on
+    WIMC's side (Meta's OAuth params offer no `force_authentication`/account-picker option in this
+    flow) — the mitigation is UX copy before the Connect button (tell the creator to make their
+    Business/Creator account the active one first, in whichever browser or app they're using) and a
+    visible "Didn't finish connecting? Click Connect again" affordance on the settings page, since a
+    dead-ended attempt currently leaves no signal that anything went wrong. Not yet implemented.
+  - **Popup-based OAuth (`window.open` + a self-closing callback page that `postMessage`s the opener)
+    was considered, to avoid navigating the creator's main tab away from WIMC, but is not recommended
+    as the primary path.** The most common real-world entry point for both creators and explorers is
+    tapping a link from inside Instagram's own in-app browser (a restricted WebView) — in-app browsers
+    (Instagram/Facebook/similar) are well documented as blocking or silently no-op'ing `window.open`,
+    which is exactly why Meta's own developer guidance for Facebook Login recommends detecting in-app
+    browsers and prompting users to open in the system browser before attempting any OAuth. A
+    popup-only implementation would likely just fail (or fail silently) for the majority of real
+    traffic. Note: WIMC's own Supabase session is standard persistent-cookie auth refreshed by
+    `middleware.ts` on every request (see `src/lib/supabase/middleware.ts`) — navigating away to
+    Instagram and back does **not** by itself require a relogin in a normal browser; the real risk is
+    narrower, limited to in-app WebViews that clear storage more aggressively or get reclaimed by the
+    OS during a long detour (e.g. converting account type, switching accounts). If this is ever built,
+    the safe shape is: detect in-app browsers via user-agent sniffing and skip straight to the current
+    full-page redirect for them (always works, same as today); for normal desktop/mobile Safari/Chrome,
+    attempt the popup with an immediate fallback to full-page redirect if `window.open` returns null
+    (popup blocked). Not implemented — this is a design note, not a task in progress.
+- **`addBlock()` (`src/app/actions/blocks.ts`) collapses every DB error into one generic string,
+  so `BlockEditor.tsx`'s error surfacing (added alongside migration 065, `src/components/dashboard/
+  BlockEditor.tsx` `handleAdd`) only got silent failure to visible failure, not visible-and-
+  diagnosable failure.** On any insert error `addBlock()` returns the hardcoded `'Failed to add
+  block.'` to the client and logs the real Postgres message (`error.message`) only via
+  `console.error` server-side — the specific cause (e.g. an invalid enum value, a constraint
+  violation) never reaches the UI or the caller. Confirmed 2026-07-24 while verifying migration 065
+  live: a recurrence of that exact bug class (a new block type shipped in TypeScript before its
+  Postgres `block_type` enum value exists) would now show a generic "Failed to add block." message
+  instead of nothing — better, but you'd still need to go read server logs to know what actually
+  broke. Same class of gap as the Instagram callback route's old `instagram_save_failed` catch-all
+  (see the Instagram Connect entry above) — a real message swallowed behind a generic one takes real
+  digging to diagnose. Not fixed here — would mean deciding how much of the raw Postgres error is
+  safe to surface to a client (likely: pass a short, allow-listed reason string back through
+  `addBlock()`'s return value rather than the raw error, mirroring the discipline already used for
+  `respondError()` in the Instagram callback route).
