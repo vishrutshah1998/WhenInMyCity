@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { SK } from '@/lib/onboarding/session-keys'
 import { VenueNoticePoster } from '@/components/onboarding/BoardingPassArtifact'
 import { inferAmenitiesFromGoogle } from '@/lib/onboarding/google-type-map'
+import { AMENITY_CATEGORIES } from '@/lib/constants/venueOnboarding'
 
 const ACCENT = '#5DD9D0'
 const MONO   = "var(--font-jetbrains-mono), 'JetBrains Mono', monospace"
@@ -12,32 +13,6 @@ const BARLOW = "var(--font-barlow), 'Barlow Condensed', sans-serif"
 const OUTFIT = "'Outfit', sans-serif"
 const ABRIL  = "var(--font-abril), 'Abril Fatface', serif"
 const DM     = "'DM Sans', sans-serif"
-
-interface AmenityCategory {
-  id:    string
-  icon:  string
-  label: string
-  items: string[]
-}
-
-const AMENITY_CATEGORIES: AmenityCategory[] = [
-  { id: 'connectivity', icon: 'wifi',              label: 'Connectivity & Tech',
-    items: ['WiFi (Fibre)', 'AV System', 'Projector', 'PA System', 'Power Backup', 'Smart TV', 'Ethernet Ports', 'DMX Lighting'] },
-  { id: 'food_drink',   icon: 'restaurant',         label: 'Food & Drink',
-    items: ['In-House Café', 'Bar & Alcohol', 'Coffee & Tea', 'Outside Catering OK', 'Kitchen Access', 'Vending Machine'] },
-  { id: 'space',        icon: 'deck',               label: 'Space & Outdoors',
-    items: ['Outdoor Terrace', 'Rooftop Access', 'Garden / Lawn', 'Dedicated Stage', 'Private Booth', 'Basement Access'] },
-  { id: 'access',       icon: 'accessible',         label: 'Access & Parking',
-    items: ['Wheelchair Ramp', 'Elevator Access', 'Near Metro', 'Free Parking', 'Valet Parking', 'Accessible Toilets'] },
-  { id: 'production',   icon: 'video_camera_front', label: 'Production & Media',
-    items: ['Photography Friendly', 'Video Shoot Ready', 'Green Screen Wall', 'Studio Lighting', 'Live Stream Setup', 'Drone-Friendly'] },
-  { id: 'ambiance',     icon: 'wb_sunny',           label: 'Ambiance & Light',
-    items: ['Natural Light', 'Blackout Curtains', 'Skylight', 'Neon Signage', 'Art Walls', 'Industrial Look', 'Heritage / Vintage'] },
-  { id: 'vibe',         icon: 'nightlife',          label: 'Vibe & Rules',
-    items: ['DJ / Live Music OK', 'Late Night (12am+)', 'Pets Allowed', 'Smoking Zone', 'BYOB Allowed', 'Board Games'] },
-  { id: 'work',         icon: 'laptop',             label: 'Work & Focus',
-    items: ['Whiteboard', 'AC Throughout', 'Private Meeting Room', 'Silent Zone', 'Standing Desks', 'Phone Booth'] },
-]
 
 const TYPE_DEFAULTS: Record<string, string[]> = {
   cafe:           ['WiFi (Fibre)', 'Coffee & Tea', 'In-House Café', 'Natural Light'],

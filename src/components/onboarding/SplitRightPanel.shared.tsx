@@ -84,6 +84,7 @@ export function readSnapshot() {
       v_neighbourhood: sessionStorage.getItem(SK.v_neighbourhood) || '',
       v_pricing:         sessionStorage.getItem(SK.v_pricing)         || '',
       v_pricing_amount:  sessionStorage.getItem(SK.v_pricing_amount)  || '',
+      v_pricing_split:   sessionStorage.getItem(SK.v_pricing_split)   || '',
       v_events:          JSON.parse(sessionStorage.getItem(SK.v_events)    || '[]') as string[],
       v_days:            JSON.parse(sessionStorage.getItem(SK.v_days)      || '[]') as string[],
       v_times:           JSON.parse(sessionStorage.getItem(SK.v_times)     || '[]') as string[],

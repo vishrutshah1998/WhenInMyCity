@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { SK } from '@/lib/onboarding/session-keys'
 import { VenueNoticePoster } from '@/components/onboarding/BoardingPassArtifact'
 import { saveVenueOnboardingStep } from '@/app/actions/venue-onboarding'
+import { PRICING_MODELS, PRICING_TO_VALID, EVENT_TYPES, type PricingId } from '@/lib/constants/venueOnboarding'
 
 const ACCENT = '#5DD9D0'
 const MONO   = "var(--font-jetbrains-mono), 'JetBrains Mono', monospace"
@@ -12,31 +13,6 @@ const BARLOW = "var(--font-barlow), 'Barlow Condensed', sans-serif"
 const OUTFIT = "'Outfit', sans-serif"
 const ABRIL  = "var(--font-abril), 'Abril Fatface', serif"
 const DM     = "'DM Sans', sans-serif"
-
-const PRICING_MODELS = [
-  { id: 'hourly', icon: 'schedule',   label: 'HOURLY',      desc: 'Creators pay a flat hourly rate for the space.' },
-  { id: 'split',  icon: 'analytics',  label: 'DOOR SPLIT',  desc: 'Revenue sharing based on ticket sales.' },
-  { id: 'hybrid', icon: 'layers',     label: 'HYBRID',      desc: 'Small booking fee + minor split on ticket sales.' },
-  { id: 'fnb',    icon: 'restaurant', label: 'F&B MINIMUM', desc: 'No rent — just a guaranteed min food/drink spend.' },
-] as const
-
-type PricingId = typeof PRICING_MODELS[number]['id']
-
-// Map display IDs → valid Supabase enum values
-const PRICING_TO_VALID: Record<PricingId, 'fixed_rental'|'door_split'|'hybrid'|'f_and_b_minimum'> = {
-  hourly: 'fixed_rental',
-  split:  'door_split',
-  hybrid: 'hybrid',
-  fnb:    'f_and_b_minimum',
-}
-
-const EVENT_TYPES = [
-  'Gigs', 'Workshops', 'Screenings', 'Concerts', 'Art Shows',
-  'Open Mic', 'Networking', 'Pop-ups', 'Stand-up', 'Dance',
-  'Yoga', 'Gaming', 'Parties', 'Meetups', 'Talks',
-  'Rehearsals', 'Podcasts', 'Book Launch', 'DJ Night', 'Poetry Slam',
-  'Photography Shoot', 'Film Shoot', 'Theatre',
-] as const
 
 const DAYS = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'] as const
 type DayKey = typeof DAYS[number]

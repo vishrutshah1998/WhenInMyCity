@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react'
 import { Snap, DARK, BARCODE, deriveVenueCity, getCityCoords } from './SplitRightPanel.shared'
+import { AMENITY_CATEGORIES, PRICING_MODELS, EVENT_TYPES } from '@/lib/constants/venueOnboarding'
 
 const TEAL  = '#5DD9D0'
 const AMBER = '#F5A800'
@@ -24,30 +25,6 @@ const VTYPE_LABEL: Record<string, string> = {
   gallery: 'Gallery', theatre: 'Theatre', event_hall: 'Event Hall', retail: 'Retail',
   bar: 'Bar', outdoor: 'Outdoor', library: 'Library', sports: 'Sports',
   film_set: 'Film Set', hotel_hall: 'Hotel Hall', garden: 'Garden', workshop: 'Workshop / School',
-}
-
-const AMENITY_ICON: Record<string, string> = {
-  wifi: '📶', projector: '📽️', pa_system: '🔊', stage: '🎤',
-  green_room: '🚪', ac: '❄️', parking: '🅿️', catering: '🍱',
-  bar_service: '🍷', av_technician: '🎛️', piano: '🎹', natural_light: '☀️',
-  outdoor_space: '🌳', whiteboard: '📋', live_streaming: '📹',
-  dressing_room: '💄', lift: '🛗', wheelchair: '♿',
-}
-
-const PRICING_LABEL: Record<string, string> = {
-  free:        'Free',
-  hourly:      'Hourly Rate',
-  per_head:    'Per Head',
-  revenue_rev: 'Revenue Share',
-  flat_rate:   'Flat Rate',
-  custom:      'Custom',
-}
-
-const EVENT_ICON: Record<string, string> = {
-  music_concerts: '🎵', comedy_shows: '🎤', art_exhibitions: '🎨',
-  corporate_events: '💼', workshops_classes: '🎓', film_screenings: '🎬',
-  dance_performances: '💃', pop_ups: '🛍️', networking: '🤝', festivals: '🎪',
-  sports: '🏆', wellness: '🧘',
 }
 
 const DAY_SHORT: Record<string, string> = {
@@ -276,7 +253,7 @@ function SectionLabel({ text, active }: { text: string; active: boolean }) {
   )
 }
 
-// ── Translucent chip — used for accumulated-data pills sitting over a photo ──
+// ── Translucent chip — used for data pills sitting over a photo or a card ────
 function HeroChip({ children }: { children: React.ReactNode }) {
   return (
     <div style={{
@@ -310,131 +287,113 @@ function RotatingStamp({ text }: { text: string }) {
   )
 }
 
-type VenueSection = 'type' | 'amenities' | 'pricing' | 'contact'
-
-// ── Venue Hero Panel ──────────────────────────────────────────────────────────
-// Shared by V4/V6/V7/V8: a full-bleed photographic hero (the venue's own real
-// Google Places photo, grayscaled — or an abstract textured backdrop when none
-// exists yet) with a live headline overlay, the same rotating verified stamp,
-// and an accumulating stack of chips underneath. Each section (type, amenities,
-// pricing, contact) appears the moment its data lands in the snapshot, so going
-// back a step — or returning later — still shows everything gathered so far,
-// not just what the current step captures.
-function VenueHeroPanel({
-  snap, headerLabel, stepTag, highlight, stampText,
-}: {
-  snap: Snap
-  headerLabel: string
-  stepTag: string
-  highlight: VenueSection
-  stampText: string
-}) {
-  const city       = snap.v_city || snap.b_city || ''
-  const types      = snap.v_types
-  const amenities  = snap.v_amenities
-  const pricing    = snap.v_pricing
-  const events     = snap.v_events
-  const days       = snap.v_days
-  const contact    = snap.v_contact
-  const photo      = snap.v_google_photos[0]
-
-  const hasType      = types.length > 0
-  const hasAmenities = amenities.length > 0
-  const hasPricing   = !!pricing || days.length > 0 || events.length > 0
-  const hasContact   = !!(contact.whatsapp || contact.email || contact.instagram || contact.bio)
-
-  const watermark = (city || snap.b_name || 'WIMC').slice(0, 3).toUpperCase()
-
+// ── Status dot + live mono label — footer convention borrowed from the
+//    creator onboarding panels (C6/C7RightPanel's "PLATFORMS_SELECTED: N"
+//    bottom bar) so all four venue steps share one closing grammar even
+//    though their main content is structurally different ──────────────────
+function StatusDot({ label, accent = TEAL }: { label: string; accent?: string }) {
   return (
-    <div style={{ width: '100%', height: '100%', background: DARK.bg, position: 'relative', overflow: 'hidden' }}>
-      <style>{`
-        @keyframes venue-hero-rotate { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-        .venue-hero-scroll::-webkit-scrollbar { width: 4px; }
-        .venue-hero-scroll::-webkit-scrollbar-track { background: transparent; }
-        .venue-hero-scroll::-webkit-scrollbar-thumb { background: ${TEAL}; border-radius: 10px; }
-      `}</style>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+      <div style={{ width: 6, height: 6, borderRadius: '50%', background: accent, flexShrink: 0 }} />
+      <span style={{ fontFamily: MONO, fontSize: 9, letterSpacing: '0.14em', color: `${accent}CC`, textTransform: 'uppercase' }}>
+        {label}
+      </span>
+    </div>
+  )
+}
 
-      {/* Background — the venue's real Google Places photo when we have one,
-          an abstract textured backdrop otherwise (never a stock/fake photo) */}
+function StatusBar({ label, accent = TEAL }: { label: string; accent?: string }) {
+  return (
+    <div style={{ flexShrink: 0, borderTop: `1px solid ${accent}18`, padding: '12px 24px', zIndex: 2 }}>
+      <StatusDot label={label} accent={accent} />
+    </div>
+  )
+}
+
+// ── Collage tile — one cell of V4's photo grid. Real Google photo, grayscale,
+//    with an accent border on whichever tile represents the current type
+//    selection. Falls back to the existing abstract diagonal-stripe backdrop
+//    when no real photo exists for that slot — never a fake/stock photo ────
+function CollageTile({ photo, highlighted = false }: { photo: string | null; highlighted?: boolean }) {
+  return (
+    <div style={{
+      position: 'relative', width: '100%', height: '100%', overflow: 'hidden',
+      border: highlighted ? `2px solid ${TEAL}` : '1px solid rgba(255,255,255,0.06)',
+    }}>
       {photo ? (
-        <>
-          <img src={photo} alt="" style={{
-            position: 'absolute', inset: 0, width: '100%', height: '100%',
-            objectFit: 'cover', filter: 'grayscale(1) contrast(1.15) brightness(0.75)',
-          }} />
-          <div style={{
-            position: 'absolute', inset: 0,
-            background: `linear-gradient(to top, ${DARK.bg} 0%, rgba(7,7,10,0.78) 40%, rgba(7,7,10,0.32) 68%, rgba(7,7,10,0.16) 100%)`,
-          }} />
-        </>
+        <img src={photo} alt="" style={{
+          width: '100%', height: '100%', objectFit: 'cover',
+          filter: highlighted ? 'grayscale(0.15) contrast(1.1) brightness(0.85)' : 'grayscale(1) contrast(1.1) brightness(0.55)',
+        }} />
       ) : (
         <div style={{
-          position: 'absolute', inset: 0,
-          backgroundImage: `repeating-linear-gradient(45deg, transparent, transparent 40px, ${TEAL}08 40px, ${TEAL}08 80px)`,
+          width: '100%', height: '100%', background: DARK.surface,
+          backgroundImage: `repeating-linear-gradient(45deg, transparent, transparent 12px, ${TEAL}0A 12px, ${TEAL}0A 24px)`,
         }} />
       )}
+    </div>
+  )
+}
 
-      {/* Grain */}
+// ── V4 Right Panel — Venue type: photo collage grid + type marquee ───────────
+export function V4RightPanel({ snap }: { snap: Snap }) {
+  const types  = snap.v_types
+  const photos = snap.v_google_photos.slice(0, 5)
+  const cells  = Array.from({ length: 5 }, (_, i) => photos[i] ?? null)
+  const hasType = types.length > 0
+  const primaryLabel = hasType ? (VTYPE_LABEL[types[0]] ?? types[0]) : 'VENUE'
+
+  return (
+    <div style={{ width: '100%', height: '100%', background: DARK.bg, display: 'flex', flexDirection: 'column', position: 'relative', overflow: 'hidden' }}>
+      <style>{`@keyframes v4-marquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }`}</style>
       <div style={{ position: 'absolute', inset: 0, backgroundImage: DARK.grain, opacity: 0.03, pointerEvents: 'none' }} />
 
       {/* Header */}
-      <div style={{ position: 'absolute', top: 18, left: 24, right: 118, display: 'flex', justifyContent: 'space-between', zIndex: 2 }}>
+      <div style={{ flexShrink: 0, padding: '18px 24px 0', display: 'flex', justifyContent: 'space-between', zIndex: 2 }}>
         <span style={{ fontFamily: MONO, fontSize: 8, letterSpacing: '0.22em', color: `${TEAL}CC`, textTransform: 'uppercase' }}>
-          {headerLabel}
+          WIMC // VENUE LISTING
         </span>
-        <span style={{ fontFamily: MONO, fontSize: 7, color: `${TEAL}77` }}>{stepTag}</span>
+        <span style={{ fontFamily: MONO, fontSize: 7, color: `${TEAL}77` }}>STEP 03</span>
       </div>
 
-      {/* Rotating verified stamp */}
-      <div style={{ position: 'absolute', top: 40, right: 20, zIndex: 2 }}>
-        <RotatingStamp text={stampText} />
+      {/* Collage + marquee zone */}
+      <div style={{ position: 'relative', flex: 1, minHeight: 0, margin: '16px 24px 0', overflow: 'hidden' }}>
+        <div aria-hidden style={{
+          position: 'absolute', top: '42%', left: 0, right: 0, transform: 'rotate(-5deg)',
+          overflow: 'hidden', whiteSpace: 'nowrap', pointerEvents: 'none', zIndex: 0,
+        }}>
+          <div style={{ display: 'inline-block', animation: 'v4-marquee 26s linear infinite' }}>
+            {Array.from({ length: 8 }).map((_, i) => (
+              <span key={i} style={{ fontFamily: OUTFIT, fontWeight: 900, fontSize: 56, color: `${TEAL}0C`, letterSpacing: '-0.03em', marginRight: 36 }}>
+                {primaryLabel.toUpperCase()}
+              </span>
+            ))}
+          </div>
+        </div>
+
+        <div style={{
+          position: 'relative', zIndex: 1, width: '100%', height: '100%',
+          display: 'grid', gridTemplateColumns: '1fr 1fr', gridTemplateRows: '1fr 1fr 1fr', gap: 6,
+        }}>
+          <div style={{ gridRow: '1 / span 2' }}><CollageTile photo={cells[0]} highlighted={hasType} /></div>
+          <div><CollageTile photo={cells[1]} /></div>
+          <div><CollageTile photo={cells[2]} /></div>
+          <div><CollageTile photo={cells[3]} /></div>
+          <div><CollageTile photo={cells[4]} /></div>
+        </div>
       </div>
 
-      {/* Vertical edge label */}
-      <div style={{
-        position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%) rotate(-90deg)',
-        transformOrigin: 'left center', zIndex: 2,
-      }}>
-        <span style={{ fontFamily: MONO, fontSize: 8, letterSpacing: '0.3em', color: `${TEAL}44`, textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
-          WIMC Venue Passport · Live Preview
-        </span>
-      </div>
-
-      {/* Giant watermark */}
-      <div aria-hidden style={{
-        position: 'absolute', bottom: -30, right: -10, zIndex: 1,
-        fontFamily: OUTFIT, fontWeight: 900, fontSize: 200,
-        color: `${TEAL}09`, letterSpacing: '-0.04em', lineHeight: 1,
-        pointerEvents: 'none', userSelect: 'none',
-      }}>
-        {watermark}
-      </div>
-
-      {/* Bottom overlay — live headline + accumulated data, grows as steps fill in */}
-      <div className="venue-hero-scroll" style={{
-        position: 'absolute', left: 0, right: 0, bottom: 0, zIndex: 3,
-        maxHeight: 'calc(100% - 120px)', overflowY: 'auto', padding: '24px 24px 22px',
-      }}>
+      {/* Headline + type chips */}
+      <div style={{ flexShrink: 0, padding: '16px 24px', zIndex: 2 }}>
         <p style={{ fontFamily: BARLOW, fontWeight: 700, fontSize: 11, letterSpacing: '0.3em', textTransform: 'uppercase', color: `${TEAL}CC`, margin: '0 0 6px' }}>
           — Your Venue —
         </p>
-        <h2 style={{
-          fontFamily: ABRIL, fontSize: 'clamp(30px, 4.2vw, 52px)', color: '#F0EFF8',
-          lineHeight: 1.0, textTransform: 'uppercase', margin: '0 0 10px',
-        }}>
+        <h2 style={{ fontFamily: ABRIL, fontSize: 'clamp(26px, 3.6vw, 42px)', color: '#F0EFF8', lineHeight: 1.0, textTransform: 'uppercase', margin: '0 0 10px' }}>
           {snap.b_name || 'YOUR VENUE'}
         </h2>
-        <div style={{ height: 3, width: 64, background: TEAL, marginBottom: 10 }} />
-        {(city || types[0]) && (
-          <p style={{ fontFamily: MONO, fontSize: 10, color: `${TEAL}AA`, letterSpacing: '0.12em', margin: '0 0 16px' }}>
-            {[types[0] ? (VTYPE_LABEL[types[0]] ?? types[0]) : null, city].filter(Boolean).join(' · ').toUpperCase()}
-          </p>
-        )}
-
-        {/* Venue type — appears once V4 is filled */}
-        {hasType && (
-          <div style={{ marginBottom: 14 }}>
-            <SectionLabel text={`VENUE TYPE (${types.length})`} active={highlight === 'type'} />
+        {hasType ? (
+          <div>
+            <SectionLabel text={`VENUE TYPE (${types.length})`} active />
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
               {types.map(t => (
                 <HeroChip key={t}>
@@ -446,104 +405,16 @@ function VenueHeroPanel({
               ))}
             </div>
           </div>
-        )}
-
-        {/* Amenities — appears once V6 is filled */}
-        {hasAmenities && (
-          <div style={{ marginBottom: 14 }}>
-            <SectionLabel text={`AMENITIES (${amenities.length})`} active={highlight === 'amenities'} />
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
-              {amenities.slice(0, 12).map(a => (
-                <HeroChip key={a}>
-                  <span style={{ fontSize: 9 }}>{AMENITY_ICON[a] ?? '✓'}</span>
-                  <span style={{ fontFamily: MONO, fontSize: 6.5, color: TEAL, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
-                    {a.replace(/_/g, ' ')}
-                  </span>
-                </HeroChip>
-              ))}
-              {amenities.length > 12 && (
-                <div style={{ fontFamily: MONO, fontSize: 6.5, color: `${TEAL}AA`, padding: '2px 6px', border: `1px dashed ${TEAL}55` }}>
-                  +{amenities.length - 12} more
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Pricing + availability — appears once V7 is filled */}
-        {hasPricing && (
-          <div style={{ marginBottom: 14 }}>
-            <SectionLabel text="PRICING & AVAILABILITY" active={highlight === 'pricing'} />
-            {pricing && (
-              <div style={{ marginBottom: (days.length || events.length) ? 8 : 0 }}>
-                <HeroChip>
-                  <span style={{ fontFamily: MONO, fontSize: 9, color: TEAL, letterSpacing: '0.10em', textTransform: 'uppercase' }}>
-                    {PRICING_LABEL[pricing] ?? pricing}
-                  </span>
-                </HeroChip>
-              </div>
-            )}
-            {days.length > 0 && (
-              <div style={{ display: 'flex', gap: 4, marginBottom: events.length ? 8 : 0 }}>
-                {['MON','TUE','WED','THU','FRI','SAT','SUN'].map(d => (
-                  <div key={d} style={{
-                    width: 20, height: 20, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    background: days.includes(d) ? `${TEAL}30` : 'rgba(7,7,10,0.45)',
-                    border: `1px solid ${days.includes(d) ? TEAL : `${DARK.muted}40`}`,
-                  }}>
-                    <span style={{ fontFamily: MONO, fontSize: 6.5, color: days.includes(d) ? TEAL : `${DARK.muted}88` }}>
-                      {DAY_SHORT[d]}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )}
-            {events.length > 0 && (
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-                {events.slice(0, 6).map(e => (
-                  <HeroChip key={e}>
-                    <span style={{ fontSize: 8 }}>{EVENT_ICON[e] ?? '✨'}</span>
-                    <span style={{ fontFamily: MONO, fontSize: 6, color: TEAL, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
-                      {e.replace(/_/g, ' ')}
-                    </span>
-                  </HeroChip>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Contact — appears once V8 is filled */}
-        {hasContact && (
-          <div>
-            <SectionLabel text="CONTACT" active={highlight === 'contact'} />
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
-              {[
-                { icon: '💬', value: contact.whatsapp ? `+91 ${contact.whatsapp}` : null },
-                { icon: '📧', value: contact.email    || null },
-                { icon: '📸', value: contact.instagram ? `@${contact.instagram}` : null },
-              ].filter(row => row.value).map(row => (
-                <div key={row.icon} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span style={{ fontSize: 10, flexShrink: 0 }}>{row.icon}</span>
-                  <span style={{ fontFamily: DM, fontSize: 10.5, color: DARK.text }}>{row.value}</span>
-                </div>
-              ))}
-            </div>
-            {contact.bio && (
-              <div style={{ fontFamily: DM, fontSize: 10, color: DARK.muted, lineHeight: 1.5, marginTop: 8, maxHeight: 44, overflow: 'hidden' }}>
-                {contact.bio}
-              </div>
-            )}
-          </div>
+        ) : (
+          <p style={{ fontFamily: MONO, fontSize: 9, color: `${DARK.muted}88`, letterSpacing: '0.08em' }}>
+            SELECT WHAT KIND OF SPACE THIS IS →
+          </p>
         )}
       </div>
+
+      <StatusBar label={hasType ? `${types.length} VENUE TYPE${types.length === 1 ? '' : 'S'} SELECTED` : 'AWAITING TYPE SELECTION'} />
     </div>
   )
-}
-
-// ── V4 Right Panel — Venue types ──────────────────────────────────────────────
-export function V4RightPanel({ snap }: { snap: Snap }) {
-  return <VenueHeroPanel snap={snap} headerLabel="WIMC // VENUE LISTING" stepTag="STEP 03" highlight="type" stampText="WIMC VERIFIED VENUE · TYPE & CAPACITY · " />
 }
 
 // ── V5 Right Panel — (redirect to V6, mirror its panel) ──────────────────────
@@ -551,9 +422,111 @@ export function V5RightPanel({ snap }: { snap: Snap }) {
   return <V6RightPanel snap={snap} />
 }
 
-// ── V6 Right Panel — Amenities ────────────────────────────────────────────────
+// ── Manifest row — one amenity category inside V6's checklist ticket ─────────
+function ManifestRow({ category, hits }: { category: (typeof AMENITY_CATEGORIES)[number]; hits: string[] }) {
+  const active = hits.length > 0
+  return (
+    <div style={{ padding: '10px 0', borderBottom: `1px dashed ${TEAL}18` }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span className="material-symbols-outlined" style={{ fontSize: 15, color: active ? TEAL : `${DARK.muted}55` }}>
+            {category.icon}
+          </span>
+          <span style={{ fontFamily: DM, fontWeight: 700, fontSize: 11.5, letterSpacing: '0.02em', textTransform: 'uppercase', color: active ? DARK.text : `${DARK.muted}77` }}>
+            {category.label}
+          </span>
+        </div>
+        <span style={{ fontFamily: MONO, fontSize: 9, color: active ? TEAL : `${DARK.muted}44` }}>
+          {hits.length}/{category.items.length}
+        </span>
+      </div>
+      {active && (
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginTop: 8 }}>
+          {hits.map(h => (
+            <div key={h} style={{ background: DARK.elevated, border: `1px solid ${TEAL}30`, padding: '3px 8px' }}>
+              <span style={{ fontFamily: MONO, fontSize: 7.5, color: TEAL, letterSpacing: '0.06em' }}>{h}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── V6 Right Panel — Amenities manifest ticket ────────────────────────────────
 export function V6RightPanel({ snap }: { snap: Snap }) {
-  return <VenueHeroPanel snap={snap} headerLabel="WIMC // SPACE FEATURES" stepTag="STEP 04" highlight="amenities" stampText="WIMC VERIFIED VENUE · SPACE FEATURES · " />
+  const selected = snap.v_amenities
+  const total = AMENITY_CATEGORIES.reduce((n, c) => n + c.items.length, 0)
+
+  return (
+    <div style={{ width: '100%', height: '100%', background: DARK.bg, display: 'flex', flexDirection: 'column', position: 'relative', overflow: 'hidden' }}>
+      <style>{`
+        .venue-manifest-scroll::-webkit-scrollbar { width: 4px; }
+        .venue-manifest-scroll::-webkit-scrollbar-track { background: transparent; }
+        .venue-manifest-scroll::-webkit-scrollbar-thumb { background: ${TEAL}; border-radius: 10px; }
+      `}</style>
+      <div style={{ position: 'absolute', inset: 0, backgroundImage: DARK.grain, opacity: 0.03, pointerEvents: 'none' }} />
+
+      {/* Giant watermark */}
+      <div aria-hidden style={{
+        position: 'absolute', bottom: -30, right: -10,
+        fontFamily: OUTFIT, fontWeight: 900, fontSize: 200,
+        color: `${TEAL}07`, lineHeight: 1, pointerEvents: 'none', userSelect: 'none',
+      }}>
+        {selected.length || '—'}
+      </div>
+
+      {/* Header */}
+      <div style={{ flexShrink: 0, padding: '18px 24px 0', display: 'flex', justifyContent: 'space-between', zIndex: 2 }}>
+        <span style={{ fontFamily: MONO, fontSize: 8, letterSpacing: '0.22em', color: `${TEAL}CC`, textTransform: 'uppercase' }}>
+          WIMC // SPACE FEATURES
+        </span>
+        <span style={{ fontFamily: MONO, fontSize: 7, color: `${TEAL}77` }}>STEP 04</span>
+      </div>
+
+      {/* Manifest ticket card */}
+      <div style={{ flex: 1, minHeight: 0, margin: '18px 24px', display: 'flex', flexDirection: 'column', zIndex: 2 }}>
+        <div style={{ background: DARK.surface, border: `1.5px solid ${TEAL}28`, position: 'relative', display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
+          <PunchHole side="left" />
+          <PunchHole side="right" />
+          <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 2, background: TEAL }} />
+
+          {/* Ticket header: venue name + running count */}
+          <div style={{ flexShrink: 0, padding: '14px 18px 10px', borderBottom: `1px dashed ${TEAL}22`, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+            <div>
+              <div style={{ fontFamily: MONO, fontSize: 7, letterSpacing: '0.2em', color: `${TEAL}55`, textTransform: 'uppercase', marginBottom: 4 }}>
+                AMENITY MANIFEST
+              </div>
+              <div style={{ fontFamily: OUTFIT, fontWeight: 900, fontSize: 18, color: DARK.text }}>
+                {snap.b_name || 'YOUR VENUE'}
+              </div>
+            </div>
+            <div style={{ textAlign: 'right' }}>
+              <div style={{ fontFamily: OUTFIT, fontWeight: 900, fontSize: 26, color: TEAL, lineHeight: 1 }}>
+                {selected.length}
+              </div>
+              <div style={{ fontFamily: MONO, fontSize: 6.5, color: `${TEAL}66`, letterSpacing: '0.1em' }}>
+                OF {total} LOGGED
+              </div>
+            </div>
+          </div>
+
+          {/* Scrollable category rows */}
+          <div className="venue-manifest-scroll" style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '2px 18px' }}>
+            {AMENITY_CATEGORIES.map(cat => (
+              <ManifestRow key={cat.id} category={cat} hits={cat.items.filter(i => selected.includes(i))} />
+            ))}
+          </div>
+
+          <div style={{ flexShrink: 0, padding: '8px 18px 12px', borderTop: `1px dashed ${TEAL}18` }}>
+            <BarcodeStrip accent={TEAL} />
+          </div>
+        </div>
+      </div>
+
+      <StatusBar label={selected.length > 0 ? `${selected.length} AMENIT${selected.length === 1 ? 'Y' : 'IES'} SELECTED` : 'AWAITING SELECTION'} />
+    </div>
+  )
 }
 
 // ── VC Right Panel — Capacity ─────────────────────────────────────────────────
@@ -651,12 +624,247 @@ export function VCRightPanel({ snap }: { snap: Snap }) {
   )
 }
 
-// ── V7 Right Panel — Pricing + events ────────────────────────────────────────
-export function V7RightPanel({ snap }: { snap: Snap }) {
-  return <VenueHeroPanel snap={snap} headerLabel="WIMC // BOOKING TERMS" stepTag="STEP 06" highlight="pricing" stampText="WIMC VERIFIED VENUE · BOOKING TERMS · " />
+// ── Formats the pricing amount/split for one model into a single value label
+function formatPricingValue(id: string, amount: string, split: string): string | null {
+  switch (id) {
+    case 'hourly': return amount ? `₹${amount}/HR` : null
+    case 'split':  return split ? `${split}% SHARE` : null
+    case 'hybrid': {
+      const parts: string[] = []
+      if (amount) parts.push(`₹${amount}`)
+      if (split)  parts.push(`${split}%`)
+      return parts.length ? parts.join(' + ') : null
+    }
+    case 'fnb': return amount ? `₹${amount} MIN` : null
+    default: return null
+  }
 }
 
-// ── V8 Right Panel — Contact details → transitions to live confirmation ──────
+// ── V7 Right Panel — Booking receipt / ledger ─────────────────────────────────
+export function V7RightPanel({ snap }: { snap: Snap }) {
+  const model = PRICING_MODELS.find(p => p.id === snap.v_pricing)
+  const valueLabel = model ? formatPricingValue(model.id, snap.v_pricing_amount, snap.v_pricing_split) : null
+  const days   = snap.v_days
+  const events = snap.v_events
+
+  return (
+    <div style={{ width: '100%', height: '100%', background: DARK.bg, display: 'flex', flexDirection: 'column', position: 'relative', overflow: 'hidden' }}>
+      <style>{`
+        .venue-receipt-scroll::-webkit-scrollbar { width: 4px; }
+        .venue-receipt-scroll::-webkit-scrollbar-track { background: transparent; }
+        .venue-receipt-scroll::-webkit-scrollbar-thumb { background: ${TEAL}; border-radius: 10px; }
+      `}</style>
+      <div style={{ position: 'absolute', inset: 0, backgroundImage: DARK.grain, opacity: 0.03, pointerEvents: 'none' }} />
+      <div aria-hidden style={{
+        position: 'absolute', bottom: -30, right: -10,
+        fontFamily: OUTFIT, fontWeight: 900, fontSize: 200,
+        color: `${TEAL}07`, lineHeight: 1, pointerEvents: 'none', userSelect: 'none',
+      }}>
+        {events.length || '—'}
+      </div>
+
+      {/* Header */}
+      <div style={{ flexShrink: 0, padding: '18px 24px 0', display: 'flex', justifyContent: 'space-between', zIndex: 2 }}>
+        <span style={{ fontFamily: MONO, fontSize: 8, letterSpacing: '0.22em', color: `${TEAL}CC`, textTransform: 'uppercase' }}>
+          WIMC // BOOKING TERMS
+        </span>
+        <span style={{ fontFamily: MONO, fontSize: 7, color: `${TEAL}77` }}>STEP 06</span>
+      </div>
+
+      {/* Receipt card */}
+      <div style={{ flex: 1, minHeight: 0, margin: '18px 24px', display: 'flex', flexDirection: 'column', zIndex: 2, overflow: 'hidden' }}>
+        <div className="venue-receipt-scroll" style={{
+          background: DARK.surface,
+          backgroundImage: `repeating-linear-gradient(45deg, transparent, transparent 16px, ${TEAL}05 16px, ${TEAL}05 32px)`,
+          border: `1.5px solid ${TEAL}28`, position: 'relative',
+          flex: 1, minHeight: 0, overflowY: 'auto', display: 'flex', flexDirection: 'column',
+        }}>
+          <PunchHole side="left" />
+          <PunchHole side="right" />
+          <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 2, background: TEAL }} />
+
+          <div style={{ padding: '14px 18px 10px', borderBottom: `1px dashed ${TEAL}22` }}>
+            <div style={{ fontFamily: MONO, fontSize: 7, letterSpacing: '0.2em', color: `${TEAL}55`, textTransform: 'uppercase', marginBottom: 4 }}>
+              BOOKING RECEIPT
+            </div>
+            <div style={{ fontFamily: OUTFIT, fontWeight: 900, fontSize: 18, color: DARK.text }}>
+              {snap.b_name || 'YOUR VENUE'}
+            </div>
+          </div>
+
+          {/* Pricing line item */}
+          <div style={{ padding: '12px 18px', borderBottom: `1px dashed ${TEAL}18` }}>
+            <div style={{ fontFamily: MONO, fontSize: 7, letterSpacing: '0.16em', color: `${TEAL}66`, textTransform: 'uppercase', marginBottom: 6 }}>
+              PRICING MODEL
+            </div>
+            {model ? (
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span className="material-symbols-outlined" style={{ fontSize: 16, color: TEAL }}>{model.icon}</span>
+                  <span style={{ fontFamily: BARLOW, fontWeight: 700, fontSize: 14, color: DARK.text, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+                    {model.label}
+                  </span>
+                </div>
+                {valueLabel && (
+                  <span style={{ fontFamily: MONO, fontSize: 11, color: TEAL }}>{valueLabel}</span>
+                )}
+              </div>
+            ) : (
+              <span style={{ fontFamily: MONO, fontSize: 9, color: `${DARK.muted}66` }}>— NOT SET —</span>
+            )}
+          </div>
+
+          {/* Schedule */}
+          <div style={{ padding: '12px 18px', borderBottom: `1px dashed ${TEAL}18` }}>
+            <div style={{ fontFamily: MONO, fontSize: 7, letterSpacing: '0.16em', color: `${TEAL}66`, textTransform: 'uppercase', marginBottom: 8 }}>
+              AVAILABLE DAYS
+            </div>
+            <div style={{ display: 'flex', gap: 5 }}>
+              {['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'].map(d => (
+                <div key={d} style={{
+                  width: 22, height: 22, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  background: days.includes(d) ? `${TEAL}30` : 'rgba(255,255,255,0.03)',
+                  border: `1px solid ${days.includes(d) ? TEAL : `${DARK.muted}30`}`,
+                }}>
+                  <span style={{ fontFamily: MONO, fontSize: 7.5, color: days.includes(d) ? TEAL : `${DARK.muted}66` }}>
+                    {DAY_SHORT[d]}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Event types */}
+          <div style={{ padding: '12px 18px 16px' }}>
+            <div style={{ fontFamily: MONO, fontSize: 7, letterSpacing: '0.16em', color: `${TEAL}66`, textTransform: 'uppercase', marginBottom: 8 }}>
+              EVENT TYPES ({events.length}/{EVENT_TYPES.length})
+            </div>
+            {events.length > 0 ? (
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
+                {events.map(e => (
+                  <div key={e} style={{ border: `1px solid ${TEAL}40`, padding: '3px 8px' }}>
+                    <span style={{ fontFamily: MONO, fontSize: 7.5, color: TEAL, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{e}</span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <span style={{ fontFamily: MONO, fontSize: 9, color: `${DARK.muted}66` }}>— NONE YET —</span>
+            )}
+          </div>
+
+          {/* Filler + closing stamp — keeps the receipt from ending in a flat
+              blank stretch when there isn't much content yet, pinned to the
+              card's bottom edge regardless of how tall the card renders */}
+          <div style={{ flex: 1, minHeight: 12 }} />
+          <div style={{ padding: '10px 18px 12px', borderTop: `1px dashed ${TEAL}18`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <BarcodeStrip accent={TEAL} />
+            <span style={{ fontFamily: MONO, fontSize: 7, color: `${TEAL}44`, letterSpacing: '0.14em' }}>
+              TERMS ON FILE
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <StatusBar label={`${events.length} EVENT TYPE${events.length === 1 ? '' : 'S'} SELECTED`} />
+    </div>
+  )
+}
+
+// ── Photo hero shell — the one remaining full-bleed photo layout, used only
+//    by V8's contact step. Background photo (or abstract fallback, never a
+//    fake photo), grain, header, rotating stamp, vertical edge label, giant
+//    watermark, and a children slot for step-specific content ──────────────
+function PhotoHeroShell({
+  snap, headerLabel, stepTag, stampText, photo, edgeLabel, children,
+}: {
+  snap: Snap
+  headerLabel: string
+  stepTag: string
+  stampText: string
+  photo: string
+  edgeLabel: string
+  children: React.ReactNode
+}) {
+  const city = snap.v_city || snap.b_city || ''
+  const watermark = (city || snap.b_name || 'WIMC').slice(0, 3).toUpperCase()
+
+  return (
+    <div style={{ width: '100%', height: '100%', background: DARK.bg, position: 'relative', overflow: 'hidden' }}>
+      <style>{`
+        @keyframes venue-hero-rotate { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        .venue-hero-scroll::-webkit-scrollbar { width: 4px; }
+        .venue-hero-scroll::-webkit-scrollbar-track { background: transparent; }
+        .venue-hero-scroll::-webkit-scrollbar-thumb { background: ${TEAL}; border-radius: 10px; }
+      `}</style>
+
+      {/* Background — the venue's real Google Places photo when we have one,
+          an abstract textured backdrop otherwise (never a stock/fake photo) */}
+      {photo ? (
+        <>
+          <img src={photo} alt="" style={{
+            position: 'absolute', inset: 0, width: '100%', height: '100%',
+            objectFit: 'cover', filter: 'grayscale(1) contrast(1.15) brightness(0.75)',
+          }} />
+          <div style={{
+            position: 'absolute', inset: 0,
+            background: `linear-gradient(to top, ${DARK.bg} 0%, rgba(7,7,10,0.78) 40%, rgba(7,7,10,0.32) 68%, rgba(7,7,10,0.16) 100%)`,
+          }} />
+        </>
+      ) : (
+        <div style={{
+          position: 'absolute', inset: 0,
+          backgroundImage: `repeating-linear-gradient(45deg, transparent, transparent 40px, ${TEAL}08 40px, ${TEAL}08 80px)`,
+        }} />
+      )}
+
+      {/* Grain */}
+      <div style={{ position: 'absolute', inset: 0, backgroundImage: DARK.grain, opacity: 0.03, pointerEvents: 'none' }} />
+
+      {/* Header */}
+      <div style={{ position: 'absolute', top: 18, left: 24, right: 118, display: 'flex', justifyContent: 'space-between', zIndex: 2 }}>
+        <span style={{ fontFamily: MONO, fontSize: 8, letterSpacing: '0.22em', color: `${TEAL}CC`, textTransform: 'uppercase' }}>
+          {headerLabel}
+        </span>
+        <span style={{ fontFamily: MONO, fontSize: 7, color: `${TEAL}77` }}>{stepTag}</span>
+      </div>
+
+      {/* Rotating verified stamp */}
+      <div style={{ position: 'absolute', top: 40, right: 20, zIndex: 2 }}>
+        <RotatingStamp text={stampText} />
+      </div>
+
+      {/* Vertical edge label */}
+      <div style={{
+        position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%) rotate(-90deg)',
+        transformOrigin: 'left center', zIndex: 2,
+      }}>
+        <span style={{ fontFamily: MONO, fontSize: 8, letterSpacing: '0.3em', color: `${TEAL}44`, textTransform: 'uppercase', whiteSpace: 'nowrap' }}>
+          {edgeLabel}
+        </span>
+      </div>
+
+      {/* Giant watermark */}
+      <div aria-hidden style={{
+        position: 'absolute', bottom: -30, right: -10, zIndex: 1,
+        fontFamily: OUTFIT, fontWeight: 900, fontSize: 200,
+        color: `${TEAL}09`, letterSpacing: '-0.04em', lineHeight: 1,
+        pointerEvents: 'none', userSelect: 'none',
+      }}>
+        {watermark}
+      </div>
+
+      {/* Bottom overlay — step-specific content */}
+      <div className="venue-hero-scroll" style={{
+        position: 'absolute', left: 0, right: 0, bottom: 0, zIndex: 3,
+        maxHeight: 'calc(100% - 120px)', overflowY: 'auto', padding: '24px 24px 22px',
+      }}>
+        {children}
+      </div>
+    </div>
+  )
+}
+
+// ── V8 Right Panel — Contact business-card → transitions to live confirmation
 export function V8RightPanel({ snap }: { snap: Snap }) {
   const [revealed, setRevealed] = useState(false)
 
@@ -671,7 +879,63 @@ export function V8RightPanel({ snap }: { snap: Snap }) {
 
   if (revealed) return <V9RightPanel snap={snap} />
 
-  return <VenueHeroPanel snap={snap} headerLabel="WIMC // CONTACT" stepTag="STEP 07" highlight="contact" stampText="WIMC VERIFIED VENUE · CONTACT DETAILS · " />
+  const contact = snap.v_contact
+  const photo   = snap.v_google_photos[1] ?? snap.v_google_photos[0]
+  const hasContact = !!(contact.whatsapp || contact.email || contact.instagram || contact.bio)
+
+  return (
+    <PhotoHeroShell
+      snap={snap}
+      headerLabel="WIMC // CONTACT"
+      stepTag="STEP 07"
+      stampText="WIMC VERIFIED VENUE · CONTACT DETAILS · "
+      photo={photo}
+      edgeLabel="WIMC Venue Passport · Live Preview"
+    >
+      <p style={{ fontFamily: BARLOW, fontWeight: 700, fontSize: 11, letterSpacing: '0.3em', textTransform: 'uppercase', color: `${TEAL}CC`, margin: '0 0 6px' }}>
+        — Your Venue —
+      </p>
+      <h2 style={{ fontFamily: ABRIL, fontSize: 'clamp(28px, 3.8vw, 46px)', color: '#F0EFF8', lineHeight: 1.0, textTransform: 'uppercase', margin: '0 0 14px' }}>
+        {snap.b_name || 'YOUR VENUE'}
+      </h2>
+
+      {hasContact ? (
+        <div>
+          <SectionLabel text="CONTACT" active />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 7, marginBottom: contact.bio ? 10 : 0 }}>
+            {[
+              { icon: '💬', value: contact.whatsapp ? `+91 ${contact.whatsapp}` : null },
+              { icon: '📧', value: contact.email    || null },
+              { icon: '📸', value: contact.instagram ? `@${contact.instagram}` : null },
+            ].filter(row => row.value).map(row => (
+              <div key={row.icon} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontSize: 10, flexShrink: 0 }}>{row.icon}</span>
+                <span style={{ fontFamily: DM, fontSize: 10.5, color: DARK.text }}>{row.value}</span>
+              </div>
+            ))}
+          </div>
+          {contact.bio && (
+            <div style={{ border: `1px dashed ${TEAL}30`, padding: '8px 10px' }}>
+              <div style={{ fontFamily: MONO, fontSize: 6.5, letterSpacing: '0.14em', color: `${TEAL}66`, textTransform: 'uppercase', marginBottom: 4 }}>
+                NOTES
+              </div>
+              <div style={{ fontFamily: DM, fontSize: 10, color: DARK.muted, lineHeight: 1.5, maxHeight: 60, overflow: 'hidden' }}>
+                {contact.bio}
+              </div>
+            </div>
+          )}
+        </div>
+      ) : (
+        <p style={{ fontFamily: MONO, fontSize: 9, color: `${DARK.muted}88`, letterSpacing: '0.08em' }}>
+          HOW SHOULD CREATORS REACH YOU? →
+        </p>
+      )}
+
+      <div style={{ marginTop: 16 }}>
+        <StatusDot label={hasContact ? 'CONTACT DETAILS CONFIRMED' : 'AWAITING CONTACT DETAILS'} />
+      </div>
+    </PhotoHeroShell>
+  )
 }
 
 // ── V9 Right Panel — Confirmed / live ────────────────────────────────────────
