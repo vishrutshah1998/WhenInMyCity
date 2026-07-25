@@ -11,7 +11,7 @@ import { createClient } from '@/lib/supabase/server'
  * After session creation, routing logic:
  *   - `user_profiles` row exists  → creator returning user  → `/dashboard`
  *   - `explorer_profiles` row exists → explorer returning user → `/explore`
- *   - Neither row                 → brand new user          → `/onboarding/role`
+ *   - Neither row                 → brand new user          → `/onboarding`
  *   - Error at any step           → `/signin?error=auth_failed`
  *
  * Supabase PKCE flow: the `code` is exchanged server-side, keeping the

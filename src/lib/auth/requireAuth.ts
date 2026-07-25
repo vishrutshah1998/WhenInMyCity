@@ -113,7 +113,7 @@ export async function requireProfile(
   const ctx = await requireAuth(redirectTo)
 
   if (!ctx.profile) {
-    redirect('/onboarding/role')
+    redirect('/onboarding')
   }
 
   return ctx as AuthContext & { profile: UserProfile }
