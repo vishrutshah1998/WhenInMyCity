@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { requireAuth } from '@/lib/auth/requireAuth'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { getFollowedFeed } from '@/app/actions/explorer'
 import FollowingClient from './FollowingClient'
 
 export default async function ExplorerDashboardFollowingPage() {
@@ -35,5 +36,7 @@ export default async function ExplorerDashboardFollowingPage() {
     creators = (data ?? []) as FollowedCreator[]
   }
 
-  return <FollowingClient creators={creators} />
+  const { events } = await getFollowedFeed()
+
+  return <FollowingClient creators={creators} events={events} />
 }

@@ -90,7 +90,7 @@ const AddPlaceSchema = z.object({
 export async function createSpotList(input: unknown): Promise<
   { success: true; list: SpotList } | { success: false; error: string }
 > {
-  const { user } = await requireAuth('/explore/profile')
+  const { user } = await requireAuth('/explore/dashboard/spots')
 
   const parsed = ListMetaSchema.safeParse(input)
   if (!parsed.success) return { success: false, error: parsed.error.errors[0].message }
@@ -121,7 +121,7 @@ export async function createSpotList(input: unknown): Promise<
     return { success: false, error: 'Failed to create list.' }
   }
 
-  revalidatePath('/explore/profile')
+  revalidatePath('/explore/dashboard/spots')
   return { success: true, list: { ...data, items: [] } }
 }
 
@@ -130,7 +130,7 @@ export async function createSpotList(input: unknown): Promise<
 export async function updateSpotListMeta(listId: string, input: unknown): Promise<
   { success: true } | { success: false; error: string }
 > {
-  const { user } = await requireAuth('/explore/profile')
+  const { user } = await requireAuth('/explore/dashboard/spots')
 
   const parsed = ListMetaSchema.safeParse(input)
   if (!parsed.success) return { success: false, error: parsed.error.errors[0].message }
@@ -155,7 +155,7 @@ export async function updateSpotListMeta(listId: string, input: unknown): Promis
     return { success: false, error: 'Failed to update list.' }
   }
 
-  revalidatePath('/explore/profile')
+  revalidatePath('/explore/dashboard/spots')
   return { success: true }
 }
 
@@ -164,7 +164,7 @@ export async function updateSpotListMeta(listId: string, input: unknown): Promis
 export async function deleteSpotList(listId: string): Promise<
   { success: true } | { success: false; error: string }
 > {
-  const { user } = await requireAuth('/explore/profile')
+  const { user } = await requireAuth('/explore/dashboard/spots')
 
   const explorer = await getExplorerForUser(user.id)
   if (!explorer) return { success: false, error: 'Explorer profile not found.' }
@@ -182,7 +182,7 @@ export async function deleteSpotList(listId: string): Promise<
     return { success: false, error: 'Failed to delete list.' }
   }
 
-  revalidatePath('/explore/profile')
+  revalidatePath('/explore/dashboard/spots')
   return { success: true }
 }
 
@@ -191,7 +191,7 @@ export async function deleteSpotList(listId: string): Promise<
 export async function addPlaceToList(listId: string, input: unknown): Promise<
   { success: true; item: SpotListItem } | { success: false; error: string }
 > {
-  const { user } = await requireAuth('/explore/profile')
+  const { user } = await requireAuth('/explore/dashboard/spots')
 
   const parsed = AddPlaceSchema.safeParse(input)
   if (!parsed.success) return { success: false, error: 'Invalid place data.' }
@@ -253,7 +253,7 @@ export async function addPlaceToList(listId: string, input: unknown): Promise<
 export async function removePlaceFromList(itemId: string, listId: string): Promise<
   { success: true } | { success: false; error: string }
 > {
-  const { user } = await requireAuth('/explore/profile')
+  const { user } = await requireAuth('/explore/dashboard/spots')
 
   const explorer = await getExplorerForUser(user.id)
   if (!explorer) return { success: false, error: 'Explorer profile not found.' }
@@ -295,7 +295,7 @@ export async function removePlaceFromList(itemId: string, listId: string): Promi
 export async function publishSpotList(listId: string): Promise<
   { success: true; status: SpotListStatus } | { success: false; error: string }
 > {
-  const { user } = await requireAuth('/explore/profile')
+  const { user } = await requireAuth('/explore/dashboard/spots')
 
   const explorer = await getExplorerForUser(user.id)
   if (!explorer) return { success: false, error: 'Explorer profile not found.' }
@@ -341,7 +341,7 @@ export async function publishSpotList(listId: string): Promise<
     return { success: false, error: 'Failed to publish list.' }
   }
 
-  revalidatePath('/explore/profile')
+  revalidatePath('/explore/dashboard/spots')
   return { success: true, status: newStatus }
 }
 
@@ -350,7 +350,7 @@ export async function publishSpotList(listId: string): Promise<
 export async function unpublishSpotList(listId: string): Promise<
   { success: true } | { success: false; error: string }
 > {
-  const { user } = await requireAuth('/explore/profile')
+  const { user } = await requireAuth('/explore/dashboard/spots')
 
   const explorer = await getExplorerForUser(user.id)
   if (!explorer) return { success: false, error: 'Explorer profile not found.' }
@@ -368,14 +368,14 @@ export async function unpublishSpotList(listId: string): Promise<
     return { success: false, error: 'Failed to unpublish list.' }
   }
 
-  revalidatePath('/explore/profile')
+  revalidatePath('/explore/dashboard/spots')
   return { success: true }
 }
 
 // ── getMySpotLists ────────────────────────────────────────────────────────────
 
 export async function getMySpotLists(): Promise<SpotList[]> {
-  const { user } = await requireAuth('/explore/profile')
+  const { user } = await requireAuth('/explore/dashboard/spots')
 
   const explorer = await getExplorerForUser(user.id)
   if (!explorer) return []

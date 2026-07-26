@@ -6,11 +6,7 @@ import { usePathname } from 'next/navigation'
 // City IDs with an active City (Government Edition). Add new clusters here.
 const CITY_EDITION_IDS = new Set(['ahmedabad', 'gandhinagar'])
 
-const BASE_TABS = [
-  { href: '/explore',         label: 'Discover',  icon: 'explore', exact: true  },
-  { href: '/explore/feed',    label: 'Following', icon: 'people',  exact: false },
-  { href: '/explore/profile', label: 'Profile',   icon: 'person',  exact: false },
-]
+const DISCOVER_TAB = { href: '/explore', label: 'Discover', icon: 'explore', exact: true }
 
 const CITY_GUIDE_TAB = { href: '/explore/guide', label: 'City Guide', icon: 'map', exact: false }
 
@@ -23,11 +19,14 @@ interface Props {
 export default function ExploreNav({ userCity }: Props) {
   const pathname = usePathname()
 
-  // City Guide tab is inserted between Following and Profile only for
-  // explorer users in cities with an active City Government Edition.
+  // This bar is shown to anonymous visitors too, so it only ever carries
+  // discovery-oriented tabs — no account-gated concepts (Following/Profile/
+  // Spots), which live exclusively in the authenticated dashboard sidebar.
+  // City Guide is further gated to explorer users in cities with an active
+  // City Government Edition.
   const tabs = CITY_EDITION_IDS.has(userCity ?? '')
-    ? [BASE_TABS[0], BASE_TABS[1], CITY_GUIDE_TAB, BASE_TABS[2]]
-    : BASE_TABS
+    ? [DISCOVER_TAB, CITY_GUIDE_TAB]
+    : [DISCOVER_TAB]
 
   return (
     <nav style={{ display: 'flex', gap: 0 }}>

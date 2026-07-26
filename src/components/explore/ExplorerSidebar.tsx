@@ -30,11 +30,11 @@ interface NavItem {
 
 const NAV_ITEMS: NavItem[] = [
   { href: '/explore/dashboard/browse',        icon: 'explore',             label: 'Explore',        exact: false },
-  { href: '/explore/guide',                   icon: 'map',                 label: 'City Guide',     exact: false },
-  { href: '/explore/dashboard',               icon: 'person',              label: 'My Profile',     exact: true },
+  { href: '/explore/dashboard/guide',         icon: 'map',                 label: 'City Guide',     exact: false },
   { href: '/explore/dashboard/studio',        icon: 'web',                 label: 'My Page',        exact: true },
   { href: '/explore/dashboard/saved',         icon: 'bookmark',            label: 'Saved Events' },
   { href: '/explore/dashboard/following',     icon: 'group',               label: 'Following' },
+  { href: '/explore/dashboard/spots',         icon: 'pin_drop',            label: 'Spots' },
   { href: '/explore/dashboard/tickets',       icon: 'confirmation_number', label: 'Tickets' },
   { href: '/explore/dashboard/notifications', icon: 'notifications',       label: 'Notifications' },
 ]

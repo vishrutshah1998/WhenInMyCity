@@ -144,9 +144,9 @@ export const explorerBottomNavConfig: BottomNavConfig = {
     { href: '/explore/dashboard/notifications', icon: 'notifications',       label: 'Alerts' },
   ],
   more: [
-    { href: '/explore/dashboard',           icon: 'person',   label: 'My Profile' },
     { href: '/explore/dashboard/studio',    icon: 'web',      label: 'My Page' },
     { href: '/explore/dashboard/following', icon: 'group',    label: 'Following' },
+    { href: '/explore/dashboard/spots',     icon: 'pin_drop', label: 'Spots' },
     { href: '/explore/dashboard/settings',  icon: 'settings', label: 'Settings' },
   ],
   accent:  'var(--wimc-accent)',

@@ -12,6 +12,7 @@ import { createClient } from '@/lib/supabase/client'
 export default function ExploreLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname()
   const [userCity, setUserCity] = useState<string | null>(null)
+  const [isLoggedIn, setIsLoggedIn] = useState(false)
 
   useEffect(() => {
     // Fetch the explorer profile city so ExploreNav can gate the City Guide tab
@@ -19,6 +20,7 @@ export default function ExploreLayout({ children }: { children: ReactNode }) {
     const supabase = createClient()
     supabase.auth.getUser().then(({ data }) => {
       if (!data.user) return
+      setIsLoggedIn(true)
       supabase
         .from('explorer_profiles')
         .select('city')
@@ -60,20 +62,36 @@ export default function ExploreLayout({ children }: { children: ReactNode }) {
             }}>
               Explorer
             </span>
-            <Link
-              href="/explore/dashboard"
-              title="My dashboard"
-              style={{
-                marginLeft: 'auto',
-                display: 'grid', placeItems: 'center',
-                width: 32, height: 32, borderRadius: 8,
-                border: '1px solid var(--wimc-border-subtle)',
-                color: 'var(--wimc-text-secondary)',
-                textDecoration: 'none', flexShrink: 0,
-              }}
-            >
-              <span className="material-symbols-outlined" style={{ fontSize: 18 }}>person</span>
-            </Link>
+            {isLoggedIn ? (
+              <Link
+                href="/explore/dashboard"
+                title="My dashboard"
+                style={{
+                  marginLeft: 'auto',
+                  display: 'grid', placeItems: 'center',
+                  width: 32, height: 32, borderRadius: 8,
+                  border: '1px solid var(--wimc-border-subtle)',
+                  color: 'var(--wimc-text-secondary)',
+                  textDecoration: 'none', flexShrink: 0,
+                }}
+              >
+                <span className="material-symbols-outlined" style={{ fontSize: 18 }}>person</span>
+              </Link>
+            ) : (
+              <Link
+                href="/signin"
+                style={{
+                  marginLeft: 'auto',
+                  padding: '6px 14px', borderRadius: 8,
+                  border: '1px solid var(--wimc-border-subtle)',
+                  color: 'var(--wimc-text-secondary)',
+                  fontSize: 12.5, fontWeight: 600,
+                  textDecoration: 'none', flexShrink: 0,
+                }}
+              >
+                Sign in
+              </Link>
+            )}
           </div>
           <ExploreNav userCity={userCity} />
         </div>

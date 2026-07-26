@@ -1172,50 +1172,6 @@ export async function updateExplorerStudioProfile(input: {
 }
 
 // ---------------------------------------------------------------------------
-// getExplorerIdentity — identity card data for the profile surface
-// Joins explorer_profiles (display name, avatar, city, interests) with
-// user_profiles (bio, instagram) into one type-safe response.
-// ---------------------------------------------------------------------------
-
-export interface ExplorerIdentity {
-  displayName:     string
-  avatarUrl:       string | null
-  city:            string
-  interestTags:    string[]
-  bio:             string | null
-  instagramHandle: string | null
-}
-
-export async function getExplorerIdentity(): Promise<ExplorerIdentity | null> {
-  const { user } = await requireAuth('/signin')
-  const admin    = createAdminClient()
-
-  const [ep, up] = await Promise.all([
-    admin
-      .from('explorer_profiles')
-      .select('display_name, avatar_url, city, interest_tags')
-      .eq('auth_user_id', user.id)
-      .maybeSingle(),
-    admin
-      .from('user_profiles')
-      .select('bio, instagram_handle')
-      .eq('id', user.id)
-      .maybeSingle(),
-  ])
-
-  if (!ep.data) return null
-
-  return {
-    displayName:     ep.data.display_name,
-    avatarUrl:       ep.data.avatar_url   ?? null,
-    city:            ep.data.city,
-    interestTags:    ep.data.interest_tags ?? [],
-    bio:             up.data?.bio              ?? null,
-    instagramHandle: up.data?.instagram_handle ?? null,
-  }
-}
-
-// ---------------------------------------------------------------------------
 // updateExplorerPublicProfile — updates user_profiles fields (bio, instagram)
 // that appear on the explorer's public page
 // ---------------------------------------------------------------------------
