@@ -61,15 +61,13 @@ export default function E5Page() {
   , [])
 
   function toggle(id: string) {
-    setSelected(prev => {
-      let next: string[]
-      if (prev.includes(id)) next = prev.filter(t => t !== id)
-      else if (prev.length >= MAX_TAGS) next = prev
-      else next = [...prev, id]
-      try { sessionStorage.setItem(SK.e_interests, JSON.stringify(next)) } catch {}
-      window.dispatchEvent(new Event('ob-snap-update'))
-      return next
-    })
+    let next: string[]
+    if (selected.includes(id)) next = selected.filter(t => t !== id)
+    else if (selected.length >= MAX_TAGS) next = selected
+    else next = [...selected, id]
+    setSelected(next)
+    try { sessionStorage.setItem(SK.e_interests, JSON.stringify(next)) } catch {}
+    window.dispatchEvent(new Event('ob-snap-update'))
   }
 
   function toggleCategory(id: string) {

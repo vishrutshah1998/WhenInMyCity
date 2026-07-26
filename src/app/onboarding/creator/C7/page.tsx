@@ -64,12 +64,10 @@ export default function C7Page() {
   , [])
 
   function toggle(id: string) {
-    setSelected(prev => {
-      const next = prev.includes(id) ? prev.filter(t => t !== id) : [...prev, id]
-      try { sessionStorage.setItem(SK.c_interests, JSON.stringify(next)) } catch {}
-      window.dispatchEvent(new Event('ob-snap-update'))
-      return next
-    })
+    const next = selected.includes(id) ? selected.filter(t => t !== id) : [...selected, id]
+    setSelected(next)
+    try { sessionStorage.setItem(SK.c_interests, JSON.stringify(next)) } catch {}
+    window.dispatchEvent(new Event('ob-snap-update'))
   }
 
   function toggleCategory(id: string) {

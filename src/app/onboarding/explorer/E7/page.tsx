@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { SK, clearNewOnboardingKeys } from '@/lib/onboarding/session-keys'
 import { completeExplorerOnboarding } from '@/app/actions/persona-complete'
@@ -22,6 +22,16 @@ const KEYFRAMES = `
 @keyframes e7-pulse  { 0%,100%{opacity:1} 50%{opacity:0.4} }
 @keyframes e7-spin   { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
 @keyframes e7-fade-up { 0%{opacity:0;transform:translateY(12px)} 100%{opacity:1;transform:translateY(0)} }
+
+/* Ticket stage: near-full-width "card in hand" on mobile, half the viewport
+   on desktop. Not constrained by the 360px text column below it — the
+   headline/CTA stay narrow for readability while the card itself gets to
+   be large. ScaledStage never scales its artifact past native resolution,
+   so this is a soft cap, not a hard fill. */
+.e7-ticket-stage { width: 100%; max-width: min(92vw, 480px); margin: 0 auto; }
+@media (min-width: 768px) {
+  .e7-ticket-stage { max-width: 50vw; }
+}
 `
 
 export default function E7Page() {
@@ -39,8 +49,17 @@ export default function E7Page() {
   const [joinedAt,        setJoinedAt]        = useState<Date | null>(null)
   const [avatarUrl,       setAvatarUrl]       = useState<string | null>(null)
 
+  // Guards against React Strict Mode's dev-only double-invoke of this effect:
+  // completeExplorerOnboarding() touches the auth session (getUser()), and two
+  // near-simultaneous calls can race Supabase's refresh-token rotation, tripping
+  // the server action's `if (!user) redirect('/signin')` and silently bouncing
+  // the user out mid-onboarding with no error shown.
+  const hasStartedSave = useRef(false)
+
   useEffect(() => {
     if (typeof window === 'undefined') return
+    if (hasStartedSave.current) return
+    hasStartedSave.current = true
     const mode = sessionStorage.getItem('wimc_ob_mode')
     const persona = sessionStorage.getItem(SK.persona)
     if (!mode && persona !== 'explorer') { router.replace('/onboarding'); return }
@@ -161,27 +180,28 @@ export default function E7Page() {
         padding: '24px 24px 80px',
         overflowY: 'auto',
       }}>
+        {/* Explorer membership ticket artifact — full-bleed width of its own,
+            not boxed into the 360px text column below (see .e7-ticket-stage). */}
+        <div className="e7-ticket-stage" style={{ marginBottom: 36 }}>
+          <ArtifactStyles />
+          <ScaledStage width={680} height={428}>
+            <ExplorerTicket
+              displayName={explorerName || 'Explorer'}
+              photoUrl={avatarUrl}
+              city={cityName}
+              memberSinceLabel={formatMemberSince(joinedAt)}
+              favoriteCategory={favoriteCategory}
+              accountId={accountId || explorerName}
+            />
+          </ScaledStage>
+        </div>
+
         <div style={{
           display: 'flex', flexDirection: 'column',
           alignItems: 'center', textAlign: 'center',
           width: '100%', maxWidth: 360,
           gap: 0,
         }}>
-
-          {/* Explorer membership ticket artifact */}
-          <div style={{ width: '100%', marginBottom: 36 }}>
-            <ArtifactStyles />
-            <ScaledStage width={720} height={320} maxWidth={340}>
-              <ExplorerTicket
-                displayName={explorerName || 'Explorer'}
-                photoUrl={avatarUrl}
-                city={cityName}
-                memberSinceLabel={formatMemberSince(joinedAt)}
-                favoriteCategory={favoriteCategory}
-                accountId={accountId || explorerName}
-              />
-            </ScaledStage>
-          </div>
 
           {/* Headline */}
           <h1 style={{

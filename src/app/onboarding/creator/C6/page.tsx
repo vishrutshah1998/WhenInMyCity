@@ -50,14 +50,10 @@ export default function C6Page() {
   }, [router])
 
   function toggle(id: string) {
-    setSelected(prev => {
-      const next = prev.includes(id) ? prev.filter(s => s !== id) : [...prev, id]
-      try {
-        sessionStorage.setItem(SK.c_platforms, JSON.stringify(next))
-        window.dispatchEvent(new Event('ob-snap-update'))
-      } catch {}
-      return next
-    })
+    const next = selected.includes(id) ? selected.filter(s => s !== id) : [...selected, id]
+    setSelected(next)
+    try { sessionStorage.setItem(SK.c_platforms, JSON.stringify(next)) } catch {}
+    window.dispatchEvent(new Event('ob-snap-update'))
   }
 
   function handleContinue() {

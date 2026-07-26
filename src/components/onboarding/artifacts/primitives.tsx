@@ -45,7 +45,7 @@ export function ScaledStage({
 }: {
   width: number
   height: number
-  maxWidth?: number
+  maxWidth?: number | string
   className?: string
   children: React.ReactNode
 }) {

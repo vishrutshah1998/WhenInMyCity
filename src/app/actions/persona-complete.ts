@@ -29,6 +29,7 @@ export async function completeExplorerOnboarding(payload: ExplorerPayload) {
   }
 
   const supabase = await createClient()
+  const admin    = createAdminClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/signin')
 
@@ -48,11 +49,31 @@ export async function completeExplorerOnboarding(payload: ExplorerPayload) {
 
   if (explorerError) throw new Error(explorerError.message)
 
+  // The explorer flow auto-derives `username` from display name (E2) with no
+  // user-facing picker or live availability check, so collisions (e.g. two
+  // "Priya"s) are only caught here — resolve them the same way
+  // completeBusinessOnboarding does, rather than letting the upsert below
+  // throw an unhandled unique-constraint error.
+  let username = payload.username
+  const { data: usernameTaken } = await admin
+    .from('user_profiles')
+    .select('id')
+    .eq('username', username)
+    .neq('id', user.id)
+    .maybeSingle()
+  if (usernameTaken) {
+    for (let i = 0; i < 10; i++) {
+      const candidate = `${payload.username}-${Math.floor(1000 + Math.random() * 9000)}`
+      const { data: c } = await admin.from('user_profiles').select('id').eq('username', candidate).maybeSingle()
+      if (!c) { username = candidate; break }
+    }
+  }
+
   const { error: profileError } = await supabase
     .from('user_profiles')
     .upsert({
       id: user.id,                           // user_profiles PK is `id`, not auth_user_id
-      username: payload.username,
+      username,
       display_name: payload.displayName,
       city: payload.city,
       creator_type: 'exploring',             // valid CreatorType value
@@ -65,7 +86,6 @@ export async function completeExplorerOnboarding(payload: ExplorerPayload) {
   if (profileError) throw new Error(profileError.message)
 
   // Seed default blocks only for new profiles (no existing blocks)
-  const admin = createAdminClient()
   const { count } = await admin
     .from('page_blocks')
     .select('id', { count: 'exact', head: true })
