@@ -314,6 +314,7 @@ function Toggle({ on, onToggle, label, badge }: { on: boolean; onToggle: () => v
 
 export default function CreateEventForm({ venues, profile }: { venues: VenueRow[]; profile: ProfileData | null }) {
   const router = useRouter()
+  const isMobile = useIsMobile()
   const [isPending, startTransition] = useTransition()
 
   // Poster
@@ -586,7 +587,7 @@ export default function CreateEventForm({ venues, profile }: { venues: VenueRow[
         <div className="flex flex-1 overflow-hidden" style={{ height: 'calc(100vh - 64px)' }}>
 
           {/* ── LEFT PANEL ── */}
-          <div className="w-[40%] bg-[#1A2744] border-r-2 border-dashed border-[#57423e] overflow-y-auto" style={{ paddingBottom: 100 }}>
+          <div className={['bg-[#1A2744] overflow-y-auto', isMobile ? 'w-full' : 'w-[40%] border-r-2 border-dashed border-[#57423e]'].join(' ')} style={{ paddingBottom: 100 }}>
             <div className="p-8 space-y-12">
 
               {/* 01 · POSTER STYLE */}
@@ -866,7 +867,7 @@ export default function CreateEventForm({ venues, profile }: { venues: VenueRow[
             </div>{/* /p-8 space-y-12 */}
 
             {/* Sticky publish footer */}
-            <div className="fixed bottom-0 left-0 w-[40%] h-[80px] bg-[#07070A]/90 border-t-2 border-dashed border-[#57423e] backdrop-blur flex items-center justify-between px-8 z-40">
+            <div className={['fixed bottom-0 left-0 h-[80px] bg-[#07070A]/90 border-t-2 border-dashed border-[#57423e] backdrop-blur flex items-center justify-between z-40', isMobile ? 'w-full px-4' : 'w-[40%] px-8'].join(' ')}>
               <div>
                 <div style={{ fontFamily: 'var(--font-jetbrains-mono)' }} className="text-white/40 text-[11px] uppercase">READY TO PUBLISH?</div>
                 {publishError && <div style={{ fontFamily: 'var(--font-jetbrains-mono)' }} className="text-red-400 text-[9px] uppercase mt-0.5">{publishError}</div>}
@@ -883,6 +884,7 @@ export default function CreateEventForm({ venues, profile }: { venues: VenueRow[
           </div>{/* /LEFT PANEL */}
 
           {/* ── RIGHT PREVIEW PANEL ── */}
+          {!isMobile && (
           <div className="w-[60%] overflow-y-auto p-12 relative pb-20"
                style={{ backgroundColor: '#F5ECD7', backgroundImage: 'radial-gradient(#57423e 0.5px, transparent 0.5px)', backgroundSize: '12px 12px' }}>
 
@@ -1165,11 +1167,13 @@ export default function CreateEventForm({ venues, profile }: { venues: VenueRow[
               </div>
             </div>
             <div className="h-8" />
-          </div>{/* /RIGHT PANEL */}
+          </div>
+          )}{/* /RIGHT PANEL */}
 
         </div>{/* /flex body */}
 
         {/* Marquee */}
+        {!isMobile && (
         <div className="fixed bottom-0 right-0 w-[60%] h-8 bg-[#1A2744] border-t-2 border-black z-50 overflow-hidden flex items-center">
           <div className="flex animate-marquee-create whitespace-nowrap">
             {[1, 2].map(n => (
@@ -1179,6 +1183,7 @@ export default function CreateEventForm({ venues, profile }: { venues: VenueRow[
             ))}
           </div>
         </div>
+        )}
 
       </div>{/* /bg-[#07070A] */}
     </>
