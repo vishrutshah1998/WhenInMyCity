@@ -1,68 +1,18 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { motion, useMotionValue, useSpring, useTransform, animate } from 'framer-motion'
 import type { MotionValue } from 'framer-motion'
 import Image from 'next/image'
 import { WimcWordmark } from '@/components/WimcWordmark'
+import { UsernameClaimInput } from '@/components/landing/UsernameClaimInput'
+import { useIsMobile } from '@/hooks/useIsMobile'
+import { MobileLandingStack } from '@/components/landing/mobile/MobileLandingStack'
+import { E, buildHorizTearClip } from '@/lib/ticketTear'
 
-const E = [0.22, 1, 0.36, 1] as const
 const NAV_H = 100
 const STUB_H = 34  // bottom info strip height (fixed px)
-
-// ── Horizontal tear-edge geometry ────────────────────────────────────────
-// Tear propagates LEFT → RIGHT along the bottom perforated edge.
-// Each entry: [x (0-1), y-offset from the perf line as a fraction of total ticket height].
-// Irregular spacing + amplitude mimics real paper-fibre breaks.
-const HORIZ_JAGS: ReadonlyArray<[number, number]> = [
-  [0.00,  0.000],
-  [0.02, +0.012], [0.05, -0.017], [0.08, +0.020],
-  [0.11, -0.010], [0.14, +0.016], [0.17, -0.022],
-  [0.20, +0.013], [0.23, -0.018], [0.26, +0.023],
-  [0.29, -0.009], [0.32, +0.019], [0.35, -0.014],
-  [0.38, +0.021], [0.41, -0.018], [0.44, +0.011],
-  [0.47, -0.023], [0.50, +0.017], [0.53, -0.012],
-  [0.56, +0.020], [0.59, -0.016], [0.62, +0.014],
-  [0.65, -0.021], [0.68, +0.018], [0.71, -0.011],
-  [0.74, +0.022], [0.77, -0.015], [0.80, +0.018],
-  [0.83, -0.020], [0.86, +0.013], [0.89, -0.019],
-  [0.92, +0.017], [0.95, -0.010], [0.98, +0.014],
-  [1.00,  0.000],
-]
-
-// perfY: perf-line y-position as % of element height (e.g. 94.7).
-// Returns the clip-path for the CURRENT (outgoing) ticket, removing the
-// already-torn left portion of the stub while keeping the main body intact.
-function buildHorizTearClip(tearProgress: number, perfY: number): string {
-  if (tearProgress <= 0.001) return 'polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%)'
-
-  if (tearProgress >= 0.999) {
-    // Fully torn — clip away entire stub, leave only main body with jagged bottom
-    const pts = [...HORIZ_JAGS].reverse().map(([x, dy]) => {
-      const py = Math.max(0, Math.min(100, perfY + dy * 100))
-      return `${(x * 100).toFixed(2)}% ${py.toFixed(2)}%`
-    }).join(', ')
-    return `polygon(0% 0%, 100% 0%, 100% ${perfY.toFixed(2)}%, ${pts}, 0% ${perfY.toFixed(2)}%)`
-  }
-
-  const tearX = tearProgress * 100
-
-  // Jag points for the already-torn edge, traversed right → left (tearX → 0)
-  const jagPts = HORIZ_JAGS
-    .filter(([x]) => x <= tearProgress)
-    .slice()
-    .reverse()
-    .map(([x, dy]) => {
-      const py = Math.max(0, Math.min(100, perfY + dy * 100))
-      return `${(x * 100).toFixed(2)}% ${py.toFixed(2)}%`
-    })
-    .join(', ')
-
-  // Visible region: full main body + right stub still attached (tearX → 100%)
-  return `polygon(0% 0%, 100% 0%, 100% 100%, ${tearX.toFixed(2)}% 100%, ${tearX.toFixed(2)}% ${perfY.toFixed(2)}%, ${jagPts}, 0% ${perfY.toFixed(2)}%)`
-}
 
 // ── State machine ────────────────────────────────────────────
 // idle → (scroll) → tearing → flying → entering → idle
@@ -218,62 +168,6 @@ function ShrutiPhoneMockup({ fast, revealDelay }: { fast: boolean; revealDelay: 
         </div>
       </motion.div>
     </motion.div>
-  )
-}
-
-function UsernameClaimInput() {
-  const router = useRouter()
-  const [username, setUsername] = useState('')
-  const [focused, setFocused] = useState(false)
-  function handleClaim() {
-    const cleaned = username.trim().toLowerCase().replace(/[^a-z0-9_]/g, '')
-    try { if (cleaned) sessionStorage.setItem('wimc_claimed_username', cleaned) } catch { /* ignore */ }
-    router.push('/signin?next=/onboarding')
-  }
-  return (
-    <div className="w-full max-w-md">
-      <div style={{ border: `1.5px dashed ${focused ? 'rgba(255,197,61,0.65)' : 'rgba(255,197,61,0.35)'}`, background: '#FFFFFF', transition: 'border-color 0.2s ease' }}>
-        {/* Header strip */}
-        <div className="flex items-center justify-between px-5 py-3" style={{ borderBottom: '1px solid rgba(255,197,61,0.24)', background: 'rgba(255,197,61,0.12)' }}>
-          <span className="font-vib-stamp text-[9px] font-bold uppercase tracking-[0.28em]" style={{ color: '#D8432E' }}>CLAIM YOUR PAGE</span>
-          <span className="font-mono text-[8px] font-bold uppercase tracking-[0.18em] px-2.5 py-1" style={{ background: '#FFC53D', color: '#201A12' }}>FREE</span>
-        </div>
-        {/* URL input */}
-        <div className="flex items-stretch" style={{ borderBottom: '1px solid rgba(255,197,61,0.24)' }}>
-          <span className="flex items-center font-mono text-[11px] font-bold shrink-0" style={{ color: '#D8432E', borderRight: '1px solid rgba(255,197,61,0.24)', padding: '14px 16px', whiteSpace: 'nowrap', background: 'rgba(255,197,61,0.08)' }}>
-            wheninmycity.com/
-          </span>
-          <input
-            type="text"
-            value={username}
-            onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ''))}
-            onKeyDown={(e) => e.key === 'Enter' && handleClaim()}
-            onFocus={() => setFocused(true)}
-            onBlur={() => setFocused(false)}
-            placeholder="yourname"
-            className="flex-1 bg-transparent outline-none font-mono text-[16px] text-vib-ink placeholder-[#B8AC94]"
-            style={{ padding: '14px 16px', minWidth: 0, caretColor: '#D8432E' }}
-          />
-        </div>
-        {/* CTA */}
-        <button
-          onClick={handleClaim}
-          className="w-full inline-flex items-center justify-center gap-2.5 py-4 font-mono text-[11px] font-bold tracking-[0.2em] uppercase transition-all hover:brightness-110 active:scale-[0.99]"
-          style={{ background: '#FFC53D', color: '#201A12', borderRadius: 0 }}
-        >
-          GET YOUR FREE PAGE
-          <span className="material-symbols-outlined" style={{ fontSize: '17px' }}>arrow_forward</span>
-        </button>
-      </div>
-      <div className="flex items-center gap-5 mt-3 px-1">
-        {['ALWAYS FREE', '75–90% YOURS', '5 MIN SETUP'].map((label) => (
-          <span key={label} className="flex items-center gap-1.5 font-mono text-[8.5px] tracking-[0.12em]" style={{ color: 'rgba(216,67,46,0.7)' }}>
-            <span className="w-1 h-1 rounded-full flex-shrink-0" style={{ background: '#FFC53D', opacity: 0.9 }} />
-            {label}
-          </span>
-        ))}
-      </div>
-    </div>
   )
 }
 
@@ -793,6 +687,7 @@ function ProgressDots({ active, onDotClick }: { active: number; onDotClick: (i: 
 // ── Main page ─────────────────────────────────────────────────
 
 export default function LandingPage() {
+  const isMobile = useIsMobile()
   const [active,        setActive]        = useState(0)
   const [previewTarget, setPreviewTarget] = useState<number | null>(null)
   const [tearState,     setTearState]     = useState<TearState>('idle')
@@ -881,14 +776,16 @@ export default function LandingPage() {
     isAnimRef.current = false
   }, [active, tearP])
 
-  // Input handlers
+  // Input handlers — inert on mobile; MobileLandingStack owns its own gesture engine.
   useEffect(() => {
+    if (isMobile) return
     const prev = document.body.style.overflow
     document.body.style.overflow = 'hidden'
     return () => { document.body.style.overflow = prev }
-  }, [])
+  }, [isMobile])
 
   useEffect(() => {
+    if (isMobile) return
     const THRESH = 240
     function onWheel(e: WheelEvent) {
       if (isAnimRef.current) return
@@ -938,18 +835,20 @@ export default function LandingPage() {
       window.removeEventListener('wheel', onWheel)
       if (tearIdleTimer.current) clearTimeout(tearIdleTimer.current)
     }
-  }, [active, doTear, tearP])
+  }, [active, doTear, tearP, isMobile])
 
   useEffect(() => {
+    if (isMobile) return
     function onKey(e: KeyboardEvent) {
       if (e.key === 'ArrowDown') doTear(active + 1)
       if (e.key === 'ArrowUp')   doTear(active - 1)
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [active, doTear])
+  }, [active, doTear, isMobile])
 
   useEffect(() => {
+    if (isMobile) return
     let startY = 0
     const onStart = (e: TouchEvent) => { startY = e.touches[0].clientY }
     const onEnd   = (e: TouchEvent) => {
@@ -960,10 +859,12 @@ export default function LandingPage() {
     window.addEventListener('touchstart', onStart, { passive: true })
     window.addEventListener('touchend',   onEnd,   { passive: true })
     return () => { window.removeEventListener('touchstart', onStart); window.removeEventListener('touchend', onEnd) }
-  }, [active, doTear])
+  }, [active, doTear, isMobile])
+
+  if (isMobile) return <MobileLandingStack />
 
   return (
-    <div className="bg-vib-cream text-vib-ink" style={{ height: '100dvh', overflow: 'hidden', position: 'relative' }}>
+    <div className="wimc-landing bg-vib-cream text-vib-ink" style={{ height: '100dvh', overflow: 'hidden', position: 'relative' }}>
 
       {/* Noise grain */}
       <div aria-hidden className="fixed inset-0 z-0 pointer-events-none select-none opacity-[0.028]"
