@@ -17,6 +17,8 @@ creators/venues are currently manual and admin-approved (`payout_requests` / `ve
 NOT live; do not assume it exists. See "Known debt" below for the parked payout-automation work.
 Framer Motion for animation; `vaul` for bottom-sheets/drawers; `useIsMobile` (768px) for the
 mobile breakpoint. Reuse these — do NOT add new dependencies for things already covered.
+Supabase Auth phone OTP delivery goes through a MSG91 Send-SMS Auth Hook (commit 01f2a39,
+2026-07-24), which replaced Twilio for Indian numbers — do not assume Twilio is still wired up.
 
 ## Workflow (how I work)
 - Planning/prompt-drafting happens in a separate chat; you receive structured task files.
@@ -54,8 +56,17 @@ mobile breakpoint. Reuse these — do NOT add new dependencies for things alread
 - **Capture-and-forward, never system-of-record** for civic reports; store reference IDs only.
 - Government/civic API integrations (e.g. Swachhata) go behind a feature-flag + credential guard
   with graceful fallback; never fake a successful external call.
-- **No browser storage APIs** (localStorage/sessionStorage/cookies) in artifacts/components — use
-  in-memory React state.
+- **Browser storage in Claude Design/Artifacts output** (any HTML/React
+  mockup produced via the `wimc-design` skill or shown as a prototype in
+  chat): no localStorage/sessionStorage/cookies — these run in a
+  sandboxed context with no persistent storage. Use in-memory state only.
+- **Browser storage in real WIMC app code** (anything under `src/`) is
+  fine and already load-bearing: onboarding's wizard-state carry-over
+  (`session-keys.ts`), sidebar-collapsed UI state, dismissed-actions
+  lists, and DPDP consent flags all depend on it. Don't remove or avoid
+  it reflexively. The one live concern is DPDP consent specifically —
+  see the existing Known Debt entry on moving it server-side — not
+  browser storage in general.
 
 ## Naming / conventions
 - User-facing term for venues/cafés is "Venue" — renamed from the historical internal "Adda" name
@@ -150,10 +161,12 @@ mobile breakpoint. Reuse these — do NOT add new dependencies for things alread
     flow) — the mitigation is UX copy before the Connect button (tell the creator to make their
     Business/Creator account the active one first, in whichever browser or app they're using) and a
     visible "Didn't finish connecting? Click Connect again" affordance on the settings page, since a
-    dead-ended attempt currently leaves no signal that anything went wrong. Not yet implemented.
+    dead-ended attempt currently leaves no signal that anything went wrong. The UX-copy mitigation
+    shipped in commit ed84e6b (2026-07-24) — see the "Needs a Business or Creator Instagram account…"
+    line next to the Connect button in `profile-client.tsx`. The "Click Connect again" affordance has not.
   - **Popup-based OAuth (`window.open` + a self-closing callback page that `postMessage`s the opener)
-    was considered, to avoid navigating the creator's main tab away from WIMC, but is not recommended
-    as the primary path.** The most common real-world entry point for both creators and explorers is
+    was built in commit ed84e6b (2026-07-24), to avoid navigating the creator's main tab away from
+    WIMC.** The most common real-world entry point for both creators and explorers is
     tapping a link from inside Instagram's own in-app browser (a restricted WebView) — in-app browsers
     (Instagram/Facebook/similar) are well documented as blocking or silently no-op'ing `window.open`,
     which is exactly why Meta's own developer guidance for Facebook Login recommends detecting in-app
@@ -163,11 +176,15 @@ mobile breakpoint. Reuse these — do NOT add new dependencies for things alread
     `middleware.ts` on every request (see `src/lib/supabase/middleware.ts`) — navigating away to
     Instagram and back does **not** by itself require a relogin in a normal browser; the real risk is
     narrower, limited to in-app WebViews that clear storage more aggressively or get reclaimed by the
-    OS during a long detour (e.g. converting account type, switching accounts). If this is ever built,
-    the safe shape is: detect in-app browsers via user-agent sniffing and skip straight to the current
-    full-page redirect for them (always works, same as today); for normal desktop/mobile Safari/Chrome,
-    attempt the popup with an immediate fallback to full-page redirect if `window.open` returns null
-    (popup blocked). Not implemented — this is a design note, not a task in progress.
+    OS during a long detour (e.g. converting account type, switching accounts). The shipped shape
+    matches this: `isInAppBrowser()` (`src/lib/instagram/in-app-browser.ts`) detects in-app browsers
+    via user-agent sniffing and lets the click fall through to the existing full-page redirect for
+    them (always works, same as today); for normal desktop/mobile Safari/Chrome,
+    `getInstagramPopupAuthorizeUrl()` (`src/app/actions/instagram.ts`) and the callback route's
+    postMessage response (`src/app/api/instagram/callback/route.ts`) drive the popup, with an
+    immediate fallback to full-page redirect if `window.open` returns null (popup blocked) — see
+    `handleInstagramConnectClick` in `profile-client.tsx`. Code-complete; still unverified live under
+    the same Meta App provisioning gate as the rest of Instagram Connect above.
 - **`addBlock()` (`src/app/actions/blocks.ts`) collapses every DB error into one generic string,
   so `BlockEditor.tsx`'s error surfacing (added alongside migration 065, `src/components/dashboard/
   BlockEditor.tsx` `handleAdd`) only got silent failure to visible failure, not visible-and-
@@ -184,3 +201,21 @@ mobile breakpoint. Reuse these — do NOT add new dependencies for things alread
   safe to surface to a client (likely: pass a short, allow-listed reason string back through
   `addBlock()`'s return value rather than the raw error, mirroring the discipline already used for
   `respondError()` in the Instagram callback route).
+- **`useIsMobile()` flash-of-desktop-layout on first paint:** The hook
+  initializes state to `false` and only measures `window.innerWidth`
+  inside a `useEffect` after mount — so on every component gated by
+  `isMobile` (mobile landing page, event-creation form overlays, Studio
+  bottom-drawers, etc.), there's one initial render where `isMobile` is
+  still `false` before the effect flips it. On a real phone this can
+  produce a brief flash of desktop layout before the mobile version
+  swaps in. Not yet confirmed how visible this is on an actual device —
+  worst case is a slow JS parse making the flash noticeable rather than
+  a single dropped frame.
+  **Trigger to fix:** if a manual device test shows a visible flicker,
+  or if a new mobile-gated component makes the flash more prominent
+  (e.g. one with a jarring layout swap rather than a subtle one).
+  **Likely fix:** read `window.innerWidth` synchronously on first render
+  where possible (e.g. via `useSyncExternalStore` or a lazy `useState`
+  initializer), instead of defaulting to `false` and correcting post-mount.
+  Affects all 7 files currently using the hook — a shared-utility fix,
+  not a per-component one.
