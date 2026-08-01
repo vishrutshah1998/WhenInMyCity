@@ -75,7 +75,10 @@ export default function ExplorerSettingsClient({ profile, explorerScene, explore
   const [tags, setTags]                   = useState<string[]>((profile.interest_tags ?? []).filter(t => validTagIds.has(t)))
   const [formats, setFormats]             = useState<string[]>(profile.preferred_formats ?? [])
   const [neighbourhood, setNeighbourhood] = useState(profile.neighbourhood_preference ?? '')
-  const [priceMax, setPriceMax]           = useState(Math.round(profile.price_range_max_paise / 100))
+  const [anyPrice, setAnyPrice]           = useState(profile.price_range_max_paise === 999999)
+  const [priceMax, setPriceMax]           = useState(
+    profile.price_range_max_paise === 999999 ? 2000 : Math.round(profile.price_range_max_paise / 100)
+  )
   const [notifWa, setNotifWa]             = useState(profile.notification_preferences?.whatsapp ?? true)
   const [digestFreq, setDigestFreq]       = useState(profile.notification_preferences?.digest_frequency ?? 'weekly')
   const [scene, setScene]                 = useState(explorerScene ?? '')
@@ -122,7 +125,7 @@ export default function ExplorerSettingsClient({ profile, explorerScene, explore
         city:                     selectedCity,
         interest_tags:            tags,
         neighbourhood_preference: neighbourhood || null,
-        price_range_max_paise:    priceMax * 100,
+        price_range_max_paise:    anyPrice ? 999999 : priceMax * 100,
         preferred_formats:        formats,
         notification_preferences: {
           whatsapp:         notifWa,
@@ -300,17 +303,32 @@ export default function ExplorerSettingsClient({ profile, explorerScene, explore
           </div>
 
           <div>
-            <label style={fieldLabelStyle}>Max Ticket Price: ₹{priceMax}</label>
-            <input
-              type="range"
-              min={0} max={2000} step={50}
-              value={priceMax}
-              onChange={e => setPriceMax(Number(e.target.value))}
-              style={{ width: '100%', accentColor: LAVENDER }}
-            />
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: '#9896B0', marginTop: 4 }}>
-              <span>₹0 (Free only)</span><span>₹2000</span>
-            </div>
+            <label style={fieldLabelStyle}>
+              Max Ticket Price{anyPrice ? '' : `: ₹${priceMax}`}
+            </label>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', marginBottom: 10 }}>
+              <input
+                type="checkbox"
+                checked={anyPrice}
+                onChange={e => setAnyPrice(e.target.checked)}
+                style={{ accentColor: LAVENDER, width: 16, height: 16 }}
+              />
+              <span style={{ fontSize: 13, color: '#F0EFF8' }}>Any price (no limit)</span>
+            </label>
+            {!anyPrice && (
+              <>
+                <input
+                  type="range"
+                  min={0} max={2000} step={50}
+                  value={priceMax}
+                  onChange={e => setPriceMax(Number(e.target.value))}
+                  style={{ width: '100%', accentColor: LAVENDER }}
+                />
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: '#9896B0', marginTop: 4 }}>
+                  <span>₹0 (Free only)</span><span>₹2000</span>
+                </div>
+              </>
+            )}
           </div>
 
           <div>

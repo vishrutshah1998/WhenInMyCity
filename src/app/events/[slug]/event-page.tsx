@@ -1729,7 +1729,7 @@ export default function EventPage({ event, rsvpCount, spotsLeft, creator, review
           <nav className="fixed bottom-0 left-0 w-full p-4 flex justify-center z-50">
             <div className="bg-surface/70 backdrop-blur-md w-full max-w-lg rounded-xl shadow-[0_-12px_32px_rgba(171,46,0,0.08)] flex justify-center p-2">
               <button
-                onClick={() => router.push('/explore/saved')}
+                onClick={() => router.push('/explore/dashboard/saved')}
                 className="bg-gradient-to-r from-[#AB2E00] to-[#CF4519] text-white rounded-lg px-8 py-4 w-full flex items-center justify-center gap-2 font-headline font-bold text-sm uppercase tracking-wider hover:brightness-110 transition-all"
               >
                 <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>confirmation_number</span>

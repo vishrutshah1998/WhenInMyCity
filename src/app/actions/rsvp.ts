@@ -1002,7 +1002,7 @@ export interface MyTicket {
 
 /**
  * Returns all confirmed (captured) tickets for the authenticated explorer,
- * sorted most-recent first. Used by /explore/tickets.
+ * sorted most-recent first. Used by /explore/dashboard/tickets.
  */
 export async function getMyTickets(): Promise<{ tickets: MyTicket[]; error: string | null }> {
   const supabase = await createClient()

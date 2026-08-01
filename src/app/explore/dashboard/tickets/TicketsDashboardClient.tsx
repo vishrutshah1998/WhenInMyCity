@@ -1,5 +1,7 @@
 'use client'
 
+import { useState } from 'react'
+import Image from 'next/image'
 import Link from 'next/link'
 import type { MyTicket } from '@/app/actions/rsvp'
 
@@ -9,16 +11,24 @@ function fmtDate(iso: string) {
   return new Intl.DateTimeFormat('en-IN', { weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true }).format(new Date(iso))
 }
 
+function fmtCheckedInAt(iso: string) {
+  return new Date(iso).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit', hour12: true })
+}
+
+function qrImageUrl(token: string): string {
+  const data = encodeURIComponent(`WIMC-${token}`)
+  return `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${data}&color=3b0a00&bgcolor=ffffff&margin=10`
+}
+
 function TicketCard({ ticket, past }: { ticket: MyTicket; past: boolean }) {
+  const [expanded, setExpanded] = useState(false)
+
   return (
     <div style={{
       background: '#FAF7F0',
       border: '1.5px dashed rgba(26,39,68,0.25)',
       borderLeft: `3px solid ${past ? 'rgba(152,150,176,0.5)' : LAVENDER}`,
       padding: '14px 16px',
-      display: 'flex',
-      alignItems: 'flex-start',
-      gap: 14,
     }}>
       <div style={{ flex: 1, minWidth: 0 }}>
         {/* Ticket header */}
@@ -43,28 +53,48 @@ function TicketCard({ ticket, past }: { ticket: MyTicket; past: boolean }) {
         </Link>
         <div style={{
           fontFamily: 'var(--font-jetbrains-mono)',
-          fontSize: 10, color: 'rgba(26,39,68,0.50)', marginBottom: 10,
+          fontSize: 10, color: 'rgba(26,39,68,0.50)', marginBottom: ticket.creatorName ? 6 : 10,
         }}>
           {ticket.venueName} · {fmtDate(ticket.eventStartsAt)}
         </div>
 
-        <div style={{ borderTop: '1px dashed rgba(26,39,68,0.15)', paddingTop: 8, display: 'flex', gap: 12, alignItems: 'center' }}>
+        {ticket.creatorName && (
+          <div style={{
+            fontFamily: 'var(--font-jetbrains-mono)',
+            fontSize: 9, color: 'rgba(26,39,68,0.45)', marginBottom: 10,
+          }}>
+            Hosted by{' '}
+            {ticket.creatorUsername ? (
+              <Link href={`/${ticket.creatorUsername}`} style={{ color: LAVENDER, fontWeight: 700, textDecoration: 'none' }}>
+                {ticket.creatorName}
+              </Link>
+            ) : (
+              <span style={{ fontWeight: 700, color: 'rgba(26,39,68,0.6)' }}>{ticket.creatorName}</span>
+            )}
+          </div>
+        )}
+
+        <div style={{ borderTop: '1px dashed rgba(26,39,68,0.15)', paddingTop: 8, display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
           {!past && (
-            <Link
-              href="/explore/tickets"
+            <button
+              onClick={() => setExpanded(v => !v)}
               style={{
                 display: 'inline-flex', alignItems: 'center', gap: 5,
                 padding: '5px 12px',
-                background: LAVENDER, color: '#07070A',
+                background: expanded ? 'transparent' : LAVENDER,
+                border: `1px solid ${LAVENDER}`,
+                color: expanded ? LAVENDER : '#07070A',
                 fontFamily: 'var(--font-jetbrains-mono)',
                 fontSize: 9, fontWeight: 700,
                 letterSpacing: '0.1em', textTransform: 'uppercase',
-                textDecoration: 'none',
+                cursor: 'pointer',
               }}
             >
-              <span className="material-symbols-outlined" style={{ fontSize: 12 }}>qr_code</span>
-              Show QR
-            </Link>
+              <span className="material-symbols-outlined" style={{ fontSize: 12 }}>
+                {expanded ? 'qr_code_scanner' : 'qr_code'}
+              </span>
+              {expanded ? 'Hide QR' : 'Show QR'}
+            </button>
           )}
           {past && (
             <Link
@@ -96,10 +126,39 @@ function TicketCard({ ticket, past }: { ticket: MyTicket; past: boolean }) {
               fontSize: 9, color: '#22C55E',
               letterSpacing: '0.1em', textTransform: 'uppercase',
             }}>
-              ✓ Checked in
+              ✓ Checked in{ticket.checkedInAt ? ` · ${fmtCheckedInAt(ticket.checkedInAt)}` : ''}
             </span>
           )}
         </div>
+
+        {expanded && !past && (
+          <div style={{
+            marginTop: 14, paddingTop: 14,
+            borderTop: '1px dashed rgba(26,39,68,0.15)',
+            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10,
+          }}>
+            <div style={{
+              padding: 14, borderRadius: 8,
+              background: '#fff',
+              boxShadow: '0 2px 12px rgba(0,0,0,0.12)',
+            }}>
+              <Image
+                src={qrImageUrl(ticket.qrToken)}
+                alt="Ticket QR code"
+                width={180}
+                height={180}
+                unoptimized
+              />
+            </div>
+            <div style={{
+              fontFamily: 'var(--font-jetbrains-mono)',
+              fontSize: 9, color: 'rgba(26,39,68,0.5)',
+              textAlign: 'center', letterSpacing: '0.05em', textTransform: 'uppercase',
+            }}>
+              Show this at the Venue entrance
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )
