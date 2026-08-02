@@ -6,8 +6,6 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { requireAuth } from '@/lib/auth/requireAuth'
 import {
-  CreateVenueSchema,
-  type CreateVenueInput,
   type AvailabilityUpdate,
   type ProposalCounterOffer,
   type VenueSearchParams,
@@ -53,146 +51,12 @@ const TIER_ORDER: Record<UserTier, number> = {
 }
 
 // ---------------------------------------------------------------------------
-// Internal helpers
-// ---------------------------------------------------------------------------
-
-/**
- * Converts an venue name into a URL-safe slug.
- * Strips non-alphanumeric characters; truncates to 55 chars to leave room
- * for a uniqueness suffix.
- *
- * @example slugifyVenue('The Blue Café') → 'the-blue-cafe'
- */
-function slugifyVenue(name: string): string {
-  return name
-    .trim()
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')  // strip diacritics (café → cafe)
-    .replace(/\s+/g, '-')
-    .replace(/[^a-z0-9\-]/g, '')
-    .replace(/-+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .slice(0, 55)
-}
-
-/**
- * Returns a unique slug derived from the venue name.
- * If the base slug is taken, appends a random 3-digit suffix.
- */
-async function generateVenueSlug(name: string): Promise<string> {
-  const base = slugifyVenue(name) || 'venue'
-  const admin = createAdminClient()
-
-  const candidates = [
-    base,
-    ...Array.from({ length: 5 }, () => `${base}-${Math.floor(100 + Math.random() * 900)}`),
-  ]
-
-  for (const candidate of candidates) {
-    if (candidate.length < 3) continue
-
-    const { data, error } = await admin
-      .from('venue_profiles')
-      .select('slug')
-      .eq('slug', candidate)
-      .maybeSingle()
-
-    if (error) {
-      console.error('[generateVenueSlug] lookup error', error.message)
-      continue
-    }
-
-    if (data === null) return candidate
-  }
-
-  return `venue-${Math.floor(100000 + Math.random() * 900000)}`
-}
-
-// ---------------------------------------------------------------------------
-// createVenueProfile
-// ---------------------------------------------------------------------------
-
-/**
- * Creates a new Venue profile for the authenticated user.
- *
- * Steps:
- *   1. Validates input with Zod.
- *   2. Checks that the user hasn't already registered an Venue.
- *   3. Generates a unique URL slug from the Venue name.
- *   4. Inserts the venue_profiles row.
- *
- * Cover image upload is handled separately via `uploadVenueCoverImage()`.
- *
- * @returns `{ slug, error: null }` on success or `{ slug: '', error: string }` on failure.
- */
-export async function createVenueProfile(
-  data: CreateVenueInput,
-): Promise<{ slug: string; error: string | null }> {
-  const { user } = await requireAuth('/onboarding/venue')
-
-  const parsed = CreateVenueSchema.safeParse(data)
-  if (!parsed.success) {
-    return { slug: '', error: parsed.error.errors[0].message }
-  }
-
-  const admin = createAdminClient()
-
-  // Guard: one venue per auth account.
-  const { data: existing } = await admin
-    .from('venue_profiles')
-    .select('slug')
-    .eq('auth_user_id', user.id)
-    .maybeSingle()
-
-  if (existing) {
-    return { slug: existing.slug, error: null }  // idempotent
-  }
-
-  const slug = await generateVenueSlug(parsed.data.name)
-
-  const { error: insertError } = await admin.from('venue_profiles').insert({
-    auth_user_id: user.id,
-    slug,
-    name:                     parsed.data.name,
-    description:              parsed.data.description ?? null,
-    venue_type:                parsed.data.venue_type,
-    city:                     parsed.data.city,
-    neighbourhood:            parsed.data.neighbourhood ?? null,
-    address:                  parsed.data.address,
-    lat:                      parsed.data.lat ?? null,
-    lng:                      parsed.data.lng ?? null,
-    cover_image_url:          parsed.data.cover_image_url || null,
-    gallery_images:           parsed.data.gallery_images,
-    capacity_min:             parsed.data.capacity_min ?? null,
-    capacity_max:             parsed.data.capacity_max ?? null,
-    capacity_configurations:  parsed.data.capacity_configurations,
-    amenities:                parsed.data.amenities,
-    pricing_model:            parsed.data.pricing_model,
-    pricing_config:           parsed.data.pricing_config,
-    contact_whatsapp:         parsed.data.contact_whatsapp || null,
-    contact_email:            parsed.data.contact_email || null,
-    instagram_handle:         parsed.data.instagram_handle || null,
-  })
-
-  if (insertError) {
-    console.error('[createVenueProfile] insert', insertError.message)
-    if (insertError.code === '23505') {
-      return { slug: '', error: 'That slug is already taken. Please try a different name.' }
-    }
-    return { slug: '', error: 'Failed to create your Venue profile. Please try again.' }
-  }
-
-  return { slug, error: null }
-}
-
-// ---------------------------------------------------------------------------
 // uploadVenueCoverImage
 // ---------------------------------------------------------------------------
 
 /**
  * Uploads an Venue cover image via FormData.
- * Must be called after `createVenueProfile` so the venue_profiles row exists.
+ * Must be called after the venue_profiles row already exists.
  *
  * @param formData - Must contain a `file` field with the image File.
  * @returns `{ url: string | null; error: string | null }`
@@ -624,7 +488,7 @@ export async function searchVenues(
     .from('venue_profiles')
     .select('*')
     .eq('is_active', true)
-    .eq('city', params.city)
+    .ilike('city', params.city)
     .order('total_events_hosted', { ascending: false })
 
   if (params.venue_type) {

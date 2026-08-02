@@ -317,7 +317,7 @@ export async function completeVenueOnboarding(
     name:                    d.name,
     description:             d.description ?? null,
     venue_type:               d.venue_type,
-    city:                    d.city,
+    city:                    d.city.trim().toLowerCase(),
     neighbourhood:           d.neighbourhood ?? null,
     address:                 d.address,
     lat:                     d.lat ?? null,
