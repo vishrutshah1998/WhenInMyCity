@@ -27,8 +27,11 @@ export type VenueTier  = 'open' | 'verified' | 'beloved' | 'legendary'
 
 export type PricingModel = 'fixed_rental' | 'door_split' | 'hybrid' | 'f_and_b_minimum'
 
-export type ProposalStatus = 'pending' | 'counter_offered' | 'accepted' | 'declined' | 'expired' | 'withdrawn'
+export type ProposalStatus = 'pending' | 'counter_offered' | 'accepted' | 'declined' | 'expired' | 'withdrawn' | 'cancelled'
+export type ProposalCancelledBy = 'maker' | 'venue'
+export type CounterOfferAuthor = 'venue' | 'maker'
 
+/** @deprecated LEGACY as of migration 069 — superseded by real start_time/end_time columns. Do not use in new code. */
 export type AvailabilitySlotType = 'morning' | 'afternoon' | 'evening' | 'full_day'
 
 export type AvailabilityStatus = 'available' | 'blocked' | 'pending' | 'confirmed'
@@ -1089,6 +1092,8 @@ export interface Database {
           lead_time_weeks: number
           google_calendar_connected: boolean
           google_calendar_refresh_token: string | null
+          buffer_before_minutes: number
+          buffer_after_minutes: number
           created_at: string
           updated_at: string
         }
@@ -1133,6 +1138,8 @@ export interface Database {
           lead_time_weeks?: number
           google_calendar_connected?: boolean
           google_calendar_refresh_token?: string | null
+          buffer_before_minutes?: number
+          buffer_after_minutes?: number
           created_at?: string
           updated_at?: string
         }
@@ -1177,6 +1184,8 @@ export interface Database {
           lead_time_weeks?: number
           google_calendar_connected?: boolean
           google_calendar_refresh_token?: string | null
+          buffer_before_minutes?: number
+          buffer_after_minutes?: number
           created_at?: string
           updated_at?: string
         }
@@ -1263,6 +1272,8 @@ export interface Database {
           venue_id: string
           date: string
           slot_type: AvailabilitySlotType
+          start_time: string | null
+          end_time: string | null
           status: AvailabilityStatus
           event_id: string | null
           notes: string | null
@@ -1273,6 +1284,8 @@ export interface Database {
           venue_id: string
           date: string
           slot_type?: AvailabilitySlotType
+          start_time?: string | null
+          end_time?: string | null
           status?: AvailabilityStatus
           event_id?: string | null
           notes?: string | null
@@ -1283,6 +1296,8 @@ export interface Database {
           venue_id?: string
           date?: string
           slot_type?: AvailabilitySlotType
+          start_time?: string | null
+          end_time?: string | null
           status?: AvailabilityStatus
           event_id?: string | null
           notes?: string | null
@@ -1371,6 +1386,8 @@ export interface Database {
           event_id: string | null
           proposed_date: string
           proposed_slot: string
+          start_time: string | null
+          end_time: string | null
           event_title: string
           expected_attendees: number | null
           expected_revenue_paise: number | null
@@ -1379,7 +1396,12 @@ export interface Database {
           message: string | null
           status: ProposalStatus
           counter_offer: Json
+          counter_offer_by: CounterOfferAuthor | null
           venue_response_note: string | null
+          maker_counter_message: string | null
+          cancelled_at: string | null
+          cancellation_reason: string | null
+          cancelled_by: ProposalCancelledBy | null
           expires_at: string
           created_at: string
           updated_at: string
@@ -1390,7 +1412,9 @@ export interface Database {
           venue_id: string
           event_id?: string | null
           proposed_date: string
-          proposed_slot: string
+          proposed_slot?: string
+          start_time?: string | null
+          end_time?: string | null
           event_title: string
           expected_attendees?: number | null
           expected_revenue_paise?: number | null
@@ -1399,7 +1423,12 @@ export interface Database {
           message?: string | null
           status?: ProposalStatus
           counter_offer?: Json
+          counter_offer_by?: CounterOfferAuthor | null
           venue_response_note?: string | null
+          maker_counter_message?: string | null
+          cancelled_at?: string | null
+          cancellation_reason?: string | null
+          cancelled_by?: ProposalCancelledBy | null
           expires_at?: string
           created_at?: string
           updated_at?: string
@@ -1411,6 +1440,8 @@ export interface Database {
           event_id?: string | null
           proposed_date?: string
           proposed_slot?: string
+          start_time?: string | null
+          end_time?: string | null
           event_title?: string
           expected_attendees?: number | null
           expected_revenue_paise?: number | null
@@ -1419,7 +1450,12 @@ export interface Database {
           message?: string | null
           status?: ProposalStatus
           counter_offer?: Json
+          counter_offer_by?: CounterOfferAuthor | null
           venue_response_note?: string | null
+          maker_counter_message?: string | null
+          cancelled_at?: string | null
+          cancellation_reason?: string | null
+          cancelled_by?: ProposalCancelledBy | null
           expires_at?: string
           created_at?: string
           updated_at?: string
@@ -1444,6 +1480,51 @@ export interface Database {
             columns: ['event_id']
             isOneToOne: false
             referencedRelation: 'events'
+            referencedColumns: ['id']
+          }
+        ]
+      }
+
+      // ----- Booking messages (migration 066) -----
+
+      booking_messages: {
+        Row: {
+          id: string
+          proposal_id: string
+          sender_id: string
+          body: string
+          sent_at: string
+          read_at: string | null
+        }
+        Insert: {
+          id?: string
+          proposal_id: string
+          sender_id: string
+          body: string
+          sent_at?: string
+          read_at?: string | null
+        }
+        Update: {
+          id?: string
+          proposal_id?: string
+          sender_id?: string
+          body?: string
+          sent_at?: string
+          read_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'booking_messages_proposal_id_fkey'
+            columns: ['proposal_id']
+            isOneToOne: false
+            referencedRelation: 'maker_venue_proposals'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'booking_messages_sender_id_fkey'
+            columns: ['sender_id']
+            isOneToOne: false
+            referencedRelation: 'user_profiles'
             referencedColumns: ['id']
           }
         ]
@@ -2046,6 +2127,7 @@ export type VenueProfile         = Tables<'venue_profiles'>
 export type ExplorerProfile      = Tables<'explorer_profiles'>
 export type VenueAvailability    = Tables<'venue_availability'>
 export type MakerVenueProposal   = Tables<'maker_venue_proposals'>
+export type BookingMessage       = Tables<'booking_messages'>
 export type UserTierHistory       = Tables<'user_tier_history'>
 /** @deprecated Use UserTierHistory */
 export type MakerTierHistory      = UserTierHistory

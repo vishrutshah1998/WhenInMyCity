@@ -28,7 +28,7 @@ const FILTER_TYPES: Record<FilterKey, string[] | null> = {
   tier:    ['tier_upgrade', 'tier_downgrade'],
   events:  ['new_rsvp', 'event_rsvp', 'event_reminder', 'followed_maker_new_event', 'creator_post', 'rating_prompt', 'new_rating'],
   payouts: ['payout_approved', 'payout_rejected', 'payment_settled'],
-  venue:   ['new_proposal', 'proposal_accepted', 'proposal_counter', 'proposal_response', 'event_confirmed', 'new_booking_inquiry'],
+  venue:   ['new_proposal', 'proposal_accepted', 'proposal_counter', 'proposal_declined', 'proposal_response', 'event_confirmed', 'new_booking_inquiry'],
 }
 
 // ---------------------------------------------------------------------------

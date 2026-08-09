@@ -20,6 +20,7 @@ export const NOTIFICATION_META: Record<string, { icon: string; color: string; la
   new_proposal:               { icon: 'handshake',           color: '#5DD9D0', label: 'New Proposal'      },
   proposal_accepted:          { icon: 'check_circle',        color: '#4ADE80', label: 'Proposal Accepted' },
   proposal_counter:           { icon: 'sync_alt',            color: '#F5A800', label: 'Counter Offer'     },
+  proposal_declined:          { icon: 'cancel',              color: '#F472B6', label: 'Proposal Declined' },
   proposal_response:          { icon: 'apartment',           color: '#3b82f6', label: 'Proposal Update'   },
   event_confirmed:            { icon: 'check_circle',        color: '#22c55e', label: 'Event Confirmed'   },
   // Ratings
@@ -36,6 +37,10 @@ export const NOTIFICATION_META: Record<string, { icon: string; color: string; la
   venue_payout_processed:      { icon: 'payments',            color: '#4ADE80', label: 'Payout Processed'  },
   venue_new_inquiry:           { icon: 'mail',                color: '#E8705A', label: 'New Inquiry'       },
   venue_space_trending:        { icon: 'trending_up',         color: '#5DD9D0', label: 'Space Trending'    },
+  venue_counter_accepted:      { icon: 'check_circle',        color: '#4ADE80', label: 'Counter Accepted'  },
+  venue_counter_declined:      { icon: 'cancel',              color: '#F472B6', label: 'Counter Declined'  },
+  venue_maker_countered:       { icon: 'sync_alt',            color: '#F5A800', label: 'New Counter Offer' },
+  venue_booking_cancelled:    { icon: 'event_busy',          color: '#F472B6', label: 'Booking Cancelled' },
   // Hub / Connections
   connection_request:         { icon: 'person_add',          color: '#5DD9D0', label: 'Connection Request' },
   connection_accepted:        { icon: 'handshake',           color: '#4ADE80', label: 'Connection Accepted' },

@@ -1,56 +1,8 @@
 'use client'
 
 import { useState, useRef, useEffect, useCallback } from 'react'
-
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
-
-type SenderType = 'venue' | 'creator'
-
-interface Message {
-  id: string
-  sender: SenderType
-  text: string
-  timestamp: string // ISO
-}
-
-// ---------------------------------------------------------------------------
-// Mock data
-// ---------------------------------------------------------------------------
-
-// TODO: replace with real messages from Supabase query:
-//   supabase.from('booking_messages').select('*').eq('proposal_id', bookingId).order('created_at')
-function getMockMessages(bookingId: string): Message[] {
-  // Seed with bookingId so each booking gets the same deterministic thread
-  void bookingId
-  return [
-    {
-      id: 'mock-1',
-      sender: 'creator',
-      text: 'Hi! Really excited about hosting this at your space. Quick question — do you have a sound system available, or should I bring my own PA?',
-      timestamp: new Date(Date.now() - 26 * 3_600_000).toISOString(),
-    },
-    {
-      id: 'mock-2',
-      sender: 'venue',
-      text: 'Hey! Yes, we have a full PA system with two floor monitors and a mixing board. It\'s included in the rental. What\'s the expected attendance for your event?',
-      timestamp: new Date(Date.now() - 25 * 3_600_000).toISOString(),
-    },
-    {
-      id: 'mock-3',
-      sender: 'creator',
-      text: 'That\'s great news! Expecting around 40–50 people. Will there be a separate green room or prep area we can use before the show?',
-      timestamp: new Date(Date.now() - 24 * 3_600_000 - 18 * 60_000).toISOString(),
-    },
-    {
-      id: 'mock-4',
-      sender: 'venue',
-      text: 'We have a back area that can serve as a prep space — fits about 4–5 people comfortably. I\'ll add 30 min of setup time before your slot at no extra charge.',
-      timestamp: new Date(Date.now() - 2 * 3_600_000).toISOString(),
-    },
-  ]
-}
+import { createClient } from '@/lib/supabase/client'
+import { getBookingMessages, sendBookingMessage, type BookingMessageDTO } from '@/app/actions/venue-bookings'
 
 // ---------------------------------------------------------------------------
 // Timestamp formatting
@@ -77,21 +29,20 @@ function formatTimestamp(iso: string): string {
 // Message bubble
 // ---------------------------------------------------------------------------
 
-function Bubble({ message }: { message: Message }) {
-  const isVenue = message.sender === 'venue'
+function Bubble({ message, isMine }: { message: BookingMessageDTO; isMine: boolean }) {
   return (
     <div style={{
       display: 'flex',
       flexDirection: 'column',
-      alignItems: isVenue ? 'flex-end' : 'flex-start',
+      alignItems: isMine ? 'flex-end' : 'flex-start',
       marginBottom: 16,
     }}>
       <div style={{
         maxWidth: '72%',
         padding: '10px 14px',
-        borderRadius: isVenue ? '16px 4px 16px 16px' : '4px 16px 16px 16px',
-        background: isVenue ? 'var(--venue-amber-tint)' : 'var(--venue-bg-elevated)',
-        border: `1px solid ${isVenue ? 'var(--venue-amber-border)' : 'var(--venue-border-subtle)'}`,
+        borderRadius: isMine ? '16px 4px 16px 16px' : '4px 16px 16px 16px',
+        background: isMine ? 'var(--venue-accent-tint)' : 'var(--venue-bg-elevated)',
+        border: `1px solid ${isMine ? 'var(--venue-accent-border)' : 'var(--venue-border-subtle)'}`,
       }}>
         <p style={{
           margin: 0,
@@ -102,7 +53,7 @@ function Bubble({ message }: { message: Message }) {
           whiteSpace: 'pre-wrap',
           wordBreak: 'break-word',
         }}>
-          {message.text}
+          {message.body}
         </p>
       </div>
       <span style={{
@@ -110,10 +61,10 @@ function Bubble({ message }: { message: Message }) {
         color: 'var(--venue-text-muted)',
         fontFamily: 'var(--font-jetbrains-mono), monospace',
         marginTop: 4,
-        paddingLeft: isVenue ? 0 : 4,
-        paddingRight: isVenue ? 4 : 0,
+        paddingLeft: isMine ? 0 : 4,
+        paddingRight: isMine ? 4 : 0,
       }}>
-        {formatTimestamp(message.timestamp)}
+        {formatTimestamp(message.sentAt)}
       </span>
     </div>
   )
@@ -124,28 +75,56 @@ function Bubble({ message }: { message: Message }) {
 // ---------------------------------------------------------------------------
 
 interface Props {
-  bookingId: string
+  proposalId: string
+  currentUserId: string
 }
 
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
 
-export default function MessageThread({ bookingId }: Props) {
-  // TODO: replace getMockMessages with Supabase Realtime subscription:
-  //   const channel = supabase.channel(`booking-${bookingId}`)
-  //   channel.on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'booking_messages',
-  //     filter: `proposal_id=eq.${bookingId}` }, (payload) => appendMessage(payload.new))
-  //   channel.subscribe()
-  const [messages, setMessages] = useState<Message[]>(() => getMockMessages(bookingId))
+export default function MessageThread({ proposalId, currentUserId }: Props) {
+  const [messages, setMessages] = useState<BookingMessageDTO[]>([])
+  const [loading, setLoading] = useState(true)
   const [draft, setDraft] = useState('')
   const [isSending, setIsSending] = useState(false)
-  // TODO: wire to Supabase Realtime presence channel booking-{bookingId}
-  // const [creatorIsTyping, setCreatorIsTyping] = useState(false)
-  const creatorIsTyping = false
+  const [error, setError] = useState<string | null>(null)
 
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+
+  // Initial load
+  useEffect(() => {
+    let cancelled = false
+    setLoading(true)
+    getBookingMessages(proposalId).then(({ messages: msgs }) => {
+      if (!cancelled) { setMessages(msgs); setLoading(false) }
+    })
+    return () => { cancelled = true }
+  }, [proposalId])
+
+  // Live delivery of the other party's messages
+  useEffect(() => {
+    const supabase = createClient()
+    const channel = supabase
+      .channel(`booking-messages-${proposalId}`)
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'booking_messages', filter: `proposal_id=eq.${proposalId}` },
+        (payload) => {
+          const row = payload.new as { id: string; sender_id: string; body: string; sent_at: string; read_at: string | null }
+          if (row.sender_id === currentUserId) return // own sends are appended locally on success
+          setMessages((prev) => (
+            prev.some((m) => m.id === row.id)
+              ? prev
+              : [...prev, { id: row.id, senderId: row.sender_id, body: row.body, sentAt: row.sent_at, readAt: row.read_at }]
+          ))
+        },
+      )
+      .subscribe()
+
+    return () => { supabase.removeChannel(channel) }
+  }, [proposalId, currentUserId])
 
   // Scroll to bottom when messages change
   useEffect(() => {
@@ -167,25 +146,29 @@ export default function MessageThread({ bookingId }: Props) {
     }
   }
 
-  function handleSend() {
+  async function handleSend() {
     const text = draft.trim()
     if (!text || isSending) return
 
-    // TODO: replace with Supabase insert:
-    //   await supabase.from('booking_messages').insert({ proposal_id: bookingId, sender: 'venue', text })
     setIsSending(true)
-    const newMsg: Message = {
+    setError(null)
+    const { error: sendError } = await sendBookingMessage(proposalId, text)
+    if (sendError) {
+      setError(sendError)
+      setIsSending(false)
+      return
+    }
+
+    setMessages((prev) => [...prev, {
       id: `local-${Date.now()}`,
-      sender: 'venue',
-      text,
-      timestamp: new Date().toISOString(),
-    }
-    setMessages(prev => [...prev, newMsg])
+      senderId: currentUserId,
+      body: text,
+      sentAt: new Date().toISOString(),
+      readAt: null,
+    }])
     setDraft('')
-    if (textareaRef.current) {
-      textareaRef.current.style.height = 'auto'
-    }
-    setTimeout(() => setIsSending(false), 400)
+    if (textareaRef.current) textareaRef.current.style.height = 'auto'
+    setIsSending(false)
   }
 
   const canSend = draft.trim().length > 0 && !isSending
@@ -220,21 +203,21 @@ export default function MessageThread({ bookingId }: Props) {
         }}>
           Messages
         </span>
-        <span style={{
-          fontSize: 10,
-          color: 'var(--venue-text-muted)',
-          fontFamily: 'var(--font-inter), system-ui, sans-serif',
-          marginLeft: 4,
-          fontStyle: 'italic',
-        }}>
-          {/* TODO: remove mock annotation when real data is wired */}
-          (mock data)
-        </span>
       </div>
 
       {/* Message list */}
       <div style={{ marginBottom: 4 }}>
-        {messages.length === 0 ? (
+        {loading ? (
+          <div style={{
+            textAlign: 'center',
+            padding: '24px 0',
+            fontSize: 13,
+            color: 'var(--venue-text-muted)',
+            fontFamily: 'var(--font-inter), system-ui, sans-serif',
+          }}>
+            Loading messages…
+          </div>
+        ) : messages.length === 0 ? (
           <div style={{
             textAlign: 'center',
             padding: '24px 0',
@@ -245,53 +228,26 @@ export default function MessageThread({ bookingId }: Props) {
             No messages yet. Start the conversation.
           </div>
         ) : (
-          messages.map(m => <Bubble key={m.id} message={m} />)
-        )}
-
-        {/* Creator is typing indicator */}
-        {creatorIsTyping && (
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 8,
-            marginBottom: 12,
-          }}>
-            {/* Animated dots */}
-            <div style={{
-              padding: '8px 14px',
-              background: 'var(--venue-bg-elevated)',
-              border: '1px solid var(--venue-border-subtle)',
-              borderRadius: '4px 16px 16px 16px',
-              display: 'flex',
-              gap: 4,
-              alignItems: 'center',
-            }}>
-              {[0, 1, 2].map(i => (
-                <span
-                  key={i}
-                  style={{
-                    width: 5,
-                    height: 5,
-                    borderRadius: '50%',
-                    background: 'var(--venue-text-muted)',
-                    display: 'inline-block',
-                    animation: `typingDot 1.2s ease-in-out ${i * 0.2}s infinite`,
-                  }}
-                />
-              ))}
-            </div>
-            <span style={{
-              fontSize: 11,
-              color: 'var(--venue-text-muted)',
-              fontFamily: 'var(--font-inter), system-ui, sans-serif',
-            }}>
-              Creator is typing…
-            </span>
-          </div>
+          messages.map(m => <Bubble key={m.id} message={m} isMine={m.senderId === currentUserId} />)
         )}
 
         <div ref={messagesEndRef} />
       </div>
+
+      {/* Error */}
+      {error && (
+        <div style={{
+          padding: '8px 12px',
+          marginBottom: 8,
+          background: 'rgba(239,68,68,0.08)',
+          border: '1px solid rgba(239,68,68,0.2)',
+          borderRadius: 6,
+          fontSize: 12.5,
+          color: 'var(--venue-danger)',
+        }}>
+          {error}
+        </div>
+      )}
 
       {/* Composer */}
       <div style={{
@@ -335,7 +291,7 @@ export default function MessageThread({ bookingId }: Props) {
             width: 34,
             height: 34,
             borderRadius: '50%',
-            background: canSend ? 'var(--venue-amber)' : 'var(--venue-bg-overlay)',
+            background: canSend ? 'var(--venue-accent)' : 'var(--venue-bg-overlay)',
             border: 'none',
             cursor: canSend ? 'pointer' : 'not-allowed',
             flexShrink: 0,
@@ -354,14 +310,6 @@ export default function MessageThread({ bookingId }: Props) {
           </span>
         </button>
       </div>
-
-      {/* Typing animation keyframes */}
-      <style>{`
-        @keyframes typingDot {
-          0%, 60%, 100% { opacity: 0.25; transform: translateY(0); }
-          30% { opacity: 1; transform: translateY(-3px); }
-        }
-      `}</style>
     </div>
   )
 }

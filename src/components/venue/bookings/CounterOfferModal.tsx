@@ -1,34 +1,15 @@
 'use client'
 
-import { useState, useEffect, useCallback, useId } from 'react'
+import { useState, useEffect, useId } from 'react'
+import type { PricingConfig, PricingModel, ProposedSplitConfig } from '@/types/marketplace'
+import type { PricingRule } from '@/components/venue/editor/types'
+import { resolveFixedRentalRate } from '@/lib/venue/proposalPricing'
 
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
 
-interface AddOn {
-  id: string
-  name: string
-  amountPaise: number
-  type: 'flat' | 'per_hour'
-}
-
-interface CounterOfferData {
-  date: string
-  startTime: string
-  endTime: string
-  hourlyRatePaise: number
-  addOns: AddOn[]
-  message: string
-}
-
-export interface CounterOfferSubmitPayload extends CounterOfferData {
-  durationHours: number
-  subtotalPaise: number
-  serviceFeePaise: number
-  guestPaysPaise: number
-  yourPayoutPaise: number
-}
+export type CounterOfferSubmitPayload = ProposedSplitConfig & { message: string }
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -37,37 +18,19 @@ export interface CounterOfferSubmitPayload extends CounterOfferData {
 const WIMC_SERVICE_FEE_RATE = 0.15
 const MIN_MESSAGE_LENGTH = 160
 
+const PRICING_MODEL_LABEL: Record<PricingModel, string> = {
+  fixed_rental:   'Fixed Rental',
+  door_split:     'Door Split',
+  hybrid:         'Hybrid',
+  f_and_b_minimum: 'F&B Minimum',
+}
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
 function formatInr(paise: number): string {
   return '₹' + Math.round(paise / 100).toLocaleString('en-IN')
-}
-
-function calcDurationHours(start: string, end: string): number {
-  if (!start || !end) return 0
-  const [sh, sm] = start.split(':').map(Number)
-  const [eh, em] = end.split(':').map(Number)
-  const mins = eh * 60 + em - (sh * 60 + sm)
-  return Math.max(0, mins / 60)
-}
-
-function calcBreakdown(
-  hourlyRatePaise: number,
-  durationHours: number,
-  addOns: AddOn[],
-): { subtotalPaise: number; serviceFeePaise: number; guestPaysPaise: number } {
-  const baseAmount = Math.round(hourlyRatePaise * durationHours)
-  const addOnsTotal = addOns.reduce((sum, a) => {
-    const amount = a.type === 'per_hour'
-      ? Math.round(a.amountPaise * durationHours)
-      : a.amountPaise
-    return sum + amount
-  }, 0)
-  const subtotalPaise = baseAmount + addOnsTotal
-  const serviceFeePaise = Math.round(subtotalPaise * WIMC_SERVICE_FEE_RATE)
-  return { subtotalPaise, serviceFeePaise, guestPaysPaise: subtotalPaise + serviceFeePaise }
 }
 
 // ---------------------------------------------------------------------------
@@ -98,7 +61,7 @@ const inputStyle: React.CSSProperties = {
   width: '100%',
   background: 'var(--venue-bg-base)',
   border: '1px solid var(--venue-border-default)',
-  borderRadius: 7,
+  borderRadius: 10,
   padding: '10px 12px',
   fontSize: 14,
   color: 'var(--venue-text-primary)',
@@ -150,6 +113,97 @@ function BreakdownLine({
   )
 }
 
+function AmountField({
+  id,
+  label,
+  valuePaise,
+  onChange,
+}: {
+  id: string
+  label: string
+  valuePaise: number
+  onChange: (paise: number) => void
+}) {
+  const [raw, setRaw] = useState(() => String(Math.round(valuePaise / 100)))
+
+  function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const next = e.target.value
+    setRaw(next)
+    const num = next === '' ? 0 : Number(next)
+    if (!Number.isNaN(num)) onChange(Math.max(0, Math.round(num * 100)))
+  }
+
+  return (
+    <div style={{ marginBottom: 20 }}>
+      <FieldLabel htmlFor={id}>{label}</FieldLabel>
+      <div style={{ position: 'relative' }}>
+        <span style={{
+          position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)',
+          fontSize: 14, color: 'var(--venue-text-muted)',
+          fontFamily: 'var(--font-jetbrains-mono), monospace', pointerEvents: 'none',
+        }}>
+          ₹
+        </span>
+        <input
+          id={id}
+          type="number"
+          min={0}
+          step={100}
+          value={raw}
+          onChange={handleChange}
+          style={{ ...inputStyle, paddingLeft: 28 }}
+        />
+      </div>
+    </div>
+  )
+}
+
+function PercentField({
+  id,
+  label,
+  value,
+  onChange,
+}: {
+  id: string
+  label: string
+  value: number
+  onChange: (pct: number) => void
+}) {
+  const [raw, setRaw] = useState(() => String(value))
+
+  function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const next = e.target.value
+    setRaw(next)
+    const num = next === '' ? 0 : Number(next)
+    if (!Number.isNaN(num)) onChange(Math.max(0, Math.min(100, Math.round(num))))
+  }
+
+  return (
+    <div style={{ marginBottom: 20 }}>
+      <FieldLabel htmlFor={id}>{label}</FieldLabel>
+      <div style={{ position: 'relative' }}>
+        <input
+          id={id}
+          type="number"
+          min={0}
+          max={100}
+          step={1}
+          value={raw}
+          onChange={handleChange}
+          style={{ ...inputStyle, paddingRight: 28 }}
+        />
+        <span style={{
+          position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)',
+          fontSize: 14, color: 'var(--venue-text-muted)',
+          fontFamily: 'var(--font-jetbrains-mono), monospace', pointerEvents: 'none',
+        }}>
+          %
+        </span>
+      </div>
+    </div>
+  )
+}
+
 // ---------------------------------------------------------------------------
 // Props
 // ---------------------------------------------------------------------------
@@ -158,7 +212,11 @@ interface Props {
   creatorName: string
   proposalId: string
   initialDate: string
-  initialHourlyRatePaise: number
+  initialStartTime: string
+  initialEndTime: string
+  pricingModel: PricingModel
+  pricingConfig?: PricingConfig | null
+  serverError?: string | null
   onSubmit: (payload: CounterOfferSubmitPayload) => void
   onClose: () => void
 }
@@ -171,24 +229,32 @@ export default function CounterOfferModal({
   creatorName,
   proposalId: _proposalId,
   initialDate,
-  initialHourlyRatePaise,
+  initialStartTime,
+  initialEndTime,
+  pricingModel,
+  pricingConfig,
+  serverError,
   onSubmit,
   onClose,
 }: Props) {
   const uid = useId()
   const [date, setDate] = useState(initialDate)
-  const [startTime, setStartTime] = useState('18:00')
-  const [endTime, setEndTime] = useState('21:00')
-  const [hourlyRatePaise, setHourlyRatePaise] = useState(initialHourlyRatePaise)
-  const [addOns, setAddOns] = useState<AddOn[]>([])
+  const [startTime, setStartTime] = useState(initialStartTime)
+  const [endTime, setEndTime] = useState(initialEndTime)
+  const [rentalFeePaise, setRentalFeePaise] = useState(() => {
+    const rules = (pricingConfig as (PricingConfig & { pricing_rules?: PricingRule[] }) | null)?.pricing_rules
+    const computed = resolveFixedRentalRate(rules, initialDate, initialStartTime, initialEndTime)?.rentalFeePaise
+    return computed ?? pricingConfig?.fixed_rental_paise ?? pricingConfig?.hybrid_rental_paise ?? 0
+  })
+  const [splitPercentage, setSplitPercentage] = useState(
+    pricingConfig?.door_split_percent ?? pricingConfig?.hybrid_split_percent ?? 0,
+  )
+  const [minimumSpendPaise, setMinimumSpendPaise] = useState(
+    pricingConfig?.f_and_b_minimum_paise ?? 0,
+  )
   const [message, setMessage] = useState('')
   const [submitError, setSubmitError] = useState<string | null>(null)
 
-  const durationHours = calcDurationHours(startTime, endTime)
-  const { subtotalPaise, serviceFeePaise, guestPaysPaise } = calcBreakdown(
-    hourlyRatePaise, durationHours, addOns,
-  )
-  const baseLinePaise = Math.round(hourlyRatePaise * durationHours)
   const msgRemaining = message.length < MIN_MESSAGE_LENGTH
     ? MIN_MESSAGE_LENGTH - message.length
     : 0
@@ -200,44 +266,42 @@ export default function CounterOfferModal({
     return () => window.removeEventListener('keydown', onKey)
   }, [onClose])
 
-  const addAddon = useCallback(() => {
-    setAddOns(prev => [...prev, {
-      id: crypto.randomUUID(),
-      name: '',
-      amountPaise: 0,
-      type: 'flat',
-    }])
-  }, [])
-
-  function updateAddon(id: string, patch: Partial<AddOn>) {
-    setAddOns(prev => prev.map(a => a.id === id ? { ...a, ...patch } : a))
-  }
-
-  function removeAddon(id: string) {
-    setAddOns(prev => prev.filter(a => a.id !== id))
+  function buildSplitConfig(): ProposedSplitConfig {
+    const base = { date, startTime, endTime }
+    switch (pricingModel) {
+      case 'fixed_rental':
+        return { ...base, pricingModel, rentalFeePaise }
+      case 'door_split':
+        return { ...base, pricingModel, splitPercentage }
+      case 'f_and_b_minimum':
+        return { ...base, pricingModel, minimumSpendPaise }
+      case 'hybrid':
+        return { ...base, pricingModel, rentalFeePaise, splitPercentage }
+    }
   }
 
   function handleSubmit() {
     if (!date) { setSubmitError('Please select a date.'); return }
-    if (durationHours <= 0) { setSubmitError('End time must be after start time.'); return }
-    if (hourlyRatePaise <= 0) { setSubmitError('Rate must be greater than ₹0.'); return }
+    if (!startTime || !endTime || startTime >= endTime) {
+      setSubmitError('Please select a valid start and end time.'); return
+    }
+    if ((pricingModel === 'fixed_rental' || pricingModel === 'hybrid') && rentalFeePaise <= 0) {
+      setSubmitError('Rental fee must be greater than ₹0.'); return
+    }
+    if ((pricingModel === 'door_split' || pricingModel === 'hybrid') && (splitPercentage <= 0 || splitPercentage > 100)) {
+      setSubmitError('Split percentage must be between 1 and 100.'); return
+    }
+    if (pricingModel === 'f_and_b_minimum' && minimumSpendPaise <= 0) {
+      setSubmitError('Minimum spend must be greater than ₹0.'); return
+    }
     if (message.trim().length < MIN_MESSAGE_LENGTH) {
       setSubmitError(`Message must be at least ${MIN_MESSAGE_LENGTH} characters.`)
       return
     }
     setSubmitError(null)
     onSubmit({
-      date,
-      startTime,
-      endTime,
-      hourlyRatePaise,
-      addOns,
+      ...buildSplitConfig(),
       message: message.trim(),
-      durationHours,
-      subtotalPaise,
-      serviceFeePaise,
-      guestPaysPaise,
-      yourPayoutPaise: subtotalPaise,
     })
   }
 
@@ -271,7 +335,7 @@ export default function CounterOfferModal({
           overflowY: 'auto',
           background: 'var(--venue-bg-surface)',
           border: '1px solid var(--venue-border-default)',
-          borderRadius: 14,
+          borderRadius: 20,
           fontFamily: 'var(--font-inter), system-ui, sans-serif',
         }}
       >
@@ -295,7 +359,7 @@ export default function CounterOfferModal({
               Send a counter offer
             </h2>
             <p style={{ margin: '3px 0 0', fontSize: 13, color: 'var(--venue-text-muted)' }}>
-              to {creatorName}
+              to {creatorName} · {PRICING_MODEL_LABEL[pricingModel]} pricing
             </p>
           </div>
           <button
@@ -311,20 +375,18 @@ export default function CounterOfferModal({
 
         <div style={{ padding: '24px 24px 32px' }}>
 
-          {/* ── Date ──────────────────────────────────────────────────────── */}
-          <div style={{ marginBottom: 20 }}>
-            <FieldLabel htmlFor={`${uid}-date`}>Date</FieldLabel>
-            <input
-              id={`${uid}-date`}
-              type="date"
-              value={date}
-              onChange={e => setDate(e.target.value)}
-              style={inputStyle}
-            />
-          </div>
-
-          {/* ── Time row ──────────────────────────────────────────────────── */}
+          {/* ── Date + time row ───────────────────────────────────────────── */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginBottom: 20 }}>
+            <div>
+              <FieldLabel htmlFor={`${uid}-date`}>Date</FieldLabel>
+              <input
+                id={`${uid}-date`}
+                type="date"
+                value={date}
+                onChange={e => setDate(e.target.value)}
+                style={inputStyle}
+              />
+            </div>
             <div>
               <FieldLabel htmlFor={`${uid}-start`}>Start time</FieldLabel>
               <input
@@ -345,151 +407,35 @@ export default function CounterOfferModal({
                 style={inputStyle}
               />
             </div>
-            <div>
-              <FieldLabel>Duration</FieldLabel>
-              <div style={{
-                ...inputStyle,
-                color: durationHours > 0 ? 'var(--venue-amber)' : 'var(--venue-text-muted)',
-                fontWeight: 600,
-                display: 'flex',
-                alignItems: 'center',
-              }}>
-                {durationHours > 0 ? `${durationHours}h` : '—'}
-              </div>
-            </div>
           </div>
 
-          {/* ── Hourly rate ───────────────────────────────────────────────── */}
-          <div style={{ marginBottom: 20 }}>
-            <FieldLabel htmlFor={`${uid}-rate`}>Hourly rate (₹)</FieldLabel>
-            <div style={{ position: 'relative' }}>
-              <span style={{
-                position: 'absolute',
-                left: 12,
-                top: '50%',
-                transform: 'translateY(-50%)',
-                fontSize: 14,
-                color: 'var(--venue-text-muted)',
-                fontFamily: 'var(--font-jetbrains-mono), monospace',
-                pointerEvents: 'none',
-              }}>
-                ₹
-              </span>
-              <input
-                id={`${uid}-rate`}
-                type="number"
-                min={0}
-                step={100}
-                value={Math.round(hourlyRatePaise / 100)}
-                onChange={e => setHourlyRatePaise(Math.max(0, Math.round(Number(e.target.value) * 100)))}
-                style={{ ...inputStyle, paddingLeft: 28 }}
-              />
-            </div>
-          </div>
+          {/* ── Pricing fields — branched by the venue's pricing model ──────── */}
+          {(pricingModel === 'fixed_rental' || pricingModel === 'hybrid') && (
+            <AmountField
+              id={`${uid}-rental`}
+              label={pricingModel === 'hybrid' ? 'Booking fee (₹)' : 'Rental fee (₹)'}
+              valuePaise={rentalFeePaise}
+              onChange={setRentalFeePaise}
+            />
+          )}
 
-          {/* ── Add-ons ───────────────────────────────────────────────────── */}
-          <div style={{ marginBottom: 20 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-              <FieldLabel>Add-ons</FieldLabel>
-              <button
-                onClick={addAddon}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 5,
-                  background: 'transparent',
-                  border: '1px solid var(--venue-amber-border)',
-                  borderRadius: 6,
-                  padding: '4px 10px',
-                  fontSize: 12,
-                  fontWeight: 600,
-                  color: 'var(--venue-amber)',
-                  cursor: 'pointer',
-                  fontFamily: 'var(--font-inter), system-ui, sans-serif',
-                }}
-              >
-                <span className="material-symbols-outlined" style={{ fontSize: 14 }}>add</span>
-                Add item
-              </button>
-            </div>
+          {(pricingModel === 'door_split' || pricingModel === 'hybrid') && (
+            <PercentField
+              id={`${uid}-split`}
+              label="Your share of ticket revenue (%)"
+              value={splitPercentage}
+              onChange={setSplitPercentage}
+            />
+          )}
 
-            {addOns.length === 0 && (
-              <div style={{
-                padding: '12px 14px',
-                background: 'var(--venue-bg-elevated)',
-                borderRadius: 7,
-                fontSize: 13,
-                color: 'var(--venue-text-muted)',
-              }}>
-                No add-ons yet — e.g. projector rental, cleaning fee, setup time.
-              </div>
-            )}
-
-            {addOns.map(addon => (
-              <div
-                key={addon.id}
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: '1fr 120px 100px 32px',
-                  gap: 8,
-                  alignItems: 'center',
-                  marginBottom: 8,
-                }}
-              >
-                <input
-                  type="text"
-                  value={addon.name}
-                  onChange={e => updateAddon(addon.id, { name: e.target.value })}
-                  placeholder="Item name"
-                  style={{ ...inputStyle, fontFamily: 'var(--font-inter), system-ui, sans-serif' }}
-                />
-                <div style={{ position: 'relative' }}>
-                  <span style={{
-                    position: 'absolute', left: 10, top: '50%',
-                    transform: 'translateY(-50%)', fontSize: 13,
-                    color: 'var(--venue-text-muted)',
-                    fontFamily: 'var(--font-jetbrains-mono), monospace',
-                    pointerEvents: 'none',
-                  }}>
-                    ₹
-                  </span>
-                  <input
-                    type="number"
-                    min={0}
-                    step={50}
-                    value={Math.round(addon.amountPaise / 100)}
-                    onChange={e => updateAddon(addon.id, { amountPaise: Math.max(0, Math.round(Number(e.target.value) * 100)) })}
-                    style={{ ...inputStyle, paddingLeft: 24, paddingRight: 6 }}
-                  />
-                </div>
-                <select
-                  value={addon.type}
-                  onChange={e => updateAddon(addon.id, { type: e.target.value as 'flat' | 'per_hour' })}
-                  style={{
-                    ...inputStyle,
-                    padding: '10px 6px',
-                    appearance: 'none',
-                    textAlign: 'center',
-                    cursor: 'pointer',
-                    colorScheme: 'dark',
-                  }}
-                >
-                  <option value="flat" style={{ background: '#18181b' }}>Flat</option>
-                  <option value="per_hour" style={{ background: '#18181b' }}>/hr</option>
-                </select>
-                <button
-                  onClick={() => removeAddon(addon.id)}
-                  style={{
-                    background: 'transparent', border: 'none', cursor: 'pointer',
-                    color: 'var(--venue-text-muted)', display: 'grid', placeItems: 'center',
-                    padding: 0, height: 38,
-                  }}
-                >
-                  <span className="material-symbols-outlined" style={{ fontSize: 17 }}>close</span>
-                </button>
-              </div>
-            ))}
-          </div>
+          {pricingModel === 'f_and_b_minimum' && (
+            <AmountField
+              id={`${uid}-minspend`}
+              label="Minimum F&B spend (₹)"
+              valuePaise={minimumSpendPaise}
+              onChange={setMinimumSpendPaise}
+            />
+          )}
 
           {/* ── Message to creator ────────────────────────────────────────── */}
           <div style={{ marginBottom: 24 }}>
@@ -541,53 +487,74 @@ export default function CounterOfferModal({
               Offer breakdown
             </div>
 
-            <BreakdownLine
-              label={
-                durationHours > 0
-                  ? `${formatInr(hourlyRatePaise)}/hr × ${durationHours}h`
-                  : `${formatInr(hourlyRatePaise)}/hr`
-              }
-              value={formatInr(baseLinePaise)}
-              muted
-            />
+            {(pricingModel === 'fixed_rental' || pricingModel === 'hybrid') && (
+              <>
+                <BreakdownLine
+                  label={pricingModel === 'hybrid' ? 'Booking fee' : 'Rental fee'}
+                  value={formatInr(rentalFeePaise)}
+                  muted
+                />
+                <BreakdownLine
+                  label={`WIMC service fee (${Math.round(WIMC_SERVICE_FEE_RATE * 100)}%)`}
+                  value={formatInr(Math.round(rentalFeePaise * WIMC_SERVICE_FEE_RATE))}
+                  muted
+                  indent
+                />
+                <div style={{ height: 1, background: 'var(--venue-border-subtle)', margin: '8px 0' }} />
+                <BreakdownLine
+                  label={pricingModel === 'hybrid' ? 'Booking fee total' : 'Total'}
+                  value={formatInr(rentalFeePaise + Math.round(rentalFeePaise * WIMC_SERVICE_FEE_RATE))}
+                  amber={pricingModel === 'fixed_rental'}
+                  large={pricingModel === 'fixed_rental'}
+                />
+              </>
+            )}
 
-            {addOns.map(a => (
-              <BreakdownLine
-                key={a.id}
-                label={`${a.name || 'Add-on'}${a.type === 'per_hour' ? ' (per hr)' : ''}`}
-                value={formatInr(a.type === 'per_hour' ? Math.round(a.amountPaise * durationHours) : a.amountPaise)}
-                muted
-                indent
-              />
-            ))}
+            {(pricingModel === 'door_split' || pricingModel === 'hybrid') && (
+              <>
+                {pricingModel === 'hybrid' && <div style={{ height: 1, background: 'var(--venue-border-subtle)', margin: '8px 0' }} />}
+                <BreakdownLine
+                  label="Revenue share"
+                  value={`${splitPercentage}% of ticket revenue`}
+                  amber
+                  large={pricingModel === 'door_split'}
+                />
+              </>
+            )}
 
-            <div style={{ height: 1, background: 'var(--venue-border-subtle)', margin: '8px 0' }} />
-            <BreakdownLine label="Subtotal" value={formatInr(subtotalPaise)} />
-
-            <BreakdownLine
-              label={`WIMC service fee (${Math.round(WIMC_SERVICE_FEE_RATE * 100)}%)`}
-              value={formatInr(serviceFeePaise)}
-              muted
-            />
-
-            <div style={{ height: 1, background: 'var(--venue-border-subtle)', margin: '8px 0' }} />
-            <BreakdownLine label="Guest pays" value={formatInr(guestPaysPaise)} />
-            <BreakdownLine label="Your payout" value={formatInr(subtotalPaise)} amber large />
+            {pricingModel === 'f_and_b_minimum' && (
+              <>
+                <BreakdownLine label="Minimum F&B spend" value={formatInr(minimumSpendPaise)} muted />
+                <BreakdownLine
+                  label={`WIMC service fee (${Math.round(WIMC_SERVICE_FEE_RATE * 100)}%)`}
+                  value={formatInr(Math.round(minimumSpendPaise * WIMC_SERVICE_FEE_RATE))}
+                  muted
+                  indent
+                />
+                <div style={{ height: 1, background: 'var(--venue-border-subtle)', margin: '8px 0' }} />
+                <BreakdownLine
+                  label="Total"
+                  value={formatInr(minimumSpendPaise + Math.round(minimumSpendPaise * WIMC_SERVICE_FEE_RATE))}
+                  amber
+                  large
+                />
+              </>
+            )}
           </div>
 
-          {/* Error */}
-          {submitError && (
+          {/* Error — local validation takes priority over a stale server error */}
+          {(submitError || serverError) && (
             <div style={{
               padding: '10px 14px',
               background: 'rgba(239,68,68,0.08)',
               border: '1px solid rgba(239,68,68,0.2)',
-              borderRadius: 8,
+              borderRadius: 10,
               fontSize: 13,
               color: 'var(--venue-danger)',
               marginBottom: 16,
               fontFamily: 'var(--font-inter), system-ui, sans-serif',
             }}>
-              {submitError}
+              {submitError || serverError}
             </div>
           )}
 
@@ -600,7 +567,7 @@ export default function CounterOfferModal({
               background: 'var(--venue-amber)',
               color: '#000',
               border: 'none',
-              borderRadius: 9,
+              borderRadius: 12,
               fontSize: 15,
               fontWeight: 700,
               cursor: 'pointer',

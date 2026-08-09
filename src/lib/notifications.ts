@@ -69,31 +69,14 @@ export async function notifyVenueOfProposal(
 // ---------------------------------------------------------------------------
 
 /**
- * Logs a WhatsApp-style notification to the Maker when an Venue responds to
- * their proposal (accept, decline, or counter-offer).
- *
- * **v1:** Outputs to `console.log`. Real WhatsApp delivery in v2.
- *
- * Message format (accepted):
- * ```
- * ✅ Your proposal was accepted!
- * [Venue name] accepted your request to host "[event title]" on [date].
- * Manage booking: wheninmycity.com/dashboard/proposals/[id]
- * ```
- *
- * Message format (declined):
- * ```
- * ❌ Proposal declined
- * [Venue name] couldn't accommodate "[event title]" on [date].
- * Find another Venue: wheninmycity.com/dashboard/venues
- * ```
- *
- * Message format (counter_offered):
- * ```
- * 💬 Counter-offer received
- * [Venue name] sent a counter-offer for "[event title]".
- * Review and respond: wheninmycity.com/dashboard/proposals/[id]
- * ```
+ * Sends a real WhatsApp message to the Maker when a Venue responds to their
+ * proposal (accept, decline, or counter-offer) — WhatsApp only. The in-app
+ * notification for this same event is created by the caller (respondToProposal
+ * in venue-bookings.ts); this function used to also insert its own separate
+ * notification row here, which duplicated that one under different, orphaned
+ * types (`proposal_declined`/`proposal_counter_offered` were never in
+ * NOTIFICATION_META) — removed so there's exactly one in-app notification
+ * per response, not two.
  *
  * @param proposal  The `maker_venue_proposals` row.
  * @param response  How the Venue responded.
@@ -106,54 +89,24 @@ export async function notifyMakerOfProposalResponse(
 ): Promise<void> {
   try {
     const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://www.wheninmycity.com'
-    const proposalUrl = `${appUrl}/dashboard/venues`
+    const proposalUrl = `${appUrl}/dashboard/events?tab=venue-bookings`
 
-    const notifConfig = {
-      accepted: {
-        type:  'proposal_accepted',
-        title: 'Booking Request Accepted 🎉',
-        body:  `${venueName} accepted your request to host "${proposal.event_title}" on ${formatDate(proposal.proposed_date)}.`,
-        wa:    `✅ Great news! ${venueName} accepted your booking request for "${proposal.event_title}" on ${formatDate(proposal.proposed_date)}. Manage it here: ${proposalUrl}`,
-      },
-      declined: {
-        type:  'proposal_declined',
-        title: 'Booking Request Declined',
-        body:  `${venueName} couldn't accommodate "${proposal.event_title}" on ${formatDate(proposal.proposed_date)}.`,
-        wa:    `❌ ${venueName} couldn't accommodate "${proposal.event_title}" on ${formatDate(proposal.proposed_date)}. Try another venue: ${proposalUrl}`,
-      },
-      counter_offered: {
-        type:  'proposal_counter_offered',
-        title: 'Counter-offer Received 💬',
-        body:  `${venueName} sent a counter-offer for "${proposal.event_title}".`,
-        wa:    `💬 ${venueName} sent a counter-offer for "${proposal.event_title}". Review it: ${proposalUrl}`,
-      },
-    }
+    const waMessage = {
+      accepted:         `✅ Great news! ${venueName} accepted your booking request for "${proposal.event_title}" on ${formatDate(proposal.proposed_date)}. Manage it here: ${proposalUrl}`,
+      declined:         `❌ ${venueName} couldn't accommodate "${proposal.event_title}" on ${formatDate(proposal.proposed_date)}. Try another venue: ${proposalUrl}`,
+      counter_offered:  `💬 ${venueName} sent a counter-offer for "${proposal.event_title}". Review it: ${proposalUrl}`,
+    }[response]
 
-    const cfg = notifConfig[response]
     const admin = createAdminClient()
+    const { data: profile } = await admin
+      .from('user_profiles')
+      .select('phone')
+      .eq('id', proposal.maker_id)
+      .maybeSingle()
 
-    // maker_id == user_profiles.id == auth.users.id
-    await Promise.all([
-      admin.from('notifications').insert({
-        recipient_id: proposal.maker_id,
-        type:         cfg.type,
-        title:        cfg.title,
-        body:         cfg.body,
-        action_url:   '/dashboard/venues',
-        metadata:     { proposal_id: proposal.id, venue_name: venueName },
-      }),
-
-      (async () => {
-        const { data: profile } = await admin
-          .from('user_profiles')
-          .select('phone')
-          .eq('id', proposal.maker_id)
-          .maybeSingle()
-        if (profile?.phone) {
-          await sendWhatsAppMessage(profile.phone, cfg.wa).catch(() => {})
-        }
-      })(),
-    ])
+    if (profile?.phone) {
+      await sendWhatsAppMessage(profile.phone, waMessage).catch(() => {})
+    }
   } catch {
     // Notifications must never crash the caller.
   }

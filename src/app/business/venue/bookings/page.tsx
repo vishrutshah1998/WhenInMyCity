@@ -3,6 +3,7 @@ import { requireAuth } from '@/lib/auth/requireAuth'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getVenueBookings } from '@/app/actions/venue-bookings'
 import BookingsPageClient from '@/components/venue/bookings/BookingsPageClient'
+import type { PricingConfig } from '@/types/marketplace'
 
 export default async function VenueBookingsPage() {
   const { user } = await requireAuth('/business/venue/bookings')
@@ -11,7 +12,7 @@ export default async function VenueBookingsPage() {
 
   const { data: venue } = await admin
     .from('venue_profiles')
-    .select('id, name, slug')
+    .select('id, name, slug, pricing_model, pricing_config')
     .eq('auth_user_id', user.id)
     .maybeSingle()
 
@@ -29,6 +30,9 @@ export default async function VenueBookingsPage() {
   return (
     <BookingsPageClient
       venueId={venue.id}
+      currentUserId={user.id}
+      pricingModel={venue.pricing_model}
+      pricingConfig={(venue.pricing_config as PricingConfig | null) ?? null}
       initialProposals={proposals}
       fetchError={error}
     />

@@ -9,7 +9,7 @@
 import { z } from 'zod'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { requireAuth } from '@/lib/auth/requireAuth'
-import type { PricingModel, AvailabilitySlotType } from '@/types/database'
+import type { PricingModel } from '@/types/database'
 
 // ---------------------------------------------------------------------------
 // Step-data shapes
@@ -367,7 +367,7 @@ export async function completeVenueOnboarding(
     for (let i = 0; i < availabilityRows.length; i += chunkSize) {
       await admin
         .from('venue_availability')
-        .upsert(availabilityRows.slice(i, i + chunkSize), { onConflict: 'venue_id,date,slot_type' })
+        .insert(availabilityRows.slice(i, i + chunkSize))
     }
   }
 
@@ -479,7 +479,7 @@ const DAY_INDICES: Record<string, number> = {
 function buildDefaultAvailability(
   venueId: string,
   availableDays: string[],
-): Array<{ venue_id: string; date: string; slot_type: AvailabilitySlotType; status: 'available' }> {
+): Array<{ venue_id: string; date: string; start_time: string; end_time: string; status: 'available' }> {
   // Normalise to lowercase for safe comparison
   const allowedIndices = availableDays.length > 0
     ? new Set(availableDays.map(d => DAY_INDICES[d.toLowerCase()]).filter(i => i !== undefined))
@@ -498,9 +498,10 @@ function buildDefaultAvailability(
 
     rows.push({
       venue_id:   venueId,
-      date:      d.toISOString().split('T')[0],
-      slot_type: 'full_day',
-      status:    'available',
+      date:       d.toISOString().split('T')[0],
+      start_time: '00:00',
+      end_time:   '23:59',
+      status:     'available',
     })
   }
 

@@ -3,14 +3,9 @@
 import { useMemo } from 'react'
 import Link from 'next/link'
 import type { VenueAvailability } from '@/types/database'
+import { formatShortTime, formatTimeRange } from '@/lib/venue/timeFormat'
 
 const DAY_ABBR = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa']
-const SLOT_ABBR: Record<string, string> = {
-  morning: 'AM',
-  afternoon: 'PM',
-  evening: 'Eve',
-  full_day: 'All',
-}
 
 function getMondayOfCurrentWeek(): Date {
   const today = new Date()
@@ -39,12 +34,15 @@ export default function WeekStrip({ availability }: Props) {
 
   const todayKey = toDateKey(new Date())
 
-  // Build date → slot list map
+  // Build date → slot list map, sorted by real start time
   const slotMap = useMemo(() => {
     const m = new Map<string, VenueAvailability[]>()
     for (const slot of availability) {
       if (!m.has(slot.date)) m.set(slot.date, [])
       m.get(slot.date)!.push(slot)
+    }
+    for (const list of m.values()) {
+      list.sort((a, b) => (a.start_time ?? '').localeCompare(b.start_time ?? ''))
     }
     return m
   }, [availability])
@@ -59,8 +57,8 @@ export default function WeekStrip({ availability }: Props) {
       case 'pending':
         return {
           background: 'var(--venue-pending)',
-          border: '1px dashed var(--venue-amber)',
-          color: 'var(--venue-amber)',
+          border: '1px dashed var(--venue-accent)',
+          color: 'var(--venue-accent)',
         }
       case 'blocked':
         return {
@@ -80,7 +78,7 @@ export default function WeekStrip({ availability }: Props) {
     <div style={{
       background: 'var(--venue-bg-surface)',
       border: '1px solid var(--venue-border-subtle)',
-      borderRadius: 12,
+      borderRadius: 18,
       overflow: 'hidden',
     }}>
       {/* Header */}
@@ -103,7 +101,7 @@ export default function WeekStrip({ availability }: Props) {
           href="/business/venue/calendar"
           style={{
             fontSize: 12,
-            color: 'var(--venue-amber)',
+            color: 'var(--venue-accent)',
             textDecoration: 'none',
             fontFamily: 'var(--font-inter), system-ui, sans-serif',
             fontWeight: 500,
@@ -141,8 +139,8 @@ export default function WeekStrip({ availability }: Props) {
                 gap: 4,
                 padding: '8px 4px',
                 borderRadius: 8,
-                border: isToday ? '1px solid var(--venue-amber)' : '1px solid transparent',
-                background: isToday ? 'var(--venue-amber-tint)' : 'transparent',
+                border: isToday ? '1px solid var(--venue-accent)' : '1px solid transparent',
+                background: isToday ? 'var(--venue-accent-tint)' : 'transparent',
                 textDecoration: 'none',
                 cursor: 'pointer',
                 transition: 'background 160ms ease',
@@ -153,7 +151,7 @@ export default function WeekStrip({ availability }: Props) {
               <span style={{
                 fontSize: 10,
                 fontWeight: 500,
-                color: isToday ? 'var(--venue-amber)' : 'var(--venue-text-muted)',
+                color: isToday ? 'var(--venue-accent)' : 'var(--venue-text-muted)',
                 fontFamily: 'var(--font-jetbrains-mono), monospace',
                 letterSpacing: '0.5px',
               }}>
@@ -166,7 +164,7 @@ export default function WeekStrip({ availability }: Props) {
                 style={{
                   fontSize: 15,
                   fontWeight: isToday ? 700 : 400,
-                  color: isToday ? 'var(--venue-amber)' : 'var(--venue-text-primary)',
+                  color: isToday ? 'var(--venue-accent)' : 'var(--venue-text-primary)',
                   fontFamily: 'var(--font-inter), system-ui, sans-serif',
                   lineHeight: 1,
                 }}
@@ -179,7 +177,7 @@ export default function WeekStrip({ availability }: Props) {
                 {slots.slice(0, 3).map(slot => (
                   <div
                     key={slot.id}
-                    title={`${slot.slot_type} · ${slot.status}`}
+                    title={`${formatTimeRange(slot.start_time, slot.end_time)} · ${slot.status}`}
                     style={{
                       ...blockStyle(slot.status),
                       borderRadius: 3,
@@ -192,7 +190,7 @@ export default function WeekStrip({ availability }: Props) {
                       whiteSpace: 'nowrap',
                     }}
                   >
-                    {SLOT_ABBR[slot.slot_type] ?? slot.slot_type}
+                    {formatShortTime(slot.start_time)}
                   </div>
                 ))}
                 {slots.length > 3 && (
@@ -220,7 +218,7 @@ export default function WeekStrip({ availability }: Props) {
       }}>
         {[
           { label: 'Confirmed', color: 'var(--venue-confirmed)' },
-          { label: 'Pending',   color: 'var(--venue-amber)' },
+          { label: 'Pending',   color: 'var(--venue-accent)' },
           { label: 'Blocked',   color: 'var(--venue-bg-overlay)' },
         ].map(({ label, color }) => (
           <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>

@@ -12,6 +12,8 @@ const EMPTY_ANALYTICS: VenueAnalyticsData = {
   proposalFunnel: { received: 0, accepted: 0, eventsCompleted: 0 },
   demandGrid: [],
   trafficStats: { totalViews: 0, byDay: [], windowDays: 30 },
+  leadTimeBins: [],
+  leadTimeMedianIndex: 0,
   hasData: false,
 }
 

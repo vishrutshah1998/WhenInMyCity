@@ -15,13 +15,14 @@ interface Props {
   open: boolean
   initialDate?: string
   initialStart?: string
+  serverError?: string | null
   onClose: () => void
   onConfirm: (payload: BlockTimePayload) => void
 }
 
 const REASONS = ['Maintenance', 'Personal', 'Setup', 'No Bookings', 'Other'] as const
 
-export default function BlockTimeModal({ open, initialDate, initialStart, onClose, onConfirm }: Props) {
+export default function BlockTimeModal({ open, initialDate, initialStart, serverError, onClose, onConfirm }: Props) {
   const todayStr = new Date().toISOString().slice(0, 10)
   const [date, setDate]           = useState(initialDate ?? todayStr)
   const [startTime, setStartTime] = useState(initialStart ?? '10:00')
@@ -32,7 +33,6 @@ export default function BlockTimeModal({ open, initialDate, initialStart, onClos
   function handleSubmit() {
     if (!date || !startTime || !endTime) return
     onConfirm({ date, startTime, endTime, reason, note })
-    onClose()
   }
 
   const isValid = date && startTime && endTime && startTime < endTime
@@ -131,6 +131,19 @@ export default function BlockTimeModal({ open, initialDate, initialStart, onClos
               <p style={{ fontSize: 11, color: 'var(--venue-text-muted)', lineHeight: 1.5, margin: 0 }}>
                 Blocked time is never shown to creators — they can't request bookings during this window.
               </p>
+
+              {serverError && (
+                <div style={{
+                  padding: '10px 12px',
+                  background: 'rgba(239,68,68,0.08)',
+                  border: '1px solid rgba(239,68,68,0.2)',
+                  borderRadius: 8,
+                  fontSize: 12,
+                  color: '#ef4444',
+                }}>
+                  {serverError}
+                </div>
+              )}
             </div>
 
             {/* Footer */}

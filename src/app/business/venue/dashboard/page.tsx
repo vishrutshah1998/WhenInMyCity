@@ -4,9 +4,11 @@ import Link from 'next/link'
 import { requireAuth } from '@/lib/auth/requireAuth'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getVenueDashboardData } from '@/app/actions/venue-dashboard'
+import { getNotificationsForUser } from '@/app/actions/notifications'
 import PersonaSwitcherPills from '@/components/PersonaSwitcherPills'
 import DashPageLink from '@/components/DashPageLink'
 import PriorityActions from '@/components/venue/dashboard/PriorityActions'
+import BookingConfirmedBanner from '@/components/shared/BookingConfirmedBanner'
 import KpiCard from '@/components/venue/dashboard/KpiCard'
 import { KpiCardSkeletonRow } from '@/components/venue/dashboard/KpiCardSkeleton'
 import WeekStrip from '@/components/venue/dashboard/WeekStrip'
@@ -201,10 +203,15 @@ export default async function VenueDashboardPage() {
 
   if (!venue) redirect('/business/venue/onboard')
 
-  const [result, { data: userProfile }] = await Promise.all([
+  const [result, { data: userProfile }, allNotifications] = await Promise.all([
     getVenueDashboardData(venue.id),
     admin.from('user_profiles').select('personas').eq('id', user.id).maybeSingle(),
+    getNotificationsForUser(),
   ])
+
+  const confirmedNotifications = allNotifications.filter(
+    (n) => !n.is_read && (n.type === 'venue_proposal_accepted' || n.type === 'venue_counter_accepted'),
+  )
 
   const rawPersonas = (userProfile?.personas ?? []) as string[]
   const personas = rawPersonas.includes('venue') ? rawPersonas : [...rawPersonas, 'venue']
@@ -290,11 +297,11 @@ export default async function VenueDashboardPage() {
         {/* Pending proposals hero */}
         {pendingProposals.length > 0 && (
           <Link
-            href="/business/venue/creators"
+            href="/business/venue/bookings"
             style={{
               display: 'flex', alignItems: 'center', gap: 20,
-              background: 'linear-gradient(135deg, rgba(245,168,0,0.1) 0%, rgba(245,168,0,0.04) 100%)',
-              border: '1px solid rgba(245,168,0,0.35)',
+              background: 'linear-gradient(135deg, rgba(93,217,208,0.1) 0%, rgba(93,217,208,0.04) 100%)',
+              border: '1px solid rgba(93,217,208,0.35)',
               borderRadius: 16, padding: '20px 24px', marginBottom: 24,
               textDecoration: 'none', cursor: 'pointer',
               transition: 'border-color 180ms ease',
@@ -302,12 +309,12 @@ export default async function VenueDashboardPage() {
           >
             <div style={{
               width: 64, height: 64, borderRadius: 14,
-              background: 'rgba(245,168,0,0.15)',
+              background: 'rgba(93,217,208,0.15)',
               display: 'grid', placeItems: 'center', flexShrink: 0,
             }}>
               <span style={{
                 fontFamily: 'var(--font-syne)', fontSize: 28, fontWeight: 900,
-                color: 'var(--venue-amber)', lineHeight: 1,
+                color: 'var(--venue-accent)', lineHeight: 1,
               }}>
                 {pendingProposals.length}
               </span>
@@ -327,13 +334,15 @@ export default async function VenueDashboardPage() {
             </div>
             <div style={{
               width: 40, height: 40, borderRadius: 10,
-              background: 'rgba(245,168,0,0.15)',
+              background: 'rgba(93,217,208,0.15)',
               display: 'grid', placeItems: 'center', flexShrink: 0,
             }}>
-              <span className="material-symbols-outlined" style={{ fontSize: 20, color: 'var(--venue-amber)' }}>arrow_forward</span>
+              <span className="material-symbols-outlined" style={{ fontSize: 20, color: 'var(--venue-accent)' }}>arrow_forward</span>
             </div>
           </Link>
         )}
+
+        <BookingConfirmedBanner notifications={confirmedNotifications} theme="dark" />
 
         <PriorityActions pendingProposals={pendingProposals} />
 

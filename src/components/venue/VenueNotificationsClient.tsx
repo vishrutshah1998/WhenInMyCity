@@ -22,7 +22,7 @@ type FilterKey = (typeof FILTER_TABS)[number]['key']
 const FILTER_TYPES: Record<FilterKey, string[] | null> = {
   all:       null,
   unread:    null,
-  proposals: ['venue_new_proposal', 'venue_proposal_accepted', 'venue_proposal_counter', 'new_proposal', 'proposal_accepted', 'proposal_counter'],
+  proposals: ['venue_new_proposal', 'venue_proposal_accepted', 'venue_proposal_counter', 'venue_counter_accepted', 'venue_counter_declined', 'venue_maker_countered', 'new_proposal', 'proposal_accepted', 'proposal_counter'],
   events:    ['venue_event_confirmed', 'venue_booking_reminder', 'event_confirmed'],
   ratings:   ['venue_new_rating', 'venue_new_review'],
 }

@@ -11,7 +11,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { requireAuth } from '@/lib/auth/requireAuth'
-import type { Notification } from '@/types/database'
+import type { Notification, Json } from '@/types/database'
 
 // ---------------------------------------------------------------------------
 // createNotification
@@ -28,12 +28,14 @@ export async function createNotification({
   title,
   body,
   actionUrl,
+  metadata,
 }: {
   recipientId: string
   type: string
   title: string
   body: string
   actionUrl?: string
+  metadata?: Record<string, unknown>
 }): Promise<void> {
   const admin = createAdminClient()
 
@@ -44,10 +46,39 @@ export async function createNotification({
     body,
     action_url: actionUrl ?? null,
     is_read: false,
+    ...(metadata ? { metadata: metadata as Json } : {}),
   })
 
   if (error) {
     console.error('[createNotification]', { recipientId, type }, error.message)
+  }
+}
+
+// ---------------------------------------------------------------------------
+// resolveNotificationsForProposal
+// ---------------------------------------------------------------------------
+
+/**
+ * Marks any still-unread notifications tagged with this proposal's ID
+ * (via `metadata.proposalId`) as read. Called whenever a proposal moves to
+ * a new state (countered, accepted, declined) so the notification that
+ * prompted the now-superseded state doesn't linger as unread forever —
+ * previously nothing ever resolved these, so e.g. the original "new booking
+ * request" notification stayed unread even after the proposal was fully
+ * accepted several steps later.
+ */
+export async function resolveNotificationsForProposal(
+  proposalId: string,
+  admin: ReturnType<typeof createAdminClient>,
+): Promise<void> {
+  const { error } = await admin
+    .from('notifications')
+    .update({ is_read: true })
+    .contains('metadata', { proposalId })
+    .eq('is_read', false)
+
+  if (error) {
+    console.error('[resolveNotificationsForProposal]', { proposalId }, error.message)
   }
 }
 

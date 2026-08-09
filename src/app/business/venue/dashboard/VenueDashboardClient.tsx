@@ -2,10 +2,11 @@
 
 import { useState, useTransition, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import { respondToProposal } from '@/app/actions/venue'
+import { respondToProposal } from '@/app/actions/venue-bookings'
 import type { VenueProfile, VenueAvailability, MakerVenueProposal, Event } from '@/types/database'
 import type { VenueDashboardStats, RevenueEntry } from '@/app/actions/venue-dashboard'
 import PriorityActions from '@/components/venue/dashboard/PriorityActions'
+import { formatTimeRange } from '@/lib/venue/timeFormat'
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -172,7 +173,7 @@ function ProposalCard({ proposal, onRespond }: { proposal: MakerVenueProposal; o
           <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 4 }}>{proposal.event_title}</div>
           <div style={{ display: 'flex', gap: 16, fontSize: 12, color: 'var(--wimc-text-secondary)', fontFamily: 'var(--font-jetbrains-mono)' }}>
             <span>{formatDate(proposal.proposed_date)}</span>
-            <span style={{ textTransform: 'capitalize' }}>{proposal.proposed_slot.replace('_', ' ')}</span>
+            <span>{formatTimeRange(proposal.start_time, proposal.end_time)}</span>
             {proposal.expected_attendees && <span>{proposal.expected_attendees} attendees</span>}
             {proposal.expected_revenue_paise && <span>~{formatInr(proposal.expected_revenue_paise)} revenue</span>}
           </div>

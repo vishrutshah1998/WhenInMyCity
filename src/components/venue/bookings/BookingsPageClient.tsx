@@ -2,8 +2,96 @@
 
 import { useState, useMemo } from 'react'
 import type { ProposalWithMaker } from '@/app/actions/venue-bookings'
+import type { PricingConfig, PricingModel, ProposedSplitConfig } from '@/types/marketplace'
+import type { Json } from '@/types/database'
 import RequestListRow from './RequestListRow'
 import BookingRequestCard from './BookingRequestCard'
+import { VENUE_RADIUS } from '@/components/venue/ui/primitives'
+
+// ---------------------------------------------------------------------------
+// Creator category filter — buckets the full creator_type enum into a
+// handful of chips, mirroring the pattern already proven in the brand
+// persona's Browse Creators page (src/app/business/brand/creators/
+// BrowseCreatorsClient.tsx). Kept as its own local copy rather than
+// importing that file's constants, since they're brand-styled and this is
+// the first venue-side use of the pattern.
+// ---------------------------------------------------------------------------
+
+const CATEGORY_FILTERS = [
+  { id: 'all',       label: 'All',          icon: 'people' },
+  { id: 'music',     label: 'Music',        icon: 'music_note' },
+  { id: 'comedy',    label: 'Comedy',       icon: 'sentiment_very_satisfied' },
+  { id: 'art',       label: 'Art & Design', icon: 'palette' },
+  { id: 'education', label: 'Education',    icon: 'school' },
+  { id: 'food',      label: 'Food',         icon: 'restaurant' },
+  { id: 'lifestyle', label: 'Lifestyle',    icon: 'spa' },
+  { id: 'video',     label: 'Video',        icon: 'videocam' },
+  { id: 'dance',     label: 'Dance',        icon: 'nightlife' },
+] as const
+
+type CategoryId = typeof CATEGORY_FILTERS[number]['id']
+
+const CREATOR_TYPE_TO_CATEGORY: Record<string, CategoryId> = {
+  music:                  'music',
+  music_performance:      'music',
+  comedy_theatre:         'comedy',
+  comedy_open_mic:        'comedy',
+  art_design:             'art',
+  crafts_making:          'art',
+  literature_poetry:      'art',
+  teaching_coaching:      'education',
+  workshops_teaching:     'education',
+  professional_portfolio: 'education',
+  food_culinary:          'food',
+  food_lifestyle:         'food',
+  lifestyle_wellness:     'lifestyle',
+  fitness_wellness:       'lifestyle',
+  spirituality:           'lifestyle',
+  travel_adventure:       'lifestyle',
+  community_impact:       'lifestyle',
+  video_content:          'video',
+  content_creation:       'video',
+  dance:                  'dance',
+}
+
+function CategoryChip({
+  filter,
+  active,
+  onClick,
+}: {
+  filter: typeof CATEGORY_FILTERS[number]
+  active: boolean
+  onClick: () => void
+}) {
+  const [hovered, setHovered] = useState(false)
+  return (
+    <button
+      onClick={onClick}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 5,
+        padding: '6px 12px',
+        borderRadius: VENUE_RADIUS.full,
+        background: active ? 'var(--venue-accent)' : hovered ? 'var(--venue-accent-tint)' : 'transparent',
+        border: `1px solid ${active ? 'var(--venue-accent)' : 'var(--venue-border-default)'}`,
+        color: active ? '#000' : 'var(--venue-text-secondary)',
+        fontFamily: 'var(--font-inter), system-ui, sans-serif',
+        fontSize: 11.5,
+        fontWeight: 600,
+        cursor: 'pointer',
+        transition: 'all 140ms ease',
+        whiteSpace: 'nowrap',
+        flexShrink: 0,
+      }}
+    >
+      <span className="material-symbols-outlined" style={{ fontSize: 14 }}>{filter.icon}</span>
+      {filter.label}
+    </button>
+  )
+}
 
 // ---------------------------------------------------------------------------
 // Tab config
@@ -47,8 +135,10 @@ const EMPTY_COPY: Record<TabKey, { icon: string; title: string; body: string }> 
   declined:  { icon: 'cancel',         title: 'No declined requests',  body: 'Requests you declined or that expired will appear here.' },
 }
 
-function EmptyState({ tab }: { tab: TabKey }) {
-  const { icon, title, body } = EMPTY_COPY[tab]
+function EmptyState({ tab, categoryLabel }: { tab: TabKey; categoryLabel?: string }) {
+  const { icon, title, body } = categoryLabel
+    ? { icon: 'filter_alt_off', title: `No ${categoryLabel.toLowerCase()} requests`, body: 'Try a different category, or select "All" to see every request in this tab.' }
+    : EMPTY_COPY[tab]
   return (
     <div style={{
       display: 'flex',
@@ -124,6 +214,9 @@ function DetailPlaceholder() {
 
 interface Props {
   venueId: string
+  currentUserId: string
+  pricingModel: PricingModel
+  pricingConfig: PricingConfig | null
   initialProposals: ProposalWithMaker[]
   fetchError: string | null
 }
@@ -132,13 +225,18 @@ interface Props {
 // Main component
 // ---------------------------------------------------------------------------
 
-export default function BookingsPageClient({ venueId, initialProposals, fetchError }: Props) {
+export default function BookingsPageClient({ venueId, currentUserId, pricingModel, pricingConfig, initialProposals, fetchError }: Props) {
   const [activeTab, setActiveTab] = useState<TabKey>('pending')
+  const [activeCategory, setActiveCategory] = useState<CategoryId>('all')
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [mobileDetailOpen, setMobileDetailOpen] = useState(false)
   const [proposals, setProposals] = useState<ProposalWithMaker[]>(initialProposals)
 
-  const tabList = useMemo(() => filterForTab(proposals, activeTab), [proposals, activeTab])
+  const tabList = useMemo(() => {
+    const forTab = filterForTab(proposals, activeTab)
+    if (activeCategory === 'all') return forTab
+    return forTab.filter(p => CREATOR_TYPE_TO_CATEGORY[p.maker.creator_type] === activeCategory)
+  }, [proposals, activeTab, activeCategory])
 
   const pendingCount = useMemo(
     () => proposals.filter(p => p.status === 'pending' || p.status === 'counter_offered').length,
@@ -152,11 +250,22 @@ export default function BookingsPageClient({ venueId, initialProposals, fetchErr
     setMobileDetailOpen(true)
   }
 
-  function handleRespond(proposalId: string, action: 'accept' | 'decline') {
+  function handleRespond(
+    proposalId: string,
+    action: 'accept' | 'decline' | 'counter_offer',
+    counterOffer?: ProposedSplitConfig,
+    note?: string,
+  ) {
     setProposals(prev =>
       prev.map(p =>
         p.id === proposalId
-          ? { ...p, status: action === 'accept' ? 'accepted' : 'declined' }
+          ? {
+              ...p,
+              status: action === 'accept' ? 'accepted' : action === 'decline' ? 'declined' : 'counter_offered',
+              ...(action === 'counter_offer'
+                ? { counter_offer: counterOffer as unknown as Json, venue_response_note: note ?? null }
+                : {}),
+            }
           : p,
       ),
     )
@@ -214,7 +323,7 @@ export default function BookingsPageClient({ venueId, initialProposals, fetchErr
                     background: 'transparent',
                     border: 'none',
                     borderBottom: isActive
-                      ? '2px solid var(--venue-amber)'
+                      ? '2px solid var(--venue-accent)'
                       : '2px solid transparent',
                     cursor: 'pointer',
                     fontSize: 12.5,
@@ -228,12 +337,12 @@ export default function BookingsPageClient({ venueId, initialProposals, fetchErr
                   {tab.label}
                   {count !== null && count > 0 && (
                     <span style={{
-                      background: 'var(--venue-amber)',
+                      background: 'var(--venue-accent)',
                       color: '#000',
                       fontSize: 9.5,
                       fontWeight: 700,
                       padding: '1px 5px',
-                      borderRadius: 9999,
+                      borderRadius: VENUE_RADIUS.full,
                       lineHeight: '14px',
                       fontFamily: 'var(--font-inter), system-ui, sans-serif',
                     }}>
@@ -243,6 +352,25 @@ export default function BookingsPageClient({ venueId, initialProposals, fetchErr
                 </button>
               )
             })}
+          </div>
+
+          {/* Creator-category filter */}
+          <div style={{
+            display: 'flex',
+            gap: 6,
+            padding: '10px 12px',
+            borderBottom: '1px solid var(--venue-border-subtle)',
+            overflowX: 'auto',
+            flexShrink: 0,
+          }}>
+            {CATEGORY_FILTERS.map(filter => (
+              <CategoryChip
+                key={filter.id}
+                filter={filter}
+                active={activeCategory === filter.id}
+                onClick={() => setActiveCategory(filter.id)}
+              />
+            ))}
           </div>
 
           {/* Error state */}
@@ -262,7 +390,10 @@ export default function BookingsPageClient({ venueId, initialProposals, fetchErr
           {/* Request list */}
           <div style={{ flex: 1, overflowY: 'auto' }}>
             {tabList.length === 0 ? (
-              <EmptyState tab={activeTab} />
+              <EmptyState
+                tab={activeTab}
+                categoryLabel={activeCategory !== 'all' ? CATEGORY_FILTERS.find(f => f.id === activeCategory)?.label : undefined}
+              />
             ) : (
               tabList.map(proposal => (
                 <RequestListRow
@@ -287,6 +418,9 @@ export default function BookingsPageClient({ venueId, initialProposals, fetchErr
             <BookingRequestCard
               proposal={selectedProposal}
               venueId={venueId}
+              currentUserId={currentUserId}
+              pricingModel={pricingModel}
+              pricingConfig={pricingConfig}
               onRespond={handleRespond}
             />
           ) : (
@@ -330,7 +464,7 @@ export default function BookingsPageClient({ venueId, initialProposals, fetchErr
                 background: 'transparent',
                 border: 'none',
                 cursor: 'pointer',
-                color: 'var(--venue-amber)',
+                color: 'var(--venue-accent)',
                 fontSize: 13,
                 fontWeight: 600,
                 fontFamily: 'var(--font-inter), system-ui, sans-serif',
@@ -345,8 +479,11 @@ export default function BookingsPageClient({ venueId, initialProposals, fetchErr
           <BookingRequestCard
             proposal={selectedProposal}
             venueId={venueId}
-            onRespond={(id, action) => {
-              handleRespond(id, action)
+            currentUserId={currentUserId}
+            pricingModel={pricingModel}
+            pricingConfig={pricingConfig}
+            onRespond={(id, action, counterOffer, note) => {
+              handleRespond(id, action, counterOffer, note)
               setMobileDetailOpen(false)
             }}
           />

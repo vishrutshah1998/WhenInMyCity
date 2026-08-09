@@ -39,7 +39,8 @@ export type ProposalStatus =
   | 'expired'
   | 'withdrawn'
 
-export type AvailabilitySlotType = 'morning' | 'afternoon' | 'evening' | 'full_day'
+/** @deprecated LEGACY as of migration 069 — superseded by real start_time/end_time. Do not use in new code. */
+export type { AvailabilitySlotType } from './database'
 
 export type AvailabilityStatus = 'available' | 'blocked' | 'pending' | 'confirmed'
 
@@ -124,16 +125,37 @@ export interface CollabInviteConfig {
 }
 
 // ---------------------------------------------------------------------------
-// Proposal counter-offer shape
+// Counter-offer split config — pricing terms proposed in a venue's counter
+// offer. Always branched on the venue's own pricing_model (never a free
+// choice for either side) and always carries the real proposed time window.
 // ---------------------------------------------------------------------------
 
-export interface ProposalCounterOffer {
-  proposed_date?: string
-  proposed_slot?: string
-  proposed_pricing_model?: PricingModel
-  proposed_split_config?: Record<string, unknown>
-  note?: string
+export interface ProposedTimeRange {
+  date: string        // 'YYYY-MM-DD'
+  startTime: string   // 'HH:MM'
+  endTime: string     // 'HH:MM'
 }
+
+type ProposedSplitConfigBase = ProposedTimeRange
+
+export type ProposedSplitConfig =
+  | (ProposedSplitConfigBase & {
+      pricingModel: 'fixed_rental'
+      rentalFeePaise: number
+    })
+  | (ProposedSplitConfigBase & {
+      pricingModel: 'door_split'
+      splitPercentage: number
+    })
+  | (ProposedSplitConfigBase & {
+      pricingModel: 'f_and_b_minimum'
+      minimumSpendPaise: number
+    })
+  | (ProposedSplitConfigBase & {
+      pricingModel: 'hybrid'
+      rentalFeePaise: number
+      splitPercentage: number
+    })
 
 // ---------------------------------------------------------------------------
 // Availability update (input to updateVenueAvailability)
@@ -141,7 +163,8 @@ export interface ProposalCounterOffer {
 
 export interface AvailabilityUpdate {
   date: string              // ISO date string 'YYYY-MM-DD'
-  slot_type: AvailabilitySlotType
+  start_time: string        // 'HH:MM'
+  end_time: string          // 'HH:MM'
   status: AvailabilityStatus
   notes?: string
 }
@@ -164,68 +187,9 @@ export interface VenueSearchParams {
 // Zod schemas — validated in Server Actions
 // ---------------------------------------------------------------------------
 
-const VALID_VENUE_TYPES: VenueType[] = [
-  'cafe', 'coworking', 'gallery', 'community_hall',
-  'rooftop', 'garden', 'studio', 'library', 'restaurant',
-]
-
-const VALID_AMENITIES = [
-  'projector', 'pa_system', 'natural_light', 'parking',
-  'accessible', 'wifi', 'whiteboard', 'kitchen', 'outdoor_space', 'ac',
-] as const
-
 const VALID_FORMATS = [
   'small_group', 'workshop', 'performance', 'networking', 'outdoor', 'dining',
 ] as const
-
-export const CreateVenueSchema = z.object({
-  name: z.string().min(2, 'Name must be at least 2 characters').max(100),
-  description: z.string().max(1000).optional(),
-  venue_type: z
-    .array(z.enum(VALID_VENUE_TYPES as [VenueType, ...VenueType[]]))
-    .min(1, 'Select at least one Venue type'),
-  city: z.string().min(1, 'City is required'),
-  neighbourhood: z.string().max(100).optional(),
-  address: z.string().min(5, 'Address is required').max(500),
-  lat: z.number().min(-90).max(90).optional(),
-  lng: z.number().min(-180).max(180).optional(),
-  cover_image_url: z.string().url().optional().or(z.literal('')),
-  gallery_images: z.array(z.string().url()).max(12).default([]),
-  capacity_min: z.number().int().min(1).optional(),
-  capacity_max: z.number().int().min(1).optional(),
-  capacity_configurations: z
-    .array(z.object({ type: z.string(), capacity: z.number().int().positive() }))
-    .default([]),
-  amenities: z.array(z.enum(VALID_AMENITIES)).default([]),
-  pricing_model: z.enum(['fixed_rental', 'door_split', 'hybrid', 'f_and_b_minimum']),
-  pricing_config: z
-    .object({
-      fixed_rental_paise: z.number().int().positive().optional(),
-      door_split_percent: z.number().min(0).max(100).optional(),
-      hybrid_rental_paise: z.number().int().positive().optional(),
-      hybrid_split_percent: z.number().min(0).max(100).optional(),
-      f_and_b_minimum_paise: z.number().int().positive().optional(),
-    })
-    .default({}),
-  contact_whatsapp: z
-    .string()
-    .regex(/^\+?[0-9]{10,15}$/, 'Invalid WhatsApp number')
-    .optional()
-    .or(z.literal('')),
-  contact_email: z.string().email().optional().or(z.literal('')),
-  instagram_handle: z
-    .string()
-    .regex(/^[a-zA-Z0-9_.]*$/, 'Invalid Instagram handle')
-    .max(30)
-    .optional()
-    .or(z.literal('')),
-})
-  .refine(
-    (data) => data.capacity_min == null || data.capacity_max == null || data.capacity_max >= data.capacity_min,
-    { message: 'Maximum capacity must be ≥ minimum capacity', path: ['capacity_max'] },
-  )
-
-export type CreateVenueInput = z.infer<typeof CreateVenueSchema>
 
 export const CreateExplorerSchema = z.object({
   display_name: z.string().min(1, 'Display name is required').max(80),

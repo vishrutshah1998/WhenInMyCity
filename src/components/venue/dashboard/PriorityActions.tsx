@@ -131,11 +131,11 @@ export default function PriorityActions({ pendingProposals, venue, stats }: Prop
             alignItems: 'center',
             gap: 8,
             padding: '8px 12px',
-            borderRadius: 8,
-            background: 'var(--venue-amber-tint)',
+            borderRadius: 12,
+            background: 'var(--venue-accent-tint)',
             border: chip.urgency === 'high'
-              ? '1px solid var(--venue-amber-border)'
-              : '1px dashed var(--venue-amber-border)',
+              ? '1px solid var(--venue-accent-border)'
+              : '1px dashed var(--venue-accent-border)',
             whiteSpace: 'nowrap',
             flexShrink: 0,
           }}
@@ -144,7 +144,7 @@ export default function PriorityActions({ pendingProposals, venue, stats }: Prop
             className="material-symbols-outlined"
             style={{
               fontSize: 16,
-              color: 'var(--venue-amber)',
+              color: 'var(--venue-accent)',
               fontVariationSettings: "'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 20",
             }}
           >
@@ -157,7 +157,7 @@ export default function PriorityActions({ pendingProposals, venue, stats }: Prop
               style={{
                 fontSize: 12.5,
                 fontWeight: 500,
-                color: 'var(--venue-amber)',
+                color: 'var(--venue-accent)',
                 fontFamily: 'var(--font-inter), system-ui, sans-serif',
                 textDecoration: 'none',
               }}
@@ -168,7 +168,7 @@ export default function PriorityActions({ pendingProposals, venue, stats }: Prop
             <span style={{
               fontSize: 12.5,
               fontWeight: 500,
-              color: 'var(--venue-amber)',
+              color: 'var(--venue-accent)',
               fontFamily: 'var(--font-inter), system-ui, sans-serif',
             }}>
               {chip.message}

@@ -4,6 +4,7 @@ import { useState, useTransition, useRef, useEffect } from 'react'
 import Link from 'next/link'
 import type { HubCreator, HubConnection, HubMessage } from '@/app/actions/hub'
 import { profileUrl } from '@/lib/profile-url'
+import { createClient } from '@/lib/supabase/client'
 import {
   sendConnectionRequest,
   respondToConnection,
@@ -259,6 +260,28 @@ function MessageThread({
       setLoading(false)
     })
   }, [connection.connectionId])
+
+  // Live delivery of the other person's messages
+  useEffect(() => {
+    const supabase = createClient()
+    const channel = supabase
+      .channel(`creator-messages-${connection.connectionId}`)
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'creator_messages', filter: `connection_id=eq.${connection.connectionId}` },
+        (payload) => {
+          const row = payload.new as { id: string; sender_id: string; body: string; sent_at: string; read_at: string | null }
+          if (row.sender_id === currentUserId) return // own sends are appended locally on success
+          setMessages((prev) => (
+            prev.some((m) => m.id === row.id)
+              ? prev
+              : [...prev, { id: row.id, senderId: row.sender_id, body: row.body, sentAt: row.sent_at, readAt: row.read_at }]
+          ))
+        },
+      )
+      .subscribe()
+    return () => { supabase.removeChannel(channel) }
+  }, [connection.connectionId, currentUserId])
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })

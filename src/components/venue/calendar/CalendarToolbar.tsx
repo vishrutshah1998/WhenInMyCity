@@ -1,7 +1,7 @@
 'use client'
 
 import type { ToolbarProps, View } from 'react-big-calendar'
-import type { CalendarEvent } from '@/lib/venue/mock/calendarEvents'
+import type { CalendarEvent } from '@/app/actions/venue-calendar'
 
 interface Props extends ToolbarProps<CalendarEvent, object> {
   onBlockTime: () => void

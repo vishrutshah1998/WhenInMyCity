@@ -37,7 +37,7 @@ function titleToSlugBase(title: string): string {
  * Generates a unique event slug: `<title-base>-<8-random-chars>`.
  * Uses crypto.randomUUID for an unguessable suffix.
  */
-async function generateUniqueSlug(title: string): Promise<string> {
+export async function generateUniqueSlug(title: string): Promise<string> {
   const { randomUUID } = await import('crypto')
   const admin = createAdminClient()
   const base = titleToSlugBase(title) || 'event'

@@ -8,9 +8,12 @@ import type { UserProfile, Event } from '@/types/database'
 import PostComposer from '@/components/dashboard/PostComposer'
 import { deletePost, type CreatorPost } from '@/app/actions/posts'
 import { getPayableEvents } from '@/app/actions/payouts'
+import { getNotificationsForUser } from '@/app/actions/notifications'
 import { profileUrl } from '@/lib/profile-url'
 import { TIER_THRESHOLDS } from '@/lib/constants/interests'
 import PersonaSwitcherPills from '@/components/PersonaSwitcherPills'
+import BookingConfirmedBanner from '@/components/shared/BookingConfirmedBanner'
+import type { Notification } from '@/types/database'
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -244,6 +247,7 @@ export default function DashboardPage() {
   const [soldCountMap,    setSoldCountMap]    = useState<Record<string, number>>({})
   const [availablePaise,  setAvailablePaise]  = useState(0)
   const [mtdEarnedPaise,  setMtdEarnedPaise]  = useState(0)
+  const [confirmedNotifications, setConfirmedNotifications] = useState<Notification[]>([])
 
   useEffect(() => {
     const supabase = createClient()
@@ -256,7 +260,7 @@ export default function DashboardPage() {
 
       const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString()
 
-      const [pr, er, rr, posts, sr, payable] = await Promise.all([
+      const [pr, er, rr, posts, sr, payable, allNotifications] = await Promise.all([
         supabase.from('user_profiles').select('*').eq('id', session.user.id).single(),
         supabase.from('events').select('*').eq('creator_id', session.user.id).order('starts_at').limit(10),
         supabase.from('maker_venue_proposals').select('id, event_title, status, proposed_date').eq('maker_id', session.user.id).eq('status', 'pending').limit(5),
@@ -270,6 +274,7 @@ export default function DashboardPage() {
           .eq('is_active', true)
           .gte('subscribed_at', monthStart),
         getPayableEvents(),
+        getNotificationsForUser(),
       ])
 
       if (pr.data) {
@@ -306,6 +311,9 @@ export default function DashboardPage() {
             .reduce((s, e) => s + e.maker_paise, 0)
         )
       }
+      setConfirmedNotifications(
+        allNotifications.filter((n) => !n.is_read && n.type === 'proposal_accepted'),
+      )
       setLoading(false)
     })()
   }, [router])
@@ -355,6 +363,9 @@ export default function DashboardPage() {
       {/* ═══════════════ DESKTOP ══════════════════════════════════════════════ */}
       <div className="hidden md:block" style={{ background: '#F2EDE3', minHeight: '100vh' }}>
         <div style={{ padding: '32px 40px 60px', maxWidth: 1280, margin: '0 auto' }}>
+
+          {/* ── Confirmed booking banner ────────────────────────────────────── */}
+          <BookingConfirmedBanner notifications={confirmedNotifications} theme="light" />
 
           {/* ── Post Composer ───────────────────────────────────────────────── */}
           <PostComposer
@@ -893,6 +904,11 @@ export default function DashboardPage() {
           </div>
           <span className="material-symbols-outlined" style={{ fontSize: 16, color: '#D97706' }}>arrow_forward</span>
         </a>
+
+        {/* Confirmed booking banner */}
+        <div style={{ padding: '16px 16px 0' }}>
+          <BookingConfirmedBanner notifications={confirmedNotifications} theme="light" />
+        </div>
 
         {/* PostComposer */}
         <div style={{ padding: '16px' }}>

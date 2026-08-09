@@ -1,23 +1,26 @@
 'use client'
 
-import { useState, useCallback, useMemo } from 'react'
+import { useState, useCallback, useMemo, useEffect } from 'react'
 import { Calendar, momentLocalizer, Views } from 'react-big-calendar'
 import withDragAndDrop from 'react-big-calendar/lib/addons/dragAndDrop'
 import moment from 'moment'
+import { subMinutes, addMinutes, startOfMonth, endOfMonth, addDays, format } from 'date-fns'
 import 'react-big-calendar/lib/css/react-big-calendar.css'
 import 'react-big-calendar/lib/addons/dragAndDrop/styles.css'
 import type { View } from 'react-big-calendar'
 import CalendarToolbar from './CalendarToolbar'
 import BlockTimeModal, { type BlockTimePayload } from './BlockTimeModal'
-import ResizeConfirmModal from './ResizeConfirmModal'
 import GoogleSyncDrawer from './GoogleSyncDrawer'
 import MobileCalendarView from './MobileCalendarView'
 import { useIsMobile } from '@/hooks/useIsMobile'
 import {
-  MOCK_CALENDAR_EVENTS,
-  getDayRevenueSummary,
+  getVenueCalendarEvents,
+  blockVenueTime,
+  unblockVenueTime,
+  moveVenueBlock,
   type CalendarEvent,
-} from '@/lib/venue/mock/calendarEvents'
+  type VenueBufferConfig,
+} from '@/app/actions/venue-calendar'
 
 // ---------------------------------------------------------------------------
 // Setup
@@ -25,6 +28,48 @@ import {
 
 const localizer = momentLocalizer(moment)
 const DnDCalendar = withDragAndDrop<CalendarEvent>(Calendar)
+
+const DEFAULT_BUFFER_CONFIG: VenueBufferConfig = { bufferBeforeMinutes: 30, bufferAfterMinutes: 45 }
+
+// ---------------------------------------------------------------------------
+// Buffer generation — synthetic background events around confirmed bookings
+// ---------------------------------------------------------------------------
+
+function generateBuffers(events: CalendarEvent[], config: VenueBufferConfig): CalendarEvent[] {
+  const buffers: CalendarEvent[] = []
+  for (const ev of events) {
+    if (ev.status !== 'confirmed') continue
+
+    if (config.bufferBeforeMinutes > 0) {
+      buffers.push({
+        id: `buf-before-${ev.id}`,
+        title: `Setup ${config.bufferBeforeMinutes}m`,
+        start: subMinutes(ev.start, config.bufferBeforeMinutes),
+        end: ev.start,
+        status: 'buffer',
+        source: 'block',
+        display: 'background',
+        bufferFor: ev.id,
+        isLocked: true,
+      })
+    }
+
+    if (config.bufferAfterMinutes > 0) {
+      buffers.push({
+        id: `buf-after-${ev.id}`,
+        title: `Teardown ${config.bufferAfterMinutes}m`,
+        start: ev.end,
+        end: addMinutes(ev.end, config.bufferAfterMinutes),
+        status: 'buffer',
+        source: 'block',
+        display: 'background',
+        bufferFor: ev.id,
+        isLocked: true,
+      })
+    }
+  }
+  return buffers
+}
 
 // ---------------------------------------------------------------------------
 // Event style getters
@@ -64,17 +109,6 @@ function getEventStyle(event: CalendarEvent) {
           border: '1.5px dashed #f59e0b',
           color: '#f59e0b',
           fontWeight: 500,
-        },
-      }
-
-    case 'tentative':
-      return {
-        style: {
-          ...base,
-          background: 'transparent',
-          border: '2px dashed #f59e0b',
-          color: '#d97706',
-          fontStyle: 'italic',
         },
       }
 
@@ -123,7 +157,6 @@ function statusIcon(status: CalendarEvent['status']): string {
   switch (status) {
     case 'confirmed':  return '✓'
     case 'pending':    return '⏱'
-    case 'tentative':  return '?'
     case 'blocked':    return '🔒'
     case 'external':   return '●'
     default:           return ''
@@ -158,70 +191,6 @@ function EventComponent({ event }: { event: CalendarEvent }) {
 }
 
 // ---------------------------------------------------------------------------
-// Day revenue summary (Day view header)
-// ---------------------------------------------------------------------------
-
-function DayRevenueSummary({ date }: { date: Date }) {
-  const { confirmedPaise, pendingPaise } = getDayRevenueSummary(date)
-  if (confirmedPaise === 0 && pendingPaise === 0) return null
-
-  function fmt(p: number) { return '₹' + Math.round(p / 100).toLocaleString('en-IN') }
-
-  return (
-    <div style={{
-      padding: '6px 16px',
-      background: 'var(--venue-bg-elevated)',
-      borderBottom: '1px solid var(--venue-border-subtle)',
-      display: 'flex',
-      alignItems: 'center',
-      gap: 16,
-      fontSize: 12,
-      fontFamily: 'var(--font-inter), system-ui, sans-serif',
-      color: 'var(--venue-text-muted)',
-      flexShrink: 0,
-    }}>
-      <span>Today:</span>
-      {confirmedPaise > 0 && (
-        <span style={{ fontWeight: 600, color: 'var(--venue-amber)' }}>
-          {fmt(confirmedPaise)} confirmed
-        </span>
-      )}
-      {pendingPaise > 0 && (
-        <span style={{ color: '#d97706' }}>
-          · {fmt(pendingPaise)} pending
-        </span>
-      )}
-    </div>
-  )
-}
-
-// ---------------------------------------------------------------------------
-// Pending dot for month cells
-// ---------------------------------------------------------------------------
-
-function MonthDateHeader({ date, label }: { date: Date; label: string }) {
-  const hasPending = MOCK_CALENDAR_EVENTS.some(ev => {
-    const sameDay = ev.start.toDateString() === date.toDateString()
-    return sameDay && ev.status === 'pending'
-  })
-
-  return (
-    <span style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-      {label}
-      {hasPending && (
-        <span style={{
-          width: 6,
-          height: 6,
-          borderRadius: '50%',
-          background: 'var(--venue-amber)',
-          flexShrink: 0,
-        }} />
-      )}
-    </span>
-  )
-}
-
-// ---------------------------------------------------------------------------
 // Slot hover affordance — shown on empty slots in week/day view
 // ---------------------------------------------------------------------------
 
@@ -250,10 +219,10 @@ function SlotWrapper({ children, value, resource, onBlockFromSlot }: {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            background: 'rgba(245,158,11,0.06)',
-            border: '1px dashed rgba(245,158,11,0.3)',
+            background: 'rgba(93,217,208,0.06)',
+            border: '1px dashed rgba(93,217,208,0.3)',
             borderRadius: 3,
-            color: 'rgba(245,158,11,0.6)',
+            color: 'rgba(93,217,208,0.6)',
             fontSize: 16,
             cursor: 'pointer',
             zIndex: 1,
@@ -280,36 +249,91 @@ interface Props {
 
 export default function VenueCalendarClient({ venueName, venueId, googleCalendarConnected }: Props) {
   const isMobile = useIsMobile()
-  const [events, setEvents] = useState<CalendarEvent[]>(MOCK_CALENDAR_EVENTS)
+  const [bookings, setBookings] = useState<CalendarEvent[]>([])
+  const [bufferConfig, setBufferConfig] = useState<VenueBufferConfig>(DEFAULT_BUFFER_CONFIG)
   const [view, setView] = useState<View>(Views.WEEK)
   const [date, setDate] = useState(new Date())
   const [blockModalOpen, setBlockModalOpen] = useState(false)
   const [blockInitialDate, setBlockInitialDate] = useState<string | undefined>()
   const [blockInitialStart, setBlockInitialStart] = useState<string | undefined>()
+  const [blockError, setBlockError] = useState<string | null>(null)
   const [syncDrawerOpen, setSyncDrawerOpen] = useState(false)
-  const [resizePending, setResizePending] = useState<{ event: CalendarEvent; newEnd: Date } | null>(null)
 
-  // ── Dragging/resizing ────────────────────────────────────────────────────
+  const events = useMemo(() => [...bookings, ...generateBuffers(bookings, bufferConfig)], [bookings, bufferConfig])
 
-  const handleEventResize = useCallback(({ event, end }: { event: CalendarEvent; start: Date | string; end: Date | string }) => {
-    if (event.isLocked || event.status !== 'confirmed') return
-    setResizePending({ event, newEnd: new Date(end) })
-  }, [])
+  // ── Fetch real events for a window covering the visible month/week/day ───
 
-  function confirmResize() {
-    if (!resizePending) return
-    setEvents(prev => prev.map(ev =>
-      ev.id === resizePending.event.id ? { ...ev, end: resizePending.newEnd } : ev
-    ))
-    setResizePending(null)
-  }
+  useEffect(() => {
+    const rangeStart = format(subMinutes(startOfMonth(date), 7 * 24 * 60), 'yyyy-MM-dd')
+    const rangeEnd = format(addDays(endOfMonth(date), 7), 'yyyy-MM-dd')
+
+    let cancelled = false
+    getVenueCalendarEvents(venueId, rangeStart, rangeEnd).then((result) => {
+      if (cancelled) return
+      if (result.error) {
+        console.error('[VenueCalendarClient] fetch events', result.error)
+        return
+      }
+      setBookings(result.events.map(ev => ({ ...ev, start: new Date(ev.start), end: new Date(ev.end) })))
+      setBufferConfig(result.bufferConfig)
+    })
+
+    return () => { cancelled = true }
+  }, [venueId, date])
+
+  // ── Dragging/resizing — blocked (venue-owned) events only ────────────────
+
+  const handleEventResize = useCallback(({ event, start, end }: { event: CalendarEvent; start: Date | string; end: Date | string }) => {
+    if (event.status !== 'blocked') return
+    const newStart = new Date(start)
+    const newEnd = new Date(end)
+    moveVenueBlock(
+      venueId,
+      event.id,
+      format(newStart, 'yyyy-MM-dd'),
+      format(newStart, 'HH:mm'),
+      format(newEnd, 'HH:mm'),
+    ).then((result) => {
+      if (result.error) {
+        console.error('[VenueCalendarClient] resize block', result.error)
+        return
+      }
+      setBookings(prev => prev.map(ev => ev.id === event.id ? { ...ev, start: newStart, end: newEnd } : ev))
+    })
+  }, [venueId])
 
   const handleEventDrop = useCallback(({ event, start, end }: { event: CalendarEvent; start: Date | string; end: Date | string }) => {
-    if (event.isLocked) return
-    setEvents(prev => prev.map(ev =>
-      ev.id === event.id ? { ...ev, start: new Date(start), end: new Date(end) } : ev
-    ))
-  }, [])
+    if (event.status !== 'blocked') return
+    const newStart = new Date(start)
+    const newEnd = new Date(end)
+    moveVenueBlock(
+      venueId,
+      event.id,
+      format(newStart, 'yyyy-MM-dd'),
+      format(newStart, 'HH:mm'),
+      format(newEnd, 'HH:mm'),
+    ).then((result) => {
+      if (result.error) {
+        console.error('[VenueCalendarClient] move block', result.error)
+        return
+      }
+      setBookings(prev => prev.map(ev => ev.id === event.id ? { ...ev, start: newStart, end: newEnd } : ev))
+    })
+  }, [venueId])
+
+  // ── Select an existing block to remove it ────────────────────────────────
+
+  const handleSelectEvent = useCallback((event: CalendarEvent) => {
+    if (event.status !== 'blocked') return
+    if (!window.confirm(`Remove "${event.title}"?`)) return
+    unblockVenueTime(venueId, event.id).then((result) => {
+      if (result.error) {
+        console.error('[VenueCalendarClient] unblock', result.error)
+        return
+      }
+      setBookings(prev => prev.filter(ev => ev.id !== event.id))
+    })
+  }, [venueId])
 
   // ── Block time ───────────────────────────────────────────────────────────
 
@@ -317,23 +341,32 @@ export default function VenueCalendarClient({ venueName, venueId, googleCalendar
     const dateStr = slotDate.toISOString().slice(0, 10)
     const hh = String(slotDate.getHours()).padStart(2, '0')
     const mm = String(slotDate.getMinutes()).padStart(2, '0')
+    setBlockError(null)
     setBlockInitialDate(dateStr)
     setBlockInitialStart(`${hh}:${mm}`)
     setBlockModalOpen(true)
   }
 
   function handleBlockConfirm(payload: BlockTimePayload) {
-    const start = new Date(`${payload.date}T${payload.startTime}`)
-    const end   = new Date(`${payload.date}T${payload.endTime}`)
-    const newEvent: CalendarEvent = {
-      id: `blk-${Date.now()}`,
-      title: `Blocked · ${payload.reason}`,
-      start,
-      end,
-      status: 'blocked',
-      isLocked: true,
-    }
-    setEvents(prev => [...prev, newEvent])
+    setBlockError(null)
+    blockVenueTime(venueId, payload).then((result) => {
+      if (result.error) {
+        setBlockError(result.error)
+        return
+      }
+      const start = new Date(`${payload.date}T${payload.startTime}:00`)
+      const end = new Date(`${payload.date}T${payload.endTime}:00`)
+      setBookings(prev => [...prev, {
+        id: result.id,
+        title: `Blocked · ${payload.reason}`,
+        start,
+        end,
+        status: 'blocked',
+        source: 'block',
+        isLocked: false,
+      }])
+      setBlockModalOpen(false)
+    })
   }
 
   // ── Slot select (week/day double-click → block modal) ────────────────────
@@ -341,6 +374,30 @@ export default function VenueCalendarClient({ venueName, venueId, googleCalendar
   const handleSelectSlot = useCallback(({ start }: { start: Date }) => {
     handleBlockFromSlot(start)
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Pending dot for month cells ───────────────────────────────────────────
+
+  const monthDateHeader = useCallback(({ date: cellDate, label }: { date: Date; label: string }) => {
+    const hasPending = events.some(ev => {
+      const sameDay = ev.start.toDateString() === cellDate.toDateString()
+      return sameDay && ev.status === 'pending'
+    })
+
+    return (
+      <span style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+        {label}
+        {hasPending && (
+          <span style={{
+            width: 6,
+            height: 6,
+            borderRadius: '50%',
+            background: 'var(--venue-amber)',
+            flexShrink: 0,
+          }} />
+        )}
+      </span>
+    )
+  }, [events])
 
   // ── Slot wrapper components (memoized to avoid re-render spam) ───────────
 
@@ -350,7 +407,7 @@ export default function VenueCalendarClient({ venueName, venueId, googleCalendar
     const ToolbarWrapper = (props: any) => (
       <CalendarToolbar
         {...props}
-        onBlockTime={() => setBlockModalOpen(true)}
+        onBlockTime={() => { setBlockError(null); setBlockModalOpen(true) }}
         onSyncGoogle={() => setSyncDrawerOpen(true)}
       />
     )
@@ -362,11 +419,11 @@ export default function VenueCalendarClient({ venueName, venueId, googleCalendar
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       toolbar: ToolbarWrapper as any,
       event: EventComponent,
-      month: { dateHeader: MonthDateHeader },
+      month: { dateHeader: monthDateHeader },
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       timeSlotWrapper: SlotWrapperBound as any,
     }
-  }, [handleBlockFromSlot]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [monthDateHeader]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Mobile view — rendered below 768px, desktop calendar untouched above ──
 
@@ -376,6 +433,7 @@ export default function VenueCalendarClient({ venueName, venueId, googleCalendar
         <MobileCalendarView
           events={events}
           onBlockTime={() => {
+            setBlockError(null)
             setBlockInitialDate(undefined)
             setBlockInitialStart(undefined)
             setBlockModalOpen(true)
@@ -385,8 +443,10 @@ export default function VenueCalendarClient({ venueName, venueId, googleCalendar
           open={blockModalOpen}
           initialDate={blockInitialDate}
           initialStart={blockInitialStart}
+          serverError={blockError}
           onClose={() => {
             setBlockModalOpen(false)
+            setBlockError(null)
             setBlockInitialDate(undefined)
             setBlockInitialStart(undefined)
           }}
@@ -395,8 +455,6 @@ export default function VenueCalendarClient({ venueName, venueId, googleCalendar
       </div>
     )
   }
-
-  const isDay = view === Views.DAY
 
   return (
     <div className="venue-theme" style={{
@@ -407,9 +465,6 @@ export default function VenueCalendarClient({ venueName, venueId, googleCalendar
       color: 'var(--venue-text-primary)',
       fontFamily: 'var(--font-inter), system-ui, sans-serif',
     }}>
-      {/* Day view revenue summary */}
-      {isDay && <DayRevenueSummary date={date} />}
-
       {/* Calendar */}
       <div style={{ flex: 1, minHeight: 0, position: 'relative' }}>
         <DnDCalendar
@@ -421,13 +476,12 @@ export default function VenueCalendarClient({ venueName, venueId, googleCalendar
           onNavigate={setDate}
           onEventResize={handleEventResize}
           onEventDrop={handleEventDrop}
+          onSelectEvent={handleSelectEvent}
           onSelectSlot={handleSelectSlot}
           selectable
           resizable
-          resizableAccessor={(event: CalendarEvent) =>
-            event.status === 'confirmed' && !event.isLocked
-          }
-          draggableAccessor={(event: CalendarEvent) => !event.isLocked}
+          resizableAccessor={(event: CalendarEvent) => event.status === 'blocked'}
+          draggableAccessor={(event: CalendarEvent) => event.status === 'blocked'}
           backgroundEvents={events.filter(e => e.display === 'background')}
           step={30}
           timeslots={2}
@@ -447,15 +501,9 @@ export default function VenueCalendarClient({ venueName, venueId, googleCalendar
         open={blockModalOpen}
         initialDate={blockInitialDate}
         initialStart={blockInitialStart}
-        onClose={() => { setBlockModalOpen(false); setBlockInitialDate(undefined); setBlockInitialStart(undefined) }}
+        serverError={blockError}
+        onClose={() => { setBlockModalOpen(false); setBlockError(null); setBlockInitialDate(undefined); setBlockInitialStart(undefined) }}
         onConfirm={handleBlockConfirm}
-      />
-
-      <ResizeConfirmModal
-        event={resizePending?.event ?? null}
-        newEnd={resizePending?.newEnd ?? null}
-        onConfirm={confirmResize}
-        onCancel={() => setResizePending(null)}
       />
 
       <GoogleSyncDrawer
@@ -517,11 +565,11 @@ export default function VenueCalendarClient({ venueName, venueId, googleCalendar
 
         /* Today highlight */
         .rbc-today {
-          background: rgba(245,158,11,0.04) !important;
+          background: rgba(93,217,208,0.04) !important;
         }
         .rbc-header.rbc-today {
-          color: var(--venue-amber) !important;
-          background: rgba(245,158,11,0.08) !important;
+          color: var(--venue-accent) !important;
+          background: rgba(93,217,208,0.08) !important;
         }
 
         /* Current time indicator — red line + dot */
@@ -560,7 +608,7 @@ export default function VenueCalendarClient({ venueName, venueId, googleCalendar
           color: var(--venue-text-muted) !important;
         }
         .rbc-show-more {
-          color: var(--venue-amber) !important;
+          color: var(--venue-accent) !important;
           font-size: 11px;
           font-weight: 600;
           background: transparent;
@@ -597,7 +645,7 @@ export default function VenueCalendarClient({ venueName, venueId, googleCalendar
         .rbc-overlay {
           background: var(--venue-bg-elevated);
           border: 1px solid var(--venue-border-default);
-          border-radius: 10px;
+          border-radius: 16px;
           box-shadow: 0 20px 40px rgba(0,0,0,0.5);
           z-index: 80;
         }
@@ -631,7 +679,7 @@ export default function VenueCalendarClient({ venueName, venueId, googleCalendar
           border: none !important;
         }
         .rbc-event:focus {
-          outline: 2px solid var(--venue-amber) !important;
+          outline: 2px solid var(--venue-accent) !important;
           outline-offset: 1px;
         }
 
@@ -643,8 +691,8 @@ export default function VenueCalendarClient({ venueName, venueId, googleCalendar
 
         /* Selection highlight when dragging to create */
         .rbc-slot-selection {
-          background: rgba(245,158,11,0.12) !important;
-          border: 1px dashed var(--venue-amber-border) !important;
+          background: rgba(93,217,208,0.12) !important;
+          border: 1px dashed var(--venue-accent-border) !important;
           border-radius: 4px;
         }
       `}</style>

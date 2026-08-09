@@ -7,11 +7,12 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { requireAuth } from '@/lib/auth/requireAuth'
 import {
   type AvailabilityUpdate,
-  type ProposalCounterOffer,
   type VenueSearchParams,
+  type ProposedSplitConfig,
 } from '@/types/marketplace'
-import { notifyVenueOfProposal, notifyMakerOfProposalResponse } from '@/lib/notifications'
-import { createNotification } from '@/app/actions/notifications'
+import { notifyVenueOfProposal } from '@/lib/notifications'
+import { createNotification, resolveNotificationsForProposal } from '@/app/actions/notifications'
+import { hasOverlap } from '@/lib/venue/availabilityOverlap'
 import type {
   VenueProfile,
   MakerVenueProposal,
@@ -26,12 +27,13 @@ import { resolveTheme, type ProfileTheme } from '@/types/theme'
 // Proposal input schema + type
 // ---------------------------------------------------------------------------
 
-const VALID_SLOTS = ['morning', 'afternoon', 'evening', 'full_day'] as const
+const TIME_REGEX = /^([01]\d|2[0-3]):[0-5]\d$/
 
 const SendProposalSchema = z.object({
   venue_id:                  z.string().uuid('Invalid Venue ID'),
   proposed_date:            z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be YYYY-MM-DD'),
-  proposed_slot:            z.enum(VALID_SLOTS),
+  start_time:               z.string().regex(TIME_REGEX, 'Start time must be HH:MM'),
+  end_time:                 z.string().regex(TIME_REGEX, 'End time must be HH:MM'),
   event_title:              z.string().min(3, 'Event title must be at least 3 characters').max(120),
   event_id:                 z.string().uuid().optional(),
   expected_attendees:       z.number().int().min(1).max(10000).optional(),
@@ -41,6 +43,9 @@ const SendProposalSchema = z.object({
     .optional(),
   proposed_split_config:    z.record(z.unknown()).default({}),
   message:                  z.string().max(1000).optional(),
+}).refine(d => d.start_time < d.end_time, {
+  message: 'End time must be after start time.',
+  path: ['end_time'],
 })
 
 export type SendProposalInput = z.infer<typeof SendProposalSchema>
@@ -246,7 +251,7 @@ export async function updateVenueStudioContent(
 /**
  * Upserts multiple availability slots for the authenticated Venue owner.
  *
- * @param availability - Array of { date, slot_type, status, notes? }
+ * @param availability - Array of { date, start_time, end_time, status, notes? }
  * @returns `{ error: string | null }`
  */
 export async function updateVenueAvailability(
@@ -271,18 +276,19 @@ export async function updateVenueAvailability(
 
   const rows = availability.map((slot) => ({
     venue_id:   venue.id,
-    date:      slot.date,
-    slot_type: slot.slot_type,
-    status:    slot.status,
-    notes:     slot.notes ?? null,
+    date:       slot.date,
+    start_time: slot.start_time,
+    end_time:   slot.end_time,
+    status:     slot.status,
+    notes:      slot.notes ?? null,
   }))
 
-  const { error: upsertError } = await admin
+  const { error: insertError } = await admin
     .from('venue_availability')
-    .upsert(rows, { onConflict: 'venue_id,date,slot_type' })
+    .insert(rows)
 
-  if (upsertError) {
-    console.error('[updateVenueAvailability]', upsertError.message)
+  if (insertError) {
+    console.error('[updateVenueAvailability]', insertError.message)
     return { error: 'Failed to update availability. Please try again.' }
   }
 
@@ -321,129 +327,6 @@ export async function getVenueProposals(): Promise<{ proposals: MakerVenuePropos
   }
 
   return { proposals: data ?? [] }
-}
-
-// ---------------------------------------------------------------------------
-// respondToProposal
-// ---------------------------------------------------------------------------
-
-/**
- * Lets the Venue owner respond to a Maker's booking proposal.
- *
- * - 'accept':        Sets status = 'accepted'; creates a tentative availability slot.
- * - 'decline':       Sets status = 'declined'.
- * - 'counter_offer': Sets status = 'counter_offered', stores counterOffer JSON.
- *
- * @returns `{ error: string | null }`
- */
-export async function respondToProposal(
-  proposalId: string,
-  response: 'accept' | 'decline' | 'counter_offer',
-  counterOffer?: ProposalCounterOffer,
-  note?: string,
-): Promise<{ error: string | null }> {
-  const { user } = await requireAuth()
-
-  const admin = createAdminClient()
-
-  // Verify the authenticated user owns the venue that received this proposal.
-  const { data: proposal, error: fetchError } = await admin
-    .from('maker_venue_proposals')
-    .select('id, venue_id, proposed_date, proposed_slot, status, maker_id, event_title')
-    .eq('id', proposalId)
-    .maybeSingle()
-
-  if (fetchError || !proposal) {
-    return { error: 'Proposal not found.' }
-  }
-
-  const { data: venue } = await admin
-    .from('venue_profiles')
-    .select('id, name')
-    .eq('id', proposal.venue_id)
-    .eq('auth_user_id', user.id)
-    .maybeSingle()
-
-  if (!venue) {
-    return { error: 'You are not authorised to respond to this proposal.' }
-  }
-
-  if (!['pending', 'counter_offered'].includes(proposal.status)) {
-    return { error: `Cannot respond to a proposal with status '${proposal.status}'.` }
-  }
-
-  const newStatus =
-    response === 'accept'
-      ? 'accepted'
-      : response === 'decline'
-      ? 'declined'
-      : 'counter_offered'
-
-  const { error: updateError } = await admin
-    .from('maker_venue_proposals')
-    .update({
-      status:             newStatus,
-      counter_offer:      response === 'counter_offer' ? (counterOffer as unknown as Json ?? {}) : {},
-      venue_response_note: note ?? null,
-    })
-    .eq('id', proposalId)
-
-  if (updateError) {
-    console.error('[respondToProposal]', updateError.message)
-    return { error: 'Failed to update proposal. Please try again.' }
-  }
-
-  // On acceptance: create a tentative availability slot so the date shows as booked.
-  if (response === 'accept') {
-    const { error: slotError } = await admin
-      .from('venue_availability')
-      .upsert(
-        {
-          venue_id:   venue.id,
-          date:      proposal.proposed_date,
-          slot_type: proposal.proposed_slot as 'morning' | 'afternoon' | 'evening' | 'full_day',
-          status:    'pending',
-        },
-        { onConflict: 'venue_id,date,slot_type' },
-      )
-
-    if (slotError) {
-      // Non-fatal: the proposal status was already updated.
-      console.error('[respondToProposal] slot upsert', slotError.message)
-    }
-  }
-
-  // Notify maker of the response (fire-and-forget)
-  notifyMakerOfProposalResponse(
-    proposal as unknown as import('@/types/database').MakerVenueProposal,
-    newStatus as 'accepted' | 'declined' | 'counter_offered',
-    venue?.name ?? 'The Venue',
-  ).catch(() => {})
-
-  // In-app notification to maker on accept or counter-offer
-  if (newStatus === 'accepted' || newStatus === 'counter_offered') {
-    createNotification({
-      recipientId: proposal.maker_id,
-      type: newStatus === 'accepted' ? 'proposal_accepted' : 'proposal_counter',
-      title: newStatus === 'accepted' ? 'Proposal accepted!' : 'Counter offer received',
-      body: newStatus === 'accepted'
-        ? `${venue.name} accepted your booking for "${proposal.event_title}".`
-        : `${venue.name} sent a counter offer for your booking request.`,
-      actionUrl: '/dashboard/venues',
-    }).catch(() => {})
-    // Venue-specific type for venue notification inbox
-    createNotification({
-      recipientId: proposal.maker_id,
-      type: newStatus === 'accepted' ? 'venue_proposal_accepted' : 'venue_proposal_counter',
-      title: newStatus === 'accepted' ? 'Booking confirmed!' : 'Counter offer received',
-      body: newStatus === 'accepted'
-        ? `${venue.name} confirmed your booking for "${proposal.event_title}".`
-        : `${venue.name} sent a counter offer for "${proposal.event_title}".`,
-      actionUrl: '/dashboard/venues',
-    }).catch(() => {})
-  }
-
-  return { error: null }
 }
 
 // ---------------------------------------------------------------------------
@@ -511,8 +394,10 @@ export async function searchVenues(
     query = query.contains('amenities', params.amenities)
   }
 
-  // Date filtering: exclude venues where the date is fully booked (all 4 slots confirmed/blocked).
-  // Simple approximation: if a date filter is supplied, we check at the app layer after fetching.
+  // Date filtering: exclude venues that have any blocking availability row on
+  // that date. A conservative heuristic — a venue with only a short block on
+  // the date still gets excluded — but honest given real times aren't scoped
+  // any further here.
   const { data, error } = await query.limit(50)
 
   if (error) {
@@ -522,33 +407,17 @@ export async function searchVenues(
 
   let results = data ?? []
 
-  // If a date filter is provided, exclude venues where every slot on that date is unavailable.
   if (params.date && results.length) {
     const venueIds = results.map((a) => a.id)
 
-    const { data: slots } = await admin
-      .from('venue_availability')
-      .select('venue_id, status')
-      .in('venue_id', venueIds)
-      .eq('date', params.date)
-      .in('status', ['blocked', 'confirmed'])
-
-    // Count unavailable slots per venue (4 total: morning, afternoon, evening, full_day).
-    const blockedCounts: Record<string, number> = {}
-    for (const slot of slots ?? []) {
-      blockedCounts[slot.venue_id] = (blockedCounts[slot.venue_id] ?? 0) + 1
-    }
-
-    // Exclude only venues where full_day is blocked/confirmed (simplest heuristic).
-    const { data: fullDayBlocked } = await admin
+    const { data: blocked } = await admin
       .from('venue_availability')
       .select('venue_id')
       .in('venue_id', venueIds)
       .eq('date', params.date)
-      .eq('slot_type', 'full_day')
       .in('status', ['blocked', 'confirmed'])
 
-    const blockedVenueIds = new Set((fullDayBlocked ?? []).map((s) => s.venue_id))
+    const blockedVenueIds = new Set((blocked ?? []).map((s) => s.venue_id))
     results = results.filter((a) => !blockedVenueIds.has(a.id))
   }
 
@@ -704,19 +573,19 @@ export async function sendProposal(
     }
   }
 
-  // Check availability (if an explicit record exists; absence = available)
-  const { data: availSlot } = await admin
-    .from('venue_availability')
-    .select('status')
-    .eq('venue_id', d.venue_id)
-    .eq('date', d.proposed_date)
-    .eq('slot_type', d.proposed_slot)
-    .maybeSingle()
+  // Check availability (overlap against any blocking row; absence = available)
+  const conflicting = await hasOverlap(admin, {
+    venueId: d.venue_id,
+    date: d.proposed_date,
+    startTime: d.start_time,
+    endTime: d.end_time,
+    statuses: ['blocked', 'pending', 'confirmed'],
+  })
 
-  if (availSlot && !['available'].includes(availSlot.status)) {
+  if (conflicting) {
     return {
       proposalId: '',
-      error: `The ${d.proposed_slot} slot on ${d.proposed_date} is not available. Please choose a different slot or date.`,
+      error: `That time on ${d.proposed_date} is not available. Please choose a different time or date.`,
     }
   }
 
@@ -729,7 +598,8 @@ export async function sendProposal(
       venue_id:                d.venue_id,
       event_id:               d.event_id ?? null,
       proposed_date:          d.proposed_date,
-      proposed_slot:          d.proposed_slot,
+      start_time:             d.start_time,
+      end_time:               d.end_time,
       event_title:            d.event_title,
       expected_attendees:     d.expected_attendees ?? null,
       expected_revenue_paise: d.expected_revenue_paise ?? null,
@@ -771,17 +641,11 @@ export async function sendProposal(
       if (venueOwner?.auth_user_id) {
         await createNotification({
           recipientId: venueOwner.auth_user_id,
-          type: 'new_proposal',
-          title: 'New venue proposal',
-          body: `${maker.display_name ?? 'A maker'} wants to host "${d.event_title}" at your Venue.`,
-          actionUrl: '/business/venue/dashboard/proposals',
-        })
-        await createNotification({
-          recipientId: venueOwner.auth_user_id,
           type: 'venue_new_proposal',
           title: 'New booking request',
           body: `${maker.display_name ?? 'A maker'} wants to host "${d.event_title}" at your space.`,
           actionUrl: '/business/venue/bookings',
+          metadata: { proposalId: inserted.id },
         })
       }
     } catch {}
@@ -816,7 +680,7 @@ export async function withdrawProposal(
 
   const { data: proposal } = await admin
     .from('maker_venue_proposals')
-    .select('id, maker_id, venue_id, proposed_date, proposed_slot, status')
+    .select('id, maker_id, venue_id, proposed_date, start_time, end_time, status')
     .eq('id', proposalId)
     .maybeSingle()
 
@@ -839,17 +703,121 @@ export async function withdrawProposal(
   }
 
   // Free any tentative availability slot this proposal held (fire-and-forget)
-  admin
-    .from('venue_availability')
-    .update({ status: 'available' })
-    .eq('venue_id', proposal.venue_id)
-    .eq('date', proposal.proposed_date)
-    .eq('slot_type', proposal.proposed_slot as import('@/types/database').AvailabilitySlotType)
-    .eq('status', 'pending')
-    .then(
-      () => { /* success */ },
-      (e: Error) => console.error('[withdrawProposal] slot release', e.message),
-    )
+  if (proposal.start_time && proposal.end_time) {
+    admin
+      .from('venue_availability')
+      .update({ status: 'available' })
+      .eq('venue_id', proposal.venue_id)
+      .eq('date', proposal.proposed_date)
+      .eq('start_time', proposal.start_time)
+      .eq('end_time', proposal.end_time)
+      .eq('status', 'pending')
+      .then(
+        () => { /* success */ },
+        (e: Error) => console.error('[withdrawProposal] slot release', e.message),
+      )
+  }
+
+  return { error: null }
+}
+
+// ---------------------------------------------------------------------------
+// cancelConfirmedBooking
+// ---------------------------------------------------------------------------
+
+/**
+ * Called by the Maker to cancel an already-`accepted` booking (illness,
+ * change of plan, venue issue, etc). Distinct from withdrawProposal, which
+ * only covers proposals that haven't been accepted yet — once a booking is
+ * confirmed there was previously no way back for the maker at all.
+ *
+ * Frees the `venue_availability` slot this booking held and notifies the
+ * Venue. Deliberately does NOT touch a linked `events` row (public event,
+ * RSVPs, refunds) — cancelling the public event is a separate decision via
+ * the existing cancelEvent() in events.ts; a maker who needs both should
+ * cancel the event too from the Events page.
+ *
+ * @param proposalId  The proposal to cancel.
+ * @param reason      Optional free-text reason, shown to the Venue.
+ * @returns `{ error: string | null }`
+ */
+export async function cancelConfirmedBooking(
+  proposalId: string,
+  reason?: string,
+): Promise<{ error: string | null }> {
+  const { user } = await requireAuth('/dashboard')
+
+  const uuidResult = z.string().uuid().safeParse(proposalId)
+  if (!uuidResult.success) return { error: 'Invalid proposal ID.' }
+
+  const admin = createAdminClient()
+
+  const { data: proposal } = await admin
+    .from('maker_venue_proposals')
+    .select('id, maker_id, venue_id, proposed_date, start_time, end_time, event_title, status')
+    .eq('id', proposalId)
+    .maybeSingle()
+
+  if (!proposal) return { error: 'Proposal not found.' }
+  if (proposal.maker_id !== user.id) {
+    return { error: 'You can only cancel bookings you made.' }
+  }
+  if (proposal.status !== 'accepted') {
+    return { error: `Cannot cancel a booking with status '${proposal.status}'. Only confirmed bookings can be cancelled here.` }
+  }
+
+  const trimmedReason = reason?.trim() || null
+
+  const { error: updateError } = await admin
+    .from('maker_venue_proposals')
+    .update({
+      status:               'cancelled',
+      cancelled_at:         new Date().toISOString(),
+      cancellation_reason:  trimmedReason,
+      cancelled_by:         'maker',
+    })
+    .eq('id', proposalId)
+
+  if (updateError) {
+    console.error('[cancelConfirmedBooking]', updateError.message)
+    return { error: 'Failed to cancel booking. Please try again.' }
+  }
+
+  // Free the confirmed availability slot this booking held (fire-and-forget)
+  if (proposal.start_time && proposal.end_time) {
+    admin
+      .from('venue_availability')
+      .update({ status: 'available' })
+      .eq('venue_id', proposal.venue_id)
+      .eq('date', proposal.proposed_date)
+      .eq('start_time', proposal.start_time)
+      .eq('end_time', proposal.end_time)
+      .eq('status', 'confirmed')
+      .then(
+        () => { /* success */ },
+        (e: Error) => console.error('[cancelConfirmedBooking] slot release', e.message),
+      )
+  }
+
+  // Notify the Venue owner (fire-and-forget)
+  void (async () => {
+    try {
+      const [{ data: venueOwner }, { data: maker }] = await Promise.all([
+        admin.from('venue_profiles').select('auth_user_id, name').eq('id', proposal.venue_id).maybeSingle(),
+        admin.from('user_profiles').select('display_name').eq('id', user.id).maybeSingle(),
+      ])
+      if (!venueOwner?.auth_user_id) return
+      await resolveNotificationsForProposal(proposalId, admin)
+      await createNotification({
+        recipientId: venueOwner.auth_user_id,
+        type: 'venue_booking_cancelled',
+        title: 'Booking cancelled',
+        body: `${maker?.display_name ?? 'The maker'} cancelled the confirmed booking for "${proposal.event_title}" on ${new Date(proposal.proposed_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}.${trimmedReason ? ` Reason: ${trimmedReason}` : ''}`,
+        actionUrl: '/business/venue/bookings',
+        metadata: { proposalId },
+      })
+    } catch { /* fire-and-forget */ }
+  })()
 
   return { error: null }
 }
@@ -895,10 +863,27 @@ export async function acceptCounterOffer(
   if (proposal.status !== 'counter_offered') {
     return { error: `Proposal status is '${proposal.status}' — only 'counter_offered' proposals can be accepted here.` }
   }
+  if (proposal.counter_offer_by === 'maker') {
+    return { error: "This is your own counter-offer — you're waiting on the Venue to respond to it." }
+  }
+
+  // The counter-offer being accepted may have proposed a different
+  // date/time than the maker's original ask (CounterOfferModal lets the
+  // venue change both) — accept whichever is actually on the table, not
+  // just the proposal's original fields.
+  const counter = proposal.counter_offer as unknown as { date?: string; startTime?: string; endTime?: string } | null
+  const finalDate = counter?.date ?? proposal.proposed_date
+  const finalStartTime = counter?.startTime ?? proposal.start_time
+  const finalEndTime = counter?.endTime ?? proposal.end_time
 
   const { error: updateError } = await admin
     .from('maker_venue_proposals')
-    .update({ status: 'accepted' })
+    .update({
+      status: 'accepted',
+      ...(counter?.date ? { proposed_date: counter.date } : {}),
+      ...(counter?.startTime ? { start_time: counter.startTime } : {}),
+      ...(counter?.endTime ? { end_time: counter.endTime } : {}),
+    })
     .eq('id', proposalId)
 
   if (updateError) {
@@ -909,16 +894,14 @@ export async function acceptCounterOffer(
   // Lock the availability slot as confirmed (fire-and-forget)
   admin
     .from('venue_availability')
-    .upsert(
-      {
-        venue_id:   proposal.venue_id,
-        date:      proposal.proposed_date,
-        slot_type: proposal.proposed_slot as import('@/types/database').AvailabilitySlotType,
-        status:    'confirmed',
-        event_id:  proposal.event_id ?? null,
-      },
-      { onConflict: 'venue_id,date,slot_type' },
-    )
+    .insert({
+      venue_id:   proposal.venue_id,
+      date:       finalDate,
+      start_time: finalStartTime,
+      end_time:   finalEndTime,
+      status:     'confirmed',
+      event_id:   proposal.event_id ?? null,
+    })
     .then(
       () => { /* success */ },
       (e: Error) => console.error('[acceptCounterOffer] slot confirm', e.message),
@@ -937,15 +920,199 @@ export async function acceptCounterOffer(
       )
   }
 
-  // Notify the Venue of the acceptance
-  const { data: venue } = await admin
-    .from('venue_profiles')
-    .select('name')
-    .eq('id', proposal.venue_id)
+  // Notify the Venue owner that the maker accepted their counter-offer
+  // (fire-and-forget). Note: this used to call notifyMakerOfProposalResponse,
+  // which notifies the *maker* — backwards, since it's the maker who just
+  // took this action; the Venue (who actually needs telling) got nothing.
+  void (async () => {
+    try {
+      const [{ data: venueOwner }, { data: maker }] = await Promise.all([
+        admin.from('venue_profiles').select('auth_user_id, name').eq('id', proposal.venue_id).maybeSingle(),
+        admin.from('user_profiles').select('display_name').eq('id', user.id).maybeSingle(),
+      ])
+      if (!venueOwner?.auth_user_id) return
+      // Resolve stale prior notifications for this proposal before inserting
+      // the new one, so the fresh unread row isn't immediately swept up too.
+      await resolveNotificationsForProposal(proposalId, admin)
+      await createNotification({
+        recipientId: venueOwner.auth_user_id,
+        type: 'venue_counter_accepted',
+        title: 'Counter-offer accepted!',
+        body: `${maker?.display_name ?? 'The maker'} accepted your counter-offer for "${proposal.event_title}".`,
+        actionUrl: '/business/venue/bookings',
+        metadata: { proposalId },
+      })
+
+      // Also notify the maker themselves — they're the one who just acted,
+      // but only the venue got a persisted notification of the confirmation.
+      // Gives both sides a record of it, not just the passive party.
+      await createNotification({
+        recipientId: user.id,
+        type: 'proposal_accepted',
+        title: 'Booking confirmed!',
+        body: `You accepted ${venueOwner.name ?? 'the venue'}'s counter-offer — "${proposal.event_title}" is confirmed for ${new Date(finalDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}.`,
+        actionUrl: '/dashboard/events?tab=venue-bookings',
+        metadata: { proposalId },
+      })
+    } catch { /* fire-and-forget */ }
+  })()
+
+  return { error: null }
+}
+
+// ---------------------------------------------------------------------------
+// declineCounterOffer
+// ---------------------------------------------------------------------------
+
+/**
+ * Called by the Maker to reject a Venue's counter-offer outright, ending the
+ * negotiation (status -> 'declined'). Distinct from withdrawProposal, which
+ * pulls the whole request; this specifically rejects the Venue's terms.
+ *
+ * Only valid when it's the Venue's counter on the table
+ * (`counter_offer_by === 'venue'`) — a maker can't "decline" their own
+ * pending counter-back.
+ */
+export async function declineCounterOffer(
+  proposalId: string,
+): Promise<{ error: string | null }> {
+  const { user } = await requireAuth('/dashboard')
+
+  const uuidResult = z.string().uuid().safeParse(proposalId)
+  if (!uuidResult.success) return { error: 'Invalid proposal ID.' }
+
+  const admin = createAdminClient()
+
+  const { data: proposal } = await admin
+    .from('maker_venue_proposals')
+    .select('*')
+    .eq('id', proposalId)
     .maybeSingle()
 
-  notifyMakerOfProposalResponse(proposal, 'accepted', venue?.name ?? 'The Venue')
-    .catch(() => { /* fire-and-forget */ })
+  if (!proposal) return { error: 'Proposal not found.' }
+  if (proposal.maker_id !== user.id) {
+    return { error: 'You can only decline counter-offers on proposals you sent.' }
+  }
+  if (proposal.status !== 'counter_offered') {
+    return { error: `Proposal status is '${proposal.status}' — only 'counter_offered' proposals can be declined here.` }
+  }
+  if (proposal.counter_offer_by === 'maker') {
+    return { error: "This is your own counter-offer — you're waiting on the Venue to respond to it." }
+  }
+
+  const { error: updateError } = await admin
+    .from('maker_venue_proposals')
+    .update({ status: 'declined' })
+    .eq('id', proposalId)
+
+  if (updateError) {
+    console.error('[declineCounterOffer] update proposal', updateError.message)
+    return { error: 'Failed to decline counter-offer. Please try again.' }
+  }
+
+  void (async () => {
+    try {
+      const { data: venueOwner } = await admin
+        .from('venue_profiles')
+        .select('auth_user_id')
+        .eq('id', proposal.venue_id)
+        .maybeSingle()
+      if (!venueOwner?.auth_user_id) return
+      await resolveNotificationsForProposal(proposalId, admin)
+      await createNotification({
+        recipientId: venueOwner.auth_user_id,
+        type: 'venue_counter_declined',
+        title: 'Counter-offer declined',
+        body: `The maker declined your counter-offer for "${proposal.event_title}".`,
+        actionUrl: '/business/venue/bookings',
+        metadata: { proposalId },
+      })
+    } catch { /* fire-and-forget */ }
+  })()
+
+  return { error: null }
+}
+
+// ---------------------------------------------------------------------------
+// sendMakerCounterOffer
+// ---------------------------------------------------------------------------
+
+/**
+ * Called by the Maker to counter back with different terms instead of only
+ * accept/decline/withdraw on a Venue's counter-offer. The proposal stays
+ * alive (status remains 'counter_offered') with `counter_offer_by` flipping
+ * to 'maker', so the Venue sees it as their turn to respond — mirroring how
+ * a Venue's own counter-offer works, just from the other side.
+ *
+ * Date/slot are intentionally NOT editable here — changing them would need
+ * re-validating venue_availability the same way sendProposal does, which is
+ * out of scope for a same-proposal counter round; a maker who wants a
+ * different date/slot should withdraw and send a fresh proposal instead.
+ */
+export async function sendMakerCounterOffer(
+  proposalId: string,
+  counterOffer: ProposedSplitConfig,
+  note: string,
+): Promise<{ error: string | null }> {
+  const { user } = await requireAuth('/dashboard')
+
+  const uuidResult = z.string().uuid().safeParse(proposalId)
+  if (!uuidResult.success) return { error: 'Invalid proposal ID.' }
+  if (!note.trim()) return { error: 'Please add a message explaining your counter-offer.' }
+
+  const admin = createAdminClient()
+
+  const { data: proposal } = await admin
+    .from('maker_venue_proposals')
+    .select('*')
+    .eq('id', proposalId)
+    .maybeSingle()
+
+  if (!proposal) return { error: 'Proposal not found.' }
+  if (proposal.maker_id !== user.id) {
+    return { error: 'You can only counter-offer on proposals you sent.' }
+  }
+  if (proposal.status !== 'counter_offered') {
+    return { error: `Proposal status is '${proposal.status}' — a counter-offer can only be sent while a Venue counter is pending.` }
+  }
+  if (proposal.counter_offer_by === 'maker') {
+    return { error: "You've already sent a counter-offer — you're waiting on the Venue to respond to it." }
+  }
+
+  const { error: updateError } = await admin
+    .from('maker_venue_proposals')
+    .update({
+      counter_offer:          counterOffer as unknown as Json,
+      counter_offer_by:       'maker',
+      maker_counter_message:  note.trim(),
+      updated_at:             new Date().toISOString(),
+    })
+    .eq('id', proposalId)
+
+  if (updateError) {
+    console.error('[sendMakerCounterOffer] update proposal', updateError.message)
+    return { error: 'Failed to send counter-offer. Please try again.' }
+  }
+
+  void (async () => {
+    try {
+      const { data: venueOwner } = await admin
+        .from('venue_profiles')
+        .select('auth_user_id')
+        .eq('id', proposal.venue_id)
+        .maybeSingle()
+      if (!venueOwner?.auth_user_id) return
+      await resolveNotificationsForProposal(proposalId, admin)
+      await createNotification({
+        recipientId: venueOwner.auth_user_id,
+        type: 'venue_maker_countered',
+        title: 'New counter-offer from maker',
+        body: `The maker sent a new counter-offer for "${proposal.event_title}".`,
+        actionUrl: '/business/venue/bookings',
+        metadata: { proposalId },
+      })
+    } catch { /* fire-and-forget */ }
+  })()
 
   return { error: null }
 }
@@ -965,7 +1132,7 @@ export async function acceptCounterOffer(
  */
 export async function getProposalHistory(
   makerId: string,
-): Promise<Array<MakerVenueProposal & { venue: Pick<VenueProfile, 'id' | 'name' | 'slug' | 'city' | 'cover_image_url' | 'pricing_model'> | null }>> {
+): Promise<Array<MakerVenueProposal & { venue: Pick<VenueProfile, 'id' | 'name' | 'slug' | 'city' | 'cover_image_url' | 'pricing_model' | 'pricing_config'> | null }>> {
   const { user } = await requireAuth('/dashboard')
 
   if (user.id !== makerId) return []
@@ -984,7 +1151,7 @@ export async function getProposalHistory(
   const venueIds = [...new Set(proposals.map((p) => p.venue_id))]
   const { data: venues } = await admin
     .from('venue_profiles')
-    .select('id, name, slug, city, cover_image_url, pricing_model')
+    .select('id, name, slug, city, cover_image_url, pricing_model, pricing_config')
     .in('id', venueIds)
 
   const venueMap = new Map((venues ?? []).map((a) => [a.id, a]))

@@ -160,8 +160,8 @@ export default function PricingClient({ venue }: Props) {
           >
             {(saveStatus === 'saving' || isDirty) && (
               <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                <div style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--venue-amber)', animation: 'pulse 1.2s ease-in-out infinite' }} />
-                <span style={{ fontSize: 11, color: 'var(--venue-amber)', fontFamily: 'var(--font-inter), sans-serif' }}>Saving…</span>
+                <div style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--venue-accent)', animation: 'pulse 1.2s ease-in-out infinite' }} />
+                <span style={{ fontSize: 11, color: 'var(--venue-accent)', fontFamily: 'var(--font-inter), sans-serif' }}>Saving…</span>
               </div>
             )}
             {saveStatus === 'saved' && !isDirty && (
@@ -259,7 +259,7 @@ export default function PricingClient({ venue }: Props) {
               exit={{ opacity: 0 }}
               transition={{ duration: 0.15 }}
               style={{
-                marginTop: 14, padding: '12px 16px', borderRadius: 10,
+                marginTop: 14, padding: '12px 16px', borderRadius: 12,
                 background: 'var(--venue-bg-elevated)',
                 border: '1px solid var(--venue-border-subtle)',
                 display: 'flex', alignItems: 'center', gap: 10,
@@ -303,7 +303,7 @@ export default function PricingClient({ venue }: Props) {
         {pricingModel === 'f_and_b_minimum' && (
           <section>
             <div style={{
-              padding: '20px 24px', borderRadius: 12,
+              padding: '20px 24px', borderRadius: 18,
               background: 'var(--venue-bg-elevated)',
               border: '1px solid var(--venue-border-subtle)',
             }}>
@@ -333,7 +333,7 @@ export default function PricingClient({ venue }: Props) {
         {pricingModel === 'door_split' && (
           <section>
             <div style={{
-              padding: '20px 24px', borderRadius: 12,
+              padding: '20px 24px', borderRadius: 18,
               background: 'var(--venue-bg-elevated)',
               border: '1px solid var(--venue-border-subtle)',
             }}>

@@ -9,10 +9,10 @@ import { z } from 'zod'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { requireAuth } from '@/lib/auth/requireAuth'
 import { calculateRevenueSplit } from '@/lib/revenue'
+import { getVenueBookings, type ProposalWithMaker } from '@/app/actions/venue-bookings'
 import type {
   VenueProfile,
   VenueAvailability,
-  MakerVenueProposal,
   Event,
 } from '@/types/database'
 
@@ -82,7 +82,7 @@ async function resolveOwnedVenue(
 export async function getVenueDashboardData(venueId: string): Promise<{
   venue: VenueProfile
   upcomingEvents: Event[]
-  pendingProposals: MakerVenueProposal[]
+  pendingProposals: ProposalWithMaker[]
   recentRevenue: RevenueEntry[]
   availabilityThisMonth: VenueAvailability[]
   stats: VenueDashboardStats
@@ -126,14 +126,8 @@ export async function getVenueDashboardData(venueId: string): Promise<{
       .order('starts_at', { ascending: true })
       .limit(20),
 
-    // Pending or counter-offered proposals
-    admin
-      .from('maker_venue_proposals')
-      .select('*')
-      .eq('venue_id', venueId)
-      .in('status', ['pending', 'counter_offered'])
-      .order('created_at', { ascending: false })
-      .limit(20),
+    // Pending or counter-offered proposals, joined with maker profile info
+    getVenueBookings(venueId, ['pending', 'counter_offered']),
 
     // Last 10 completed events with RSVPs
     admin
@@ -209,7 +203,7 @@ export async function getVenueDashboardData(venueId: string): Promise<{
   return {
     venue,
     upcomingEvents:         upcomingResult.data ?? [],
-    pendingProposals:       pendingProposalsResult.data ?? [],
+    pendingProposals:       pendingProposalsResult.proposals,
     recentRevenue,
     availabilityThisMonth:  availabilityResult.data ?? [],
     stats,

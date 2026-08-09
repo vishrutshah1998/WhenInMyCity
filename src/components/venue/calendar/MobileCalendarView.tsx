@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import type { CalendarEvent } from '@/lib/venue/mock/calendarEvents'
+import type { CalendarEvent } from '@/app/actions/venue-calendar'
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -44,7 +44,6 @@ function statusColor(status: CalendarEvent['status']): string {
   switch (status) {
     case 'confirmed': return 'var(--venue-amber)'
     case 'pending':   return '#d97706'
-    case 'tentative': return '#d97706'
     case 'blocked':   return 'var(--venue-text-muted)'
     case 'external':  return '#10b981'
     case 'buffer':    return 'var(--venue-text-muted)'
@@ -56,7 +55,6 @@ function statusDotBg(status: CalendarEvent['status']): string {
   switch (status) {
     case 'confirmed': return 'var(--venue-amber)'
     case 'pending':   return 'transparent'
-    case 'tentative': return 'transparent'
     case 'blocked':   return 'var(--venue-bg-overlay, #27272a)'
     case 'external':  return '#10b981'
     default:          return 'transparent'
@@ -67,7 +65,6 @@ function statusLabel(status: CalendarEvent['status']): string {
   switch (status) {
     case 'confirmed': return 'Confirmed'
     case 'pending':   return 'Pending'
-    case 'tentative': return 'Hold'
     case 'blocked':   return 'Blocked'
     case 'external':  return 'External'
     case 'buffer':    return 'Buffer'
@@ -107,14 +104,14 @@ function DayCell({
         flex: 1,
         borderRadius: 10,
         border: isSelected
-          ? '1.5px solid var(--venue-amber)'
+          ? '1.5px solid var(--venue-accent)'
           : isToday
-            ? '1px solid rgba(245,158,11,0.4)'
+            ? '1px solid rgba(93,217,208,0.4)'
             : '1px solid transparent',
         background: isSelected
-          ? 'rgba(245,158,11,0.12)'
+          ? 'rgba(93,217,208,0.12)'
           : isToday
-            ? 'rgba(245,158,11,0.05)'
+            ? 'rgba(93,217,208,0.05)'
             : 'transparent',
         cursor: 'pointer',
         WebkitTapHighlightColor: 'transparent',
@@ -125,7 +122,7 @@ function DayCell({
       <span style={{
         fontSize: 10,
         fontWeight: 500,
-        color: isSelected || isToday ? 'var(--venue-amber)' : 'var(--venue-text-muted)',
+        color: isSelected || isToday ? 'var(--venue-accent)' : 'var(--venue-text-muted)',
         fontFamily: 'var(--font-jetbrains-mono), monospace',
         letterSpacing: '0.4px',
         lineHeight: 1,
@@ -137,7 +134,7 @@ function DayCell({
       <span style={{
         fontSize: 18,
         fontWeight: isSelected || isToday ? 700 : 400,
-        color: isSelected || isToday ? 'var(--venue-amber)' : 'var(--venue-text-primary)',
+        color: isSelected || isToday ? 'var(--venue-accent)' : 'var(--venue-text-primary)',
         fontFamily: 'var(--font-inter), system-ui, sans-serif',
         lineHeight: 1,
       }}>
@@ -171,7 +168,7 @@ function DayCell({
 function AgendaItem({ event }: { event: CalendarEvent }) {
   const color = statusColor(event.status)
   const dotBg = statusDotBg(event.status)
-  const isPending = event.status === 'pending' || event.status === 'tentative'
+  const isPending = event.status === 'pending'
   const isBuffer = event.status === 'buffer'
 
   if (isBuffer) return null // buffers not shown in agenda
@@ -265,18 +262,6 @@ function AgendaItem({ event }: { event: CalendarEvent }) {
                 fontFamily: 'var(--font-inter), system-ui, sans-serif',
               }}>
                 {event.creatorName}
-              </span>
-            </>
-          )}
-          {event.hourlyRate && event.status === 'confirmed' && (
-            <>
-              <span style={{ color: 'var(--venue-border-default)', fontSize: 10 }}>·</span>
-              <span style={{
-                fontSize: 11,
-                color: 'var(--venue-amber)',
-                fontFamily: 'var(--font-jetbrains-mono), monospace',
-              }}>
-                ₹{Math.round(event.hourlyRate * (event.end.getTime() - event.start.getTime()) / 3_600_000_00) / 10}
               </span>
             </>
           )}
@@ -388,7 +373,7 @@ export default function MobileCalendarView({ events, onBlockTime }: Props) {
                 borderRadius: 6,
                 border: '1px solid var(--venue-border-default)',
                 background: 'transparent',
-                color: 'var(--venue-amber)',
+                color: 'var(--venue-accent)',
                 fontSize: 11,
                 fontFamily: 'var(--font-jetbrains-mono), monospace',
                 cursor: 'pointer',
@@ -449,7 +434,7 @@ export default function MobileCalendarView({ events, onBlockTime }: Props) {
             const key = toDateKey(day)
             const dayEvents = eventsByDate.get(key) ?? []
             const confirmedCount = dayEvents.filter(e => e.status === 'confirmed').length
-            const hasPending = dayEvents.some(e => e.status === 'pending' || e.status === 'tentative')
+            const hasPending = dayEvents.some(e => e.status === 'pending')
             return (
               <DayCell
                 key={key}
@@ -483,7 +468,7 @@ export default function MobileCalendarView({ events, onBlockTime }: Props) {
           <span style={{
             fontSize: 13,
             fontWeight: 600,
-            color: selectedKey === todayKey ? 'var(--venue-amber)' : 'var(--venue-text-secondary)',
+            color: selectedKey === todayKey ? 'var(--venue-accent)' : 'var(--venue-text-secondary)',
             fontFamily: 'var(--font-inter), system-ui, sans-serif',
           }}>
             {selectedKey === todayKey ? 'Today' : `${DAY_ABBR[selectedDate.getDay()]}, ${MONTH_NAMES[selectedDate.getMonth()]} ${selectedDate.getDate()}`}
@@ -529,9 +514,9 @@ export default function MobileCalendarView({ events, onBlockTime }: Props) {
                   marginTop: 8,
                   padding: '10px 20px',
                   borderRadius: 8,
-                  border: '1px dashed var(--venue-amber-border, rgba(245,158,11,0.4))',
+                  border: '1px dashed var(--venue-accent-border, rgba(93,217,208,0.4))',
                   background: 'transparent',
-                  color: 'var(--venue-amber)',
+                  color: 'var(--venue-accent)',
                   fontSize: 12,
                   fontFamily: 'var(--font-jetbrains-mono), monospace',
                   letterSpacing: '0.05em',
