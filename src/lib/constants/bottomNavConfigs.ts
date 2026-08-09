@@ -91,12 +91,11 @@ export const creatorBottomNavConfig: BottomNavConfig = {
 export const venueBottomNavConfig: BottomNavConfig = {
   items: [
     { href: '/business/venue/dashboard',     icon: 'dashboard',       label: 'Home',     exact: true },
-    { href: '/business/venue/creators',      icon: 'person_search',   label: 'Proposals' },
     { href: '/business/venue/bookings',      icon: 'event_available', label: 'Bookings' },
+    { href: '/business/venue/calendar',      icon: 'calendar_today',  label: 'Calendar' },
     { href: '/business/venue/notifications', icon: 'inbox',           label: 'Inbox',    badgeKey: 'inbox' },
   ],
   more: [
-    { href: '/business/venue/calendar',     icon: 'calendar_today',   label: 'Calendar' },
     { href: '/business/venue/analytics',    icon: 'bar_chart_4_bars', label: 'Analytics' },
     { href: '/business/venue/payouts',      icon: 'payments',         label: 'Payouts' },
     { href: '/business/venue/venue',        icon: 'apartment',        label: 'My Venue' },
