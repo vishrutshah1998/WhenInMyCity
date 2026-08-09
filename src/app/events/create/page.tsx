@@ -6,6 +6,8 @@ import { createClient } from '@/lib/supabase/client'
 import { WimcWordmark } from '@/components/WimcWordmark'
 import { createEvent, publishEvent } from '@/app/actions/events'
 import { uploadEventCover } from '@/app/actions/upload'
+import { TimeOverlayMobile } from '@/components/shared/TimeOverlayMobile'
+import { useIsMobile } from '@/hooks/useIsMobile'
 import type { CreateEventInput } from '@/types/events'
 
 // ── Constants ────────────────────────────────────────────────────────────────
@@ -15,7 +17,7 @@ const GRAIN_STYLE: React.CSSProperties = {
 }
 
 const MONTH_NAMES = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC']
-const CITIES = ['Ahmedabad', 'Gandhinagar', 'Surat', 'Vadodara', 'Rajkot']
+const CITIES = ['Ahmedabad', 'Gandhinagar']
 
 type PosterStyle = 'underground' | 'zine' | 'electric' | 'upload'
 type VenueMode = 'wimc' | 'custom'
@@ -324,6 +326,7 @@ function UploadThumb({ active, previewUrl }: { active: boolean; previewUrl: stri
 
 export default function CreateEventPage() {
   const router = useRouter()
+  const isMobile = useIsMobile()
 
   const [posterStyle, setPosterStyle] = useState<PosterStyle>('underground')
   const [title, setTitle] = useState('')
@@ -503,7 +506,9 @@ export default function CreateEventPage() {
       <div className="fixed inset-0 z-[9999] pointer-events-none opacity-[0.028]" style={GRAIN_STYLE} />
 
       {showDateOverlay && <CalendarOverlay onConfirm={d => setSelectedDate(d)} onClose={() => setShowDateOverlay(false)} />}
-      {showTimeOverlay && <TimeOverlay onConfirm={(h, m) => { setSelectedHour(h); setSelectedMinute(m) }} onClose={() => setShowTimeOverlay(false)} />}
+      {showTimeOverlay && (isMobile
+        ? <TimeOverlayMobile onConfirm={(h, m) => { setSelectedHour(h); setSelectedMinute(m) }} onClose={() => setShowTimeOverlay(false)} />
+        : <TimeOverlay onConfirm={(h, m) => { setSelectedHour(h); setSelectedMinute(m) }} onClose={() => setShowTimeOverlay(false)} />)}
 
       <div className="bg-[#07070A] min-h-screen flex flex-col">
 

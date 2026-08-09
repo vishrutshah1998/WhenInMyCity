@@ -2,9 +2,11 @@
 
 import { useState, useRef, useEffect, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
+import { Drawer } from 'vaul'
 import { createEvent, publishEvent } from '@/app/actions/events'
 import { uploadEventCover } from '@/app/actions/upload'
 import { WimcWordmark } from '@/components/WimcWordmark'
+import { WheelColumn, WHEEL_ITEM_H, WHEEL_PAD, WHEEL_TIME_SLOTS, WHEEL_AMPM_SLOTS, to12Hour, to24Hour } from '@/components/shared/TimeOverlayMobile'
 import { useIsMobile } from '@/hooks/useIsMobile'
 import type { CreateEventInput, TicketTier } from '@/types/events'
 import type { UserTier } from '@/types/database'
@@ -112,14 +114,14 @@ function CalendarOverlay({ onConfirm, onClose }: { onConfirm: (d: Date) => void;
       >
         <div className="flex items-center justify-between mb-6">
           <span style={{ fontFamily: 'var(--font-barlow)' }} className="text-[#1A2744] text-[24px] font-bold uppercase tracking-wide">SELECT DATE</span>
-          <button onClick={onClose} className="text-[#1A2744] hover:rotate-90 transition-transform duration-200 text-[24px] leading-none">×</button>
+          <button onClick={onClose} className={['text-[#1A2744] hover:rotate-90 transition-transform duration-200 text-[24px] leading-none', isMobile ? 'p-2.5' : 'p-1'].join(' ')}>×</button>
         </div>
         <div className="flex items-center justify-between mb-4">
-          <button onClick={() => month === 0 ? (setMonth(11), setYear(y => y - 1)) : setMonth(m => m - 1)} className="text-[#1A2744] hover:text-[#E8705A] p-1">
+          <button onClick={() => month === 0 ? (setMonth(11), setYear(y => y - 1)) : setMonth(m => m - 1)} className={['text-[#1A2744] hover:text-[#E8705A]', isMobile ? 'p-2.5' : 'p-1'].join(' ')}>
             <span className="material-symbols-outlined text-[20px]">chevron_left</span>
           </button>
           <span style={{ fontFamily: 'var(--font-jetbrains-mono)' }} className="text-[#1A2744] text-[13px] font-bold uppercase tracking-widest">{MONTH_NAMES[month]} {year}</span>
-          <button onClick={() => month === 11 ? (setMonth(0), setYear(y => y + 1)) : setMonth(m => m + 1)} className="text-[#1A2744] hover:text-[#E8705A] p-1">
+          <button onClick={() => month === 11 ? (setMonth(0), setYear(y => y + 1)) : setMonth(m => m + 1)} className={['text-[#1A2744] hover:text-[#E8705A]', isMobile ? 'p-2.5' : 'p-1'].join(' ')}>
             <span className="material-symbols-outlined text-[20px]">chevron_right</span>
           </button>
         </div>
@@ -155,60 +157,174 @@ function CalendarOverlay({ onConfirm, onClose }: { onConfirm: (d: Date) => void;
   )
 }
 
-// ── Time overlay ──────────────────────────────────────────────────────────────
+// ── Inline time picker (desktop — embedded in CHRONOLOGY, not a popup) ─────────
 
-function TimeOverlay({ onConfirm, onClose }: { onConfirm: (h: number, m: number) => void; onClose: () => void }) {
-  const isMobile = useIsMobile()
-  const [hour,   setHour  ] = useState(21)
-  const [minute, setMinute] = useState(0)
+function InlineTimePicker({
+  label, hour, minute, onConfirm, onCancel,
+}: {
+  label: string
+  hour: number | null
+  minute: number | null
+  onConfirm: (h: number, m: number) => void
+  onCancel: () => void
+}) {
+  const { h12: initH12, ampm: initAmpm } = to12Hour(hour ?? 19)
+  const [h12,  setH12 ] = useState(initH12)
+  const [min,  setMin ] = useState(minute ?? 0)
+  const [ampm, setAmpm] = useState<'AM' | 'PM'>(initAmpm)
+
+  function handleConfirm() {
+    const [h, m] = to24Hour(h12, min, ampm)
+    onConfirm(h, m)
+  }
 
   return (
-    <div className={`fixed inset-0 bg-black/50 z-[100] flex items-end ${isMobile ? 'justify-center' : 'justify-start'}`}
-         onClick={e => { if (e.target === e.currentTarget) onClose() }}>
-      <div
-        className={isMobile
-          ? 'bg-[#FAF7F0] w-full border-t-2 border-[#1A2744] p-5'
-          : 'bg-[#FAF7F0] w-[40%] border-t-2 border-r-2 border-[#1A2744] p-8'}
-        style={{ animation: 'slideUp 200ms ease-out' }}
-      >
-        <div className="flex items-center justify-between mb-6">
-          <span style={{ fontFamily: 'var(--font-barlow)' }} className="text-[#1A2744] text-[24px] font-bold uppercase tracking-wide">SELECT TIME</span>
-          <button onClick={onClose} className="text-[#1A2744] hover:rotate-90 transition-transform duration-200 text-[24px] leading-none">×</button>
+    <div className="col-span-3 bg-[#201f23] border border-[#57423e] p-5 mt-3">
+      <div style={{ fontFamily: 'var(--font-jetbrains-mono)' }} className="text-[#E8705A] text-[10px] uppercase tracking-widest mb-4">
+        SELECT {label} TIME
+      </div>
+      <div className="flex items-center gap-3 mb-5">
+        <select value={h12} onChange={e => setH12(Number(e.target.value))}
+                className="h-11 px-3 bg-white/5 border border-white/10 text-white text-[14px] outline-none focus:border-[#E8705A] cursor-pointer"
+                style={{ fontFamily: 'var(--font-jetbrains-mono)' }}>
+          {Array.from({ length: 12 }, (_, i) => i + 1).map(h => (
+            <option key={h} value={h}>{fmt2(h)}</option>
+          ))}
+        </select>
+        <span style={{ fontFamily: 'var(--font-jetbrains-mono)' }} className="text-white text-[16px] font-bold">:</span>
+        <select value={min} onChange={e => setMin(Number(e.target.value))}
+                className="h-11 px-3 bg-white/5 border border-white/10 text-white text-[14px] outline-none focus:border-[#E8705A] cursor-pointer"
+                style={{ fontFamily: 'var(--font-jetbrains-mono)' }}>
+          {[0, 15, 30, 45].map(m => (
+            <option key={m} value={m}>{fmt2(m)}</option>
+          ))}
+        </select>
+        <div className="flex border border-white/10 ml-2">
+          {(['AM', 'PM'] as const).map(a => (
+            <button key={a} onClick={() => setAmpm(a)}
+                    className={['px-3 h-11 text-[12px] transition-colors', ampm === a ? 'bg-[#E8705A] text-white' : 'text-white/40 hover:text-white/70'].join(' ')}
+                    style={{ fontFamily: 'var(--font-jetbrains-mono)' }}>
+              {a}
+            </button>
+          ))}
         </div>
-        <div className="mb-6">
-          <div style={{ fontFamily: 'var(--font-jetbrains-mono)' }} className="text-[10px] text-[#1A2744]/50 uppercase tracking-widest mb-3">HOUR</div>
-          <div className="grid grid-cols-8 gap-2">
-            {Array.from({ length: 24 }, (_, i) => (
-              <button key={i} onClick={() => setHour(i)}
-                      className={['h-9 text-[12px] transition-colors', hour === i ? 'bg-[#E8705A] text-white' : 'bg-[#1A2744]/5 text-[#1A2744] hover:bg-[#1A2744]/10'].join(' ')}
-                      style={{ fontFamily: 'var(--font-jetbrains-mono)' }}>
-                {fmt2(i)}
-              </button>
-            ))}
-          </div>
-        </div>
-        <div className="mb-6">
-          <div style={{ fontFamily: 'var(--font-jetbrains-mono)' }} className="text-[10px] text-[#1A2744]/50 uppercase tracking-widest mb-3">MINUTE</div>
-          <div className="flex gap-3">
-            {[0, 15, 30, 45].map(m => (
-              <button key={m} onClick={() => setMinute(m)}
-                      className={['flex-1 h-12 text-[13px] transition-colors', minute === m ? 'bg-[#E8705A] text-white' : 'bg-[#1A2744]/5 text-[#1A2744] hover:bg-[#1A2744]/10'].join(' ')}
-                      style={{ fontFamily: 'var(--font-jetbrains-mono)' }}>
-                :{fmt2(m)}
-              </button>
-            ))}
-          </div>
-        </div>
-        <div style={{ fontFamily: 'var(--font-jetbrains-mono)' }} className="text-center text-[#1A2744] text-[28px] font-bold tracking-widest mb-4">
-          {fmt2(hour)}:{fmt2(minute)} HRS
-        </div>
-        <button onClick={() => { onConfirm(hour, minute); onClose() }}
-                className="w-full bg-[#E8705A] text-white py-3 hover:brightness-110 transition-all"
+      </div>
+      <div className="flex items-center gap-3">
+        <button onClick={onCancel}
+                className="text-white/40 hover:text-white/70 transition-colors px-4 py-2"
+                style={{ fontFamily: 'var(--font-jetbrains-mono)', fontSize: 11, letterSpacing: '0.1em' }}>
+          CANCEL
+        </button>
+        <button onClick={handleConfirm}
+                className="flex-1 bg-[#E8705A] text-white py-2 hover:brightness-110 transition-all"
                 style={{ fontFamily: 'var(--font-jetbrains-mono)', fontSize: 11, letterSpacing: '0.1em' }}>
           CONFIRM TIME
         </button>
       </div>
     </div>
+  )
+}
+
+// ── Time range overlay (mobile — start + end together) ────────────────────────
+
+function TimeRangeOverlayMobile({
+  initialStartHour, initialStartMinute, initialEndHour, initialEndMinute, onConfirm, onClose,
+}: {
+  initialStartHour: number | null
+  initialStartMinute: number | null
+  initialEndHour: number | null
+  initialEndMinute: number | null
+  onConfirm: (start: [number, number], end: [number, number]) => void
+  onClose: () => void
+}) {
+  const { h12: initStartH12, ampm: initStartAmpm } = to12Hour(initialStartHour ?? 19)
+  const initStartTimeIndex = WHEEL_TIME_SLOTS.findIndex(s => s.h12 === initStartH12 && s.m === (initialStartMinute ?? 0))
+  const initStartAmpmIndex = WHEEL_AMPM_SLOTS.indexOf(initStartAmpm)
+
+  const defaultEndHour = initialEndHour ?? (initialStartHour ?? 19) + 2
+  const { h12: initEndH12, ampm: initEndAmpm } = to12Hour(defaultEndHour % 24)
+  const initEndTimeIndex = WHEEL_TIME_SLOTS.findIndex(s => s.h12 === initEndH12 && s.m === (initialEndMinute ?? 0))
+  const initEndAmpmIndex = WHEEL_AMPM_SLOTS.indexOf(initEndAmpm)
+
+  const [startTimeIndex, setStartTimeIndex] = useState(initStartTimeIndex)
+  const [startAmpmIndex, setStartAmpmIndex] = useState(initStartAmpmIndex)
+  const [endTimeIndex,   setEndTimeIndex  ] = useState(initEndTimeIndex)
+  const [endAmpmIndex,   setEndAmpmIndex  ] = useState(initEndAmpmIndex)
+
+  const startSlot = WHEEL_TIME_SLOTS[startTimeIndex]
+  const startAmpm = WHEEL_AMPM_SLOTS[startAmpmIndex]
+  const endSlot   = WHEEL_TIME_SLOTS[endTimeIndex]
+  const endAmpm   = WHEEL_AMPM_SLOTS[endAmpmIndex]
+
+  function handleConfirm() {
+    onConfirm(to24Hour(startSlot.h12, startSlot.m, startAmpm), to24Hour(endSlot.h12, endSlot.m, endAmpm))
+    onClose()
+  }
+
+  return (
+    <Drawer.Root open modal dismissible onOpenChange={o => { if (!o) onClose() }}>
+      <Drawer.Portal>
+        <Drawer.Overlay className="fixed inset-0 bg-black/50 z-[100]" />
+        <Drawer.Content className="fixed bottom-0 left-0 right-0 z-[101] bg-[#FAF7F0] border-t-2 border-[#1A2744] p-5 outline-none">
+          <Drawer.Handle style={{ marginBottom: 12 }} />
+          <div className="flex items-center justify-between mb-6">
+            <Drawer.Title style={{ fontFamily: 'var(--font-barlow)' }} className="text-[#1A2744] text-[24px] font-bold uppercase tracking-wide">SELECT TIME</Drawer.Title>
+            <button onClick={onClose} className="text-[#1A2744] p-2.5 text-[24px] leading-none">×</button>
+          </div>
+
+          <div className="flex items-center justify-center gap-3 mb-2">
+            <div className="flex-1 text-center" style={{ fontFamily: 'var(--font-jetbrains-mono)' }}>
+              <span className="text-[#1A2744]/50 text-[10px] uppercase tracking-widest">START</span>
+            </div>
+            <div className="w-px" />
+            <div className="flex-1 text-center" style={{ fontFamily: 'var(--font-jetbrains-mono)' }}>
+              <span className="text-[#1A2744]/50 text-[10px] uppercase tracking-widest">END</span>
+            </div>
+          </div>
+
+          <div className="relative flex items-center justify-center gap-3 mb-6">
+            {/* Center highlight band */}
+            <div className="absolute left-0 right-0 border-y border-[#1A2744]/15 pointer-events-none"
+                 style={{ top: WHEEL_PAD, height: WHEEL_ITEM_H }} />
+            <div className="flex-1 flex items-center justify-center gap-1">
+              <WheelColumn items={WHEEL_TIME_SLOTS} initialIndex={initStartTimeIndex} onSettle={setStartTimeIndex} widthClass="w-16"
+                           render={s => (
+                             <span style={{ fontFamily: 'var(--font-jetbrains-mono)' }} className="text-[#1A2744] text-[16px] font-bold tracking-wide">
+                               {s.h12}:{fmt2(s.m)}
+                             </span>
+                           )} />
+              <WheelColumn items={[...WHEEL_AMPM_SLOTS]} initialIndex={initStartAmpmIndex} onSettle={setStartAmpmIndex} widthClass="w-11"
+                           render={a => (
+                             <span style={{ fontFamily: 'var(--font-jetbrains-mono)' }} className="text-[#1A2744] text-[12px] font-bold tracking-widest">
+                               {a}
+                             </span>
+                           )} />
+            </div>
+            <div className="w-px self-stretch bg-[#1A2744]/10" />
+            <div className="flex-1 flex items-center justify-center gap-1">
+              <WheelColumn items={WHEEL_TIME_SLOTS} initialIndex={initEndTimeIndex} onSettle={setEndTimeIndex} widthClass="w-16"
+                           render={s => (
+                             <span style={{ fontFamily: 'var(--font-jetbrains-mono)' }} className="text-[#1A2744] text-[16px] font-bold tracking-wide">
+                               {s.h12}:{fmt2(s.m)}
+                             </span>
+                           )} />
+              <WheelColumn items={[...WHEEL_AMPM_SLOTS]} initialIndex={initEndAmpmIndex} onSettle={setEndAmpmIndex} widthClass="w-11"
+                           render={a => (
+                             <span style={{ fontFamily: 'var(--font-jetbrains-mono)' }} className="text-[#1A2744] text-[12px] font-bold tracking-widest">
+                               {a}
+                             </span>
+                           )} />
+            </div>
+          </div>
+
+          <button onClick={handleConfirm}
+                  className="w-full bg-[#E8705A] text-white py-3 hover:brightness-110 transition-all"
+                  style={{ fontFamily: 'var(--font-jetbrains-mono)', fontSize: 11, letterSpacing: '0.1em' }}>
+            CONFIRM TIME
+          </button>
+        </Drawer.Content>
+      </Drawer.Portal>
+    </Drawer.Root>
   )
 }
 
@@ -339,6 +455,8 @@ export default function CreateEventForm({ venues, profile }: { venues: VenueRow[
   const [showStartTime,     setShowStartTime    ] = useState(false)
   const [showEndDate,       setShowEndDate      ] = useState(false)
   const [showEndTime,       setShowEndTime      ] = useState(false)
+  const [showTimeRange,     setShowTimeRange    ] = useState(false)
+  const [isMultiDay,        setIsMultiDay       ] = useState(false)
 
   // Geography
   const [venueMode,         setVenueMode        ] = useState<VenueMode>('wimc')
@@ -455,7 +573,9 @@ export default function CreateEventForm({ venues, profile }: { venues: VenueRow[
     if (!startDate || startHour === null || startMinute === null) return 'Please set a start date and time.'
     const startsAt = buildIso(startDate, startHour, startMinute)
     if (new Date(startsAt) <= new Date()) return 'Start time must be in the future.'
-    const endsAt = endDate && endHour !== null && endMinute !== null ? buildIso(endDate, endHour, endMinute) : undefined
+    if (isMultiDay && !endDate && (endHour !== null || endMinute !== null)) return 'Please select the end date for this multi-day event.'
+    const effectiveEndDate = isMultiDay ? endDate : startDate
+    const endsAt = effectiveEndDate && endHour !== null && endMinute !== null ? buildIso(effectiveEndDate, endHour, endMinute) : undefined
 
     let finalPrice = ticketPricePaise
     let finalTiers: TicketTier[] | undefined
@@ -550,9 +670,18 @@ export default function CreateEventForm({ venues, profile }: { venues: VenueRow[
       <div className="fixed inset-0 z-[9999] pointer-events-none opacity-[0.028]" style={GRAIN_STYLE} />
 
       {showStartDate && <CalendarOverlay onConfirm={d => setStartDate(d)} onClose={() => setShowStartDate(false)} />}
-      {showStartTime && <TimeOverlay onConfirm={(h, m) => { setStartHour(h); setStartMinute(m) }} onClose={() => setShowStartTime(false)} />}
       {showEndDate   && <CalendarOverlay onConfirm={d => setEndDate(d)} onClose={() => setShowEndDate(false)} />}
-      {showEndTime   && <TimeOverlay onConfirm={(h, m) => { setEndHour(h); setEndMinute(m) }} onClose={() => setShowEndTime(false)} />}
+      {showTimeRange && (
+        <TimeRangeOverlayMobile
+          initialStartHour={startHour} initialStartMinute={startMinute}
+          initialEndHour={endHour} initialEndMinute={endMinute}
+          onConfirm={(start, end) => {
+            setStartHour(start[0]); setStartMinute(start[1])
+            setEndHour(end[0]); setEndMinute(end[1])
+          }}
+          onClose={() => setShowTimeRange(false)}
+        />
+      )}
 
       <div className="bg-[#07070A] min-h-screen flex flex-col">
 
@@ -638,34 +767,55 @@ export default function CreateEventForm({ venues, profile }: { venues: VenueRow[
               {/* 03 · CHRONOLOGY */}
               <section>
                 <div style={{ fontFamily: 'var(--font-jetbrains-mono)' }} className="text-[#E8705A] text-[10px] uppercase tracking-[0.2em] mb-6">03. CHRONOLOGY</div>
-                <div style={{ fontFamily: 'var(--font-jetbrains-mono)' }} className="text-white/40 text-[9px] uppercase mb-2">START</div>
-                <div className="grid grid-cols-2 gap-4 mb-5">
+                <div className="grid grid-cols-3 gap-3 mb-4">
                   <button onClick={() => setShowStartDate(true)}
-                          className="bg-[#201f23] p-5 border border-[#57423e] relative cursor-pointer hover:bg-[#2a292d] group transition-colors text-left">
-                    <span style={{ fontFamily: 'var(--font-jetbrains-mono)' }} className="text-white/40 text-[9px] uppercase absolute top-3 left-4">DATE</span>
-                    <div style={{ fontFamily: 'var(--font-jetbrains-mono)' }} className="text-white text-[15px] pt-5">{startDisplay || '— / — / ——'}</div>
-                    <span className="material-symbols-outlined absolute bottom-3 right-3 text-[#E8705A] opacity-0 group-hover:opacity-100 transition-opacity text-[16px]">calendar_today</span>
+                          className="bg-[#201f23] p-4 border border-[#57423e] relative cursor-pointer hover:bg-[#2a292d] group transition-colors text-left">
+                    <span style={{ fontFamily: 'var(--font-jetbrains-mono)' }} className="text-white/40 text-[9px] uppercase absolute top-3 left-3">DATE</span>
+                    <div style={{ fontFamily: 'var(--font-jetbrains-mono)' }} className="text-white text-[13px] pt-5">{startDisplay || '— / — / ——'}</div>
+                    <span className={['material-symbols-outlined absolute bottom-2.5 right-2.5 text-[#E8705A] transition-opacity text-[15px]', isMobile ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'].join(' ')}>calendar_today</span>
                   </button>
-                  <button onClick={() => setShowStartTime(true)}
-                          className="bg-[#201f23] p-5 border border-[#57423e] relative cursor-pointer hover:bg-[#2a292d] group transition-colors text-left">
-                    <span style={{ fontFamily: 'var(--font-jetbrains-mono)' }} className="text-white/40 text-[9px] uppercase absolute top-3 left-4">TIME</span>
-                    <div style={{ fontFamily: 'var(--font-jetbrains-mono)' }} className="text-white text-[15px] pt-5">{startTimeDisp || '— : — HRS'}</div>
-                    <span className="material-symbols-outlined absolute bottom-3 right-3 text-[#E8705A] opacity-0 group-hover:opacity-100 transition-opacity text-[16px]">schedule</span>
+                  <button onClick={() => { if (isMobile) { setShowTimeRange(true); return } setShowEndTime(false); setShowStartTime(v => !v) }}
+                          className="bg-[#201f23] p-4 border border-[#57423e] relative cursor-pointer hover:bg-[#2a292d] group transition-colors text-left">
+                    <span style={{ fontFamily: 'var(--font-jetbrains-mono)' }} className="text-white/40 text-[9px] uppercase absolute top-3 left-3">START</span>
+                    <div style={{ fontFamily: 'var(--font-jetbrains-mono)' }} className="text-white text-[13px] pt-5">{startTimeDisp || '— : — HRS'}</div>
+                    <span className={['material-symbols-outlined absolute bottom-2.5 right-2.5 text-[#E8705A] transition-opacity text-[15px]', isMobile ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'].join(' ')}>schedule</span>
                   </button>
+                  <button onClick={() => { if (isMobile) { setShowTimeRange(true); return } setShowStartTime(false); setShowEndTime(v => !v) }}
+                          className="bg-[#201f23] p-4 border border-[#57423e] relative cursor-pointer hover:bg-[#2a292d] group transition-colors text-left">
+                    <span style={{ fontFamily: 'var(--font-jetbrains-mono)' }} className="text-white/40 text-[9px] uppercase absolute top-3 left-3">END</span>
+                    <div style={{ fontFamily: 'var(--font-jetbrains-mono)' }} className="text-white text-[13px] pt-5">{endTimeDisp || '— : — HRS'}</div>
+                    <span className={['material-symbols-outlined absolute bottom-2.5 right-2.5 text-[#E8705A] transition-opacity text-[15px]', isMobile ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'].join(' ')}>schedule</span>
+                  </button>
+                  {!isMobile && showStartTime && (
+                    <InlineTimePicker
+                      label="START" hour={startHour} minute={startMinute}
+                      onConfirm={(h, m) => { setStartHour(h); setStartMinute(m); setShowStartTime(false) }}
+                      onCancel={() => setShowStartTime(false)}
+                    />
+                  )}
+                  {!isMobile && showEndTime && (
+                    <InlineTimePicker
+                      label="END" hour={endHour} minute={endMinute}
+                      onConfirm={(h, m) => { setEndHour(h); setEndMinute(m); setShowEndTime(false) }}
+                      onCancel={() => setShowEndTime(false)}
+                    />
+                  )}
                 </div>
-                <div style={{ fontFamily: 'var(--font-jetbrains-mono)' }} className="text-white/40 text-[9px] uppercase mb-2">END (OPTIONAL)</div>
-                <div className="grid grid-cols-2 gap-4">
-                  <button onClick={() => setShowEndDate(true)}
-                          className="bg-[#201f23]/60 p-4 border border-dashed border-[#57423e]/60 relative cursor-pointer hover:bg-[#2a292d] transition-colors text-left">
-                    <span style={{ fontFamily: 'var(--font-jetbrains-mono)' }} className="text-white/30 text-[8px] uppercase absolute top-2 left-3">DATE</span>
-                    <div style={{ fontFamily: 'var(--font-jetbrains-mono)' }} className="text-white/60 text-[12px] pt-4">{endDisplay || '— / — / ——'}</div>
-                  </button>
-                  <button onClick={() => setShowEndTime(true)}
-                          className="bg-[#201f23]/60 p-4 border border-dashed border-[#57423e]/60 relative cursor-pointer hover:bg-[#2a292d] transition-colors text-left">
-                    <span style={{ fontFamily: 'var(--font-jetbrains-mono)' }} className="text-white/30 text-[8px] uppercase absolute top-2 left-3">TIME</span>
-                    <div style={{ fontFamily: 'var(--font-jetbrains-mono)' }} className="text-white/60 text-[12px] pt-4">{endTimeDisp || '— : — HRS'}</div>
-                  </button>
-                </div>
+
+                <Toggle on={isMultiDay} label="This event spans multiple days"
+                         onToggle={() => { setIsMultiDay(v => !v); setEndDate(null) }} />
+
+                {isMultiDay && (
+                  <div className="mt-4">
+                    <div style={{ fontFamily: 'var(--font-jetbrains-mono)' }} className="text-white/40 text-[9px] uppercase mb-2">END DATE</div>
+                    <button onClick={() => setShowEndDate(true)}
+                            className="w-full bg-[#201f23] p-4 border border-[#57423e] relative cursor-pointer hover:bg-[#2a292d] group transition-colors text-left">
+                      <span style={{ fontFamily: 'var(--font-jetbrains-mono)' }} className="text-white/40 text-[9px] uppercase absolute top-3 left-3">DATE</span>
+                      <div style={{ fontFamily: 'var(--font-jetbrains-mono)' }} className="text-white text-[13px] pt-5">{endDisplay || '— / — / ——'}</div>
+                      <span className={['material-symbols-outlined absolute bottom-2.5 right-2.5 text-[#E8705A] transition-opacity text-[15px]', isMobile ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'].join(' ')}>calendar_today</span>
+                    </button>
+                  </div>
+                )}
               </section>
 
               {/* 04 · GEOGRAPHY */}

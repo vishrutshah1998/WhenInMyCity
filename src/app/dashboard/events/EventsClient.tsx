@@ -2,7 +2,8 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
+import VenueBookingsPanel, { type ProposalWithVenue } from './VenueBookingsPanel'
 import type { Event, EventStatus, BookingRow } from '@/types/database'
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -150,17 +151,20 @@ function EventCard({ event, booked, revenue, username, onEdit }: EventCardProps)
 
 // ── Main component ────────────────────────────────────────────────────────────
 
-type Tab = 'upcoming' | 'drafts' | 'past' | 'all'
+type Tab = 'upcoming' | 'drafts' | 'past' | 'all' | 'venue-bookings'
 
 interface EventsClientProps {
   events: Event[]
   bookings: BookingRow[]
   username: string
+  profileId: string
+  venueProposals: ProposalWithVenue[]
 }
 
-export default function EventsClient({ events, bookings, username }: EventsClientProps) {
+export default function EventsClient({ events, bookings, username, profileId, venueProposals }: EventsClientProps) {
   const router = useRouter()
-  const [tab, setTab] = useState<Tab>('upcoming')
+  const searchParams = useSearchParams()
+  const [tab, setTab] = useState<Tab>(searchParams.get('tab') === 'venue-bookings' ? 'venue-bookings' : 'upcoming')
 
   const bookingsByEvent: Record<string, BookingRow[]> = {}
   for (const b of bookings) {
@@ -177,15 +181,21 @@ export default function EventsClient({ events, bookings, username }: EventsClien
     drafts: draftEvents,
     past: pastEvents,
     all: events,
+    'venue-bookings': [],
   }
 
-  const displayed = tabEvents[tab]
+  const displayed = tab === 'venue-bookings' ? [] : tabEvents[tab]
+
+  const venueBookingsNeedingResponse = venueProposals.filter(
+    (p) => p.status === 'counter_offered' && p.counter_offer_by === 'venue',
+  ).length
 
   const TAB_LABELS: { key: Tab; label: string; count?: number }[] = [
-    { key: 'upcoming', label: 'Upcoming', count: upcomingEvents.length },
-    { key: 'drafts',   label: 'Drafts',   count: draftEvents.length },
-    { key: 'past',     label: 'Past',     count: pastEvents.length },
-    { key: 'all',      label: 'All' },
+    { key: 'upcoming',       label: 'Upcoming',       count: upcomingEvents.length },
+    { key: 'drafts',         label: 'Drafts',         count: draftEvents.length },
+    { key: 'past',           label: 'Past',           count: pastEvents.length },
+    { key: 'all',            label: 'All' },
+    { key: 'venue-bookings', label: 'Venue Bookings', count: venueBookingsNeedingResponse > 0 ? venueBookingsNeedingResponse : undefined },
   ]
 
   const topbar: React.CSSProperties = {
@@ -253,8 +263,13 @@ export default function EventsClient({ events, bookings, username }: EventsClien
           ))}
         </div>
 
+        {/* Venue Bookings tab */}
+        {tab === 'venue-bookings' && (
+          <VenueBookingsPanel proposals={venueProposals} currentUserId={profileId} />
+        )}
+
         {/* Event cards */}
-        {displayed.length === 0 ? (
+        {tab !== 'venue-bookings' && (displayed.length === 0 ? (
           <div
             style={{
               border: '2px dashed var(--wimc-border-default)', borderRadius: 0,
@@ -294,7 +309,7 @@ export default function EventsClient({ events, bookings, username }: EventsClien
               />
             )
           })
-        )}
+        ))}
 
         {/* Add more prompt when events exist */}
         {displayed.length > 0 && (
