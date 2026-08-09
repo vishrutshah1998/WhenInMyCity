@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import type { UserTier } from '@/types/database'
@@ -110,6 +110,7 @@ export default function Sidebar({
   const pathname = usePathname()
   const [isExpanded, setIsExpanded] = useState(false)
   const [workspaceOpen, setWorkspaceOpen] = useState(false)
+  const pendingCollapseRef = useRef(false)
   const isNewCreator = eventsHostedCount < 3
   const c = !isExpanded
 
@@ -131,6 +132,16 @@ export default function Sidebar({
   // Close workspace menu on navigation
   useEffect(() => { setWorkspaceOpen(false) }, [pathname])
 
+  // Flush a collapse that was armed by a nav-link click once the router has
+  // actually committed the new route (pathname changes together with the new
+  // page's content being ready — not optimistically at click time).
+  useEffect(() => {
+    if (pendingCollapseRef.current) {
+      pendingCollapseRef.current = false
+      closeSidebar()
+    }
+  }, [pathname])
+
   useEffect(() => {
     document.documentElement.style.setProperty(
       '--wimc-sidebar-w',
@@ -139,11 +150,38 @@ export default function Sidebar({
   }, [isExpanded])
 
   function toggleExpand() {
+    pendingCollapseRef.current = false
     setIsExpanded(v => {
       const next = !v
       localStorage.setItem('wimc-sidebar-collapsed', next ? 'false' : 'true')
       return next
     })
+  }
+
+  // Selecting any link in the sidebar navigates AND slides the panel back
+  // into the icon-only rail, so it doesn't stay pinned open over the page.
+  function closeSidebar() {
+    setIsExpanded(false)
+    localStorage.setItem('wimc-sidebar-collapsed', 'true')
+  }
+
+  // Workspace-switcher links jump to a different persona's layout, which
+  // unmounts this sidebar entirely — collapse immediately so the next
+  // sidebar mounts already collapsed (no route to defer to).
+  function handleWorkspaceClick(e: React.MouseEvent) {
+    if ((e.target as HTMLElement).closest('a')) closeSidebar()
+  }
+
+  // Main-nav links stay within this same layout, so defer the collapse until
+  // the router actually commits the new route (see the pathname effect above)
+  // instead of collapsing before the new page has loaded.
+  function handleNavClick(e: React.MouseEvent) {
+    const anchor = (e.target as HTMLElement).closest('a')
+    if (!anchor) return
+    if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return
+    if (!isExpanded) return
+    if (anchor.getAttribute('href') === pathname) { closeSidebar(); return }
+    pendingCollapseRef.current = true
   }
 
   function isActive(item: NavItem) {
@@ -260,7 +298,7 @@ export default function Sidebar({
 
       {/* ── Workspace dropdown (inline, below header) ───────────────────── */}
       {workspaceOpen && isExpanded && (
-        <div style={{
+        <div onClick={handleWorkspaceClick} style={{
           margin: '0 8px',
           background: 'rgba(0,0,0,0.25)',
           border: `1px solid ${SB_BORDER}`,
@@ -366,7 +404,7 @@ export default function Sidebar({
       )}
 
       {/* ── Nav ─────────────────────────────────────────────────────────── */}
-      <nav style={{ flex: 1, padding: '12px 8px', display: 'flex', flexDirection: 'column', gap: 2, overflowY: 'auto', overflowX: 'hidden' }}>
+      <nav onClick={handleNavClick} style={{ flex: 1, padding: '12px 8px', display: 'flex', flexDirection: 'column', gap: 2, overflowY: 'auto', overflowX: 'hidden' }}>
         {!c && <SectionLabel>Creator</SectionLabel>}
 
         {CORE_NAV.map((item) => (
@@ -419,6 +457,7 @@ export default function Sidebar({
       <Link
         href="/dashboard/profile/settings"
         title={c ? `${displayName} · Profile Settings` : undefined}
+        onClick={handleNavClick}
         style={{
           padding: c ? '14px 0' : '12px 14px',
           borderTop: `1px solid ${SB_BORDER}`,

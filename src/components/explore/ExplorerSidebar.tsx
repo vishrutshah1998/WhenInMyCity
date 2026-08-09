@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { WimcWordmark } from '@/components/WimcWordmark'
@@ -62,6 +62,7 @@ export default function ExplorerSidebar({
 }: ExplorerSidebarProps) {
   const pathname = usePathname()
   const [isExpanded, setIsExpanded] = useState(false)
+  const pendingCollapseRef = useRef(false)
   const c = !isExpanded
 
   const activeBg = `rgba(155,143,255,0.14)`
@@ -73,9 +74,42 @@ export default function ExplorerSidebar({
     )
   }, [isExpanded])
 
+  // Flush a collapse that was armed by a nav-link click once the router has
+  // actually committed the new route (pathname changes together with the new
+  // page's content being ready — not optimistically at click time).
+  useEffect(() => {
+    if (pendingCollapseRef.current) {
+      pendingCollapseRef.current = false
+      closeSidebar()
+    }
+  }, [pathname])
+
   function isActive(item: NavItem) {
     if (item.exact) return pathname === item.href
     return pathname === item.href || pathname.startsWith(item.href + '/')
+  }
+
+  function toggleExpand() {
+    pendingCollapseRef.current = false
+    setIsExpanded(v => !v)
+  }
+
+  // Selecting any link in the sidebar navigates AND slides the panel back
+  // into the icon-only rail, so it doesn't stay pinned open over the page.
+  function closeSidebar() {
+    setIsExpanded(false)
+  }
+
+  // Nav links stay within this same layout, so defer the collapse until the
+  // router actually commits the new route (see the pathname effect above)
+  // instead of collapsing before the new page has loaded.
+  function handleNavClick(e: React.MouseEvent) {
+    const anchor = (e.target as HTMLElement).closest('a')
+    if (!anchor) return
+    if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return
+    if (!isExpanded) return
+    if (anchor.getAttribute('href') === pathname) { closeSidebar(); return }
+    pendingCollapseRef.current = true
   }
 
   return (
@@ -105,7 +139,7 @@ export default function ExplorerSidebar({
         flexShrink: 0,
       }}>
         <button
-          onClick={() => setIsExpanded(v => !v)}
+          onClick={toggleExpand}
           title={isExpanded ? 'Collapse menu' : 'Expand menu'}
           style={{
             display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -141,7 +175,7 @@ export default function ExplorerSidebar({
       )}
 
       {/* ── Nav ─────────────────────────────────────────────────────────── */}
-      <nav style={{
+      <nav onClick={handleNavClick} style={{
         flex: 1,
         padding: '8px 8px',
         display: 'flex',
@@ -197,6 +231,7 @@ export default function ExplorerSidebar({
       <Link
         href="/explore/dashboard/settings"
         title={c ? `${displayName} · Settings` : undefined}
+        onClick={handleNavClick}
         style={{
           padding: c ? '14px 0' : '12px 14px',
           borderTop: `1px solid ${SB_BORDER}`,

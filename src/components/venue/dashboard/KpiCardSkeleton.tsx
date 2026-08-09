@@ -4,7 +4,7 @@ export default function KpiCardSkeleton() {
     <div style={{
       background: 'var(--venue-bg-surface)',
       border: '1px solid var(--venue-border-subtle)',
-      borderRadius: 12,
+      borderRadius: 18,
       padding: '20px 20px 0',
       overflow: 'hidden',
     }}>

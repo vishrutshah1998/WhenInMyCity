@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { usePathname } from 'next/navigation'
 import Link from 'next/link'
 
@@ -28,8 +28,7 @@ const NAV_SECTIONS_VENUE: NavSection[] = [
     group: 'Operations',
     items: [
       { href: '/business/venue/dashboard',     icon: 'dashboard',       label: 'Dashboard',  primary: true, exact: true },
-      { href: '/business/venue/creators',      icon: 'person_search',   label: 'Proposals',  badgeKey: 'pending' },
-      { href: '/business/venue/bookings',      icon: 'event_available', label: 'Bookings' },
+      { href: '/business/venue/bookings',      icon: 'event_available', label: 'Bookings',   badgeKey: 'pending' },
       { href: '/business/venue/calendar',      icon: 'calendar_today',  label: 'Calendar' },
       { href: '/business/venue/notifications', icon: 'inbox',           label: 'Inbox',      badgeKey: 'unread' },
     ],
@@ -107,7 +106,7 @@ export interface VenueSidebarClientProps {
 // Design tokens
 // ---------------------------------------------------------------------------
 
-const VENUE_AMBER   = 'var(--venue-amber, #F5A800)'
+const VENUE_ACCENT  = 'var(--venue-accent, #5DD9D0)'
 const VENUE_MUTED   = 'var(--venue-text-muted)'
 const VENUE_BORDER  = 'var(--venue-border-subtle)'
 const VENUE_HOVER   = 'var(--venue-bg-hover)'
@@ -167,21 +166,21 @@ function NavLink({ item, active, badge, collapsed }: { item: NavItem; active: bo
       style={{
         position: 'relative', display: 'flex', alignItems: 'center', gap: 10,
         padding: collapsed ? '10px 0' : '9px 10px 9px 14px',
-        borderRadius: 6, justifyContent: collapsed ? 'center' : undefined,
+        borderRadius: 12, justifyContent: collapsed ? 'center' : undefined,
         cursor: 'pointer', textDecoration: 'none',
         transition: 'background 160ms ease',
-        background: active ? 'var(--venue-amber-tint)' : hovered && !active ? VENUE_HOVER : 'transparent',
+        background: active ? 'var(--venue-accent-tint)' : hovered && !active ? VENUE_HOVER : 'transparent',
         marginBottom: 1,
       }}
     >
       {active && !collapsed && (
-        <span style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 3, background: VENUE_AMBER, borderRadius: '0 3px 3px 0' }} />
+        <span style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 3, background: VENUE_ACCENT, borderRadius: '0 3px 3px 0' }} />
       )}
       <span
         className="material-symbols-outlined"
         style={{
           fontSize: 20, flexShrink: 0,
-          color: active ? VENUE_AMBER : VENUE_MUTED,
+          color: active ? VENUE_ACCENT : VENUE_MUTED,
           fontVariationSettings: active ? "'FILL' 1,'wght' 400,'GRAD' 0,'opsz' 24" : "'FILL' 0,'wght' 300,'GRAD' 0,'opsz' 24",
           transition: 'color 160ms ease',
         }}
@@ -190,7 +189,7 @@ function NavLink({ item, active, badge, collapsed }: { item: NavItem; active: bo
       </span>
 
       {collapsed && badge !== null && (
-        <span style={{ position: 'absolute', top: 7, right: 8, width: 7, height: 7, borderRadius: '50%', background: VENUE_AMBER, border: '1.5px solid var(--venue-bg-surface)' }} />
+        <span style={{ position: 'absolute', top: 7, right: 8, width: 7, height: 7, borderRadius: '50%', background: VENUE_ACCENT, border: '1.5px solid var(--venue-bg-surface)' }} />
       )}
 
       {!collapsed && (
@@ -205,7 +204,7 @@ function NavLink({ item, active, badge, collapsed }: { item: NavItem; active: bo
             {item.label}
           </span>
           {badge !== null && (
-            <span style={{ background: VENUE_AMBER, color: '#000', fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 9999, flexShrink: 0, fontFamily: 'var(--font-inter), system-ui, sans-serif', lineHeight: '16px' }}>
+            <span style={{ background: VENUE_ACCENT, color: '#000', fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 9999, flexShrink: 0, fontFamily: 'var(--font-inter), system-ui, sans-serif', lineHeight: '16px' }}>
               {badge}
             </span>
           )}
@@ -234,6 +233,7 @@ export default function VenueSidebarClient({
   const pathname = usePathname()
   const [collapsed, setCollapsed] = useState(true)
   const [workspaceOpen, setWorkspaceOpen] = useState(false)
+  const pendingCollapseRef = useRef(false)
 
   const NAV_SECTIONS = businessType === 'brand' ? NAV_SECTIONS_BRAND : NAV_SECTIONS_VENUE
 
@@ -260,12 +260,49 @@ export default function VenueSidebarClient({
 
   useEffect(() => { setWorkspaceOpen(false) }, [pathname])
 
+  // Flush a collapse that was armed by a nav-link click once the router has
+  // actually committed the new route (pathname changes together with the new
+  // page's content being ready — not optimistically at click time).
+  useEffect(() => {
+    if (pendingCollapseRef.current) {
+      pendingCollapseRef.current = false
+      closeSidebar()
+    }
+  }, [pathname])
+
   function toggleCollapse() {
+    pendingCollapseRef.current = false
     setCollapsed(prev => {
       const next = !prev
       localStorage.setItem('wimc-sidebar-collapsed', String(next))
       return next
     })
+  }
+
+  // Selecting any link in the sidebar navigates AND slides the panel back
+  // into the icon-only rail, so it doesn't stay pinned open over the page.
+  function closeSidebar() {
+    setCollapsed(true)
+    localStorage.setItem('wimc-sidebar-collapsed', 'true')
+  }
+
+  // Workspace-switcher links jump to a different persona's layout, which
+  // unmounts this sidebar entirely — collapse immediately so the next
+  // sidebar mounts already collapsed (no route to defer to).
+  function handleWorkspaceClick(e: React.MouseEvent) {
+    if ((e.target as HTMLElement).closest('a')) closeSidebar()
+  }
+
+  // Main-nav links stay within this same layout, so defer the collapse until
+  // the router actually commits the new route (see the pathname effect above)
+  // instead of collapsing before the new page has loaded.
+  function handleNavClick(e: React.MouseEvent) {
+    const anchor = (e.target as HTMLElement).closest('a')
+    if (!anchor) return
+    if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return
+    if (collapsed) return
+    if (anchor.getAttribute('href') === pathname) { closeSidebar(); return }
+    pendingCollapseRef.current = true
   }
 
   function isActive(item: NavItem) {
@@ -310,7 +347,7 @@ export default function VenueSidebarClient({
           title={collapsed ? 'Expand menu' : 'Collapse menu'}
           style={{
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            width: 34, height: 34, borderRadius: 8, border: 'none',
+            width: 34, height: 34, borderRadius: 12, border: 'none',
             background: 'transparent', cursor: 'pointer',
             color: 'rgba(255,255,255,0.55)', flexShrink: 0,
           }}
@@ -327,19 +364,19 @@ export default function VenueSidebarClient({
             style={{
               flex: 1, minWidth: 0,
               display: 'flex', alignItems: 'center', gap: 7,
-              background: workspaceOpen ? 'rgba(245,168,0,0.10)' : 'transparent',
-              border: `1px solid ${workspaceOpen ? 'rgba(245,168,0,0.30)' : 'transparent'}`,
-              borderRadius: 8, padding: '6px 8px',
+              background: workspaceOpen ? 'var(--venue-accent-tint)' : 'transparent',
+              border: `1px solid ${workspaceOpen ? 'var(--venue-accent-border)' : 'transparent'}`,
+              borderRadius: 12, padding: '6px 8px',
               cursor: 'pointer',
               transition: 'background 160ms ease, border-color 160ms ease',
             }}
           >
-            <span className="material-symbols-outlined" style={{ fontSize: 16, color: VENUE_AMBER, flexShrink: 0 }}>
+            <span className="material-symbols-outlined" style={{ fontSize: 16, color: VENUE_ACCENT, flexShrink: 0 }}>
               {businessType === 'brand' ? 'campaign' : 'storefront'}
             </span>
             <div style={{ flex: 1, minWidth: 0, textAlign: 'left' }}>
               <div style={{
-                fontSize: 11, fontWeight: 700, color: VENUE_AMBER,
+                fontSize: 11, fontWeight: 700, color: VENUE_ACCENT,
                 letterSpacing: '1.5px', textTransform: 'uppercase',
                 fontFamily: 'var(--font-jetbrains-mono), monospace',
                 overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
@@ -367,7 +404,7 @@ export default function VenueSidebarClient({
             title="Switch workspace"
             style={{
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              width: 34, height: 34, borderRadius: 8, border: 'none',
+              width: 34, height: 34, borderRadius: 12, border: 'none',
               background: 'transparent', cursor: 'pointer',
               color: 'rgba(255,255,255,0.30)', position: 'relative',
             }}
@@ -379,11 +416,11 @@ export default function VenueSidebarClient({
 
       {/* ── Workspace dropdown ─────────────────────────────────────────────── */}
       {workspaceOpen && !collapsed && (
-        <div style={{
+        <div onClick={handleWorkspaceClick} style={{
           margin: '0 8px',
           background: 'rgba(0,0,0,0.2)',
           border: `1px solid ${VENUE_BORDER}`,
-          borderRadius: 10, overflow: 'hidden', flexShrink: 0,
+          borderRadius: 18, overflow: 'hidden', flexShrink: 0,
         }}>
           {/* Current workspace — active with checkmark */}
           {(() => {
@@ -462,7 +499,7 @@ export default function VenueSidebarClient({
       )}
 
       {/* ── Nav ───────────────────────────────────────────────────────────────── */}
-      <nav style={{ flex: 1, padding: collapsed ? '8px 8px' : '8px 10px', display: 'flex', flexDirection: 'column', overflowY: 'auto', overflowX: 'hidden' }}>
+      <nav onClick={handleNavClick} style={{ flex: 1, padding: collapsed ? '8px 8px' : '8px 10px', display: 'flex', flexDirection: 'column', overflowY: 'auto', overflowX: 'hidden' }}>
         {NAV_SECTIONS.map((section, si) => (
           <div key={section.group}>
             {collapsed && si > 0 && <div style={{ height: 1, background: VENUE_BORDER, margin: '6px 8px' }} />}
@@ -476,7 +513,7 @@ export default function VenueSidebarClient({
                   style={{
                     display: 'flex', alignItems: 'center', gap: 10,
                     padding: collapsed ? '10px 0' : '9px 10px 9px 14px',
-                    borderRadius: 6, justifyContent: collapsed ? 'center' : undefined,
+                    borderRadius: 12, justifyContent: collapsed ? 'center' : undefined,
                     opacity: 0.35, cursor: 'not-allowed', marginBottom: 1,
                   }}
                 >
@@ -501,11 +538,12 @@ export default function VenueSidebarClient({
         <Link
           href={businessType === 'brand' ? '/business/brand/profile' : '/business/venue/profile'}
           title={collapsed ? `${ownerName} · Profile` : undefined}
+          onClick={handleNavClick}
           style={{
             display: 'flex', alignItems: 'center', gap: 10,
             padding: collapsed ? '8px 0' : '8px 10px',
             justifyContent: collapsed ? 'center' : undefined,
-            borderRadius: 6, textDecoration: 'none',
+            borderRadius: 12, textDecoration: 'none',
             transition: 'background 160ms ease',
           }}
           onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = VENUE_HOVER }}

@@ -30,7 +30,7 @@ export default function RevenueTrend({ data }: Props) {
     <div style={{
       background: 'var(--venue-bg-surface)',
       border: '1px solid var(--venue-border-subtle)',
-      borderRadius: 12,
+      borderRadius: 18,
       overflow: 'hidden',
     }}>
       {/* Header */}

@@ -65,7 +65,7 @@ function RuleForm({
     border: '1px solid var(--venue-border-default)',
     color: 'var(--venue-text-primary)',
     fontFamily: 'var(--font-inter), sans-serif', fontSize: 13,
-    outline: 'none', caretColor: 'var(--venue-amber)',
+    outline: 'none', caretColor: 'var(--venue-accent)',
     boxSizing: 'border-box' as const,
   }
 
@@ -122,7 +122,7 @@ function RuleForm({
                 style={{
                   width: 34, height: 34, borderRadius: 8,
                   border: on ? 'none' : '1px solid var(--venue-border-default)',
-                  background: on ? 'var(--venue-amber)' : 'var(--venue-bg-elevated)',
+                  background: on ? 'var(--venue-accent)' : 'var(--venue-bg-elevated)',
                   color: on ? '#000' : 'var(--venue-text-secondary)',
                   fontWeight: 700, fontSize: 12,
                   fontFamily: 'var(--font-inter), sans-serif',
@@ -164,7 +164,7 @@ function RuleForm({
           onClick={() => patch('active', !draft.active)}
           style={{
             width: 40, height: 22, borderRadius: 11,
-            background: draft.active ? 'var(--venue-amber)' : 'var(--venue-bg-overlay)',
+            background: draft.active ? 'var(--venue-accent)' : 'var(--venue-bg-overlay)',
             border: 'none', cursor: 'pointer', position: 'relative',
             transition: 'background 200ms',
           }}
@@ -219,7 +219,7 @@ function PricingPreview({ rules }: { rules: PricingRule[] }) {
 
   return (
     <div style={{
-      padding: 16, borderRadius: 10,
+      padding: 16, borderRadius: 12,
       background: 'var(--venue-bg-elevated)',
       border: '1px solid var(--venue-border-subtle)',
       marginTop: 16,
@@ -302,7 +302,7 @@ function PricingPreview({ rules }: { rules: PricingRule[] }) {
             fontSize: 12, color: 'var(--venue-text-muted)',
             fontFamily: 'var(--font-inter), sans-serif', marginBottom: 6,
           }}>
-            Applies rule: <span style={{ color: 'var(--venue-amber)', fontWeight: 600 }}>{matched.name}</span>
+            Applies rule: <span style={{ color: 'var(--venue-accent)', fontWeight: 600 }}>{matched.name}</span>
           </div>
           <div style={{
             fontFamily: 'var(--font-jetbrains-mono), monospace',
@@ -492,7 +492,7 @@ export default function PricingRulesSection({ pricingRules, onChange, isEditing 
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span className="material-symbols-outlined" style={{ fontSize: 18, color: 'var(--venue-amber)' }}>
+            <span className="material-symbols-outlined" style={{ fontSize: 18, color: 'var(--venue-accent)' }}>
               price_change
             </span>
             <span style={{ fontFamily: 'var(--font-inter), sans-serif', fontWeight: 600, fontSize: 14 }}>
@@ -530,7 +530,7 @@ export default function PricingRulesSection({ pricingRules, onChange, isEditing 
             >
               {/* Rules table */}
               <div style={{
-                borderRadius: 10, overflow: 'hidden',
+                borderRadius: 18, overflow: 'hidden',
                 border: '1px solid var(--venue-border-subtle)',
               }}>
                 {/* Table header */}
@@ -664,9 +664,9 @@ export default function PricingRulesSection({ pricingRules, onChange, isEditing 
                     marginTop: 10,
                     display: 'inline-flex', alignItems: 'center', gap: 6,
                     padding: '8px 16px', borderRadius: 8,
-                    background: 'var(--venue-amber-tint)',
-                    border: '1px solid var(--venue-amber-border)',
-                    color: 'var(--venue-amber)', fontSize: 13, fontWeight: 600,
+                    background: 'var(--venue-accent-tint)',
+                    border: '1px solid var(--venue-accent-border)',
+                    color: 'var(--venue-accent)', fontSize: 13, fontWeight: 600,
                     fontFamily: 'var(--font-inter), sans-serif',
                     cursor: 'pointer',
                   }}

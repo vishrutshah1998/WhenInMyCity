@@ -58,7 +58,7 @@ function RadialArc({ percent }: { percent: number }) {
       <circle
         cx="14" cy="14" r={r}
         fill="none"
-        stroke="var(--venue-amber)"
+        stroke="var(--venue-accent)"
         strokeWidth="2.5"
         strokeDasharray={`${filled} ${circ}`}
         strokeDashoffset={offset}
@@ -109,7 +109,7 @@ export default function KpiCard({
         background: 'var(--venue-bg-surface)',
         border: '1px solid var(--venue-border-subtle)',
         borderTop: '3px solid var(--venue-accent)',
-        borderRadius: 12,
+        borderRadius: 18,
         padding: '20px 20px 0',
         display: 'flex',
         flexDirection: 'column',
@@ -159,7 +159,7 @@ export default function KpiCard({
       {subtext && (
         <div style={{
           fontSize: 11,
-          color: 'var(--venue-amber)',
+          color: 'var(--venue-accent)',
           fontFamily: 'var(--font-inter), system-ui, sans-serif',
           marginBottom: 4,
         }}>
