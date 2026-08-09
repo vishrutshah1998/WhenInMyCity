@@ -732,10 +732,9 @@ export async function withdrawProposal(
  * confirmed there was previously no way back for the maker at all.
  *
  * Frees the `venue_availability` slot this booking held and notifies the
- * Venue. Deliberately does NOT touch a linked `events` row (public event,
- * RSVPs, refunds) — cancelling the public event is a separate decision via
- * the existing cancelEvent() in events.ts; a maker who needs both should
- * cancel the event too from the Events page.
+ * Venue. Also unpublishes a linked `events` row back to 'draft' — but only
+ * when it's safe to do so silently (see below); this does NOT touch RSVPs
+ * or refunds, which stay the existing cancelEvent() flow in events.ts.
  *
  * @param proposalId  The proposal to cancel.
  * @param reason      Optional free-text reason, shown to the Venue.
@@ -754,7 +753,7 @@ export async function cancelConfirmedBooking(
 
   const { data: proposal } = await admin
     .from('maker_venue_proposals')
-    .select('id, maker_id, venue_id, proposed_date, start_time, end_time, event_title, status')
+    .select('id, maker_id, venue_id, proposed_date, start_time, end_time, event_title, status, event_id')
     .eq('id', proposalId)
     .maybeSingle()
 
@@ -781,6 +780,43 @@ export async function cancelConfirmedBooking(
   if (updateError) {
     console.error('[cancelConfirmedBooking]', updateError.message)
     return { error: 'Failed to cancel booking. Please try again.' }
+  }
+
+  // Unpublish the linked event back to 'draft', same as its state when the
+  // booking was first confirmed — but only when nobody has paid to attend
+  // yet. An event with captured RSVPs is left untouched: flipping it to
+  // 'draft' would 404 it for those attendees (events RLS only allows
+  // non-creators to see 'published' rows) without refunding them, which is
+  // worse than doing nothing. That case needs the creator's explicit
+  // cancelEvent() (full refunds) — not a silent side effect of cancelling
+  // the venue side of the booking.
+  if (proposal.event_id) {
+    const { data: linkedEvent } = await admin
+      .from('events')
+      .select('id, status')
+      .eq('id', proposal.event_id)
+      .maybeSingle()
+
+    if (linkedEvent && linkedEvent.status === 'published') {
+      const { count: capturedRsvpCount } = await admin
+        .from('rsvps')
+        .select('id', { count: 'exact', head: true })
+        .eq('event_id', linkedEvent.id)
+        .eq('payment_status', 'captured')
+
+      if (!capturedRsvpCount) {
+        const { error: draftError } = await admin
+          .from('events')
+          .update({ status: 'draft' })
+          .eq('id', linkedEvent.id)
+
+        if (draftError) {
+          console.error('[cancelConfirmedBooking] event draft revert', draftError.message)
+        }
+      } else {
+        console.warn('[cancelConfirmedBooking] linked event has captured RSVPs — left published; needs creator cancelEvent()', linkedEvent.id)
+      }
+    }
   }
 
   // Free the confirmed availability slot this booking held (fire-and-forget)

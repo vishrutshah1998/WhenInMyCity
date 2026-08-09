@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { Drawer } from 'vaul'
 import { createEvent, publishEvent } from '@/app/actions/events'
 import { uploadEventCover } from '@/app/actions/upload'
@@ -19,19 +20,6 @@ interface ProfileData {
   user_tier?: UserTier | null
 }
 
-interface VenueRow {
-  id: string
-  name: string
-  address: string
-  city: string
-  lat: number | null
-  lng: number | null
-  photos: string[] | null
-  category: string | null
-  capacity_max: number | null
-  google_maps_url: string | null
-}
-
 // ── Constants ─────────────────────────────────────────────────────────────────
 
 const GRAIN_STYLE: React.CSSProperties = {
@@ -41,7 +29,6 @@ const GRAIN_STYLE: React.CSSProperties = {
 const MONTH_NAMES = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC']
 
 type PosterStyle = 'underground' | 'zine' | 'electric' | 'upload'
-type VenueMode   = 'wimc' | 'custom'
 
 // ── Category detection ────────────────────────────────────────────────────────
 
@@ -428,7 +415,7 @@ function Toggle({ on, onToggle, label, badge }: { on: boolean; onToggle: () => v
 
 // ── Main form ─────────────────────────────────────────────────────────────────
 
-export default function CreateEventForm({ venues, profile }: { venues: VenueRow[]; profile: ProfileData | null }) {
+export default function CreateEventForm({ profile }: { profile: ProfileData | null }) {
   const router = useRouter()
   const isMobile = useIsMobile()
   const [isPending, startTransition] = useTransition()
@@ -459,9 +446,6 @@ export default function CreateEventForm({ venues, profile }: { venues: VenueRow[
   const [isMultiDay,        setIsMultiDay       ] = useState(false)
 
   // Geography
-  const [venueMode,         setVenueMode        ] = useState<VenueMode>('wimc')
-  const [venueSearch,       setVenueSearch      ] = useState('')
-  const [selectedVenueId,   setSelectedVenueId  ] = useState<string | null>(null)
   const [customVenueName,   setCustomVenueName  ] = useState('')
   const [customVenueAddr,   setCustomVenueAddr  ] = useState('')
   const [customMapsUrl,     setCustomMapsUrl    ] = useState('')
@@ -503,14 +487,9 @@ export default function CreateEventForm({ venues, profile }: { venues: VenueRow[
   const dateDay       = startDate ? fmt2(startDate.getDate()) : null
   const dateMonth     = startDate ? MONTH_NAMES[startDate.getMonth()] : null
 
-  const selectedVenue    = venues.find(v => v.id === selectedVenueId) ?? null
-  const filteredVenues   = venueSearch.trim()
-    ? venues.filter(v => `${v.name} ${v.city}`.toLowerCase().includes(venueSearch.toLowerCase()))
-    : venues
-
-  const activeVenueName = venueMode === 'wimc' ? (selectedVenue?.name ?? '') : customVenueName.trim()
-  const activeVenueAddr = venueMode === 'wimc' ? (selectedVenue?.address ?? '') : customVenueAddr.trim()
-  const activeMapsUrl   = venueMode === 'wimc' ? (selectedVenue?.google_maps_url ?? '') : customMapsUrl.trim()
+  const activeVenueName = customVenueName.trim()
+  const activeVenueAddr = customVenueAddr.trim()
+  const activeMapsUrl   = customMapsUrl.trim()
 
   const ticketPricePaise = isFree ? 0 : Math.round(parseFloat(ticketPrice || '0') * 100)
   const priceLabel = isFree ? 'FREE' : ticketPrice ? `₹${ticketPrice}` : '₹ — — —'
@@ -567,7 +546,7 @@ export default function CreateEventForm({ venues, profile }: { venues: VenueRow[
     if (!title.trim()) return 'Please enter an event title.'
     if (title.trim().length < 3) return 'Title must be at least 3 characters.'
     const vAddr = activeVenueAddr.trim()
-    if (vAddr.length < 5) return venueMode === 'wimc' ? 'Please select a venue or switch to Custom.' : 'Full venue address required (5+ chars).'
+    if (vAddr.length < 5) return 'Full venue address required (5+ chars).'
     if (!isFree && ticketPricePaise <= 0) return 'Please enter a ticket price greater than ₹0.'
     if (fanTiersEnabled && isLanternPlus && fanTiers.some(t => !t.name.trim())) return 'Each ticket tier needs a name.'
     if (!startDate || startHour === null || startMinute === null) return 'Please set a start date and time.'
@@ -590,8 +569,6 @@ export default function CreateEventForm({ venues, profile }: { venues: VenueRow[
       description:     description.trim() || undefined,
       venue_name:      activeVenueName || 'TBA',
       venue_address:   hideAddress ? 'Hidden until RSVP' : vAddr,
-      venue_lat:       selectedVenue?.lat ?? undefined,
-      venue_lng:       selectedVenue?.lng ?? undefined,
       google_maps_url: activeMapsUrl || undefined,
       starts_at:       startsAt,
       ends_at:         endsAt,
@@ -821,64 +798,30 @@ export default function CreateEventForm({ venues, profile }: { venues: VenueRow[
               {/* 04 · GEOGRAPHY */}
               <section>
                 <div style={{ fontFamily: 'var(--font-jetbrains-mono)' }} className="text-[#E8705A] text-[10px] uppercase tracking-[0.2em] mb-6">04. GEOGRAPHY</div>
-                <div className="flex gap-2 mb-4">
-                  {(['wimc', 'custom'] as const).map(mode => (
-                    <button key={mode} onClick={() => { setVenueMode(mode); setSelectedVenueId(null) }}
-                            className={['flex-1 py-2 border-2 transition-colors text-center', venueMode === mode ? 'border-[#E8705A] bg-[#E8705A]/10 text-[#E8705A]' : 'border-dashed border-white/20 text-white/40 hover:border-white/30'].join(' ')}
-                            style={{ fontFamily: 'var(--font-jetbrains-mono)', fontSize: 10, letterSpacing: '0.1em' }}>
-                      {mode === 'wimc' ? 'WIMC VENUES' : 'CUSTOM VENUE'}
-                    </button>
-                  ))}
+
+                <div className="space-y-3">
+                  <input type="text" value={customVenueName} onChange={e => setCustomVenueName(e.target.value)} placeholder="Venue name"
+                         className="w-full bg-white/5 border-2 border-dashed border-white/10 focus:border-[#E8705A] outline-none px-4 py-3 text-white placeholder:text-white/30 transition-colors"
+                         style={{ fontFamily: 'var(--font-jetbrains-mono)', fontSize: 13 }} />
+                  <input type="text" value={customVenueAddr} onChange={e => setCustomVenueAddr(e.target.value)} placeholder="Full address"
+                         className="w-full bg-white/5 border-2 border-dashed border-white/10 focus:border-[#E8705A] outline-none px-4 py-3 text-white placeholder:text-white/30 transition-colors"
+                         style={{ fontFamily: 'var(--font-jetbrains-mono)', fontSize: 13 }} />
+                  <div className="relative group">
+                    <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-white/30 group-focus-within:text-[#E8705A] transition-colors text-[16px]">map</span>
+                    <input type="url" value={customMapsUrl} onChange={e => setCustomMapsUrl(e.target.value)} placeholder="Google Maps link (optional)"
+                           className="w-full bg-white/5 border-2 border-dashed border-white/10 focus:border-[#E8705A] outline-none px-4 py-3 pl-10 text-white placeholder:text-white/30 transition-colors"
+                           style={{ fontFamily: 'var(--font-jetbrains-mono)', fontSize: 12 }} />
+                  </div>
                 </div>
 
-                {venueMode === 'wimc' ? (
-                  <>
-                    <div className="relative group mb-3">
-                      <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-white/30 group-focus-within:text-[#E8705A] transition-colors text-[16px]">search</span>
-                      <input type="text" value={venueSearch} onChange={e => setVenueSearch(e.target.value)}
-                             placeholder="Search by name or city..."
-                             className="w-full bg-white/5 border-2 border-dashed border-white/10 focus:border-[#E8705A] outline-none px-4 py-3 pl-10 text-white placeholder:text-white/30 transition-colors"
-                             style={{ fontFamily: 'var(--font-jetbrains-mono)', fontSize: 12 }} />
-                    </div>
-                    {filteredVenues.length === 0 ? (
-                      <div className="py-4 text-white/30 text-center" style={{ fontFamily: 'var(--font-jetbrains-mono)', fontSize: 10 }}>NO VENUES FOUND — USE CUSTOM VENUE</div>
-                    ) : (
-                      <div className="space-y-2 max-h-52 overflow-y-auto pr-1">
-                        {filteredVenues.map(v => (
-                          <button key={v.id} onClick={() => setSelectedVenueId(selectedVenueId === v.id ? null : v.id)}
-                                  className={['w-full flex items-start gap-3 py-3 px-4 border text-left transition-colors', selectedVenueId === v.id ? 'border-[#E8705A] bg-[#E8705A]/10' : 'border-dashed border-white/10 hover:bg-white/5'].join(' ')}>
-                            <div className="w-7 h-7 flex items-center justify-center flex-shrink-0 mt-0.5"
-                                 style={{ backgroundColor: '#E8705A', fontFamily: 'var(--font-syne)', fontWeight: 900, fontSize: 12, color: '#07070A' }}>
-                              {v.name.charAt(0).toUpperCase()}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <div style={{ fontFamily: 'var(--font-barlow)' }} className="text-white text-[14px]">{v.name}</div>
-                              <div style={{ fontFamily: 'var(--font-jetbrains-mono)' }} className="text-white/50 text-[10px] truncate">{v.city} · {v.address}</div>
-                            </div>
-                            {selectedVenueId === v.id && <span className="material-symbols-outlined text-[#E8705A] text-[16px] flex-shrink-0" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>}
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </>
-                ) : (
-                  <div className="space-y-3">
-                    <input type="text" value={customVenueName} onChange={e => setCustomVenueName(e.target.value)} placeholder="Venue name"
-                           className="w-full bg-white/5 border-2 border-dashed border-white/10 focus:border-[#E8705A] outline-none px-4 py-3 text-white placeholder:text-white/30 transition-colors"
-                           style={{ fontFamily: 'var(--font-jetbrains-mono)', fontSize: 13 }} />
-                    <input type="text" value={customVenueAddr} onChange={e => setCustomVenueAddr(e.target.value)} placeholder="Full address"
-                           className="w-full bg-white/5 border-2 border-dashed border-white/10 focus:border-[#E8705A] outline-none px-4 py-3 text-white placeholder:text-white/30 transition-colors"
-                           style={{ fontFamily: 'var(--font-jetbrains-mono)', fontSize: 13 }} />
-                    <div className="relative group">
-                      <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-white/30 group-focus-within:text-[#E8705A] transition-colors text-[16px]">map</span>
-                      <input type="url" value={customMapsUrl} onChange={e => setCustomMapsUrl(e.target.value)} placeholder="Google Maps link (optional)"
-                             className="w-full bg-white/5 border-2 border-dashed border-white/10 focus:border-[#E8705A] outline-none px-4 py-3 pl-10 text-white placeholder:text-white/30 transition-colors"
-                             style={{ fontFamily: 'var(--font-jetbrains-mono)', fontSize: 12 }} />
-                    </div>
-                  </div>
-                )}
-
                 <Toggle on={hideAddress} onToggle={() => setHideAddress(v => !v)} label="Hide address until RSVP" />
+
+                <Link href="/dashboard/venues"
+                      className="mt-4 flex items-center gap-2 text-white/40 hover:text-[#E8705A] transition-colors"
+                      style={{ fontFamily: 'var(--font-jetbrains-mono)', fontSize: 11 }}>
+                  <span className="material-symbols-outlined text-[15px]">apartment</span>
+                  Want to book a real WIMC venue? Browse WIMC Venues →
+                </Link>
               </section>
 
               {/* 05 · ADMISSION */}
