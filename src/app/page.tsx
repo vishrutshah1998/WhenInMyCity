@@ -19,7 +19,7 @@ const STUB_H = 34  // bottom info strip height (fixed px)
 type TearState = 'idle' | 'tearing' | 'flying' | 'entering'
 
 // ── Data ─────────────────────────────────────────────────────
-const CITIES = ['Indore','Jaipur','Bhopal','Chandigarh','Kochi','Mysuru','Vadodara','Dehradun','Ranchi','Coimbatore','Agra','Vijayawada','Surat','Nagpur','Lucknow','Amritsar','Jodhpur','Udaipur']
+const CITIES = ['Ahmedabad','Gandhinagar']
 const EVENT_TAGS = [
   { label: 'Jazz Nights',   color: '#FF6B35' },
   { label: 'Stand-up',      color: '#D8432E' },

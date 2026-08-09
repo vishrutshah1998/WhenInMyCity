@@ -24,7 +24,7 @@ export const TICKET_META: TicketMeta[] = [
   { serial: 'WIMC · 004', type: 'ROLE SELECT',  accent: '#1F8A70', stubLabel: 'ADMIT ONE · CHOOSE YOUR PATH',          bg: '#FAF7F0', tallStub: true },
 ]
 
-export const CITIES = ['Indore', 'Jaipur', 'Bhopal', 'Chandigarh', 'Kochi', 'Mysuru', 'Vadodara', 'Dehradun', 'Ranchi', 'Coimbatore', 'Agra', 'Vijayawada', 'Surat', 'Nagpur', 'Lucknow', 'Amritsar', 'Jodhpur', 'Udaipur']
+export const CITIES = ['Ahmedabad', 'Gandhinagar']
 
 export const EVENT_TAGS = [
   { label: 'Jazz Nights',  color: '#FF6B35' },

@@ -7,52 +7,11 @@ import { CITIES, type City } from '@/lib/constants/interests'
 import { CreatorEventTicket } from '@/components/onboarding/BoardingPassArtifact'
 import { getCategoryColour } from '@/lib/onboarding/design-tokens'
 
-const DEFAULT_TOP = ['Indore', 'Jaipur', 'Bhopal', 'Chandigarh', 'Kochi', 'Ahmedabad', 'Mumbai']
+const DEFAULT_TOP = ['Ahmedabad', 'Gandhinagar']
 
 const CITY_TAGLINES: Record<string, string> = {
   'Gandhinagar':          "India's greenest planned capital — 54 trees per person",
-  'Jaipur':               "Pink sandstone city of palaces & bazaars since 1727",
-  'Indore':               "Cleanest city in India, 7 years running — and counting",
-  'Chandigarh':           "Le Corbusier's modernist grid meets Himalayan skies",
-  'Kochi':                "Arabian Sea spice routes still flow through here",
   'Ahmedabad':            "UNESCO World Heritage city with 600-year-old stepwells",
-  'Mumbai':               "Maximum city. Maximum dreams. Maximum everything.",
-  'Delhi':                "3,000 years of empire, still the seat of power",
-  'Bhopal':               "City of lakes cradled between the Vindhya hills",
-  'Varanasi':             "Oldest continuously inhabited city on the planet",
-  'Udaipur':              "Venice of the East — palaces rising from three lakes",
-  'Jodhpur':              "Every house painted blue — 500 years of tradition",
-  'Mysuru':               "Sandalwood, silk & a palace lit by 100,000 bulbs",
-  'Panaji':               "Latin facades, feni cocktails, eternal sea breeze",
-  'Shimla':               "Summer capital of the British Raj at 2,200m above sea",
-  'Srinagar':             "Dal Lake + chinar leaves + saffron fields in autumn",
-  'Shillong':             "Scotland of the East — rock capital of India",
-  'Amritsar':             "The Golden Temple feeds 100,000 people free. Daily.",
-  'Lucknow':              "Tehzeeb so refined, even arguments end with 'pehle aap'",
-  'Nashik':               "India's wine country on the banks of the Godavari",
-  'Nagpur':               "Geographical center of India — the true zero mile",
-  'Guwahati':             "Gateway to the Northeast on the mighty Brahmaputra",
-  'Coimbatore':           "Manchester of South India — textile spine of the nation",
-  'Madurai':              "Meenakshi temple built when Rome was still rising",
-  'Dehradun':             "Valley of doons, ringed by snow-capped Himalayan peaks",
-  'Visakhapatnam':        "Steel, submarines & 2,000 km of Eastern coast",
-  'Pune':                 "Oxford of the East — 50+ universities, one vibrant city",
-  'Surat':                "Cuts 90% of the world's diamonds. Right. Here.",
-  'Patna':                "Pataliputra — capital of the Mauryan Empire",
-  'Bengaluru':            "Silicon Valley of India and garden city — all in one",
-  'Hyderabad':            "Biryani, pearls, and a $100B tech ecosystem",
-  'Chennai':              "Classical Carnatic music + Marina Beach at sunrise",
-  'Kolkata':              "City of joy — Tagore, trams & mishti doi",
-  'Rajkot':               "Mahatma Gandhi's childhood city in Kathiawar",
-  'Vadodara':             "Art, culture & the grand Gaekwad royal legacy",
-  'Thiruvananthapuram':   "Kerala's capital — Padmanabhaswamy's golden vaults",
-  'Tirupati':             "Most-visited pilgrim city on earth, atop Tirumala Hills",
-  'Ujjain':               "One of seven sacred Hindu cities — where time began",
-  'Gwalior':              "A fortress that has never been conquered in war",
-  'Raipur':               "Fastest-growing city in central India's heartland",
-  'Ranchi':               "Jharkhand's cool plateau capital, city of waterfalls",
-  'Bhubaneswar':          "Temple city of India — 700 temples, one skyline",
-  'Mangaluru':            "Where the Western Ghats meet the Arabian Sea",
 }
 
 export default function C4Page() {

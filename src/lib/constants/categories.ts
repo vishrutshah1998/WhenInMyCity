@@ -490,3 +490,17 @@ export function getCategoryColors(id: CreatorType | null): { primary: string; se
     ? { primary: config.primaryColor, secondary: config.secondaryColor }
     : { primary: '#6750A4', secondary: '#EADDFF' }
 }
+
+/**
+ * CREATOR_CATEGORIES only covers the v2/v3 category set — legacy v1 values
+ * (music_performance, comedy_open_mic, workshops_teaching, food_lifestyle,
+ * content_creation) and a few v2 values (video_content, lifestyle_wellness,
+ * business_brand, professional_portfolio) fall through to a title-cased
+ * version of the raw enum instead of an unlabeled blank.
+ */
+export function getCategoryLabel(id: CreatorType | string): string {
+  if (id === 'exploring') return EXPLORING_OPTION.label
+  const config = getCategoryConfig(id as CreatorType)
+  if (config) return config.label
+  return id.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+}

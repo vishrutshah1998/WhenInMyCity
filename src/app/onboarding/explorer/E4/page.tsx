@@ -9,16 +9,9 @@ interface City { name: string; state: string }
 
 const CITIES: City[] = [
   { name: 'Ahmedabad',   state: 'GJ' }, { name: 'Gandhinagar', state: 'GJ' },
-  { name: 'Surat',       state: 'GJ' }, { name: 'Vadodara',    state: 'GJ' },
-  { name: 'Indore',      state: 'MP' }, { name: 'Bhopal',      state: 'MP' },
-  { name: 'Jaipur',      state: 'RJ' }, { name: 'Chandigarh',  state: 'CH' },
-  { name: 'Kochi',       state: 'KL' }, { name: 'Mysuru',      state: 'KA' },
-  { name: 'Bengaluru',   state: 'KA' }, { name: 'Hyderabad',   state: 'TS' },
-  { name: 'Pune',        state: 'MH' }, { name: 'Mumbai',      state: 'MH' },
-  { name: 'Delhi',       state: 'DL' }, { name: 'Lucknow',     state: 'UP' },
 ]
 
-const DEFAULT_TOP = ['Ahmedabad', 'Indore', 'Jaipur', 'Chandigarh', 'Kochi', 'Bengaluru']
+const DEFAULT_TOP = ['Ahmedabad', 'Gandhinagar']
 
 export default function E4Page() {
   const router = useRouter()
