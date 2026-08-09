@@ -11,7 +11,7 @@ import {
   LabelList,
   ResponsiveContainer,
 } from 'recharts'
-import type { WaterfallData } from '@/lib/venue/mock/analyticsData'
+import type { WaterfallData } from '@/lib/venue/analyticsCompute'
 
 // ---------------------------------------------------------------------------
 // Waterfall chart via stacked bars: invisible offset bar + colored value bar

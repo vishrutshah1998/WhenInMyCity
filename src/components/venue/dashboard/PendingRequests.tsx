@@ -3,25 +3,12 @@
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { respondToProposal } from '@/app/actions/venue'
-import type { MakerVenueProposal } from '@/types/database'
+import { respondToProposal } from '@/app/actions/venue-bookings'
+import type { ProposalWithMaker } from '@/app/actions/venue-bookings'
 import ProposalActionButtons from '@/components/venue/ProposalActionButtons'
-
-const SLOT_LABEL: Record<string, string> = {
-  morning:   'Morning',
-  afternoon: 'Afternoon',
-  evening:   'Evening',
-  full_day:  'Full Day',
-}
-
-const CREATOR_TYPE_LABEL: Record<string, string> = {
-  music_performance: 'Music',
-  comedy_open_mic:   'Comedy',
-  art_design:        'Art',
-  workshops_teaching:'Workshop',
-  food_lifestyle:    'Food & Lifestyle',
-  content_creation:  'Content',
-}
+import { getCategoryColors, getCategoryLabel } from '@/lib/constants/categories'
+import { VENUE_RADIUS } from '@/components/venue/ui/primitives'
+import { formatTimeRange } from '@/lib/venue/timeFormat'
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })
@@ -60,7 +47,7 @@ function ProposalCard({
   proposal,
   onRespond,
 }: {
-  proposal: MakerVenueProposal
+  proposal: ProposalWithMaker
   onRespond: (id: string, response: 'accept' | 'decline') => void
 }) {
   const [isPending, startTransition] = useTransition()
@@ -70,10 +57,10 @@ function ProposalCard({
     startTransition(() => onRespond(proposal.id, response))
   }
 
-  // TODO: replace with joined user_profiles data when API supports it
-  const creatorInitials = 'CR'
-  const creatorName = 'Creator'  // placeholder until maker profile is joined
-  const eventTypeLabel = 'Event'
+  const creatorName = proposal.maker.display_name
+  const creatorInitials = getInitials(creatorName)
+  const categoryColors = getCategoryColors(proposal.maker.creator_type)
+  const eventTypeLabel = getCategoryLabel(proposal.maker.creator_type)
 
   return (
     <div style={{
@@ -91,7 +78,7 @@ function ProposalCard({
             height: 32,
             borderRadius: '50%',
             background: 'var(--venue-bg-overlay)',
-            border: avatarHovered ? '2px solid var(--venue-amber)' : '2px solid transparent',
+            border: avatarHovered ? `2px solid ${categoryColors.primary}` : `2px solid ${categoryColors.primary}40`,
             transition: 'border-color 160ms ease',
             display: 'grid',
             placeItems: 'center',
@@ -106,7 +93,7 @@ function ProposalCard({
         </div>
 
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
             <span style={{
               fontSize: 13,
               fontWeight: 600,
@@ -115,19 +102,21 @@ function ProposalCard({
               overflow: 'hidden',
               textOverflow: 'ellipsis',
               whiteSpace: 'nowrap',
+              minWidth: 0,
             }}>
               {creatorName}
             </span>
-            {/* Event type pill */}
+            {/* Event type pill — colored per creator category */}
             <span style={{
               fontSize: 10,
               fontWeight: 600,
               padding: '1px 6px',
-              borderRadius: 9999,
-              background: 'var(--venue-bg-hover)',
-              color: 'var(--venue-text-muted)',
+              borderRadius: VENUE_RADIUS.full,
+              background: `${categoryColors.primary}22`,
+              color: categoryColors.primary,
               fontFamily: 'var(--font-jetbrains-mono), monospace',
               flexShrink: 0,
+              whiteSpace: 'nowrap',
             }}>
               {eventTypeLabel}
             </span>
@@ -145,7 +134,7 @@ function ProposalCard({
           >
             <span>{formatDate(proposal.proposed_date)}</span>
             <span>·</span>
-            <span>{SLOT_LABEL[proposal.proposed_slot] ?? proposal.proposed_slot}</span>
+            <span>{formatTimeRange(proposal.start_time, proposal.end_time)}</span>
             {proposal.expected_attendees && (
               <>
                 <span>·</span>
@@ -186,7 +175,7 @@ function ProposalCard({
 // ---------------------------------------------------------------------------
 
 interface Props {
-  proposals: MakerVenueProposal[]
+  proposals: ProposalWithMaker[]
 }
 
 export default function PendingRequests({ proposals: initialProposals }: Props) {
@@ -208,7 +197,7 @@ export default function PendingRequests({ proposals: initialProposals }: Props) 
     <div style={{
       background: 'var(--venue-bg-surface)',
       border: '1px solid var(--venue-border-subtle)',
-      borderRadius: 12,
+      borderRadius: VENUE_RADIUS.lg,
       overflow: 'hidden',
       display: 'flex',
       flexDirection: 'column',
@@ -233,12 +222,12 @@ export default function PendingRequests({ proposals: initialProposals }: Props) 
           <span
             className="font-venue-nums"
             style={{
-              background: 'var(--venue-amber)',
+              background: 'var(--venue-accent)',
               color: '#000',
               fontSize: 10,
               fontWeight: 700,
               padding: '2px 7px',
-              borderRadius: 9999,
+              borderRadius: VENUE_RADIUS.full,
               fontFamily: 'var(--font-inter), system-ui, sans-serif',
             }}
           >
@@ -307,7 +296,7 @@ export default function PendingRequests({ proposals: initialProposals }: Props) 
                 style={{
                   fontSize: 12.5,
                   fontWeight: 600,
-                  color: 'var(--venue-amber)',
+                  color: 'var(--venue-accent)',
                   textDecoration: 'none',
                   fontFamily: 'var(--font-inter), system-ui, sans-serif',
                   display: 'flex',

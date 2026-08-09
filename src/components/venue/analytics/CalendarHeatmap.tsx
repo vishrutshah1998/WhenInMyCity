@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react'
 import dynamic from 'next/dynamic'
-import type { DailyMetric } from '@/lib/venue/mock/analyticsData'
+import type { DailyMetric } from '@/lib/venue/analyticsCompute'
 import InsightCard, { Amber } from './InsightCard'
 import { useIsMobile } from '@/hooks/useIsMobile'
 

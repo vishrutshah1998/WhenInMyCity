@@ -16,6 +16,7 @@ import WaterfallChart from './WaterfallChart'
 import CalendarHeatmap from './CalendarHeatmap'
 import DemandHeatmap from './DemandHeatmap'
 import PageViewsChart from './PageViewsChart'
+import LeadTimeChart from './LeadTimeChart'
 import InsightCard, { Amber } from './InsightCard'
 
 import {
@@ -24,7 +25,7 @@ import {
   computeWaterfall,
   getBusiestMonth,
   getHighestOccupancyDay,
-} from '@/lib/venue/mock/analyticsData'
+} from '@/lib/venue/analyticsCompute'
 
 import type { VenueAnalyticsData, ProposalFunnel } from '@/app/actions/venue-analytics'
 
@@ -67,7 +68,7 @@ function ProposalFunnelSection({ funnel }: { funnel: ProposalFunnel }) {
     {
       label: 'Accepted',
       value: accepted,
-      color: 'var(--venue-amber)',
+      color: 'var(--venue-accent)',
       desc: acceptRate > 0 ? `${acceptRate}% acceptance rate` : 'No accepted proposals yet',
     },
     {
@@ -82,7 +83,7 @@ function ProposalFunnelSection({ funnel }: { funnel: ProposalFunnel }) {
     <div style={{
       background: 'var(--venue-bg-surface)',
       border: '1px solid var(--venue-border-subtle)',
-      borderRadius: 12,
+      borderRadius: 18,
       padding: 20,
       marginBottom: 24,
     }}>
@@ -212,7 +213,7 @@ function EmptyState({ venueSlug }: { venueSlug: string }) {
           View your listing
         </Link>
         <Link
-          href="/business/venue/creators"
+          href="/business/venue/bookings"
           style={{
             display: 'flex', alignItems: 'center', gap: 6,
             padding: '10px 20px',
@@ -225,8 +226,8 @@ function EmptyState({ venueSlug }: { venueSlug: string }) {
             textDecoration: 'none',
           }}
         >
-          <span className="material-symbols-outlined" style={{ fontSize: 16 }}>person_search</span>
-          Check proposals
+          <span className="material-symbols-outlined" style={{ fontSize: 16 }}>event_available</span>
+          Check bookings
         </Link>
       </div>
 
@@ -339,6 +340,10 @@ export default function AnalyticsPageClient({ venueName: _venueName, venueSlug, 
       <SectionHeading>Booking Funnel</SectionHeading>
 
       <ProposalFunnelSection funnel={realData.proposalFunnel} />
+
+      {realData.leadTimeBins.some(b => b.count > 0) && (
+        <LeadTimeChart bins={realData.leadTimeBins} medianIndex={realData.leadTimeMedianIndex} />
+      )}
 
       {/* ── Occupancy Calendar (all history) ────────────────────────────────── */}
       <SectionHeading>Occupancy Calendar</SectionHeading>

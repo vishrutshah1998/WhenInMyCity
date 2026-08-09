@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { requireAuth } from '@/lib/auth/requireAuth'
 import { calculateRevenueSplit } from '@/lib/revenue'
-import type { DailyMetric, HourDayCell } from '@/lib/venue/mock/analyticsData'
+import { computeLeadTimeDistribution, type DailyMetric, type HourDayCell, type LeadTimeBin } from '@/lib/venue/analyticsCompute'
 
 export interface ProposalFunnel {
   received: number
@@ -23,6 +23,8 @@ export interface VenueAnalyticsData {
   proposalFunnel: ProposalFunnel
   demandGrid: HourDayCell[]
   trafficStats: VenueTrafficStats
+  leadTimeBins: LeadTimeBin[]
+  leadTimeMedianIndex: number
   hasData: boolean
 }
 
@@ -100,7 +102,7 @@ export async function getVenueAnalytics(venueId: string): Promise<VenueAnalytics
         .order('starts_at', { ascending: true }),
       supabase
         .from('maker_venue_proposals')
-        .select('status')
+        .select('status, created_at, proposed_date')
         .eq('venue_id', venueId),
       getVenueTrafficStats(venueId),
     ])
@@ -114,12 +116,18 @@ export async function getVenueAnalytics(venueId: string): Promise<VenueAnalytics
       eventsCompleted: events.filter(e => e.status === 'completed').length,
     }
 
+    const { bins: leadTimeBins, medianIndex: leadTimeMedianIndex } = computeLeadTimeDistribution(
+      proposals.map(p => ({ createdAt: p.created_at, proposedDate: p.proposed_date })),
+    )
+
     if (!events.length) {
       return {
         dailyMetrics: [],
         proposalFunnel,
         demandGrid: emptyDemandGrid(),
         trafficStats,
+        leadTimeBins,
+        leadTimeMedianIndex,
         hasData: proposals.length > 0 || trafficStats.totalViews > 0,
       }
     }
@@ -198,7 +206,7 @@ export async function getVenueAnalytics(venueId: string): Promise<VenueAnalytics
 
     const hasData = dailyMetrics.length > 0 || proposalFunnel.received > 0 || trafficStats.totalViews > 0
 
-    return { dailyMetrics, proposalFunnel, demandGrid, trafficStats, hasData }
+    return { dailyMetrics, proposalFunnel, demandGrid, trafficStats, leadTimeBins, leadTimeMedianIndex, hasData }
   } catch {
     return null
   }

@@ -1,7 +1,7 @@
 'use client'
 
 import KpiCard from '@/components/venue/dashboard/KpiCard'
-import type { KpiAggregates } from '@/lib/venue/mock/analyticsData'
+import type { KpiAggregates } from '@/lib/venue/analyticsCompute'
 
 interface Props {
   kpis: KpiAggregates

@@ -11,8 +11,7 @@ import {
   ResponsiveContainer,
   Cell,
 } from 'recharts'
-import type { LeadTimeBin } from '@/lib/venue/mock/analyticsData'
-import { LEAD_TIME_MEDIAN_INDEX } from '@/lib/venue/mock/analyticsData'
+import type { LeadTimeBin } from '@/lib/venue/analyticsCompute'
 
 // ---------------------------------------------------------------------------
 // Custom rounded bar shape

@@ -13,7 +13,7 @@ import {
   ResponsiveContainer,
   Legend,
 } from 'recharts'
-import type { TrendPoint } from '@/lib/venue/mock/analyticsData'
+import type { TrendPoint } from '@/lib/venue/analyticsCompute'
 
 // ---------------------------------------------------------------------------
 // Types

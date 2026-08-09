@@ -2,8 +2,8 @@
 
 import { Fragment, useMemo } from 'react'
 import Link from 'next/link'
-import type { HourDayCell } from '@/lib/venue/mock/analyticsData'
-import { demandIntensity } from '@/lib/venue/mock/analyticsData'
+import type { HourDayCell } from '@/lib/venue/analyticsCompute'
+import { demandIntensity } from '@/lib/venue/analyticsCompute'
 import InsightCard, { Amber } from './InsightCard'
 import { useIsMobile } from '@/hooks/useIsMobile'
 
