@@ -49,7 +49,7 @@ export default function SpotListPublicPage({ list }: Props) {
           color: 'var(--wimc-text-muted)', fontFamily: 'var(--font-jetbrains-mono)',
           marginBottom: 14,
         }}>
-          When In My City · Favorite Spots
+          When In My City · Favorite Places
         </div>
 
         <h1 style={{

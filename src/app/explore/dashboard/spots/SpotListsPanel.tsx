@@ -348,7 +348,7 @@ export default function SpotListsPanel({ initialLists }: Props) {
           }}>
             format_list_bulleted
           </span>
-          <span>No lists yet. Share your favourite spots in the city.</span>
+          <span>No lists yet. Share your favourite places in the city.</span>
           <button
             onClick={() => setShowCreate(true)}
             style={{

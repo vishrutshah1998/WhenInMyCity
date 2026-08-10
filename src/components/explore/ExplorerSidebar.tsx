@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { WimcWordmark } from '@/components/WimcWordmark'
+import TabbedNavGroup from '@/components/nav/TabbedNavGroup'
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -28,16 +29,27 @@ interface NavItem {
   exact?: boolean
 }
 
-const NAV_ITEMS: NavItem[] = [
-  { href: '/explore/dashboard/browse',        icon: 'explore',             label: 'Explore',        exact: false },
-  { href: '/explore/dashboard/guide',         icon: 'map',                 label: 'City Guide',     exact: false },
-  { href: '/explore/dashboard/studio',        icon: 'web',                 label: 'My Page',        exact: true },
-  { href: '/explore/dashboard/saved',         icon: 'bookmark',            label: 'Saved Events' },
-  { href: '/explore/dashboard/following',     icon: 'group',               label: 'Following' },
-  { href: '/explore/dashboard/spots',         icon: 'pin_drop',            label: 'Spots' },
+const DISCOVER_NAV: NavItem[] = [
+  { href: '/explore/dashboard/browse',        icon: 'explore',             label: 'Explore',       exact: false },
+]
+
+const DISCOVER_NAV_AFTER_SAVED: NavItem[] = [
   { href: '/explore/dashboard/tickets',       icon: 'confirmation_number', label: 'Tickets' },
   { href: '/explore/dashboard/notifications', icon: 'notifications',       label: 'Notifications' },
 ]
+
+const YOU_NAV: NavItem[] = [
+  { href: '/explore/dashboard/studio', icon: 'web', label: 'My Page', exact: true },
+  { href: '/explore/dashboard/guide',  icon: 'map', label: 'City Guide' },
+]
+
+const NAV_GROUP_THEME = {
+  activeColor: LAVENDER,
+  activeBg:    'rgba(155,143,255,0.14)',
+  textColor:   'rgba(255,255,255,0.55)',
+  mutedColor:  'rgba(255,255,255,0.30)',
+  fontFamily:  'var(--font-jetbrains-mono)',
+}
 
 // ---------------------------------------------------------------------------
 // Props
@@ -184,47 +196,29 @@ export default function ExplorerSidebar({
         overflowY: 'auto',
         overflowX: 'hidden',
       }}>
-        {NAV_ITEMS.map((item) => {
-          const active = isActive(item)
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              title={c ? item.label : undefined}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: c ? 'center' : 'flex-start',
-                gap: c ? 0 : 10,
-                padding: c ? '9px 0' : '9px 10px',
-                borderRadius: 6,
-                fontSize: 13.5,
-                fontWeight: 500,
-                textDecoration: 'none',
-                transition: 'background 220ms ease, color 220ms ease',
-                color: active ? LAVENDER : SB_TEXT,
-                background: active ? activeBg : 'transparent',
-                whiteSpace: 'nowrap',
-                overflow: 'hidden',
-              }}
-            >
-              <span
-                className="material-symbols-outlined"
-                style={{
-                  fontSize: 20, flexShrink: 0,
-                  fontVariationSettings: active
-                    ? "'FILL' 1,'wght' 400,'GRAD' 0,'opsz' 24"
-                    : "'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24",
-                }}
-              >
-                {item.icon}
-              </span>
-              {!c && (
-                <span style={{ flex: 1, minWidth: 0 }}>{item.label}</span>
-              )}
-            </Link>
-          )
-        })}
+        {!c && <SectionLabel>Discover</SectionLabel>}
+        {DISCOVER_NAV.map((item) => (
+          <NavItemLink key={item.href} item={item} active={isActive(item)} collapsed={c} activeBg={activeBg} />
+        ))}
+        <TabbedNavGroup
+          icon="bookmark"
+          label="Saved"
+          collapsed={c}
+          theme={NAV_GROUP_THEME}
+          tabs={[
+            { label: 'Events', href: '/explore/dashboard/saved' },
+            { label: 'People', href: '/explore/dashboard/following' },
+            { label: 'Places', href: '/explore/dashboard/spots' },
+          ]}
+        />
+        {DISCOVER_NAV_AFTER_SAVED.map((item) => (
+          <NavItemLink key={item.href} item={item} active={isActive(item)} collapsed={c} activeBg={activeBg} />
+        ))}
+
+        {!c && <SectionLabel>You</SectionLabel>}
+        {YOU_NAV.map((item) => (
+          <NavItemLink key={item.href} item={item} active={isActive(item)} collapsed={c} activeBg={activeBg} />
+        ))}
       </nav>
 
       {/* ── User footer ─────────────────────────────────────────────────── */}
@@ -276,5 +270,58 @@ export default function ExplorerSidebar({
         )}
       </Link>
     </aside>
+  )
+}
+
+function SectionLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <div style={{
+      fontSize: 10, letterSpacing: '1.5px', textTransform: 'uppercase',
+      color: SB_MUTED, padding: '12px 8px 6px',
+      fontFamily: 'var(--font-jetbrains-mono)',
+      whiteSpace: 'nowrap',
+    }}>
+      {children}
+    </div>
+  )
+}
+
+function NavItemLink({ item, active, collapsed, activeBg }: { item: NavItem; active: boolean; collapsed: boolean; activeBg: string }) {
+  return (
+    <Link
+      href={item.href}
+      title={collapsed ? item.label : undefined}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: collapsed ? 'center' : 'flex-start',
+        gap: collapsed ? 0 : 10,
+        padding: collapsed ? '9px 0' : '9px 10px',
+        borderRadius: 6,
+        fontSize: 13.5,
+        fontWeight: 500,
+        textDecoration: 'none',
+        transition: 'background 220ms ease, color 220ms ease',
+        color: active ? LAVENDER : SB_TEXT,
+        background: active ? activeBg : 'transparent',
+        whiteSpace: 'nowrap',
+        overflow: 'hidden',
+      }}
+    >
+      <span
+        className="material-symbols-outlined"
+        style={{
+          fontSize: 20, flexShrink: 0,
+          fontVariationSettings: active
+            ? "'FILL' 1,'wght' 400,'GRAD' 0,'opsz' 24"
+            : "'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24",
+        }}
+      >
+        {item.icon}
+      </span>
+      {!collapsed && (
+        <span style={{ flex: 1, minWidth: 0 }}>{item.label}</span>
+      )}
+    </Link>
   )
 }

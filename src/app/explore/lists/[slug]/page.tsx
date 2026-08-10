@@ -10,7 +10,7 @@ export async function generateMetadata({ params }: Props) {
   if (!list) return {}
   return {
     title:       `${list.title} — When In My City`,
-    description: list.description ?? `A curated list of favorite spots by ${list.author_name}`,
+    description: list.description ?? `A curated list of favorite places by ${list.author_name}`,
   }
 }
 
