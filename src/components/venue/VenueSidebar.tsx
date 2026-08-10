@@ -24,12 +24,17 @@ export default async function VenueSidebar({
   const supabase = await createClient()
   const { user } = await requireAuth()
 
-  const [{ count: pendingCount }, { totalUnreadCount }, { data: profile }] = await Promise.all([
+  const [{ count: pendingCount }, { count: confirmedCount }, { totalUnreadCount }, { data: profile }] = await Promise.all([
     supabase
       .from('maker_venue_proposals')
       .select('id', { count: 'exact', head: true })
       .eq('venue_id', venueId)
       .eq('status', 'pending'),
+    supabase
+      .from('maker_venue_proposals')
+      .select('id', { count: 'exact', head: true })
+      .eq('venue_id', venueId)
+      .eq('status', 'accepted'),
     getVenueNotifications(venueId, 1),
     supabase
       .from('user_profiles')
@@ -49,6 +54,7 @@ export default async function VenueSidebar({
       avatarUrl={avatarUrl}
       pendingCount={pendingCount ?? 0}
       unreadCount={totalUnreadCount}
+      hasAnyConfirmedBooking={(confirmedCount ?? 0) > 0}
       hasCreatorProfile={hasCreatorProfile}
       businessType={businessType}
       personas={personas}

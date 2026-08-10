@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { usePathname } from 'next/navigation'
 import Link from 'next/link'
+import TabbedNavGroup from '@/components/nav/TabbedNavGroup'
 
 // ---------------------------------------------------------------------------
 // Nav data
@@ -16,6 +17,7 @@ interface NavItem {
   primary?: boolean
   exact?: boolean
   soon?: boolean
+  sublabel?: string
 }
 
 interface NavSection {
@@ -34,54 +36,28 @@ const NAV_SECTIONS_VENUE: NavSection[] = [
     ],
   },
   {
-    group: 'Performance',
+    group: 'Growth',
     items: [
       { href: '/business/venue/analytics', icon: 'bar_chart_4_bars', label: 'Analytics' },
       { href: '/business/venue/payouts',   icon: 'payments',         label: 'Payouts' },
     ],
   },
   {
-    group: 'My Space',
+    group: 'Management',
     items: [
-      { href: '/business/venue/venue',        icon: 'apartment',       label: 'My Venue' },
-      { href: '/business/venue/studio',       icon: 'web',             label: 'My Page' },
-      { href: '/business/venue/pricing',      icon: 'price_change',    label: 'Pricing' },
-      { href: '/business/venue/availability', icon: 'tune',            label: 'Availability Rules' },
-    ],
-  },
-  {
-    group: 'Discover',
-    items: [
-      { href: '/map-of-legends', icon: 'location_city', label: 'Map of Legends' },
+      { href: '/business/venue/studio', icon: 'web', label: 'My Page' },
     ],
   },
 ]
 
 const NAV_SECTIONS_BRAND: NavSection[] = [
   {
-    group: 'Operations',
+    group: '',
     items: [
       { href: '/business/brand/dashboard',  icon: 'dashboard',       label: 'Dashboard', primary: true, exact: true },
-      { href: '/business/brand/campaigns', icon: 'campaign',        label: 'Campaigns', soon: true },
-      { href: '/business/brand/enquiries', icon: 'inbox',           label: 'Enquiries', badgeKey: 'unread' },
-    ],
-  },
-  {
-    group: 'Discover',
-    items: [
-      { href: '/business/brand/creators', icon: 'person_search', label: 'Browse Creators' },
-    ],
-  },
-  {
-    group: 'Performance',
-    items: [
-      { href: '/business/brand/analytics', icon: 'bar_chart_4_bars', label: 'Analytics', soon: true },
-    ],
-  },
-  {
-    group: 'My Brand',
-    items: [
-      { href: '/business/brand/studio', icon: 'web', label: 'My Page' },
+      { href: '/business/brand/enquiries',  icon: 'inbox',           label: 'Enquiries', badgeKey: 'unread' },
+      { href: '/business/brand/creators',   icon: 'person_search',   label: 'Browse Creators' },
+      { href: '/business/brand/studio',     icon: 'web',             label: 'My Page' },
     ],
   },
 ]
@@ -97,6 +73,7 @@ export interface VenueSidebarClientProps {
   avatarUrl?: string
   pendingCount: number
   unreadCount: number
+  hasAnyConfirmedBooking?: boolean
   hasCreatorProfile?: boolean
   businessType?: 'venue' | 'brand'
   personas?: string[]
@@ -194,14 +171,28 @@ function NavLink({ item, active, badge, collapsed }: { item: NavItem; active: bo
 
       {!collapsed && (
         <>
-          <span style={{
-            fontSize: 13.5, fontWeight: item.primary ? 600 : 500,
-            fontFamily: 'var(--font-inter), system-ui, sans-serif',
-            color: active ? 'var(--venue-text-primary)' : 'var(--venue-text-secondary)',
-            flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-            transition: 'color 160ms ease',
-          }}>
-            {item.label}
+          <span style={{ flex: 1, minWidth: 0 }}>
+            <span style={{
+              display: 'block',
+              fontSize: 13.5, fontWeight: item.primary ? 600 : 500,
+              fontFamily: 'var(--font-inter), system-ui, sans-serif',
+              color: active ? 'var(--venue-text-primary)' : 'var(--venue-text-secondary)',
+              whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+              transition: 'color 160ms ease',
+            }}>
+              {item.label}
+            </span>
+            {item.sublabel && (
+              <span style={{
+                display: 'block', fontSize: 11,
+                color: VENUE_MUTED,
+                fontFamily: 'var(--font-inter), system-ui, sans-serif',
+                fontWeight: 400, marginTop: 1,
+                whiteSpace: 'normal', lineHeight: 1.3,
+              }}>
+                {item.sublabel}
+              </span>
+            )}
           </span>
           {badge !== null && (
             <span style={{ background: VENUE_ACCENT, color: '#000', fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 9999, flexShrink: 0, fontFamily: 'var(--font-inter), system-ui, sans-serif', lineHeight: '16px' }}>
@@ -223,9 +214,18 @@ function NavLink({ item, active, badge, collapsed }: { item: NavItem; active: bo
 // Main component
 // ---------------------------------------------------------------------------
 
+const NAV_GROUP_THEME = {
+  activeColor: VENUE_ACCENT,
+  activeBg:    'var(--venue-accent-tint)',
+  textColor:   'var(--venue-text-secondary)',
+  mutedColor:  VENUE_MUTED,
+  fontFamily:  'var(--font-inter), system-ui, sans-serif',
+}
+
 export default function VenueSidebarClient({
   businessName, ownerName, initials, avatarUrl,
   pendingCount, unreadCount,
+  hasAnyConfirmedBooking = false,
   hasCreatorProfile = false,
   businessType = 'venue',
   personas = [],
@@ -501,12 +501,18 @@ export default function VenueSidebarClient({
       {/* ── Nav ───────────────────────────────────────────────────────────────── */}
       <nav onClick={handleNavClick} style={{ flex: 1, padding: collapsed ? '8px 8px' : '8px 10px', display: 'flex', flexDirection: 'column', overflowY: 'auto', overflowX: 'hidden' }}>
         {NAV_SECTIONS.map((section, si) => (
-          <div key={section.group}>
+          <div key={section.group || `section-${si}`}>
             {collapsed && si > 0 && <div style={{ height: 1, background: VENUE_BORDER, margin: '6px 8px' }} />}
-            {!collapsed && <SectionLabel label={section.group} />}
+            {!collapsed && section.group && <SectionLabel label={section.group} />}
 
-            {section.items.map(item => (
-              item.soon ? (
+            {section.items.map(item => {
+              const sublabel =
+                businessType === 'venue' && !hasAnyConfirmedBooking &&
+                (item.href === '/business/venue/analytics' || item.href === '/business/venue/payouts')
+                  ? 'Unlocks after first booking'
+                  : item.sublabel
+
+              return item.soon ? (
                 <div
                   key={item.href}
                   title={collapsed ? item.label : undefined}
@@ -526,9 +532,23 @@ export default function VenueSidebarClient({
                   )}
                 </div>
               ) : (
-                <NavLink key={item.href} item={item} active={isActive(item)} badge={getBadge(item.badgeKey)} collapsed={collapsed} />
+                <NavLink key={item.href} item={{ ...item, sublabel }} active={isActive(item)} badge={getBadge(item.badgeKey)} collapsed={collapsed} />
               )
-            ))}
+            })}
+
+            {businessType === 'venue' && section.group === 'Management' && (
+              <TabbedNavGroup
+                icon="settings"
+                label="Venue Settings"
+                collapsed={collapsed}
+                theme={NAV_GROUP_THEME}
+                tabs={[
+                  { label: 'My Venue', href: '/business/venue/venue' },
+                  { label: 'Pricing', href: '/business/venue/pricing' },
+                  { label: 'Availability Rules', href: '/business/venue/availability' },
+                ]}
+              />
+            )}
           </div>
         ))}
       </nav>
