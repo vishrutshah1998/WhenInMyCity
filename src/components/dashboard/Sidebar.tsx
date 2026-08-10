@@ -4,6 +4,8 @@ import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import type { UserTier } from '@/types/database'
+import { isLocalPlus } from '@/lib/tier'
+import TabbedNavGroup from '@/components/nav/TabbedNavGroup'
 
 const TIER_LABELS: Record<UserTier, string> = {
   wanderer: 'Wanderer',
@@ -42,8 +44,6 @@ const SPACES_NAV: NavItem[] = [
   { href: '/dashboard/venues', icon: 'apartment',  label: 'Venues' },
 ]
 
-const COMMUNITY_ITEM: NavItem = { href: '/dashboard/community', icon: 'diversity_3', label: 'My Circles' }
-
 const EXPANDED_W = 220
 const COLLAPSED_W = 60
 
@@ -51,6 +51,14 @@ const SB_BG     = '#1A2744'
 const SB_BORDER = 'rgba(255,255,255,0.07)'
 const SB_TEXT   = 'rgba(255,255,255,0.55)'
 const SB_MUTED  = 'rgba(255,255,255,0.30)'
+
+const NAV_GROUP_THEME = {
+  activeColor: 'var(--wimc-accent)',
+  activeBg:    'color-mix(in srgb, var(--wimc-accent) 14%, transparent)',
+  textColor:   SB_TEXT,
+  mutedColor:  SB_MUTED,
+  fontFamily:  'var(--font-jetbrains-mono)',
+}
 
 function hexToRgba(hex: string, alpha: number): string {
   const h = hex.replace('#', '')
@@ -192,7 +200,7 @@ export default function Sidebar({
   return (
     <aside className="dash-sidebar" style={{
       width: isExpanded ? EXPANDED_W : COLLAPSED_W,
-      minHeight: '100vh',
+      height: '100vh',
       background: SB_BG,
       borderRight: `1px solid ${SB_BORDER}`,
       display: 'flex',
@@ -426,31 +434,33 @@ export default function Sidebar({
           )
         })}
 
-        {!c && <SectionLabel>Spaces</SectionLabel>}
+        {!c && <SectionLabel>Discover</SectionLabel>}
         {SPACES_NAV.map((item) => (
           <NavLink key={item.href} item={item} active={isActive(item)} collapsed={c} />
         ))}
-        <NavLink
-          item={{ href: '/dashboard/hub', icon: 'hub', label: 'Creator Hub', badge: tier !== 'wanderer' && (unreadHubMessages + pendingHubRequests) > 0 ? (unreadHubMessages + pendingHubRequests) : undefined }}
-          active={isActive({ href: '/dashboard/hub', icon: 'hub', label: 'Creator Hub' })}
+
+        {!c && <SectionLabel>Community</SectionLabel>}
+        <TabbedNavGroup
+          icon="diversity_3"
+          label="Community"
           collapsed={c}
-          dimmed={tier === 'wanderer'}
+          hidden={!isLocalPlus(tier)}
+          theme={NAV_GROUP_THEME}
+          tabs={[
+            { label: 'Creator Hub', href: '/dashboard/hub', badge: (unreadHubMessages + pendingHubRequests) > 0 ? unreadHubMessages + pendingHubRequests : undefined },
+            { label: 'My Circles', href: '/dashboard/community' },
+          ]}
         />
-        {(tier === 'local' || tier === 'lantern' || tier === 'beacon') && (
-          <NavLink item={COMMUNITY_ITEM} active={isActive(COMMUNITY_ITEM)} collapsed={c} />
-        )}
-        <NavLink
-          item={{ href: '/dashboard/hall-of-lights', icon: 'auto_awesome', label: 'Hall of Lights', sublabel: 'Top creators' }}
-          active={isActive({ href: '/dashboard/hall-of-lights', icon: 'auto_awesome', label: 'Hall of Lights' })}
+        <TabbedNavGroup
+          icon="workspace_premium"
+          label="Progress"
           collapsed={c}
+          theme={NAV_GROUP_THEME}
+          tabs={[
+            { label: 'Hall of Lights', href: '/dashboard/hall-of-lights' },
+            { label: 'Tier Progress', href: '/dashboard/tier' },
+          ]}
         />
-        {c && (
-          <NavLink
-            item={{ href: '/dashboard/tier', icon: 'workspace_premium', label: 'Tier Progress' }}
-            active={isActive({ href: '/dashboard/tier', icon: 'workspace_premium', label: 'Tier Progress' })}
-            collapsed={c}
-          />
-        )}
       </nav>
 
       {/* ── User footer → Profile Settings ──────────────────────────────── */}
