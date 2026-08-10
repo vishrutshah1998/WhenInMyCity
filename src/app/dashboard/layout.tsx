@@ -128,7 +128,15 @@ export default async function DashboardLayout({ children }: { children: React.Re
           {children}
         </main>
       </div>
-      <MobileBottomNav config={creatorBottomNavConfig} workspaces={resolveWorkspaces(sidebarPersonas, 'creator')} />
+      <MobileBottomNav
+        config={{
+          ...creatorBottomNavConfig,
+          more: creatorBottomNavConfig.more.filter(item =>
+            ['Creator Hub', 'My Circles'].includes(item.label) ? isHubEnabled : true
+          ),
+        }}
+        workspaces={resolveWorkspaces(sidebarPersonas, 'creator')}
+      />
     </div>
   )
 }

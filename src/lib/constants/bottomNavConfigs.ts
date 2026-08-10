@@ -4,6 +4,10 @@ export interface BottomNavItem {
   label: string
   badgeKey?: string  // key in the badges prop passed to MobileBottomNav
   exact?: boolean
+  // When present, this item represents a tabbed group (e.g. Saved: Events/People/Places).
+  // MobileBottomNav shows an inline tab strip above the primary bar whenever the active
+  // route matches one of these tabs.
+  tabs?: { href: string; label: string }[]
 }
 
 export interface MoreItem {
@@ -102,7 +106,6 @@ export const venueBottomNavConfig: BottomNavConfig = {
     { href: '/business/venue/studio',       icon: 'web',              label: 'My Page' },
     { href: '/business/venue/pricing',      icon: 'price_change',     label: 'Pricing' },
     { href: '/business/venue/availability', icon: 'tune',             label: 'Availability' },
-    { href: '/map-of-legends',              icon: 'location_city',    label: 'Map of Legends' },
   ],
   accent:  'var(--venue-amber)',
   bg:      'var(--venue-bg-surface)',
@@ -122,10 +125,7 @@ export const brandBottomNavConfig: BottomNavConfig = {
     { href: '/business/brand/creators',  icon: 'person_search', label: 'Creators' },
     { href: '/business/brand/studio',    icon: 'web',           label: 'My Page' },
   ],
-  more: [
-    { icon: 'campaign',         label: 'Campaigns', soon: true },
-    { icon: 'bar_chart_4_bars', label: 'Analytics', soon: true },
-  ],
+  more: [],
   accent:  'var(--venue-amber)',
   bg:      'var(--venue-bg-surface)',
   border:  'var(--venue-border-subtle)',
@@ -138,15 +138,21 @@ export const brandBottomNavConfig: BottomNavConfig = {
 export const explorerBottomNavConfig: BottomNavConfig = {
   items: [
     { href: '/explore',                         icon: 'explore',             label: 'Explore', exact: true },
+    {
+      href: '/explore/dashboard/saved',         icon: 'bookmark',            label: 'Saved',
+      tabs: [
+        { href: '/explore/dashboard/saved',     label: 'Events' },
+        { href: '/explore/dashboard/following', label: 'People' },
+        { href: '/explore/dashboard/spots',     label: 'Places' },
+      ],
+    },
     { href: '/explore/dashboard/tickets',       icon: 'confirmation_number', label: 'Tickets' },
-    { href: '/explore/dashboard/saved',         icon: 'bookmark',            label: 'Saved' },
     { href: '/explore/dashboard/notifications', icon: 'notifications',       label: 'Alerts' },
   ],
   more: [
-    { href: '/explore/dashboard/studio',    icon: 'web',      label: 'My Page' },
-    { href: '/explore/dashboard/following', icon: 'group',    label: 'Following' },
-    { href: '/explore/dashboard/spots',     icon: 'pin_drop', label: 'Spots' },
-    { href: '/explore/dashboard/settings',  icon: 'settings', label: 'Settings' },
+    { href: '/explore/dashboard/studio',   icon: 'web',      label: 'My Page' },
+    { href: '/explore/dashboard/guide',    icon: 'map',      label: 'City Guide' },
+    { href: '/explore/dashboard/settings', icon: 'settings', label: 'Settings' },
   ],
   accent:  'var(--wimc-accent)',
   bg:      'var(--wimc-navy)',

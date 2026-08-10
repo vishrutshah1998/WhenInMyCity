@@ -30,6 +30,12 @@ export default function MobileBottomNav({ config, badges = {}, workspaces = [] }
     return pathname === href || pathname.startsWith(href + '/')
   }
 
+  // Item whose tab group is currently active — its tabs render as an inline
+  // strip above the primary bar (e.g. Explorer's Saved: Events/People/Places).
+  const activeTabsItem = items.find(item =>
+    item.tabs?.some(tab => pathname === tab.href || pathname.startsWith(tab.href + '/'))
+  )
+
   const labelStyle: React.CSSProperties = {
     fontSize: 10,
     fontFamily: 'var(--font-jetbrains-mono), monospace',
@@ -41,6 +47,37 @@ export default function MobileBottomNav({ config, badges = {}, workspaces = [] }
 
   return (
     <>
+      {/* ── Inline tab strip — shown above the primary bar when a tabbed core-4
+             item (e.g. Explorer's Saved: Events/People/Places) is active ──── */}
+      {activeTabsItem?.tabs && (
+        <div
+          className="md:hidden fixed left-0 right-0 z-[55] flex"
+          style={{ bottom: NAV_HEIGHT, background: bg, borderTop: `1px solid ${border}` }}
+        >
+          {activeTabsItem.tabs.map(tab => {
+            const tabActive = pathname === tab.href || pathname.startsWith(tab.href + '/')
+            return (
+              <Link
+                key={tab.href}
+                href={tab.href}
+                className="flex-1 flex items-center justify-center"
+                style={{
+                  height: 40,
+                  color: tabActive ? accent : muted,
+                  fontSize: 11,
+                  fontWeight: 600,
+                  fontFamily: 'var(--font-jetbrains-mono), monospace',
+                  textDecoration: 'none',
+                  borderBottom: tabActive ? `2px solid ${accent}` : '2px solid transparent',
+                }}
+              >
+                {tab.label}
+              </Link>
+            )
+          })}
+        </div>
+      )}
+
       {/* ── Primary nav bar ───────────────────────────────────────────────── */}
       <nav
         className="md:hidden fixed bottom-0 left-0 right-0 z-[55] flex"
@@ -53,7 +90,7 @@ export default function MobileBottomNav({ config, badges = {}, workspaces = [] }
         }}
       >
         {items.map(item => {
-          const active = isActive(item.href, item.exact)
+          const active = item === activeTabsItem || isActive(item.href, item.exact)
           const badge  = item.badgeKey ? (badges[item.badgeKey] ?? 0) : 0
           return (
             <Link
