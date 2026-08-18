@@ -172,6 +172,7 @@ export default async function ExplorePage({
   let subscribedPosts:    SubscribedPost[] = []
   let followedCreatorIds: string[]         = []
   let viewerUserId:       string | null    = null
+  let viewerProfile:      { avatarUrl: string | null; initials: string; displayName: string } | null = null
 
   try {
     const { data: { user } } = await userClient.auth.getUser()
@@ -180,6 +181,20 @@ export default async function ExplorePage({
     if (user) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const db = userClient as any
+
+      // Top bar avatar — same explorer_profiles → user_profiles fallback used by
+      // /explore/dashboard's layout. Degrades gracefully for non-Explorer viewers
+      // (no explorer_profiles row) by falling through to user_profiles alone.
+      const [{ data: viewerEp }, { data: viewerUp }] = await Promise.all([
+        admin.from('explorer_profiles').select('avatar_url, display_name').eq('auth_user_id', user.id).maybeSingle(),
+        admin.from('user_profiles').select('avatar_url, display_name').eq('id', user.id).maybeSingle(),
+      ])
+      const viewerDisplayName = viewerEp?.display_name ?? viewerUp?.display_name ?? 'Explorer'
+      viewerProfile = {
+        avatarUrl:   viewerEp?.avatar_url ?? viewerUp?.avatar_url ?? null,
+        initials:    viewerDisplayName.split(' ').map((w: string) => w[0]).join('').toUpperCase().slice(0, 2),
+        displayName: viewerDisplayName,
+      }
 
       // Get followed creator IDs
       const { data: followsRaw } = await db
@@ -221,6 +236,7 @@ export default async function ExplorePage({
       subscribedPosts={subscribedPosts}
       followedCreatorIds={followedCreatorIds}
       viewerUserId={viewerUserId}
+      viewerProfile={viewerProfile}
     />
   )
 }

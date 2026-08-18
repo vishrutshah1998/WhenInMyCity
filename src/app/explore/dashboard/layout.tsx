@@ -2,8 +2,8 @@ import { redirect } from 'next/navigation'
 import { requireAuth } from '@/lib/auth/requireAuth'
 import { createAdminClient } from '@/lib/supabase/admin'
 import ExplorerSidebar from '@/components/explore/ExplorerSidebar'
-import MobileBottomNav from '@/components/ui/MobileBottomNav'
-import { explorerBottomNavConfig, resolveWorkspaces } from '@/lib/constants/bottomNavConfigs'
+import ExplorerAuthenticatedTopBar from '@/components/explore/ExplorerAuthenticatedTopBar'
+import { getNotificationsForUser } from '@/app/actions/notifications'
 
 export default async function ExplorerDashboardLayout({
   children,
@@ -16,7 +16,7 @@ export default async function ExplorerDashboardLayout({
   // Must have an explorer profile
   const { data: ep } = await admin
     .from('explorer_profiles')
-    .select('display_name, avatar_url')
+    .select('display_name, avatar_url, city')
     .eq('auth_user_id', user.id)
     .maybeSingle()
 
@@ -25,27 +25,30 @@ export default async function ExplorerDashboardLayout({
   // Get username + initials from user_profiles
   const { data: up } = await admin
     .from('user_profiles')
-    .select('username, display_name, avatar_url, personas')
+    .select('username, display_name, avatar_url')
     .eq('id', user.id)
     .maybeSingle()
+
+  const notifications = await getNotificationsForUser()
 
   const displayName      = ep.display_name ?? up?.display_name ?? 'Explorer'
   const username         = up?.username ?? 'explorer'
   const avatarUrl        = ep.avatar_url ?? up?.avatar_url ?? null
   const initials         = displayName.split(' ').map((w: string) => w[0]).join('').toUpperCase().slice(0, 2)
-  const explorerPersonas = (up?.personas ?? []) as string[]
-  const mobileWorkspaces = resolveWorkspaces(explorerPersonas, 'explorer')
+  // LocationPill only covers the Phase 0 launch cities — fall back to the same
+  // default /explore itself uses for any other stored city.
+  const pillCity          = ep.city === 'Gandhinagar' ? 'Gandhinagar' : 'Ahmedabad'
 
   return (
     <div
+      className="venue-theme explorer-variant"
       style={{
         display: 'flex',
         minHeight: '100vh',
-        background: 'var(--wimc-bg-base)',
-        color: 'var(--wimc-text-primary)',
+        background: 'var(--venue-bg-base)',
+        color: 'var(--venue-text-primary)',
         fontFamily: 'var(--font-dm-sans), sans-serif',
-        '--wimc-accent': '#9B8FFF',
-      } as React.CSSProperties}
+      }}
     >
       <div className="wimc-grain" aria-hidden />
 
@@ -68,13 +71,29 @@ export default async function ExplorerDashboardLayout({
           transition: 'margin-left 250ms cubic-bezier(.4,0,.2,1)',
         }}
       >
-        {/* Slim top bar */}
-        <div style={{
+        {/* New top bar is mobile-only this session — lg:hidden matches the gate
+            already used for ExploreClient.tsx's equivalent swap. Desktop keeps
+            the original static label unchanged below. ExplorerTabStrip (the old
+            mobile nav strip) is gone — the swipe carousel's own labeled dot
+            indicator is now the primary mobile nav surface for /explore/dashboard. */}
+        <div className="lg:hidden">
+          <ExplorerAuthenticatedTopBar
+            city={pillCity}
+            avatarUrl={avatarUrl}
+            initials={initials}
+            displayName={displayName}
+            profileHref="/explore/dashboard/profile"
+            notifications={notifications}
+          />
+        </div>
+
+        {/* Desktop — restored unchanged from before this session */}
+        <div className="hidden lg:flex" style={{
           position: 'sticky', top: 0, zIndex: 30,
           height: 48,
           background: 'rgba(242,237,227,0.95)', backdropFilter: 'blur(12px)',
           borderBottom: '1px solid rgba(26,39,68,0.10)',
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          alignItems: 'center', justifyContent: 'space-between',
           padding: '0 20px',
         }}>
           <span style={{
@@ -88,11 +107,12 @@ export default async function ExplorerDashboardLayout({
           </span>
         </div>
 
-        <main className="mob-nav-pb" style={{ flex: 1, minWidth: 0 }}>
+        {/* No fixed bottom nav left to clear (MobileBottomNav removed for Explorer) —
+            just the iOS home-indicator safe area, which mob-nav-pb used to cover too. */}
+        <main style={{ flex: 1, minWidth: 0, paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
           {children}
         </main>
       </div>
-      <MobileBottomNav config={explorerBottomNavConfig} workspaces={mobileWorkspaces} />
     </div>
   )
 }

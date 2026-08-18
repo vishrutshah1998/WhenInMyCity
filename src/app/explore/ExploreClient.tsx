@@ -5,8 +5,29 @@ import { useRouter } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 import Pushpin from '@/components/ui/Pushpin'
 import RubberStamp from '@/components/ui/RubberStamp'
+import ExplorerTopBar from '@/components/explore/ExplorerTopBar'
 import { createClient } from '@/lib/supabase/client'
 import { profileUrl } from '@/lib/profile-url'
+
+// ─── Dark theme constants ──────────────────────────────────────────────────
+// Explorer's dark surface tokens, reused from styles/venue-tokens.css's
+// `.explorer-variant` block / ExplorerProfileHubClient.tsx. Hardcoded (not
+// var(--venue-*)) because this file renders both inside the dashboard shell
+// (which provides those CSS vars) and on the public /explore page (which
+// does not).
+const BG_BASE       = '#0A0814'  // page background; also reused as dark
+                                  // "ink" text atop bright accent badges
+                                  // (coral/teal/amber), mirroring the old
+                                  // light theme's dark-ink-on-chalk-chip role
+const PANEL         = '#191527'  // card / elevated surface background
+const PANEL_LIGHT    = '#211C33'  // one step lighter than PANEL — ticket-stub
+                                  // footers, image-placeholder fills, subtle
+                                  // chip backgrounds
+const BORDER        = 'rgba(155,143,255,0.15)'  // thin dividers / hairline borders
+const BORDER_STRONG = 'rgba(155,143,255,0.28)'  // former 2px brutalist card borders
+const TEXT          = '#F0EFF8'  // primary text
+const MUTED         = '#9896B0'  // secondary / muted text
+const LAVENDER       = '#9B8FFF'  // accent
 
 // ─── Exported data types ──────────────────────────────────────────────────────
 
@@ -76,6 +97,7 @@ interface Props {
   subscribedPosts?:   SubscribedPost[]
   followedCreatorIds?: string[]
   viewerUserId?:      string | null
+  viewerProfile?:     { avatarUrl: string | null; initials: string; displayName: string } | null
   inDashboard?:       boolean
   basePath?:          string
 }
@@ -109,7 +131,7 @@ function makePageBg(baseColor: string, flat = false): React.CSSProperties {
   if (flat) return { backgroundColor: baseColor }
   return {
     backgroundColor: baseColor,
-    backgroundImage: 'radial-gradient(#1A1108 0.5px, transparent 0.5px)',
+    backgroundImage: 'radial-gradient(rgba(155,143,255,0.12) 0.5px, transparent 0.5px)',
     backgroundSize: '16px 16px',
   }
 }
@@ -132,7 +154,7 @@ function Grain() {
 // ─── Barcode decoration ───────────────────────────────────────────────────────
 
 function Barcode({ light = false }: { light?: boolean }) {
-  const color = light ? 'rgba(255,255,255,0.4)' : 'rgba(26,17,8,0.3)'
+  const color = light ? 'rgba(255,255,255,0.4)' : 'rgba(240,239,248,0.35)'
   return (
     <div style={{
       height: 16, width: 64, flexShrink: 0,
@@ -149,7 +171,7 @@ function ImgPlaceholder({ className, dotColor = '#5DD9D0', opacity = 0.1 }: {
   opacity?: number
 }) {
   return (
-    <div className={`relative overflow-hidden bg-ed-chalk-3 ${className ?? ''}`}>
+    <div className={`relative overflow-hidden bg-[#211C33] ${className ?? ''}`}>
       <div className="absolute inset-0" style={{
         backgroundImage: `radial-gradient(${dotColor} 0.5px, transparent 0.5px)`,
         backgroundSize: '8px 8px',
@@ -166,7 +188,7 @@ function EventTicketCard({ event, index = 0 }: { event: ExploreEvent; index?: nu
   return (
     <Link href={`/events/${event.slug}?src=platform_discovery`} className="block">
     <div
-      className="group bg-white text-ed-ink relative flex flex-col overflow-hidden cursor-pointer border-2 border-ed-ink shadow-[6px_6px_0px_0px_rgba(26,17,8,1)] hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[10px_10px_0px_0px_rgba(232,112,90,1)] transition-all duration-300"
+      className="group bg-[#191527] text-[#F0EFF8] relative flex flex-col overflow-hidden cursor-pointer border border-[rgba(155,143,255,0.28)] rounded-[14px] hover:-translate-y-0.5 hover:shadow-[0_8px_24px_rgba(155,143,255,0.12)] transition-all duration-300"
       style={{ animationDelay: `${index * 80}ms` }}
     >
       {/* Grain */}
@@ -188,16 +210,16 @@ function EventTicketCard({ event, index = 0 }: { event: ExploreEvent; index?: nu
           <span className="font-mono text-[10px] text-[#E8705A]">
             #WIMC-{event.id.slice(0, 5).toUpperCase()}
           </span>
-          <span className="bg-[#E8705A] text-ed-ink px-2 py-[2px] font-mono text-[10px] font-bold">
+          <span className="bg-[#E8705A] text-[#0A0814] px-2 py-[2px] font-mono text-[10px] font-bold">
             {d.badge}
           </span>
         </div>
 
         {/* Image */}
-        <ImgPlaceholder className="w-full aspect-[16/9] mb-3 group-hover:scale-[1.02] transition-transform duration-500 border border-ed-ink/10" dotColor="#5DD9D0" opacity={0.14} />
+        <ImgPlaceholder className="w-full aspect-[16/9] mb-3 group-hover:scale-[1.02] transition-transform duration-500 border border-[rgba(155,143,255,0.15)]" dotColor="#5DD9D0" opacity={0.14} />
 
         {/* Title */}
-        <h3 className="font-display font-black text-[22px] text-ed-ink uppercase leading-none mb-1">
+        <h3 className="font-display font-black text-[22px] text-[#F0EFF8] uppercase leading-none mb-1">
           {event.title}
         </h3>
 
@@ -207,7 +229,7 @@ function EventTicketCard({ event, index = 0 }: { event: ExploreEvent; index?: nu
             <div className="w-6 h-6 bg-[#3B6BCC] flex items-center justify-center font-display font-black text-[10px] text-white flex-shrink-0">
               {initial(event.creator.display_name)}
             </div>
-            <span className="font-mono text-[10px] text-ed-ink/40 uppercase">
+            <span className="font-mono text-[10px] text-[#9896B0] uppercase">
               @{event.creator.username}
             </span>
           </div>
@@ -225,10 +247,10 @@ function EventTicketCard({ event, index = 0 }: { event: ExploreEvent; index?: nu
       </div>
 
       {/* Stub */}
-      <div className="h-[34px] bg-ed-ink/[0.04] border-t-2 border-dashed border-ed-ink/15 relative flex items-center justify-between px-4 pl-6 overflow-hidden">
-        <div className="absolute -left-2 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-ed-chalk" />
-        <div className="absolute -right-2 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-ed-chalk" />
-        <span className="font-mono text-[11px] font-black text-ed-ink/70 uppercase">
+      <div className="h-[34px] bg-[#211C33] border-t-2 border-dashed border-[rgba(155,143,255,0.15)] relative flex items-center justify-between px-4 pl-6 overflow-hidden">
+        <div className="absolute -left-2 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-[#0A0814]" />
+        <div className="absolute -right-2 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-[#0A0814]" />
+        <span className="font-mono text-[11px] font-black text-[#9896B0] uppercase">
           ADMIT ONE · {priceFmt(event.ticket_price)}
         </span>
         <Barcode />
@@ -244,7 +266,7 @@ function EventsTabCard({ event, featured = false }: { event: ExploreEvent; featu
   const d = fmtDate(event.starts_at)
   return (
     <Link href={`/events/${event.slug}?src=platform_discovery`} className="block">
-    <div className="group bg-white border-2 border-ed-ink relative flex flex-col overflow-hidden cursor-pointer shadow-[6px_6px_0px_0px_rgba(26,17,8,1)] hover:shadow-[10px_10px_0px_0px_rgba(232,112,90,1)] hover:-translate-x-0.5 hover:-translate-y-0.5 transition-all duration-300">
+    <div className="group bg-[#191527] border border-[rgba(155,143,255,0.28)] relative flex flex-col overflow-hidden cursor-pointer rounded-[14px] hover:-translate-y-0.5 hover:shadow-[0_8px_24px_rgba(155,143,255,0.12)] transition-all duration-300">
       <div className="absolute inset-0 opacity-[0.03] pointer-events-none" aria-hidden>
         <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
           <filter id={`etab-grain-${event.id}`}>
@@ -267,12 +289,12 @@ function EventsTabCard({ event, featured = false }: { event: ExploreEvent; featu
       )}
 
       {/* Ticket header row */}
-      <div className="flex justify-between items-center p-4 pl-6 border-b border-dashed border-ed-ink/15">
-        <span className="font-mono text-[10px] text-ed-ink/40">
+      <div className="flex justify-between items-center p-4 pl-6 border-b border-dashed border-[rgba(155,143,255,0.15)]">
+        <span className="font-mono text-[10px] text-[#9896B0]">
           #WIMC-{event.id.slice(0, 8).toUpperCase()}
         </span>
         {featured && (
-          <span className="bg-[#F5A800] text-ed-ink font-mono text-[9px] px-2 py-[2px]">
+          <span className="bg-[#F5A800] text-[#0A0814] font-mono text-[9px] px-2 py-[2px]">
             FEATURED
           </span>
         )}
@@ -282,7 +304,7 @@ function EventsTabCard({ event, featured = false }: { event: ExploreEvent; featu
       <div className="relative h-48 w-full overflow-hidden">
         <ImgPlaceholder className="absolute inset-0 group-hover:scale-[1.03] transition-transform duration-500" dotColor="#E8705A" opacity={0.1} />
         {/* Date badge over image */}
-        <div className="absolute bottom-4 left-4 bg-white text-ed-ink p-2 flex flex-col items-center font-mono z-10 border border-ed-ink/10">
+        <div className="absolute bottom-4 left-4 bg-[#191527] text-[#F0EFF8] p-2 flex flex-col items-center font-mono z-10 border border-[rgba(155,143,255,0.15)]">
           <span className="font-bold text-xl leading-none">{d.date}</span>
           <span className="text-[10px] uppercase">{d.month}</span>
         </div>
@@ -290,7 +312,7 @@ function EventsTabCard({ event, featured = false }: { event: ExploreEvent; featu
 
       {/* Content */}
       <div className="p-6 pl-8 flex-1 flex flex-col gap-3">
-        <h3 className="font-display font-black text-[26px] text-ed-ink uppercase leading-none group-hover:text-[#E8705A] transition-colors">
+        <h3 className="font-display font-black text-[26px] text-[#F0EFF8] uppercase leading-none group-hover:text-[#E8705A] transition-colors">
           {event.title}
         </h3>
 
@@ -299,27 +321,27 @@ function EventsTabCard({ event, featured = false }: { event: ExploreEvent; featu
             <div className="w-6 h-6 bg-[#3B6BCC] flex items-center justify-center font-display font-black text-[10px] text-white flex-shrink-0">
               {initial(event.creator.display_name)}
             </div>
-            <span className="font-sans text-[13px] text-ed-ink/60 uppercase">
+            <span className="font-sans text-[13px] text-[#9896B0] uppercase">
               BY {event.creator.display_name}
             </span>
           </div>
         )}
 
-        <div className="flex items-center gap-1 text-ed-ink/70">
+        <div className="flex items-center gap-1 text-[#9896B0]">
           <span className="material-symbols-outlined text-[16px]">location_on</span>
           <span className="font-sans text-[14px] uppercase">{event.venue_name}</span>
         </div>
 
         {/* Price */}
-        <div className="mt-auto pt-4 border-t border-dashed border-ed-ink/10 font-display font-black text-[28px] text-[#E8705A]">
+        <div className="mt-auto pt-4 border-t border-dashed border-[rgba(155,143,255,0.15)] font-display font-black text-[28px] text-[#E8705A]">
           {priceFmt(event.ticket_price)}
         </div>
       </div>
 
       {/* Stub */}
-      <div className="h-[34px] bg-ed-chalk-3 border-t-2 border-dashed border-ed-ink/15 relative flex items-center justify-between px-6 pl-8 overflow-hidden">
-        <div className="absolute -left-2 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-ed-chalk" />
-        <div className="absolute -right-2 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-ed-chalk" />
+      <div className="h-[34px] bg-[#211C33] border-t-2 border-dashed border-[rgba(155,143,255,0.15)] relative flex items-center justify-between px-6 pl-8 overflow-hidden">
+        <div className="absolute -left-2 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-[#0A0814]" />
+        <div className="absolute -right-2 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-[#0A0814]" />
         <span className="font-mono text-[10px] text-[#E8705A] uppercase">
           {event.capacity ? `${event.capacity} SEATS LEFT` : 'OPEN ENTRY'}
         </span>
@@ -336,7 +358,7 @@ function CreatorPassCard({ creator }: { creator: ExploreCreator }) {
   return (
     <Link
       href={profileUrl(creator.city, creator.username)}
-      className="min-w-[260px] bg-white border-2 border-ed-ink flex flex-col relative cursor-pointer hover:shadow-[4px_4px_0px_0px_rgba(59,107,204,0.4)] transition-all shrink-0 overflow-hidden"
+      className="min-w-[260px] bg-[#191527] border border-[rgba(155,143,255,0.28)] rounded-[14px] flex flex-col relative cursor-pointer hover:-translate-y-0.5 hover:shadow-[0_8px_24px_rgba(59,107,204,0.18)] transition-all shrink-0 overflow-hidden"
     >
       {/* Culture stamp */}
       <div className="absolute -top-3 -right-3 rotate-12 opacity-40 w-12 h-12 border-2 border-[#3B6BCC] rounded-full flex items-center justify-center pointer-events-none">
@@ -349,25 +371,25 @@ function CreatorPassCard({ creator }: { creator: ExploreCreator }) {
           {initial(creator.display_name)}
         </div>
         <div>
-          <div className="font-black text-[20px] text-ed-ink uppercase leading-tight" style={{ fontFamily: 'var(--font-barlow)' }}>
+          <div className="font-black text-[20px] text-[#F0EFF8] uppercase leading-tight" style={{ fontFamily: 'var(--font-barlow)' }}>
             {creator.display_name}
           </div>
-          <div className="font-mono text-[10px] text-ed-ink/50 uppercase">
+          <div className="font-mono text-[10px] text-[#9896B0] uppercase">
             {creator.creator_type.replace(/_/g, ' ')}
           </div>
         </div>
       </div>
 
       {/* Sub-types strip */}
-      <div className="bg-ed-ink/5 px-4 py-2 border-y-2 border-dashed border-ed-ink/10">
-        <span className="font-sans text-[11px] font-medium uppercase tracking-tight text-ed-ink">
+      <div className="bg-[#211C33] px-4 py-2 border-y-2 border-dashed border-[rgba(155,143,255,0.15)]">
+        <span className="font-sans text-[11px] font-medium uppercase tracking-tight text-[#F0EFF8]">
           {creator.sub_types?.slice(0, 2).join(', ') || 'CREATOR'}
         </span>
       </div>
 
       {/* Stub */}
       <div className="h-8 flex items-center justify-between px-4 bg-[#3B6BCC]/10">
-        <span className="font-mono text-[10px] font-bold text-ed-ink uppercase">CREATOR PASS</span>
+        <span className="font-mono text-[10px] font-bold text-[#F0EFF8] uppercase">CREATOR PASS</span>
         <Barcode />
       </div>
     </Link>
@@ -380,13 +402,13 @@ function VenuePassCard({ venue }: { venue: ExploreVenue }) {
   return (
     <Link
       href={`/venue/${venue.slug}`}
-      className="bg-white border-2 border-ed-ink flex relative overflow-hidden cursor-pointer shadow-[12px_12px_0px_0px_#5DD9D0] hover:shadow-[16px_16px_0px_0px_#5DD9D0] transition-all group"
+      className="bg-[#191527] border border-[rgba(155,143,255,0.28)] rounded-[14px] flex relative overflow-hidden cursor-pointer hover:-translate-y-0.5 hover:shadow-[0_8px_24px_rgba(93,217,208,0.18)] transition-all group"
     >
       {/* Left punch strip */}
-      <div className="w-12 border-r-2 border-dashed border-ed-ink flex flex-col justify-center items-center gap-6 relative bg-[#5DD9D0]/5 flex-shrink-0">
-        <div className="absolute -left-2 top-1/4 w-4 h-4 bg-ed-chalk rounded-full border border-ed-ink" />
-        <div className="absolute -left-2 top-1/2 -translate-y-1/2 w-4 h-4 bg-ed-chalk rounded-full border border-ed-ink" />
-        <div className="absolute -left-2 bottom-1/4 w-4 h-4 bg-ed-chalk rounded-full border border-ed-ink" />
+      <div className="w-12 border-r-2 border-dashed border-[rgba(155,143,255,0.28)] flex flex-col justify-center items-center gap-6 relative bg-[#5DD9D0]/5 flex-shrink-0">
+        <div className="absolute -left-2 top-1/4 w-4 h-4 bg-[#0A0814] rounded-full border border-[rgba(155,143,255,0.28)]" />
+        <div className="absolute -left-2 top-1/2 -translate-y-1/2 w-4 h-4 bg-[#0A0814] rounded-full border border-[rgba(155,143,255,0.28)]" />
+        <div className="absolute -left-2 bottom-1/4 w-4 h-4 bg-[#0A0814] rounded-full border border-[rgba(155,143,255,0.28)]" />
         <span className="material-symbols-outlined text-[#5DD9D0] text-[20px]">location_on</span>
       </div>
 
@@ -394,34 +416,34 @@ function VenuePassCard({ venue }: { venue: ExploreVenue }) {
       <div className="p-4 flex-grow space-y-3">
         <div className="flex justify-between items-start">
           <div>
-            <div className="font-black text-[22px] text-ed-ink uppercase leading-none" style={{ fontFamily: 'var(--font-barlow)' }}>
+            <div className="font-black text-[22px] text-[#F0EFF8] uppercase leading-none" style={{ fontFamily: 'var(--font-barlow)' }}>
               {venue.name}
             </div>
-            <div className="font-mono text-[11px] text-ed-ink/60 uppercase mt-0.5">
+            <div className="font-mono text-[11px] text-[#9896B0] uppercase mt-0.5">
               {venue.neighbourhood ?? venue.city}
             </div>
           </div>
-          <span className="bg-[#5DD9D0] text-ed-ink font-bold px-2 py-[2px] font-mono text-[10px]">
+          <span className="bg-[#5DD9D0] text-[#0A0814] font-bold px-2 py-[2px] font-mono text-[10px]">
             {venue.is_verified ? 'VERIFIED' : 'OPEN'}
           </span>
         </div>
 
         {/* Image grid */}
         <div className="grid grid-cols-3 gap-2">
-          <div className="h-16 bg-ed-ink/10 border border-ed-ink/20" />
-          <div className="h-16 bg-ed-ink/10 border border-ed-ink/20" />
-          <div className="h-16 border-2 border-dashed border-ed-ink/10 flex items-center justify-center font-mono text-[10px] text-ed-ink/40">
+          <div className="h-16 bg-[#211C33] border border-[rgba(155,143,255,0.15)]" />
+          <div className="h-16 bg-[#211C33] border border-[rgba(155,143,255,0.15)]" />
+          <div className="h-16 border-2 border-dashed border-[rgba(155,143,255,0.15)] flex items-center justify-center font-mono text-[10px] text-[#9896B0]">
             {venue.venue_type?.[0]?.toUpperCase().slice(0, 6) ?? 'VENUE'}
           </div>
         </div>
       </div>
 
       {/* Right stub */}
-      <div className="w-16 bg-[#5DD9D0]/10 flex flex-col items-center justify-center border-l-2 border-dashed border-ed-ink/10 flex-shrink-0">
-        <div className="-rotate-90 whitespace-nowrap font-mono text-[9px] text-ed-ink/50 uppercase tracking-widest">
+      <div className="w-16 bg-[#5DD9D0]/10 flex flex-col items-center justify-center border-l-2 border-dashed border-[rgba(155,143,255,0.15)] flex-shrink-0">
+        <div className="-rotate-90 whitespace-nowrap font-mono text-[9px] text-[#9896B0] uppercase tracking-widest">
           CAPACITY
         </div>
-        <div className="font-display font-black text-[22px] text-ed-ink mt-1">
+        <div className="font-display font-black text-[22px] text-[#F0EFF8] mt-1">
           {venue.capacity_max ?? '—'}
         </div>
       </div>
@@ -435,7 +457,7 @@ function FeaturedEventCard({ event }: { event?: ExploreEvent }) {
   return (
     <div className="group cursor-pointer">
       <Link href={event ? `/events/${event.slug}?src=platform_discovery` : '#'}>
-        <div className="bg-ed-ink text-white overflow-hidden relative shadow-[8px_8px_0px_0px_rgba(26,17,8,1)] hover:-translate-y-1 hover:shadow-[12px_12px_0px_0px_rgba(232,112,90,1)] transition-all duration-300">
+        <div className="bg-[#050308] text-white overflow-hidden relative rounded-[14px] border border-[rgba(155,143,255,0.28)] hover:-translate-y-1 hover:shadow-[0_12px_32px_rgba(232,112,90,0.18)] transition-all duration-300">
           <div className="absolute inset-0 opacity-[0.03] pointer-events-none" aria-hidden>
             <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
               <filter id="feat-grain">
@@ -448,7 +470,7 @@ function FeaturedEventCard({ event }: { event?: ExploreEvent }) {
             {/* Left text panel */}
             <div className="p-10 flex flex-col justify-between relative z-10">
               <div>
-                <span className="inline-block bg-[#E8705A] text-ed-ink font-mono text-[12px] px-4 py-1 mb-6">
+                <span className="inline-block bg-[#E8705A] text-[#0A0814] font-mono text-[12px] px-4 py-1 mb-6">
                   FEATURED EXPERIENCE
                 </span>
                 <h2 className="font-display font-black text-white uppercase leading-[0.9]" style={{ fontSize: 'clamp(40px, 5vw, 72px)' }}>
@@ -463,7 +485,7 @@ function FeaturedEventCard({ event }: { event?: ExploreEvent }) {
                   <div className="font-mono text-[14px] text-[#E8705A]">
                     TICKETS FROM {event ? priceFmt(event.ticket_price) : '₹299'}
                   </div>
-                  <button className="mt-3 bg-white text-ed-ink px-10 py-4 font-display font-black text-[18px] hover:bg-[#E8705A] hover:text-white transition-colors">
+                  <button className="mt-3 bg-[#191527] text-[#F0EFF8] px-10 py-4 font-display font-black text-[18px] rounded-[10px] hover:bg-[#E8705A] hover:text-white transition-colors">
                     SECURE THE SPOT
                   </button>
                 </div>
@@ -474,7 +496,7 @@ function FeaturedEventCard({ event }: { event?: ExploreEvent }) {
               </div>
             </div>
             {/* Right image panel */}
-            <div className="relative overflow-hidden bg-ed-ink">
+            <div className="relative overflow-hidden bg-[#050308]">
               <div className="absolute inset-0" style={{
                 backgroundImage: 'radial-gradient(#E8705A 0.5px, transparent 0.5px)',
                 backgroundSize: '8px 8px',
@@ -542,7 +564,7 @@ function FilterRail({
     <aside className="hidden lg:flex flex-col gap-8 sticky top-32">
       {/* What's On */}
       <div>
-        <div className="font-mono text-[10px] text-ed-ink/40 uppercase tracking-widest mb-2 pb-1 border-b border-dashed border-ed-ink/15">
+        <div className="font-mono text-[10px] text-[#9896B0] uppercase tracking-widest mb-2 pb-1 border-b border-dashed border-[rgba(155,143,255,0.15)]">
           WHAT&apos;S ON
         </div>
         <div className="space-y-0.5">
@@ -552,10 +574,10 @@ function FilterRail({
               href={`${basePath}?tab=${tab}&city=${city}&when=${item.when}`}
               className="flex justify-between items-center cursor-pointer group py-2"
             >
-              <span className={`font-sans text-[13px] font-semibold group-hover:text-[#E8705A] transition-colors ${item.when === when ? 'text-[#E8705A] font-bold' : 'text-ed-ink'}`}>
+              <span className={`font-sans text-[13px] font-semibold group-hover:text-[#E8705A] transition-colors ${item.when === when ? 'text-[#E8705A] font-bold' : 'text-[#F0EFF8]'}`}>
                 {item.label}
               </span>
-              <span className="font-mono text-[11px] bg-ed-ink/10 px-1 text-ed-ink/60">
+              <span className="font-mono text-[11px] bg-[#211C33] px-1 text-[#9896B0]">
                 {item.count}
               </span>
             </Link>
@@ -565,7 +587,7 @@ function FilterRail({
 
       {/* Category */}
       <div>
-        <div className="font-mono text-[10px] text-ed-ink/40 uppercase tracking-widest mb-2 pb-1 border-b border-dashed border-ed-ink/15">
+        <div className="font-mono text-[10px] text-[#9896B0] uppercase tracking-widest mb-2 pb-1 border-b border-dashed border-[rgba(155,143,255,0.15)]">
           CATEGORY
         </div>
         <div className="space-y-0.5">
@@ -576,8 +598,8 @@ function FilterRail({
             { label: 'FOOD',  color: '#F5A800' },
           ].map(cat => (
             <div key={cat.label} className="flex items-center gap-2 cursor-pointer group py-2">
-              <div className={`w-3 h-3 border flex-shrink-0 transition-all ${cat.active ? 'border-solid border-[#E8705A] bg-[#E8705A]' : 'border border-dashed border-ed-ink group-hover:border-solid'}`} />
-              <span className="font-sans text-[13px] font-semibold text-ed-ink group-hover:text-[#E8705A] transition-colors">
+              <div className={`w-3 h-3 border flex-shrink-0 transition-all ${cat.active ? 'border-solid border-[#E8705A] bg-[#E8705A]' : 'border border-dashed border-[rgba(155,143,255,0.28)] group-hover:border-solid'}`} />
+              <span className="font-sans text-[13px] font-semibold text-[#F0EFF8] group-hover:text-[#E8705A] transition-colors">
                 {cat.label}
               </span>
             </div>
@@ -587,14 +609,14 @@ function FilterRail({
 
       {/* Sort */}
       <div>
-        <div className="font-mono text-[10px] text-ed-ink/40 uppercase tracking-widest mb-2 pb-1 border-b border-dashed border-ed-ink/15">
+        <div className="font-mono text-[10px] text-[#9896B0] uppercase tracking-widest mb-2 pb-1 border-b border-dashed border-[rgba(155,143,255,0.15)]">
           SORT BY
         </div>
         <div className="flex flex-col gap-1">
-          <button className="bg-ed-ink text-white px-3 py-2 font-mono text-[10px] uppercase text-left">
+          <button className="bg-[#191527] text-white px-3 py-2 font-mono text-[10px] uppercase text-left">
             NEWEST
           </button>
-          <button className="border-2 border-dashed border-ed-ink/20 text-ed-ink/50 px-3 py-2 font-mono text-[10px] uppercase text-left hover:border-solid hover:text-ed-ink transition-all">
+          <button className="border-2 border-dashed border-[rgba(155,143,255,0.15)] text-[#9896B0] px-3 py-2 font-mono text-[10px] uppercase text-left hover:border-solid hover:text-[#F0EFF8] transition-all">
             TRENDING
           </button>
         </div>
@@ -602,8 +624,8 @@ function FilterRail({
 
       {/* Partner promo */}
       <div className="border-2 border-dashed border-[#E8705A]/30 p-4 space-y-2">
-        <div className="font-mono text-[9px] text-ed-ink/50 uppercase">WIMC PARTNER PROGRAM</div>
-        <div className="font-sans text-[13px] italic text-ed-ink">
+        <div className="font-mono text-[9px] text-[#9896B0] uppercase">WIMC PARTNER PROGRAM</div>
+        <div className="font-sans text-[13px] italic text-[#F0EFF8]">
           &ldquo;Host your own venue. Get the community stamp.&rdquo;
         </div>
         <button className="w-full bg-[#E8705A] text-white font-mono text-[10px] py-1 uppercase hover:opacity-90 transition-opacity">
@@ -643,8 +665,8 @@ function SubscribedPostsSection({ posts }: { posts: SubscribedPost[] }) {
         {posts.map((post) => (
           <Link key={post.id} href={post.creator ? profileUrl(post.creator.city, post.creator.username) : '#'} className="block">
             <div
-              className="bg-white border border-ed-ink/[0.08] p-4 hover:border-[#3B6BCC]/40 transition-colors"
-              style={{ boxShadow: '2px 2px 8px rgba(26,17,8,0.04)' }}
+              className="bg-[#191527] border border-[rgba(155,143,255,0.15)] p-4 hover:border-[#3B6BCC]/40 transition-colors"
+              style={{ boxShadow: '0 2px 8px rgba(0,0,0,0.24)' }}
             >
               <div className="flex items-center gap-2 mb-2">
                 <div
@@ -654,13 +676,13 @@ function SubscribedPostsSection({ posts }: { posts: SubscribedPost[] }) {
                   {(post.creator?.display_name?.[0] ?? '?').toUpperCase()}
                 </div>
                 <span
-                  className="text-[12px] font-semibold text-ed-ink"
+                  className="text-[12px] font-semibold text-[#F0EFF8]"
                   style={{ fontFamily: 'var(--font-dm-sans)' }}
                 >
                   @{post.creator?.username ?? '—'}
                 </span>
                 <span
-                  className="text-[11px] text-ed-ink/30 ml-auto"
+                  className="text-[11px] text-[#9896B0] ml-auto"
                   style={{ fontFamily: 'var(--font-dm-sans)' }}
                   suppressHydrationWarning
                 >
@@ -669,7 +691,7 @@ function SubscribedPostsSection({ posts }: { posts: SubscribedPost[] }) {
               </div>
               {post.post_type === 'text' && post.content && (
                 <p
-                  className="text-[14px] text-ed-ink leading-relaxed line-clamp-3"
+                  className="text-[14px] text-[#F0EFF8] leading-relaxed line-clamp-3"
                   style={{ fontFamily: 'var(--font-dm-sans)' }}
                 >
                   {post.content}
@@ -683,7 +705,7 @@ function SubscribedPostsSection({ posts }: { posts: SubscribedPost[] }) {
                   )}
                   {post.content && (
                     <p
-                      className="text-[14px] text-ed-ink/70 leading-relaxed line-clamp-2"
+                      className="text-[14px] text-[#9896B0] leading-relaxed line-clamp-2"
                       style={{ fontFamily: 'var(--font-dm-sans)' }}
                     >
                       {post.content}
@@ -694,7 +716,7 @@ function SubscribedPostsSection({ posts }: { posts: SubscribedPost[] }) {
               {post.post_type === 'link' && (
                 <div>
                   <p
-                    className="text-[13px] font-semibold text-ed-ink truncate"
+                    className="text-[13px] font-semibold text-[#F0EFF8] truncate"
                     style={{ fontFamily: 'var(--font-dm-sans)' }}
                   >
                     🔗 {post.link_title ?? post.link_url}
@@ -737,7 +759,7 @@ function AllTabContent({
             href={inDashboard ? '/dashboard/hall-of-lights' : '/hall-of-lights'}
             className="flex items-center gap-3 p-4 transition-colors hover:brightness-110"
             style={{
-              background: '#1A1108',
+              background: PANEL,
               border: '1px solid rgba(245,168,0,0.22)',
               borderLeft: '3px solid #F5A800',
             }}
@@ -759,7 +781,7 @@ function AllTabContent({
             href="/map-of-legends"
             className="flex items-center gap-3 p-4 transition-colors hover:brightness-110"
             style={{
-              background: '#1A1108',
+              background: PANEL,
               border: '1px solid rgba(93,217,208,0.22)',
               borderLeft: '3px solid #5DD9D0',
             }}
@@ -806,7 +828,7 @@ function AllTabContent({
                 <EventTicketCard key={ev.id} event={ev} index={i} />
               ))}
               {events.length === 0 && (
-                <div className="col-span-3 border-2 border-dashed border-[#E8705A]/30 p-10 text-center font-mono text-[12px] text-ed-ink/40 uppercase tracking-widest">
+                <div className="col-span-3 border-2 border-dashed border-[#E8705A]/30 p-10 text-center font-mono text-[12px] text-[#9896B0] uppercase tracking-widest">
                   NO UPCOMING EVENTS IN {(city || 'YOUR CITY').toUpperCase()} — CHECK BACK SOON
                 </div>
               )}
@@ -821,7 +843,7 @@ function AllTabContent({
                 <CreatorPassCard key={c.id} creator={c} />
               ))}
               {creators.length === 0 && (
-                <div className="border-2 border-dashed border-[#3B6BCC]/30 p-10 font-mono text-[12px] text-ed-ink/40 uppercase tracking-widest">
+                <div className="border-2 border-dashed border-[#3B6BCC]/30 p-10 font-mono text-[12px] text-[#9896B0] uppercase tracking-widest">
                   NO CREATORS FOUND
                 </div>
               )}
@@ -847,7 +869,7 @@ function AllTabContent({
                 <VenuePassCard key={v.id} venue={v} />
               ))}
               {venues.length === 0 && (
-                <div className="col-span-2 border-2 border-dashed border-[#5DD9D0]/30 p-10 text-center font-mono text-[12px] text-ed-ink/40 uppercase tracking-widest">
+                <div className="col-span-2 border-2 border-dashed border-[#5DD9D0]/30 p-10 text-center font-mono text-[12px] text-[#9896B0] uppercase tracking-widest">
                   NO VENUES FOUND IN THIS CITY
                 </div>
               )}
@@ -876,7 +898,7 @@ function AllTabContent({
               <MobileEventCard key={ev.id} event={ev} index={i} />
             ))}
             {events.length === 0 && (
-              <div className="border-2 border-dashed border-[#E8705A]/40 p-6 text-center font-mono text-[11px] text-ed-ink/40 uppercase tracking-widest">
+              <div className="border-2 border-dashed border-[#E8705A]/40 p-6 text-center font-mono text-[11px] text-[#9896B0] uppercase tracking-widest">
                 NO UPCOMING EVENTS IN {(city || 'YOUR CITY').toUpperCase()} — CHECK BACK SOON
               </div>
             )}
@@ -937,7 +959,7 @@ function MobileEventCard({ event, index = 0 }: { event: ExploreEvent; index?: nu
     <Link href={`/events/${event.slug}?src=platform_discovery`} className="block">
     <div
       ref={ref}
-      className="relative bg-white border-2 border-ed-ink shadow-[6px_6px_0px_0px_rgba(26,17,8,1)] flex flex-col overflow-hidden active:scale-[0.98] transition-transform cursor-pointer"
+      className="relative bg-[#191527] border border-[rgba(155,143,255,0.28)] rounded-[14px] flex flex-col overflow-hidden active:scale-[0.98] transition-transform cursor-pointer"
       style={{ opacity: 0, transform: 'translateY(40px)', transition: 'opacity 0.6s cubic-bezier(0.22,1,0.36,1), transform 0.6s cubic-bezier(0.22,1,0.36,1)' }}
     >
       <div className="absolute left-0 top-0 bottom-0 w-[3px] bg-[#E8705A]" />
@@ -950,11 +972,11 @@ function MobileEventCard({ event, index = 0 }: { event: ExploreEvent; index?: nu
             {priceFmt(event.ticket_price)}
           </span>
         </div>
-        <h3 className="font-display font-black text-[22px] text-ed-ink uppercase leading-tight mt-2">
+        <h3 className="font-display font-black text-[22px] text-[#F0EFF8] uppercase leading-tight mt-2">
           {event.title}
         </h3>
         {event.creator && (
-          <span className="font-mono text-[12px] text-ed-ink/50 uppercase">
+          <span className="font-mono text-[12px] text-[#9896B0] uppercase">
             BY {event.creator.display_name}
           </span>
         )}
@@ -962,7 +984,7 @@ function MobileEventCard({ event, index = 0 }: { event: ExploreEvent; index?: nu
           @ {event.venue_name}
         </span>
       </div>
-      <div className="h-[34px] bg-ed-chalk-3 border-t border-dashed border-ed-ink/15 flex items-center justify-between px-4 pl-6">
+      <div className="h-[34px] bg-[#211C33] border-t border-dashed border-[rgba(155,143,255,0.15)] flex items-center justify-between px-4 pl-6">
         <span className="font-mono text-[9px] text-[#E8705A]/80 uppercase">
           {event.capacity ? `${event.capacity} SEATS LEFT` : 'OPEN ENTRY'}
         </span>
@@ -979,19 +1001,19 @@ function MobileCreatorCard({ creator }: { creator: ExploreCreator }) {
   return (
     <Link
       href={profileUrl(creator.city, creator.username)}
-      className="min-w-[180px] bg-white border-2 border-ed-ink shadow-[4px_4px_0px_0px_rgba(26,17,8,1)] flex flex-col relative overflow-hidden shrink-0 active:translate-x-1 active:translate-y-1 active:shadow-none transition-all"
+      className="min-w-[180px] bg-[#191527] border border-[rgba(155,143,255,0.28)] rounded-[14px] flex flex-col relative overflow-hidden shrink-0 active:scale-[0.98] transition-all"
     >
       <div className="absolute left-0 top-0 bottom-0 w-[3px] bg-[#3B6BCC]" />
       <div className="p-4 flex items-center gap-3">
         <div className="w-8 h-8 bg-[#3B6BCC] text-white flex items-center justify-center font-display font-black text-[12px] flex-shrink-0">
           {initial(creator.display_name)}
         </div>
-        <div className="font-black text-lg text-ed-ink uppercase leading-none" style={{ fontFamily: 'var(--font-barlow)' }}>
+        <div className="font-black text-lg text-[#F0EFF8] uppercase leading-none" style={{ fontFamily: 'var(--font-barlow)' }}>
           {creator.display_name}
         </div>
       </div>
-      <div className="h-7 border-t border-dashed border-ed-ink/10 px-4 flex items-center">
-        <span className="font-mono text-[8px] text-ed-ink/40 tracking-widest uppercase">CREATOR</span>
+      <div className="h-7 border-t border-dashed border-[rgba(155,143,255,0.15)] px-4 flex items-center">
+        <span className="font-mono text-[8px] text-[#9896B0] tracking-widest uppercase">CREATOR</span>
       </div>
     </Link>
   )
@@ -1003,24 +1025,24 @@ function MobileVenueCard({ venue }: { venue: ExploreVenue }) {
   return (
     <Link
       href={`/venue/${venue.slug}`}
-      className="min-w-[220px] bg-white flex flex-col border-l-[6px] border-[#5DD9D0] border-2 border-ed-ink shadow-[4px_4px_0px_0px_rgba(93,217,208,0.4)] shrink-0"
+      className="min-w-[220px] bg-[#191527] flex flex-col border-l-[6px] border-[#5DD9D0] border border-[rgba(155,143,255,0.28)] rounded-r-[14px] shrink-0"
     >
       <div className="p-4 flex flex-col gap-1">
-        <span className="font-mono text-[8px] text-ed-ink/40 uppercase">VENUE PASS</span>
-        <div className="font-black text-xl uppercase text-ed-ink" style={{ fontFamily: 'var(--font-barlow)' }}>
+        <span className="font-mono text-[8px] text-[#9896B0] uppercase">VENUE PASS</span>
+        <div className="font-black text-xl uppercase text-[#F0EFF8]" style={{ fontFamily: 'var(--font-barlow)' }}>
           {venue.name}
         </div>
-        <div className="font-mono text-[11px] text-ed-ink/60 uppercase">
+        <div className="font-mono text-[11px] text-[#9896B0] uppercase">
           {venue.neighbourhood ?? venue.city}
         </div>
         {venue.venue_type[0] && (
-          <span className="inline-block bg-[#5DD9D0] text-ed-ink font-mono text-[9px] px-2 py-[2px] border border-[#5DD9D0] uppercase mt-1">
+          <span className="inline-block bg-[#5DD9D0] text-[#0A0814] font-mono text-[9px] px-2 py-[2px] border border-[#5DD9D0] uppercase mt-1">
             {venue.venue_type[0].replace(/_/g, ' ')}
           </span>
         )}
       </div>
-      <div className="h-7 border-t border-dashed border-ed-ink/10 flex items-center justify-between px-4">
-        <span className="font-mono text-[8px] text-ed-ink/40 uppercase">
+      <div className="h-7 border-t border-dashed border-[rgba(155,143,255,0.15)] flex items-center justify-between px-4">
+        <span className="font-mono text-[8px] text-[#9896B0] uppercase">
           CAP: {venue.capacity_max ?? '—'}
         </span>
         <Barcode />
@@ -1033,26 +1055,26 @@ function MobileVenueCard({ venue }: { venue: ExploreVenue }) {
 
 function MobileFeaturedCard({ event }: { event: ExploreEvent }) {
   return (
-    <Link href={`/events/${event.slug}?src=platform_discovery`} className="block bg-white border-2 border-ed-ink shadow-[8px_8px_0px_0px_rgba(26,17,8,1)] flex flex-col overflow-hidden relative group">
+    <Link href={`/events/${event.slug}?src=platform_discovery`} className="block bg-[#191527] border border-[rgba(155,143,255,0.28)] rounded-[14px] flex flex-col overflow-hidden relative group">
       <div className="absolute left-0 top-0 bottom-0 w-[3px] bg-[#E8705A]" />
       <div className="p-6 flex flex-col gap-3">
         <div className="flex justify-between items-center">
-          <span className="font-mono text-[10px] border border-ed-ink text-ed-ink px-2 py-1 uppercase">
+          <span className="font-mono text-[10px] border border-[rgba(155,143,255,0.28)] text-[#F0EFF8] px-2 py-1 uppercase">
             FEATURED SELECTION
           </span>
           <span className="font-display font-black text-[#E8705A] text-xl">
             {priceFmt(event.ticket_price)}
           </span>
         </div>
-        <h3 className="font-display font-black text-ed-ink text-[28px] uppercase leading-[1.1] mt-2">
+        <h3 className="font-display font-black text-[#F0EFF8] text-[28px] uppercase leading-[1.1] mt-2">
           {event.title}
         </h3>
-        <span className="font-mono text-[13px] text-ed-ink/60 uppercase">
+        <span className="font-mono text-[13px] text-[#9896B0] uppercase">
           {fmtDate(event.starts_at).badge} · {event.venue_name}
         </span>
       </div>
-      <ImgPlaceholder className="w-full h-40 border-2 border-ed-ink mt-1" dotColor="#E8705A" opacity={0.1} />
-      <div className="h-12 bg-ed-ink text-[#E8705A] border-t-2 border-ed-ink px-6 flex items-center justify-between w-full group-hover:bg-[#E8705A] group-hover:text-ed-ink transition-colors">
+      <ImgPlaceholder className="w-full h-40 border-2 border-[rgba(155,143,255,0.28)] mt-1" dotColor="#E8705A" opacity={0.1} />
+      <div className="h-12 bg-[#191527] text-[#E8705A] border-t-2 border-[rgba(155,143,255,0.28)] px-6 flex items-center justify-between w-full group-hover:bg-[#E8705A] group-hover:text-[#0A0814] transition-colors">
         <span className="font-display font-black uppercase tracking-widest text-sm">GET TICKETS</span>
         <span className="material-symbols-outlined text-[20px] group-hover:translate-x-1 transition-transform">arrow_forward</span>
       </div>
@@ -1082,25 +1104,25 @@ function EventsTabContent({
   return (
     <div className="max-w-[1440px] mx-auto p-6">
       {/* Filter row */}
-      <div className="flex flex-col gap-4 mb-10 border-b-2 border-dashed border-ed-ink/10 pb-6">
+      <div className="flex flex-col gap-4 mb-10 border-b-2 border-dashed border-[rgba(155,143,255,0.15)] pb-6">
         <div className="flex items-center gap-3 flex-wrap">
-          <span className="font-mono text-[10px] text-ed-ink/50 uppercase mr-2">Timeframe /</span>
+          <span className="font-mono text-[10px] text-[#9896B0] uppercase mr-2">Timeframe /</span>
           {DATE_FILTERS.map(f => (
             <Link
               key={f.label}
               href={`${basePath}?tab=${tab}&city=${city}&when=${f.when}`}
-              className={`px-4 py-2 border-2 font-mono text-[10px] uppercase font-bold transition-all ${f.when === when ? 'bg-[#E8705A] text-white border-[#E8705A]' : 'border-dashed border-ed-ink/20 text-ed-ink/50 hover:bg-ed-ink/5'}`}
+              className={`px-4 py-2 border-2 font-mono text-[10px] uppercase font-bold transition-all ${f.when === when ? 'bg-[#E8705A] text-white border-[#E8705A]' : 'border-dashed border-[rgba(155,143,255,0.15)] text-[#9896B0] hover:bg-[#211C33]'}`}
             >
               {f.label}
             </Link>
           ))}
         </div>
         <div className="flex items-center gap-3 flex-wrap">
-          <span className="font-mono text-[10px] text-ed-ink/50 uppercase mr-2">Category /</span>
+          <span className="font-mono text-[10px] text-[#9896B0] uppercase mr-2">Category /</span>
           {CAT_FILTERS.map((f, i) => (
             <button
               key={f}
-              className={`px-4 py-2 border-2 font-mono text-[10px] uppercase font-bold transition-all ${i === 0 ? 'bg-[#E8705A] text-white border-[#E8705A]' : 'border-dashed border-ed-ink/20 text-ed-ink/50 hover:bg-ed-ink/5'}`}
+              className={`px-4 py-2 border-2 font-mono text-[10px] uppercase font-bold transition-all ${i === 0 ? 'bg-[#E8705A] text-white border-[#E8705A]' : 'border-dashed border-[rgba(155,143,255,0.15)] text-[#9896B0] hover:bg-[#211C33]'}`}
             >
               {f}
             </button>
@@ -1114,7 +1136,7 @@ function EventsTabContent({
           <EventsTabCard key={ev.id} event={ev} featured={i === 0} />
         ))}
         {events.length === 0 && (
-          <div className="col-span-3 border-2 border-dashed border-[#E8705A]/30 p-16 text-center font-mono text-[12px] text-ed-ink/40 uppercase tracking-widest">
+          <div className="col-span-3 border-2 border-dashed border-[#E8705A]/30 p-16 text-center font-mono text-[12px] text-[#9896B0] uppercase tracking-widest">
             NO UPCOMING EVENTS — MORE COMING SOON
           </div>
         )}
@@ -1123,18 +1145,18 @@ function EventsTabContent({
       {/* Load more */}
       <div className="flex flex-col items-center mt-10">
         <button
-          className="border-2 border-[#E8705A] text-[#E8705A] px-10 py-4 uppercase italic hover:bg-[#E8705A]/10 transition-all shadow-[4px_4px_0px_0px_rgba(232,112,90,0.2)] flex items-center gap-4"
+          className="border-2 border-[#E8705A] text-[#E8705A] px-10 py-4 uppercase italic hover:bg-[#E8705A]/10 transition-all rounded-[14px] hover:shadow-[0_8px_24px_rgba(232,112,90,0.18)] flex items-center gap-4"
           style={{ fontFamily: 'var(--font-barlow)', fontWeight: 900, fontSize: 36 }}
         >
           LOAD MORE EVENTS
           <span className="material-symbols-outlined text-[28px]">keyboard_double_arrow_down</span>
         </button>
         <div className="flex items-center gap-4 mt-4">
-          <div className="w-16 border-t border-dashed border-ed-ink/30" />
-          <span className="font-mono text-[10px] text-ed-ink/60 uppercase">
+          <div className="w-16 border-t border-dashed border-[rgba(155,143,255,0.15)]" />
+          <span className="font-mono text-[10px] text-[#9896B0] uppercase">
             Showing {events.length} results
           </span>
-          <div className="w-16 border-t border-dashed border-ed-ink/30" />
+          <div className="w-16 border-t border-dashed border-[rgba(155,143,255,0.15)]" />
         </div>
       </div>
     </div>
@@ -1150,7 +1172,7 @@ function CreatorsTabContent({ creators }: { creators: ExploreCreator[] }) {
     <div className="max-w-[1440px] mx-auto p-4 lg:p-6">
       {/* Section header */}
       <div className="py-4 lg:py-6">
-        <div className="font-mono text-[10px] text-ed-ink/50 uppercase tracking-widest">
+        <div className="font-mono text-[10px] text-[#9896B0] uppercase tracking-widest">
           CREATORS IN AHMEDABAD
         </div>
         <div className="font-mono text-[9px] text-[#3B6BCC] font-bold mt-1 uppercase">
@@ -1163,7 +1185,7 @@ function CreatorsTabContent({ creators }: { creators: ExploreCreator[] }) {
         {CREATOR_FILTERS.map((f, i) => (
           <button
             key={f}
-            className={`px-4 py-2 border-2 font-mono text-[10px] uppercase font-bold whitespace-nowrap flex-shrink-0 transition-all ${i === 0 ? 'bg-[#3B6BCC] text-white border-[#3B6BCC]' : 'border-dashed border-ed-ink/20 text-ed-ink hover:border-[#3B6BCC]/50'}`}
+            className={`px-4 py-2 border-2 font-mono text-[10px] uppercase font-bold whitespace-nowrap flex-shrink-0 transition-all ${i === 0 ? 'bg-[#3B6BCC] text-white border-[#3B6BCC]' : 'border-dashed border-[rgba(155,143,255,0.15)] text-[#F0EFF8] hover:border-[#3B6BCC]/50'}`}
           >
             {f}
           </button>
@@ -1186,12 +1208,12 @@ function CreatorBoardingPass({ creator, index = 0 }: { creator: ExploreCreator; 
   return (
     <Link
       href={profileUrl(creator.city, creator.username)}
-      className="bg-white border border-ed-ink relative flex flex-col shadow-[4px_4px_0px_0px_rgba(26,17,8,1)] overflow-hidden active:translate-y-1 active:translate-x-1 active:shadow-none transition-all cursor-pointer"
+      className="bg-[#191527] border border-[rgba(155,143,255,0.28)] relative flex flex-col rounded-[14px] overflow-hidden active:scale-[0.98] transition-all cursor-pointer"
     >
       <div className="absolute left-0 top-0 bottom-0 w-[3px] bg-[#3B6BCC]" />
       {/* Punch holes */}
-      <div className="absolute -left-2.5 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-ed-chalk" />
-      <div className="absolute -right-2.5 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-ed-chalk" />
+      <div className="absolute -left-2.5 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-[#0A0814]" />
+      <div className="absolute -right-2.5 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-[#0A0814]" />
 
       {/* Content */}
       <div className="p-4 pl-6 flex items-center gap-4">
@@ -1200,26 +1222,26 @@ function CreatorBoardingPass({ creator, index = 0 }: { creator: ExploreCreator; 
         </div>
         <div className="flex-1 overflow-hidden">
           <div className="flex items-center gap-2 mb-[2px]">
-            <span className="font-black text-[22px] text-ed-ink uppercase leading-none truncate" style={{ fontFamily: 'var(--font-barlow)' }}>
+            <span className="font-black text-[22px] text-[#F0EFF8] uppercase leading-none truncate" style={{ fontFamily: 'var(--font-barlow)' }}>
               {creator.display_name}
             </span>
             <span className="bg-[#3B6BCC]/10 text-[#3B6BCC] font-mono text-[9px] px-2 py-[2px] border border-[#3B6BCC]/20 uppercase flex-shrink-0">
               {creator.creator_type.replace(/_/g, ' ').slice(0, 8)}
             </span>
           </div>
-          <div className="font-mono text-[10px] text-ed-ink/50 uppercase">
+          <div className="font-mono text-[10px] text-[#9896B0] uppercase">
             {creator.city} • @{creator.username}
           </div>
         </div>
       </div>
 
       {/* Perforation */}
-      <div className="h-px border-t border-dashed border-ed-ink/20 mx-4" />
+      <div className="h-px border-t border-dashed border-[rgba(155,143,255,0.15)] mx-4" />
 
       {/* Stub */}
-      <div className="h-[30px] bg-ed-ink/5 flex items-center justify-between px-4 pl-6">
-        <span className="font-mono text-[9px] text-ed-ink tracking-widest uppercase">VIEW PROFILE</span>
-        <div style={{ height: 12, width: 48, background: 'repeating-linear-gradient(90deg, #1A1108, #1A1108 1px, transparent 1px, transparent 3px)', opacity: 0.3 }} />
+      <div className="h-[30px] bg-[#211C33] flex items-center justify-between px-4 pl-6">
+        <span className="font-mono text-[9px] text-[#F0EFF8] tracking-widest uppercase">VIEW PROFILE</span>
+        <div style={{ height: 12, width: 48, background: `repeating-linear-gradient(90deg, ${MUTED}, ${MUTED} 1px, transparent 1px, transparent 3px)`, opacity: 0.3 }} />
       </div>
 
       {/* Postmark on alternating cards */}
@@ -1234,12 +1256,12 @@ function CreatorBoardingPass({ creator, index = 0 }: { creator: ExploreCreator; 
 
 function CreatorEmptyState() {
   return (
-    <div className="border-2 border-dashed border-[#3B6BCC]/40 p-6 flex flex-col items-center gap-4 min-h-[180px] bg-ed-chalk/50 justify-center text-center">
+    <div className="border-2 border-dashed border-[#3B6BCC]/40 p-6 flex flex-col items-center gap-4 min-h-[180px] bg-[#191527] justify-center text-center">
       <div className="w-12 h-12 border border-[#3B6BCC]/30 flex items-center justify-center text-[#3B6BCC]">
         <span className="material-symbols-outlined text-[24px]">person_add</span>
       </div>
-      <div className="font-sans font-bold text-ed-ink">BE THE FIRST IN YOUR CITY</div>
-      <div className="font-sans text-[13px] text-ed-ink/60 mt-1">
+      <div className="font-sans font-bold text-[#F0EFF8]">BE THE FIRST IN YOUR CITY</div>
+      <div className="font-sans text-[13px] text-[#9896B0] mt-1">
         Claim your spot in the Ahmedabad creative registry.
       </div>
       <Link href="/onboarding?persona=creator" className="block w-full bg-[#3B6BCC] text-white py-3 font-mono text-[10px] tracking-[0.2em] uppercase text-center active:scale-95 transition-transform">
@@ -1279,8 +1301,8 @@ function VenuePosterCard({ venue }: { venue: ExploreVenue }) {
   return (
     <Link href={`/venue/${venue.slug}`} className="break-inside-avoid inline-block w-full mb-6">
       <div
-        className="bg-white text-ed-ink relative overflow-hidden transition-transform duration-300 [transform:rotate(-0.5deg)] hover:[transform:rotate(0deg)] cursor-pointer border border-ed-ink/10"
-        style={{ boxShadow: '6px 8px 20px 0px rgba(26,17,8,0.15)' }}
+        className="bg-[#191527] text-[#F0EFF8] relative overflow-hidden transition-transform duration-300 [transform:rotate(-0.5deg)] hover:[transform:rotate(0deg)] cursor-pointer border border-[rgba(155,143,255,0.15)]"
+        style={{ boxShadow: '6px 8px 20px 0px rgba(0,0,0,0.35)' }}
       >
         {/* Pushpin */}
         <Pushpin color="#5DD9D0" pinSize={20} bodyHeight={8} className="top-[-10px] left-1/2 -translate-x-1/2" />
@@ -1298,38 +1320,38 @@ function VenuePosterCard({ venue }: { venue: ExploreVenue }) {
         <div className="p-6 flex flex-col gap-3">
           {/* Top strip */}
           <div className="flex justify-between items-start">
-            <span className="font-mono text-[9px] text-ed-ink/40 uppercase tracking-[0.3em]">VENUE</span>
+            <span className="font-mono text-[9px] text-[#9896B0] uppercase tracking-[0.3em]">VENUE</span>
             <RubberStamp text={"VERIFIED\nVENUE"} color="#5DD9D0" rotate={-12} size={56} />
           </div>
 
           {/* Venue name */}
-          <h3 className="font-display font-black text-[36px] text-ed-ink uppercase leading-none mt-2"
+          <h3 className="font-display font-black text-[36px] text-[#F0EFF8] uppercase leading-none mt-2"
               style={{ fontFamily: 'var(--font-barlow)' }}>
             {venue.name}
           </h3>
 
           {/* Neighbourhood + city */}
-          <p className="font-mono text-[11px] text-ed-ink/50 uppercase">
+          <p className="font-mono text-[11px] text-[#9896B0] uppercase">
             {venue.neighbourhood ? `${venue.neighbourhood}, ${venue.city}` : venue.city}
           </p>
 
           {/* Type chips */}
           <div className="flex gap-2 mt-3 flex-wrap">
             {(venue.venue_type ?? []).map(t => (
-              <span key={t} className="bg-ed-ink/5 text-ed-ink/70 px-2 py-[2px] font-mono text-[9px] uppercase border border-ed-ink/15">
+              <span key={t} className="bg-[#211C33] text-[#9896B0] px-2 py-[2px] font-mono text-[9px] uppercase border border-[rgba(155,143,255,0.15)]">
                 {t.replace(/_/g, ' ')}
               </span>
             ))}
           </div>
 
           {/* Image area */}
-          <div className="w-full h-32 mt-4 relative overflow-hidden bg-ed-chalk-3">
+          <div className="w-full h-32 mt-4 relative overflow-hidden bg-[#211C33]">
             <div className="absolute inset-0" style={{
               backgroundImage: 'radial-gradient(#5DD9D0 0.5px, transparent 0.5px)',
               backgroundSize: '8px 8px',
               opacity: 0.16,
             }} />
-            <span className="absolute bottom-3 right-3 font-mono text-[10px] text-ed-ink/30 uppercase">
+            <span className="absolute bottom-3 right-3 font-mono text-[10px] text-[#9896B0] uppercase">
               {venue.city.toUpperCase()} · {venue.venue_type?.[0]?.toUpperCase().replace(/_/g, ' ') ?? 'VENUE'}
             </span>
           </div>
@@ -1340,13 +1362,13 @@ function VenuePosterCard({ venue }: { venue: ExploreVenue }) {
               <div className="font-display font-black text-[28px] text-[#1B3A6B]">
                 {venue.events_count ?? '—'}
               </div>
-              <div className="font-mono text-[9px] text-ed-ink/40 uppercase">EVENTS / MONTH</div>
+              <div className="font-mono text-[9px] text-[#9896B0] uppercase">EVENTS / MONTH</div>
             </div>
             <div className="text-right">
-              <div className="font-display font-black text-[28px] text-ed-ink">
+              <div className="font-display font-black text-[28px] text-[#F0EFF8]">
                 {venue.capacity_max ?? '—'}
               </div>
-              <div className="font-mono text-[9px] text-ed-ink/40 uppercase">CAPACITY</div>
+              <div className="font-mono text-[9px] text-[#9896B0] uppercase">CAPACITY</div>
             </div>
           </div>
         </div>
@@ -1370,8 +1392,8 @@ function VenueDesktopBusinessCard({ venue }: { venue: ExploreVenue }) {
   return (
     <Link href={`/venue/${venue.slug}`} className="break-inside-avoid inline-block w-full mb-6">
       <div
-        className="bg-white text-ed-ink relative overflow-hidden transition-transform duration-300 [transform:rotate(1deg)] hover:[transform:rotate(0deg)] cursor-pointer border border-ed-ink/10"
-        style={{ boxShadow: '4px 6px 16px 0px rgba(26,17,8,0.15)', minHeight: 140 }}
+        className="bg-[#191527] text-[#F0EFF8] relative overflow-hidden transition-transform duration-300 [transform:rotate(1deg)] hover:[transform:rotate(0deg)] cursor-pointer border border-[rgba(155,143,255,0.15)]"
+        style={{ boxShadow: '4px 6px 16px 0px rgba(0,0,0,0.35)', minHeight: 140 }}
       >
         {/* Pushpin */}
         <Pushpin color="#E8705A" pinSize={16} bodyHeight={6} className="top-[-8px] left-[40px]" />
@@ -1383,18 +1405,18 @@ function VenueDesktopBusinessCard({ venue }: { venue: ExploreVenue }) {
           {/* Top row */}
           <div>
             <div className="flex justify-between items-start">
-              <span className="font-mono text-[8px] text-ed-ink/40 uppercase tracking-[0.3em]">VENUE PASS</span>
+              <span className="font-mono text-[8px] text-[#9896B0] uppercase tracking-[0.3em]">VENUE PASS</span>
               {venue.venue_type?.[0] && (
-                <span className="bg-[#5DD9D0] text-ed-ink border border-[#5DD9D0] font-mono text-[8px] px-2 py-[2px] uppercase">
+                <span className="bg-[#5DD9D0] text-[#0A0814] border border-[#5DD9D0] font-mono text-[8px] px-2 py-[2px] uppercase">
                   {venue.venue_type[0].replace(/_/g, ' ')}
                 </span>
               )}
             </div>
-            <h3 className="font-display font-black text-[24px] text-ed-ink uppercase leading-none mt-2"
+            <h3 className="font-display font-black text-[24px] text-[#F0EFF8] uppercase leading-none mt-2"
                 style={{ fontFamily: 'var(--font-barlow)' }}>
               {venue.name}
             </h3>
-            <p className="font-mono text-[10px] text-ed-ink/60 uppercase mt-1">
+            <p className="font-mono text-[10px] text-[#9896B0] uppercase mt-1">
               {venue.neighbourhood ?? venue.city}
             </p>
           </div>
@@ -1402,14 +1424,14 @@ function VenueDesktopBusinessCard({ venue }: { venue: ExploreVenue }) {
           {/* Bottom row */}
           <div className="flex justify-between items-end mt-auto pt-3">
             <div>
-              <div className="font-mono text-[9px] text-ed-ink/40">Events this month</div>
-              <div className="font-display font-black text-[20px] text-ed-ink">
+              <div className="font-mono text-[9px] text-[#9896B0]">Events this month</div>
+              <div className="font-display font-black text-[20px] text-[#F0EFF8]">
                 {venue.events_count != null ? `${venue.events_count} events` : '— events'}
               </div>
             </div>
             <div className="text-right">
-              <div className="font-mono text-[8px] text-ed-ink/40 uppercase">CAP</div>
-              <div className="font-display font-black text-[20px] text-ed-ink">
+              <div className="font-mono text-[8px] text-[#9896B0] uppercase">CAP</div>
+              <div className="font-display font-black text-[20px] text-[#F0EFF8]">
                 {venue.capacity_max ?? '—'}
               </div>
             </div>
@@ -1431,15 +1453,15 @@ function VenueFlyerCard({ venue }: { venue: ExploreVenue }) {
   return (
     <Link href={`/venue/${venue.slug}`} className="break-inside-avoid inline-block w-full mb-6">
       <div
-        className="bg-ed-chalk text-ed-ink relative transition-transform duration-300 [transform:rotate(0.5deg)] hover:[transform:rotate(-0.5deg)] cursor-pointer"
-        style={{ boxShadow: '3px 5px 12px 0px rgba(26,17,8,0.12)' }}
+        className="bg-[#191527] text-[#F0EFF8] relative transition-transform duration-300 [transform:rotate(0.5deg)] hover:[transform:rotate(-0.5deg)] cursor-pointer"
+        style={{ boxShadow: '3px 5px 12px 0px rgba(0,0,0,0.3)' }}
       >
         {/* Torn top edge — uses slightly darker board bg to simulate torn paper */}
         <div
           className="absolute top-0 left-0 right-0 z-10"
           style={{
             height: 12,
-            backgroundColor: '#E0D9C8',
+            backgroundColor: '#211C33',
             clipPath: 'polygon(0 0, 5% 100%, 10% 20%, 15% 90%, 20% 10%, 25% 80%, 30% 0%, 35% 100%, 40% 20%, 45% 80%, 50% 0, 55% 100%, 60% 10%, 65% 90%, 70% 0, 75% 80%, 80% 20%, 85% 100%, 90% 0, 95% 70%, 100% 0)',
           }}
         />
@@ -1447,23 +1469,23 @@ function VenueFlyerCard({ venue }: { venue: ExploreVenue }) {
         <Pushpin color="#3B6BCC" pinSize={12} bodyHeight={6} className="top-[-6px] right-[30px]" />
 
         {/* Card content — no top border, torn edge covers it */}
-        <div className="pt-6 pb-4 px-4 flex flex-col gap-2 border border-ed-ink/10 border-t-0">
-          <h3 className="font-display font-black text-[22px] text-ed-ink uppercase leading-none"
+        <div className="pt-6 pb-4 px-4 flex flex-col gap-2 border border-[rgba(155,143,255,0.15)] border-t-0">
+          <h3 className="font-display font-black text-[22px] text-[#F0EFF8] uppercase leading-none"
               style={{ fontFamily: 'var(--font-barlow)' }}>
             {venue.name}
           </h3>
-          <p className="font-mono text-[10px] text-ed-ink/50 uppercase">
+          <p className="font-mono text-[10px] text-[#9896B0] uppercase">
             {venue.neighbourhood ?? venue.city}
           </p>
           <div className="flex gap-2 flex-wrap mt-1">
             {(venue.venue_type ?? []).map(t => (
-              <span key={t} className="bg-ed-ink/5 text-ed-ink/60 font-mono text-[8px] px-2 py-[2px] uppercase border border-ed-ink/10">
+              <span key={t} className="bg-[#211C33] text-[#9896B0] font-mono text-[8px] px-2 py-[2px] uppercase border border-[rgba(155,143,255,0.15)]">
                 {t.replace(/_/g, ' ')}
               </span>
             ))}
           </div>
           <div className="font-mono text-[8px] text-[#3B6BCC] uppercase font-bold">NEW VENUE</div>
-          <div className="font-mono text-[9px] text-ed-ink/40 uppercase">
+          <div className="font-mono text-[9px] text-[#9896B0] uppercase">
             CAP: {venue.capacity_max ?? '—'}
           </div>
         </div>
@@ -1478,8 +1500,8 @@ function VenueMobileCard({ venue }: { venue: ExploreVenue }) {
   return (
     <Link href={`/venue/${venue.slug}`} className="block">
       <div
-        className="bg-white relative w-full overflow-hidden border border-ed-ink/10 flex active:scale-[0.98] transition-transform cursor-pointer"
-        style={{ minHeight: 130, boxShadow: '4px 5px 0px 0px rgba(93,217,208,0.35)' }}
+        className="bg-[#191527] relative w-full overflow-hidden border border-[rgba(155,143,255,0.15)] flex active:scale-[0.98] transition-transform cursor-pointer"
+        style={{ minHeight: 130, boxShadow: '0 6px 20px rgba(93,217,208,0.16)' }}
       >
         {/* Left teal strip */}
         <div className="w-3 bg-[#5DD9D0] flex-shrink-0" />
@@ -1489,12 +1511,12 @@ function VenueMobileCard({ venue }: { venue: ExploreVenue }) {
           {/* Top */}
           <div className="flex justify-between items-start">
             <div>
-              <div className="font-mono text-[8px] text-ed-ink/40 uppercase tracking-[0.25em]">VENUE PASS</div>
-              <h3 className="font-display font-black text-[22px] text-ed-ink uppercase leading-none mt-1"
+              <div className="font-mono text-[8px] text-[#9896B0] uppercase tracking-[0.25em]">VENUE PASS</div>
+              <h3 className="font-display font-black text-[22px] text-[#F0EFF8] uppercase leading-none mt-1"
                   style={{ fontFamily: 'var(--font-barlow)' }}>
                 {venue.name}
               </h3>
-              <p className="font-mono text-[10px] text-ed-ink/50 uppercase mt-0.5">
+              <p className="font-mono text-[10px] text-[#9896B0] uppercase mt-0.5">
                 {venue.neighbourhood ?? venue.city}
               </p>
             </div>
@@ -1502,17 +1524,17 @@ function VenueMobileCard({ venue }: { venue: ExploreVenue }) {
           </div>
 
           {/* Bottom row */}
-          <div className="flex justify-between items-end mt-auto pt-3 border-t border-dashed border-ed-ink/10">
+          <div className="flex justify-between items-end mt-auto pt-3 border-t border-dashed border-[rgba(155,143,255,0.15)]">
             <div className="flex gap-1 flex-wrap">
               {(venue.venue_type ?? []).slice(0, 2).map(t => (
-                <span key={t} className="bg-[#5DD9D0] text-ed-ink border border-[#5DD9D0] font-mono text-[8px] px-2 py-[2px] uppercase">
+                <span key={t} className="bg-[#5DD9D0] text-[#0A0814] border border-[#5DD9D0] font-mono text-[8px] px-2 py-[2px] uppercase">
                   {t.replace(/_/g, ' ')}
                 </span>
               ))}
             </div>
             <div className="text-right">
-              <div className="font-mono text-[8px] text-ed-ink/40 uppercase">CAP</div>
-              <div className="font-display font-black text-[18px] text-ed-ink">
+              <div className="font-mono text-[8px] text-[#9896B0] uppercase">CAP</div>
+              <div className="font-display font-black text-[18px] text-[#F0EFF8]">
                 {venue.capacity_max ?? '—'}
               </div>
             </div>
@@ -1520,11 +1542,11 @@ function VenueMobileCard({ venue }: { venue: ExploreVenue }) {
         </div>
 
         {/* Right stub */}
-        <div className="w-14 bg-[#5DD9D0]/10 border-l-2 border-dashed border-ed-ink/10 flex flex-col items-center justify-center gap-2 flex-shrink-0">
-          <div className="font-display font-black text-[20px] text-ed-ink">
+        <div className="w-14 bg-[#5DD9D0]/10 border-l-2 border-dashed border-[rgba(155,143,255,0.15)] flex flex-col items-center justify-center gap-2 flex-shrink-0">
+          <div className="font-display font-black text-[20px] text-[#F0EFF8]">
             {venue.events_count ?? '—'}
           </div>
-          <div className="font-mono text-[7px] text-ed-ink/40 uppercase">EVENTS</div>
+          <div className="font-mono text-[7px] text-[#9896B0] uppercase">EVENTS</div>
           <VenueBarcode vertical />
         </div>
       </div>
@@ -1537,7 +1559,7 @@ function VenueMobileCard({ venue }: { venue: ExploreVenue }) {
 function VenueMapTeaser({ count, city, desktop = false }: { count: number; city: string; desktop?: boolean }) {
   if (desktop) {
     return (
-      <div className="bg-ed-ink p-8 relative overflow-hidden flex items-center justify-between">
+      <div className="bg-[#050308] p-8 relative overflow-hidden flex items-center justify-between">
         <div className="absolute inset-0 opacity-[0.03] pointer-events-none" aria-hidden>
           <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
             <filter id="map-grain"><feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" stitchTiles="stitch" /></filter>
@@ -1560,8 +1582,8 @@ function VenueMapTeaser({ count, city, desktop = false }: { count: number; city:
         </div>
         <Link
           href="/explore?tab=venues&view=map"
-          className="relative z-10 font-display font-black px-8 py-4 bg-[#5DD9D0] text-ed-ink border-2 border-ed-ink uppercase"
-          style={{ fontFamily: 'var(--font-barlow)', fontSize: 22, boxShadow: '4px 4px 0 rgba(26,17,8,1)' }}
+          className="relative z-10 font-display font-black px-8 py-4 bg-[#5DD9D0] text-[#0A0814] border-2 border-[rgba(155,143,255,0.28)] uppercase"
+          style={{ fontFamily: 'var(--font-barlow)', fontSize: 22, boxShadow: '0 8px 24px rgba(93,217,208,0.25)' }}
         >
           OPEN MAP →
         </Link>
@@ -1570,7 +1592,7 @@ function VenueMapTeaser({ count, city, desktop = false }: { count: number; city:
   }
 
   return (
-    <div className="bg-ed-ink p-5 flex justify-between items-center">
+    <div className="bg-[#050308] p-5 flex justify-between items-center">
       <div>
         <h2 className="font-display font-black text-[20px] text-white uppercase leading-tight"
             style={{ fontFamily: 'var(--font-barlow)' }}>
@@ -1582,8 +1604,8 @@ function VenueMapTeaser({ count, city, desktop = false }: { count: number; city:
       </div>
       <Link
         href="/explore?tab=venues&view=map"
-        className="font-display font-black px-4 py-3 bg-[#5DD9D0] text-ed-ink border-2 border-ed-ink uppercase flex items-center gap-2"
-        style={{ fontFamily: 'var(--font-barlow)', boxShadow: '2px 2px 0px rgba(26,17,8,1)' }}
+        className="font-display font-black px-4 py-3 bg-[#5DD9D0] text-[#0A0814] border-2 border-[rgba(155,143,255,0.28)] uppercase flex items-center gap-2"
+        style={{ fontFamily: 'var(--font-barlow)', boxShadow: '0 6px 16px rgba(93,217,208,0.22)' }}
       >
         <span className="material-symbols-outlined text-[16px]">map</span>
         MAP →
@@ -1600,28 +1622,28 @@ function VenuesTabContent({ venues, city }: { venues: ExploreVenue[]; city: stri
       {/* ── DESKTOP: Notice Board ───────────────────────────────────────── */}
       <div className="hidden lg:block max-w-[1440px] mx-auto">
         {/* Filter row */}
-        <div className="px-8 py-4 flex items-center gap-3 border-b-2 border-dashed border-ed-ink/15">
-          <span className="font-mono text-[10px] text-ed-ink/50 uppercase tracking-widest">TYPE:</span>
+        <div className="px-8 py-4 flex items-center gap-3 border-b-2 border-dashed border-[rgba(155,143,255,0.15)]">
+          <span className="font-mono text-[10px] text-[#9896B0] uppercase tracking-widest">TYPE:</span>
           {VENUE_TYPE_FILTERS.map((f, i) => (
             <button
               key={f}
               className={`px-4 py-2 border-2 font-mono text-[10px] uppercase font-bold transition-all ${
                 i === 0
-                  ? 'bg-[#5DD9D0] text-ed-ink border-[#5DD9D0]'
-                  : 'border-dashed border-ed-ink/20 text-ed-ink/50 hover:border-solid hover:border-ed-ink/40'
+                  ? 'bg-[#5DD9D0] text-[#0A0814] border-[#5DD9D0]'
+                  : 'border-dashed border-[rgba(155,143,255,0.15)] text-[#9896B0] hover:border-solid hover:border-[rgba(155,143,255,0.28)]'
               }`}
             >
               {f}
             </button>
           ))}
           <div className="ml-auto flex gap-3 items-center">
-            <span className="font-mono text-[10px] text-ed-ink/40 uppercase">
+            <span className="font-mono text-[10px] text-[#9896B0] uppercase">
               SHOWING {venues.length} VENUES
             </span>
-            <button className="px-4 py-2 bg-[#5DD9D0] text-ed-ink border-2 border-[#5DD9D0] font-mono text-[10px] uppercase font-bold">
+            <button className="px-4 py-2 bg-[#5DD9D0] text-[#0A0814] border-2 border-[#5DD9D0] font-mono text-[10px] uppercase font-bold">
               MOST EVENTS
             </button>
-            <button className="px-4 py-2 border-2 border-dashed border-ed-ink/20 text-ed-ink/50 font-mono text-[10px] uppercase font-bold hover:border-solid hover:border-ed-ink/40 transition-all">
+            <button className="px-4 py-2 border-2 border-dashed border-[rgba(155,143,255,0.15)] text-[#9896B0] font-mono text-[10px] uppercase font-bold hover:border-solid hover:border-[rgba(155,143,255,0.15)] transition-all">
               NEWEST
             </button>
           </div>
@@ -1630,7 +1652,7 @@ function VenuesTabContent({ venues, city }: { venues: ExploreVenue[]; city: stri
         {/* Masonry notice board — CSS columns for true masonry */}
         <div className="px-8 py-8" style={{ columns: 3, columnGap: '1.5rem' }}>
           {venues.length === 0 && (
-            <div className="break-inside-avoid inline-block w-full border-2 border-dashed border-[#5DD9D0]/40 p-12 text-center font-mono text-[12px] text-ed-ink/40 uppercase tracking-widest">
+            <div className="break-inside-avoid inline-block w-full border-2 border-dashed border-[#5DD9D0]/40 p-12 text-center font-mono text-[12px] text-[#9896B0] uppercase tracking-widest">
               NO VENUES FOUND IN {city.toUpperCase()} — CHECK BACK SOON
             </div>
           )}
@@ -1653,7 +1675,7 @@ function VenuesTabContent({ venues, city }: { venues: ExploreVenue[]; city: stri
         {/* Section header */}
         <div className="flex justify-between items-end">
           <div>
-            <div className="font-mono text-[10px] text-ed-ink/50 uppercase tracking-widest">
+            <div className="font-mono text-[10px] text-[#9896B0] uppercase tracking-widest">
               VENUES IN {city.toUpperCase()}
             </div>
             <div className="font-mono text-[9px] text-[#1B3A6B] font-bold mt-1 uppercase">
@@ -1663,8 +1685,8 @@ function VenuesTabContent({ venues, city }: { venues: ExploreVenue[]; city: stri
           {/* Decorative pushpin */}
           <div className="flex flex-col items-center">
             <div className="w-3 h-3 rounded-full bg-[#5DD9D0]"
-                 style={{ boxShadow: '0px 1px 3px rgba(26,17,8,0.3)' }} />
-            <div className="w-[2px] h-3 bg-ed-ink/40 mt-[-1px]" />
+                 style={{ boxShadow: '0px 1px 3px rgba(0,0,0,0.4)' }} />
+            <div className="w-[2px] h-3 bg-[#9896B0] mt-[-1px]" />
           </div>
         </div>
 
@@ -1675,8 +1697,8 @@ function VenuesTabContent({ venues, city }: { venues: ExploreVenue[]; city: stri
               key={f}
               className={`px-4 py-2 border-2 font-mono text-[10px] uppercase font-bold whitespace-nowrap flex-shrink-0 transition-all ${
                 i === 0
-                  ? 'bg-[#5DD9D0] text-ed-ink border-[#5DD9D0]'
-                  : 'border-dashed border-ed-ink/20 text-ed-ink/50'
+                  ? 'bg-[#5DD9D0] text-[#0A0814] border-[#5DD9D0]'
+                  : 'border-dashed border-[rgba(155,143,255,0.15)] text-[#9896B0]'
               }`}
             >
               {f}
@@ -1687,7 +1709,7 @@ function VenuesTabContent({ venues, city }: { venues: ExploreVenue[]; city: stri
         {/* Business card stack */}
         <div className="flex flex-col gap-5">
           {venues.length === 0 && (
-            <div className="border-2 border-dashed border-[#5DD9D0]/40 p-8 text-center font-mono text-[12px] text-ed-ink/40 uppercase tracking-widest">
+            <div className="border-2 border-dashed border-[#5DD9D0]/40 p-8 text-center font-mono text-[12px] text-[#9896B0] uppercase tracking-widest">
               NO VENUES FOUND IN {city.toUpperCase()}
             </div>
           )}
@@ -1716,13 +1738,13 @@ const TICKER_ITEMS = [
 function LiveTicker() {
   const text = TICKER_ITEMS.join('   ·   ')
   return (
-    <div className="fixed bottom-14 lg:bottom-0 w-full h-12 bg-[#E8705A] border-t-2 border-ed-ink z-[55] overflow-hidden">
+    <div className="fixed bottom-14 lg:bottom-0 w-full h-12 bg-[#E8705A] border-t-2 border-[rgba(155,143,255,0.28)] z-[55] overflow-hidden">
       <div
         className="flex items-center h-full whitespace-nowrap"
         style={{ animation: 'tickerScroll 24s linear infinite' }}
       >
         {[text, text].map((t, i) => (
-          <span key={i} className="font-mono text-[12px] text-ed-ink uppercase tracking-widest px-8">
+          <span key={i} className="font-mono text-[12px] text-[#0A0814] uppercase tracking-widest px-8">
             {t}
           </span>
         ))}
@@ -1749,10 +1771,10 @@ function MobileBottomNav({ tab, city }: { tab: string; city: string }) {
   }
 
   return (
-    <nav className="lg:hidden fixed bottom-0 w-full h-14 bg-ed-chalk border-t-2 border-dashed border-ed-ink/15 z-[60] flex items-center">
+    <nav className="lg:hidden fixed bottom-0 w-full h-14 bg-[#050308] border-t-2 border-dashed border-[rgba(155,143,255,0.15)] z-[60] flex items-center">
       {NAV_ITEMS.map(item => {
         const isActive = tab === item.tab
-        const color = isActive ? (activeColors[item.tab] ?? '#E8705A') : 'rgba(26,17,8,0.4)'
+        const color = isActive ? (activeColors[item.tab] ?? '#E8705A') : '#9896B0'
         return (
           <Link
             key={item.tab}
@@ -1781,16 +1803,16 @@ function MobileBottomNav({ tab, city }: { tab: string; city: string }) {
 // ─── Tab Bar ─────────────────────────────────────────────────────────────────
 
 const TABS = [
-  { id: 'all',      label: 'ALL',      icon: 'grid_view',           activeColor: 'bg-ed-ink text-white'                 },
+  { id: 'all',      label: 'ALL',      icon: 'grid_view',           activeColor: 'bg-[#050308] text-white'                 },
   { id: 'events',   label: 'EVENTS',   icon: 'confirmation_number', activeColor: 'bg-[#E8705A] text-white'                 },
   { id: 'creators', label: 'CREATORS', icon: 'person',              activeColor: 'bg-[#3B6BCC] text-white'                 },
-  { id: 'venues',   label: 'VENUES',    icon: 'location_on',         activeColor: 'bg-[#5DD9D0] text-ed-ink font-bold'  },
+  { id: 'venues',   label: 'VENUES',    icon: 'location_on',         activeColor: 'bg-[#5DD9D0] text-[#0A0814] font-bold'  },
 ] as const
 
 function TabBar({ activeTab, city, count = 0, basePath = '/explore', stickyTop = 'top-[64px]', inDashboard = false }: { activeTab: string; city: string; count?: number; basePath?: string; stickyTop?: string; inDashboard?: boolean }) {
   const shellClass = inDashboard
     ? 'backdrop-blur border-b h-12 flex justify-between items-center'
-    : 'bg-ed-chalk-2/95 backdrop-blur border-b-2 border-dashed border-ed-ink/15 h-12 flex justify-between items-center'
+    : 'bg-[#050308]/95 backdrop-blur border-b-2 border-dashed border-[rgba(155,143,255,0.15)] h-12 flex justify-between items-center'
   const shellStyle = inDashboard
     ? { background: 'var(--wimc-bg-elevated)', borderColor: 'var(--wimc-border-default)' }
     : undefined
@@ -1805,7 +1827,7 @@ function TabBar({ activeTab, city, count = 0, basePath = '/explore', stickyTop =
             <Link
               key={t.id}
               href={`${basePath}?tab=${t.id}&city=${city}`}
-              className={`flex items-center gap-2 px-4 lg:px-6 font-mono text-[10px] tracking-[0.24em] uppercase h-full transition-colors ${i > 0 ? `${dividerClass} ${inDashboard ? '' : 'border-ed-ink/15'}` : ''} ${isActive ? t.activeColor : inDashboard ? 'hover:opacity-70' : 'text-ed-ink/60 hover:bg-ed-ink/5'}`}
+              className={`flex items-center gap-2 px-4 lg:px-6 font-mono text-[10px] tracking-[0.24em] uppercase h-full transition-colors ${i > 0 ? `${dividerClass} ${inDashboard ? '' : 'border-[rgba(155,143,255,0.15)]'}` : ''} ${isActive ? t.activeColor : inDashboard ? 'hover:opacity-70' : 'text-[#9896B0] hover:bg-[#211C33]'}`}
               style={i > 0 && inDashboard ? { borderColor: 'var(--wimc-border-default)' } : undefined}
             >
               <span className="hidden lg:inline">
@@ -1818,7 +1840,7 @@ function TabBar({ activeTab, city, count = 0, basePath = '/explore', stickyTop =
       </div>
       {/* Right meta — desktop only */}
       {!inDashboard && (
-        <div className="hidden lg:block font-mono text-[10px] text-ed-ink/40 uppercase tracking-widest pr-6">
+        <div className="hidden lg:block font-mono text-[10px] text-[#9896B0] uppercase tracking-widest pr-6">
           {count} results in {city.toUpperCase()} // [23.0225° N, 72.5714° E]
         </div>
       )}
@@ -1830,7 +1852,7 @@ function TabBar({ activeTab, city, count = 0, basePath = '/explore', stickyTop =
 
 function DesktopHeader({ city, setCity }: { city: string; setCity: (c: string) => void }) {
   return (
-    <header className="hidden lg:flex sticky top-0 z-[60] h-[64px] items-center justify-between px-6 bg-ed-ink/95 backdrop-blur border-b-2 border-dashed border-white/15">
+    <header className="hidden lg:flex sticky top-0 z-[60] h-[64px] items-center justify-between px-6 bg-[#050308]/95 backdrop-blur border-b-2 border-dashed border-white/15">
       {/* Left */}
       <div className="flex items-center gap-4">
         <span className="font-display font-black text-[24px] text-[#E8705A] tracking-tighter uppercase">
@@ -1844,7 +1866,7 @@ function DesktopHeader({ city, setCity }: { city: string; setCity: (c: string) =
               onClick={() => setCity(c)}
               className={`px-4 py-1 border-2 font-mono text-[11px] uppercase font-bold transition-all ${
                 city === c
-                  ? 'bg-[#F5A800] text-ed-ink border-[#F5A800]'
+                  ? 'bg-[#F5A800] text-[#0A0814] border-[#F5A800]'
                   : 'border-dashed border-white/30 text-white/50 hover:border-solid hover:border-white hover:text-white bg-transparent'
               }`}
             >
@@ -1871,7 +1893,7 @@ function DesktopHeader({ city, setCity }: { city: string; setCity: (c: string) =
         </button>
         <Link
           href="/events/create"
-          className="bg-[#E8705A] text-white font-sans font-bold text-sm px-6 py-2 uppercase hover:-translate-y-0.5 hover:shadow-[4px_4px_0px_0px_rgba(26,17,8,1)] transition-all"
+          className="bg-[#E8705A] text-white font-sans font-bold text-sm px-6 py-2 uppercase rounded-[10px] hover:-translate-y-0.5 hover:shadow-[0_8px_20px_rgba(232,112,90,0.35)] transition-all"
         >
           CREATE EVENT
         </Link>
@@ -1881,32 +1903,28 @@ function DesktopHeader({ city, setCity }: { city: string; setCity: (c: string) =
 }
 
 // ─── Mobile Header ────────────────────────────────────────────────────────────
+// Shared with the authenticated Explorer dashboard top bar (ExplorerTopBar) —
+// guest state here (no viewerProfile), authenticated state on /explore/dashboard/*.
+// Wrapped in its own sticky/lg:hidden shell since ExplorerTopBar itself has no
+// opinion on breakpoint visibility (the dashboard layout renders it at all sizes).
 
-function MobileHeader({ city, setCity }: { city: string; setCity: (c: string) => void }) {
+function MobileHeader({
+  city, setCity, viewerProfile,
+}: {
+  city:          string
+  setCity:       (c: string) => void
+  viewerProfile: { avatarUrl: string | null; initials: string; displayName: string } | null
+}) {
   return (
-    <header className="lg:hidden sticky top-0 z-[60] h-[64px] flex items-center justify-between px-4 bg-ed-chalk/95 backdrop-blur border-b-2 border-dashed border-ed-ink/15">
-      <span className="font-display font-black text-[20px] text-[#E8705A] tracking-tighter uppercase">
-        WIMC
-      </span>
-      <div className="flex gap-2">
-        {(['Ahmedabad', 'Gandhinagar'] as const).map(c => (
-          <button
-            key={c}
-            onClick={() => setCity(c)}
-            className={`px-3 py-1 border-2 font-mono text-[10px] uppercase font-bold transition-all ${
-              city === c
-                ? 'bg-ed-ink text-white border-ed-ink'
-                : 'border-dashed border-ed-ink/30 text-ed-ink/50 hover:border-solid hover:text-ed-ink'
-            }`}
-          >
-            {c === 'Ahmedabad' ? 'AHM' : 'GNR'}
-          </button>
-        ))}
-      </div>
-      <button className="text-ed-ink">
-        <span className="material-symbols-outlined text-[24px]">search</span>
-      </button>
-    </header>
+    <div className="lg:hidden">
+      <ExplorerTopBar
+        city={city}
+        onCitySelect={setCity}
+        avatar={viewerProfile ? { href: '/explore/dashboard/profile', ...viewerProfile } : null}
+        signInHref={`/signin?next=${encodeURIComponent('/explore')}`}
+        zIndex={60}
+      />
+    </div>
   )
 }
 
@@ -1919,6 +1937,7 @@ export default function ExploreClient({
   subscribedPosts:   initialSubscribedPosts = [],
   followedCreatorIds = [],
   viewerUserId       = null,
+  viewerProfile      = null,
   inDashboard        = false,
   basePath:          basePathProp,
 }: Props) {
@@ -1965,7 +1984,7 @@ export default function ExploreClient({
   }, [viewerUserId, followedCreatorIds])
 
   const basePath = basePathProp ?? (inDashboard ? '/dashboard/explore' : '/explore')
-  const bgColor  = inDashboard ? 'var(--wimc-bg-base)' : '#F7F2E8'
+  const bgColor  = BG_BASE
 
   function setCity(c: string) {
     router.push(`${basePath}?tab=${tab}&city=${encodeURIComponent(c)}`)
@@ -2008,8 +2027,9 @@ export default function ExploreClient({
 
       <div className="fixed inset-0 z-[40] overflow-y-auto" style={makePageBg(bgColor)}>
         <DesktopHeader city={city} setCity={setCity} />
-        <MobileHeader city={city} setCity={setCity} />
-        <TabBar activeTab={tab} city={city} basePath={basePath} count={eventCounts.all} />
+        <MobileHeader city={city} setCity={setCity} viewerProfile={viewerProfile} />
+        {/* Mobile top bar is 48px (BAR_H in ExplorerTopBar); DesktopHeader stays 64px. */}
+        <TabBar activeTab={tab} city={city} basePath={basePath} stickyTop="top-12 lg:top-[64px]" count={eventCounts.all} />
 
         {/* Content area */}
         <div className="pb-28 lg:pb-12">
