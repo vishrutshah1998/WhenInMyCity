@@ -11,8 +11,15 @@ import { getPayableEvents } from '@/app/actions/payouts'
 import { getNotificationsForUser } from '@/app/actions/notifications'
 import { profileUrl } from '@/lib/profile-url'
 import { TIER_THRESHOLDS } from '@/lib/constants/interests'
+import { isLocalPlus } from '@/lib/tier'
 import PersonaSwitcherPills from '@/components/PersonaSwitcherPills'
 import BookingConfirmedBanner from '@/components/shared/BookingConfirmedBanner'
+import CreatorCarousel from './CreatorCarousel'
+import CreatorHomeMobile from './CreatorHomeMobile'
+import CreatorBusinessSlot from './CreatorBusinessSlot'
+import CreatorCommunitySlot from './CreatorCommunitySlot'
+import CreatorProgressSlot from './CreatorProgressSlot'
+import { PERF_STYLE, formatPaiseCompact, formatPaiseFull, EventTicket } from './homeShared'
 import type { Notification } from '@/types/database'
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -38,36 +45,6 @@ const BOARD_CSS = `
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 `
 
-// Perforated divider used on ticket/boarding-pass cards
-const PERF_STYLE: React.CSSProperties = {
-  width: 1,
-  flexShrink: 0,
-  background: 'repeating-linear-gradient(to bottom, transparent, transparent 4px, rgba(26,39,68,0.18) 4px, rgba(26,39,68,0.18) 8px)',
-}
-
-// ── Helpers ────────────────────────────────────────────────────────────────────
-
-function fmtDate(iso: string) {
-  const d = new Date(iso)
-  return {
-    day:   d.getDate().toString(),
-    month: d.toLocaleString('en-US', { month: 'short' }).toUpperCase(),
-    year:  d.getFullYear().toString(),
-  }
-}
-
-// Compact rupee display for headline stat — matches the paise() format in payouts pages.
-function formatPaiseCompact(p: number): string {
-  const r = p / 100
-  if (r >= 100000) return `₹${(r / 100000).toFixed(1)}L`
-  if (r >= 1000)   return `₹${(r / 1000).toFixed(1)}k`
-  return '₹' + Math.round(r).toLocaleString('en-IN')
-}
-
-function formatPaiseFull(p: number): string {
-  return '₹' + (p / 100).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 0 })
-}
-
 // ── PaperCard ─────────────────────────────────────────────────────────────────
 
 function PaperCard({ children, style, accent }: {
@@ -86,58 +63,6 @@ function PaperCard({ children, style, accent }: {
     }}>
       {children}
     </div>
-  )
-}
-
-// ── EventTicket ───────────────────────────────────────────────────────────────
-// Inspired by: stamp perforations, concert ticket stubs
-
-function EventTicket({ ev, soldCount = 0 }: { ev: Event; soldCount?: number }) {
-  const { day, month, year } = fmtDate(ev.starts_at)
-  return (
-    <Link
-      href={`/dashboard/events/${ev.id}/manage`}
-      style={{ display: 'flex', textDecoration: 'none', borderBottom: '1px solid rgba(26,39,68,0.07)' }}
-      onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = 'rgba(26,39,68,0.02)'}
-      onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}
-    >
-      {/* Left date stamp — coral */}
-      <div style={{
-        width: 64, flexShrink: 0, background: '#E8705A',
-        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-        padding: '16px 8px',
-      }}>
-        <span style={{ fontSize: 24, fontWeight: 900, color: 'white', lineHeight: 1, fontFamily: 'var(--font-syne)' }}>{day}</span>
-        <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.85)', fontFamily: 'var(--font-jetbrains-mono)', letterSpacing: 1, marginTop: 2 }}>{month}</span>
-        <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.55)', fontFamily: 'var(--font-jetbrains-mono)', marginTop: 1 }}>{year}</span>
-      </div>
-
-      {/* Main body */}
-      <div style={{ flex: 1, padding: '14px 18px', minWidth: 0 }}>
-        <p style={{ fontSize: 15, fontWeight: 700, color: '#1A2744', fontFamily: 'var(--font-dm-sans)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: 4 }}>
-          {ev.title}
-        </p>
-        <p style={{ fontSize: 10, color: 'rgba(26,39,68,0.45)', textTransform: 'uppercase', fontFamily: 'var(--font-jetbrains-mono)', letterSpacing: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-          📍 {ev.venue_name}
-        </p>
-      </div>
-
-      {/* Perforated divider */}
-      <div style={PERF_STYLE} />
-
-      {/* Stub — ticket count */}
-      <div style={{
-        width: 80, flexShrink: 0, display: 'flex', flexDirection: 'column',
-        alignItems: 'center', justifyContent: 'center', padding: '14px 10px',
-        background: 'rgba(26,39,68,0.025)',
-      }}>
-        <span style={{ fontSize: 9, color: 'rgba(26,39,68,0.4)', fontFamily: 'var(--font-jetbrains-mono)', textTransform: 'uppercase', marginBottom: 4 }}>SOLD</span>
-        <span style={{ fontSize: 18, fontWeight: 900, color: '#E8705A', fontFamily: 'var(--font-syne)', lineHeight: 1 }}>
-          {soldCount}{ev.capacity ? `/${ev.capacity}` : ''}
-        </span>
-        <span className="material-symbols-outlined" style={{ fontSize: 12, color: 'rgba(26,39,68,0.25)', marginTop: 4 }}>chevron_right</span>
-      </div>
-    </Link>
   )
 }
 
@@ -248,6 +173,9 @@ export default function DashboardPage() {
   const [availablePaise,  setAvailablePaise]  = useState(0)
   const [mtdEarnedPaise,  setMtdEarnedPaise]  = useState(0)
   const [confirmedNotifications, setConfirmedNotifications] = useState<Notification[]>([])
+  // Attendee-side RSVP count — mirrors dashboard/layout.tsx's hasAnyRsvp query exactly,
+  // needed here too for the Business carousel page's Bookings card visibility.
+  const [hasAnyRsvp,      setHasAnyRsvp]      = useState(false)
 
   useEffect(() => {
     const supabase = createClient()
@@ -260,7 +188,7 @@ export default function DashboardPage() {
 
       const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString()
 
-      const [pr, er, rr, posts, sr, payable, allNotifications] = await Promise.all([
+      const [pr, er, rr, posts, sr, rsvpCountRes, payable, allNotifications] = await Promise.all([
         supabase.from('user_profiles').select('*').eq('id', session.user.id).single(),
         supabase.from('events').select('*').eq('creator_id', session.user.id).order('starts_at').limit(10),
         supabase.from('maker_venue_proposals').select('id, event_title, status, proposed_date').eq('maker_id', session.user.id).eq('status', 'pending').limit(5),
@@ -273,6 +201,7 @@ export default function DashboardPage() {
           .eq('maker_id', session.user.id)
           .eq('is_active', true)
           .gte('subscribed_at', monthStart),
+        supabase.from('rsvps').select('id', { count: 'exact', head: true }).eq('attendee_user_id', session.user.id),
         getPayableEvents(),
         getNotificationsForUser(),
       ])
@@ -303,6 +232,7 @@ export default function DashboardPage() {
       if (rr.data)    setRequests(rr.data as BookingRequest[])
       if (posts.data) setDashPosts(posts.data)
       setSubscriberCount(sr.count ?? 0)
+      setHasAnyRsvp((rsvpCountRes.count ?? 0) > 0)
       if (payable.data) {
         setAvailablePaise(payable.data.reduce((s, e) => s + e.maker_paise, 0))
         setMtdEarnedPaise(
@@ -327,6 +257,12 @@ export default function DashboardPage() {
   )
 
   const isFirstLogin = events.length === 0 && requests.length === 0 && !profile?.bio
+
+  // Same conditional shape as dashboard/layout.tsx's isHubEnabled/showBookings
+  // (hasAnyEvent || hasAnyRsvp) — reused here to drive the mobile carousel's
+  // Community page inclusion and the Business page's Bookings card.
+  const isHubEnabled = isLocalPlus(profile?.user_tier ?? 'wanderer')
+  const showBookings = events.length > 0 || hasAnyRsvp
 
   const completionItems = [
     { label: 'Verify Social Handles', done: !!profile?.social_links && Object.keys(profile.social_links as object).length > 0 },
@@ -361,7 +297,11 @@ export default function DashboardPage() {
       <PersonaSwitcherPills personas={personas} currentPersona="creator" variant="light" />
 
       {/* ═══════════════ DESKTOP ══════════════════════════════════════════════ */}
-      <div className="hidden md:block" style={{ background: '#F2EDE3', minHeight: '100vh' }}>
+      {/* Breakpoint changed from md to lg (unchanged content/logic below) so this
+          stays mutually exclusive with the lg:hidden carousel replacing the old
+          md:hidden mobile block — matches the lg convention CreatorAuthenticatedTopBar
+          / the old CreatorTabStrip already used in dashboard/layout.tsx. */}
+      <div className="hidden lg:block" style={{ background: '#F2EDE3', minHeight: '100vh' }}>
         <div style={{ padding: '32px 40px 60px', maxWidth: 1280, margin: '0 auto' }}>
 
           {/* ── Confirmed booking banner ────────────────────────────────────── */}
@@ -840,125 +780,35 @@ export default function DashboardPage() {
         </Link>
       </div>
 
-      {/* ═══════════════ MOBILE ═══════════════════════════════════════════════ */}
-      <div className="md:hidden min-h-screen pb-6" style={{ background: '#F2EDE3' }}>
-
-        {/* Greeting — navy strip */}
-        <div style={{ background: '#1A2744', padding: '16px' }}>
-          <p style={{ fontSize: 9, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', fontFamily: 'var(--font-jetbrains-mono)', marginBottom: 4, letterSpacing: 1.5 }}>WELCOME BACK,</p>
-          <p style={{ fontFamily: 'var(--font-abril)', fontSize: 28, color: 'white', lineHeight: 1.1, margin: 0 }}>{displayName}</p>
-          <p style={{ fontSize: 8, color: '#E8705A', textTransform: 'uppercase', marginTop: 4, fontFamily: 'var(--font-jetbrains-mono)', letterSpacing: 1.5 }}>CREATOR // ACTIVE</p>
-        </div>
-
-        {/* Stat pills */}
-        <div className="overflow-x-auto py-4 no-scrollbar px-4" style={{ borderBottom: '1px solid rgba(26,39,68,0.1)' }}>
-          <div style={{ display: 'flex', gap: 12 }}>
-            {[
-              { value: String(subscriberCount), label: 'SUBSCRIBERS', color: '#E8705A' },
-              { value: String(upcomingEvents.length), label: 'EVENTS', color: '#E8705A' },
-              { value: String(profile?.monthly_page_visitors ?? 0), label: 'VIEWS', color: '#E8705A' },
-              { value: String(requests.length), label: 'REQUESTS', color: '#E8705A' },
-              { value: formatPaiseCompact(availablePaise), label: 'EARNINGS', color: '#D97706', href: '/dashboard/payouts' },
-            ].map(({ value, label, color, href }) => {
-              const content = (
-                <>
-                  <p style={{ fontFamily: 'var(--font-syne)', fontSize: 24, fontWeight: 900, color, lineHeight: 1, margin: 0 }}>{value}</p>
-                  <p style={{ fontSize: 9, color: 'rgba(26,39,68,0.4)', textTransform: 'uppercase', fontFamily: 'var(--font-jetbrains-mono)', marginTop: 6, letterSpacing: 1 }}>{label}</p>
-                </>
-              )
-              return href ? (
-                <a key={label} href={href} style={{ background: '#FEFCF8', border: '1px solid rgba(26,39,68,0.12)', borderTop: `2px solid ${color}`, padding: '12px 16px', minWidth: 110, flexShrink: 0, textDecoration: 'none', display: 'block' }}>
-                  {content}
-                </a>
-              ) : (
-                <div key={label} style={{ background: '#FEFCF8', border: '1px solid rgba(26,39,68,0.12)', padding: '12px 16px', minWidth: 110, flexShrink: 0 }}>
-                  {content}
-                </div>
-              )
-            })}
-          </div>
-        </div>
-
-        {/* Earn snapshot — compact card gateway to /dashboard/earn */}
-        <a
-          href="/dashboard/earn"
-          style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            margin: '0 16px 16px',
-            padding: '14px 16px',
-            background: '#FEFCF8',
-            border: '1px solid rgba(217,119,6,0.2)',
-            borderLeft: '3px solid #D97706',
-            textDecoration: 'none',
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <span className="material-symbols-outlined" style={{ fontSize: 20, color: '#D97706', fontVariationSettings: "'FILL' 1" }}>sell</span>
-            <div>
-              <p style={{ fontSize: 8, color: 'rgba(26,39,68,0.4)', fontFamily: 'var(--font-jetbrains-mono)', textTransform: 'uppercase', letterSpacing: 1.2, marginBottom: 2 }}>EARN HUB</p>
-              <p style={{ fontFamily: 'var(--font-dm-sans)', fontSize: 14, fontWeight: 700, color: '#1A2744', lineHeight: 1.2 }}>
-                {formatPaiseCompact(mtdEarnedPaise)}{' '}
-                <span style={{ fontSize: 11, fontWeight: 400, color: 'rgba(26,39,68,0.5)' }}>this month</span>
-              </p>
-            </div>
-          </div>
-          <span className="material-symbols-outlined" style={{ fontSize: 16, color: '#D97706' }}>arrow_forward</span>
-        </a>
-
-        {/* Confirmed booking banner */}
-        <div style={{ padding: '16px 16px 0' }}>
-          <BookingConfirmedBanner notifications={confirmedNotifications} theme="light" />
-        </div>
-
-        {/* PostComposer */}
-        <div style={{ padding: '16px' }}>
-          <PostComposer onPostCreated={(post) => setDashPosts(prev => [post, ...prev].slice(0, 5))} />
-        </div>
-
-        {/* Upcoming Events as tickets */}
-        <div style={{ padding: '0 16px 16px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-            <span style={{ fontSize: 10, color: '#1A2744', fontFamily: 'var(--font-jetbrains-mono)', textTransform: 'uppercase', letterSpacing: 1.5 }}>YOUR EVENTS</span>
-            <Link href="/dashboard/events/create" style={{ fontSize: 9, color: '#E8705A', border: '1px solid rgba(232,112,90,0.3)', padding: '4px 10px', fontFamily: 'var(--font-jetbrains-mono)', textDecoration: 'none', letterSpacing: 1 }}>
-              PIN +
-            </Link>
-          </div>
-          {upcomingEvents.length === 0 ? (
-            <div style={{ border: '1px dashed rgba(26,39,68,0.18)', padding: '24px', textAlign: 'center' }}>
-              <p style={{ fontSize: 10, color: 'rgba(26,39,68,0.35)', textTransform: 'uppercase', fontFamily: 'var(--font-jetbrains-mono)' }}>No events pinned yet</p>
-            </div>
-          ) : (
-            <div style={{ border: '1px solid rgba(26,39,68,0.12)', background: '#FEFCF8', overflow: 'hidden' }}>
-              {upcomingEvents.slice(0, 3).map(ev => <EventTicket key={ev.id} ev={ev} soldCount={soldCountMap[ev.id] ?? 0} />)}
-            </div>
-          )}
-        </div>
-
-        {/* Quick actions */}
-        <div style={{ padding: '0 16px 16px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-          {[
-            { icon: 'edit_note',  label: 'MY PAGE',   href: '/dashboard/studio' },
-            { icon: 'event',      label: 'ADD EVENT', href: '/dashboard/events/create' },
-            { icon: 'bar_chart',  label: 'ANALYTICS', href: '/dashboard/analytics' },
-            { icon: 'sell',       label: 'EARN',      href: '/dashboard/earn' },
-          ].map(({ icon, label, href }) => (
-            <a key={label} href={href} style={{ background: '#FEFCF8', border: '1px solid rgba(26,39,68,0.12)', padding: 16, aspectRatio: '1', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10, textDecoration: 'none' }}>
-              <span className="material-symbols-outlined" style={{ fontSize: 26, color: '#E8705A', fontVariationSettings: "'FILL' 1" }}>{icon}</span>
-              <span style={{ fontSize: 9, color: '#1A2744', textTransform: 'uppercase', fontFamily: 'var(--font-jetbrains-mono)', textAlign: 'center', letterSpacing: 1 }}>{label}</span>
-            </a>
-          ))}
-        </div>
-
-        {/* Marquee */}
-        <div style={{ background: '#1A2744', height: 30, display: 'flex', alignItems: 'center', overflow: 'hidden', marginTop: 8 }}>
-          <div className="flex whitespace-nowrap board-marquee">
-            {[0, 1].map((k) => (
-              <span key={k} style={{ fontSize: 9, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', fontFamily: 'var(--font-jetbrains-mono)', letterSpacing: '0.3em', paddingRight: '2rem' }}>
-                CITY CREATORS · OFFLINE FIRST · LOCAL SCENE ·&nbsp;
-              </span>
-            ))}
-          </div>
-        </div>
+      {/* ═══════════════ MOBILE — swipe carousel ═══════════════════════════════ */}
+      {/* Replaces the old flat md:hidden block (now CreatorHomeMobile.tsx, unchanged
+          JSX) as the Home slot, alongside three new carousel-only pages. Gated at
+          lg:hidden (not the old md:hidden) so it stays mutually exclusive with the
+          desktop block above — matches the lg convention the top bar already uses. */}
+      <div className="lg:hidden">
+        <CreatorCarousel
+          isHubEnabled={isHubEnabled}
+          accentColor="var(--wimc-accent)"
+          homeSlot={
+            <CreatorHomeMobile
+              displayName={displayName}
+              profile={profile}
+              subscriberCount={subscriberCount}
+              upcomingEvents={upcomingEvents}
+              requestsCount={requests.length}
+              availablePaise={availablePaise}
+              mtdEarnedPaise={mtdEarnedPaise}
+              confirmedNotifications={confirmedNotifications}
+              soldCountMap={soldCountMap}
+              onPostCreated={(post) => setDashPosts(prev => [post, ...prev].slice(0, 5))}
+            />
+          }
+          businessSlot={<CreatorBusinessSlot showBookings={showBookings} accentColor="var(--wimc-accent)" />}
+          communitySlot={isHubEnabled && profile ? (
+            <CreatorCommunitySlot currentUserId={profile.id} userTier={profile.user_tier ?? 'wanderer'} accentColor="var(--wimc-accent)" />
+          ) : null}
+          progressSlot={<CreatorProgressSlot viewerCity={profile?.city ?? null} />}
+        />
       </div>
     </>
   )

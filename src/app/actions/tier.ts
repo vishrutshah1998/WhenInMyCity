@@ -1,6 +1,8 @@
 'use server'
 
 import { createAdminClient } from '@/lib/supabase/admin'
+import { createClient } from '@/lib/supabase/server'
+import { requireProfile } from '@/lib/auth/requireAuth'
 import { TIER_THRESHOLDS } from '@/lib/constants/interests'
 import { createNotification } from '@/app/actions/notifications'
 import type {
@@ -571,3 +573,111 @@ export async function triggerTierCelebration(userId: string): Promise<void> {
 export const evaluateMakerTier = evaluateUserTier
 /** @deprecated Use getUserTierProgress */
 export const getMakerTierProgress = getUserTierProgress
+
+// ---------------------------------------------------------------------------
+// getTierMetrics — full benefits/progress view for TierClient
+// ---------------------------------------------------------------------------
+// Distinct from getUserTierProgress above (which returns only the gap-to-next-
+// tier summary for the dashboard nudge card). TierClient's full Tier Progress
+// page needs the raw metrics + rolling-window counts themselves. Extracted
+// from dashboard/tier/page.tsx (which now just calls this) so the Creator
+// carousel's Progress slot can reuse the exact same multi-field, date-windowed
+// query instead of hand-duplicating it.
+
+export interface TierPageMetrics {
+  user_tier: string
+  // Creator metrics
+  cumulative_events_hosted: number
+  cumulative_unique_attendees: number
+  cumulative_gmv_paise: number
+  average_event_rating: number
+  repeat_attendee_rate: number
+  monthly_page_visitors: number
+  is_founding_maker: boolean
+  // Explorer metrics
+  events_attended_count: number
+  rsvps_total_count: number
+  no_shows_count: number
+  reviews_posted_count: number
+  whatsapp_subscriber_count: number
+  tier_recovery_until: string | null
+}
+
+export interface TierMetricsResult {
+  tier: UserTier
+  metrics: TierPageMetrics
+  eventsAttendedIn90d: number
+  eventsHostedIn180d: number
+  eventsHostedIn365d: number
+}
+
+export async function getTierMetrics(): Promise<TierMetricsResult> {
+  const { profile } = await requireProfile()
+  const supabase = await createClient()
+  const now  = new Date()
+  const d90  = new Date(now.getTime() - 90  * 24 * 60 * 60 * 1000).toISOString()
+  const d180 = new Date(now.getTime() - 180 * 24 * 60 * 60 * 1000).toISOString()
+  const d365 = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000).toISOString()
+
+  const [
+    { data: fullProfile },
+    { count: attended90 },
+    { count: hosted180 },
+    { count: hosted365 },
+  ] = await Promise.all([
+    supabase
+      .from('user_profiles')
+      .select(`
+        user_tier, cumulative_events_hosted, cumulative_unique_attendees,
+        cumulative_gmv_paise, average_event_rating, repeat_attendee_rate,
+        monthly_page_visitors, is_founding_maker, events_attended_count,
+        rsvps_total_count, no_shows_count, reviews_posted_count,
+        whatsapp_subscriber_count, tier_recovery_until
+      `)
+      .eq('id', profile.id)
+      .single(),
+    supabase
+      .from('explorer_event_history')
+      .select('id', { count: 'exact', head: true })
+      .eq('explorer_id', profile.id)
+      .eq('attended', true)
+      .gte('created_at', d90),
+    supabase
+      .from('events')
+      .select('id', { count: 'exact', head: true })
+      .eq('creator_id', profile.id)
+      .neq('status', 'draft')
+      .gte('starts_at', d180),
+    supabase
+      .from('events')
+      .select('id', { count: 'exact', head: true })
+      .eq('creator_id', profile.id)
+      .neq('status', 'draft')
+      .gte('starts_at', d365),
+  ])
+
+  const metrics: TierPageMetrics = fullProfile ?? {
+    user_tier: 'wanderer',
+    cumulative_events_hosted: 0,
+    cumulative_unique_attendees: 0,
+    cumulative_gmv_paise: 0,
+    average_event_rating: 0,
+    repeat_attendee_rate: 0,
+    monthly_page_visitors: 0,
+    is_founding_maker: false,
+    events_attended_count: 0,
+    rsvps_total_count: 0,
+    no_shows_count: 0,
+    reviews_posted_count: 0,
+    whatsapp_subscriber_count: 0,
+    tier_recovery_until: null,
+  }
+
+  return {
+    tier: (profile.user_tier ?? 'wanderer') as UserTier,
+    metrics,
+    eventsAttendedIn90d: attended90 ?? 0,
+    eventsHostedIn180d: hosted180 ?? 0,
+    eventsHostedIn365d: hosted365 ?? 0,
+  }
+}

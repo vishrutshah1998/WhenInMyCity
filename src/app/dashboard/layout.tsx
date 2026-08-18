@@ -3,9 +3,8 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import Sidebar from '@/components/dashboard/Sidebar'
-import MobileBottomNav from '@/components/ui/MobileBottomNav'
-import { creatorBottomNavConfig, resolveWorkspaces } from '@/lib/constants/bottomNavConfigs'
 import NotificationBell from '@/components/dashboard/NotificationBell'
+import CreatorAuthenticatedTopBar from '@/components/dashboard/CreatorAuthenticatedTopBar'
 import { getNotificationsForUser } from '@/app/actions/notifications'
 import { getUnreadMessageCount } from '@/app/actions/hub'
 import Link from 'next/link'
@@ -110,13 +109,32 @@ export default async function DashboardLayout({ children }: { children: React.Re
         />
       </div>
       <div className="dash-content ml-0 md:ml-[var(--wimc-sidebar-w)]" style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', transition: 'margin-left 250ms cubic-bezier(.4,0,.2,1)' }}>
-        {/* Slim top bar — notification bell lives here */}
-        <div style={{
+        {/* New top bar is mobile-only this session (Part 1 of 3) — lg:hidden
+            matches the gate already proven for Explorer's equivalent swap.
+            Desktop keeps the original bar unchanged below. CreatorTabStrip is
+            gone — the Home page's swipe carousel (dashboard/page.tsx) now owns
+            mobile nav for /dashboard itself, same as Explorer's carousel; other
+            /dashboard/* sub-routes rely on the top bar + in-page links, matching
+            the precedent already shipped for Explorer's sub-routes. */}
+        <div className="lg:hidden">
+          <CreatorAuthenticatedTopBar
+            city={profile.city ?? ''}
+            avatarUrl={profile.avatar_url ?? null}
+            initials={initials}
+            displayName={profile.display_name ?? profile.username ?? ''}
+            profileHref="/dashboard/profile/hub"
+            accentColor={accentColor}
+            notifications={notifications}
+          />
+        </div>
+
+        {/* Desktop — restored unchanged from before this session */}
+        <div className="hidden lg:flex" style={{
           position: 'sticky', top: 0, zIndex: 30,
           height: 48,
           background: 'rgba(242,237,227,0.95)', backdropFilter: 'blur(12px)',
           borderBottom: '1px solid var(--wimc-coral-glow)',
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          alignItems: 'center', justifyContent: 'space-between',
           padding: '0 20px',
         }}>
           <Link href="/dashboard" className="dash-logo" style={{ display: 'flex', alignItems: 'center', textDecoration: 'none' }}>
@@ -124,19 +142,12 @@ export default async function DashboardLayout({ children }: { children: React.Re
           </Link>
           <NotificationBell initialNotifications={notifications} />
         </div>
-        <main className="mob-nav-pb" style={{ flex: 1, minWidth: 0 }}>
+        {/* No fixed bottom nav left to clear (MobileBottomNav removed for Creator) —
+            just the iOS home-indicator safe area, which mob-nav-pb used to cover too. */}
+        <main style={{ flex: 1, minWidth: 0, paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
           {children}
         </main>
       </div>
-      <MobileBottomNav
-        config={{
-          ...creatorBottomNavConfig,
-          more: creatorBottomNavConfig.more.filter(item =>
-            ['Creator Hub', 'My Circles'].includes(item.label) ? isHubEnabled : true
-          ),
-        }}
-        workspaces={resolveWorkspaces(sidebarPersonas, 'creator')}
-      />
     </div>
   )
 }
