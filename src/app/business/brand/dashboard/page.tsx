@@ -2,6 +2,9 @@ import { requireProfile } from '@/lib/auth/requireAuth'
 import Link from 'next/link'
 import PersonaSwitcherPills from '@/components/PersonaSwitcherPills'
 import DashPageLink from '@/components/DashPageLink'
+import BrandCarousel from './BrandCarousel'
+import BrandEnquiriesPage from '../enquiries/page'
+import BrandCreatorsPage from '../creators/page'
 
 // ── Dark palette ──────────────────────────────────────────────────────────────
 const D = {
@@ -133,7 +136,11 @@ export default async function BrandDashboardPage() {
   const pageVisitors    = profile.monthly_page_visitors ?? 0
   const creatorsReached = profile.cumulative_unique_attendees ?? 0
 
-  return (
+  // Reused as-is for both the desktop view and the mobile carousel's Home
+  // slot — this content already reflows responsively via its own
+  // @media(max-width:900px) rules below, so no separate mobile extraction
+  // is needed (same shape as Venue's Home).
+  const homeContent = (
     <>
       <style>{`
         .brand-kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; }
@@ -354,6 +361,27 @@ export default async function BrandDashboardPage() {
       >
         <span className="material-symbols-outlined" style={{ fontSize: 24, color: D.bg }}>campaign</span>
       </Link>
+    </>
+  )
+
+  return (
+    <>
+      {/* Desktop — unchanged content/logic, just re-gated from unconditional to
+          hidden lg:block so it stays mutually exclusive with the lg:hidden
+          carousel below (matches the lg convention BrandAuthenticatedTopBar
+          already uses in layout.tsx). */}
+      <div className="hidden lg:block">{homeContent}</div>
+
+      {/* Mobile — swipe carousel replacing MobileBottomNav as the primary
+          mobile nav surface for /business/brand. Enquiries/Creators pages
+          reused verbatim (their own page.tsx default exports, unmodified). */}
+      <div className="lg:hidden">
+        <BrandCarousel
+          homeSlot={homeContent}
+          enquiriesSlot={<BrandEnquiriesPage />}
+          creatorsSlot={<BrandCreatorsPage />}
+        />
+      </div>
     </>
   )
 }
