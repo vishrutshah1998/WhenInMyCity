@@ -28,9 +28,11 @@ function timeAgo(iso: string): string {
 
 interface Props {
   initialNotifications: Notification[]
+  /** Where "See all →" navigates. Defaults to Creator's notifications page. */
+  seeAllHref?: string
 }
 
-export default function NotificationBell({ initialNotifications }: Props) {
+export default function NotificationBell({ initialNotifications, seeAllHref = '/dashboard/notifications' }: Props) {
   const router = useRouter()
   const [, startTransition] = useTransition()
 
@@ -158,7 +160,7 @@ export default function NotificationBell({ initialNotifications }: Props) {
                 </button>
               )}
               <button
-                onClick={() => { setOpen(false); router.push('/dashboard/notifications') }}
+                onClick={() => { setOpen(false); router.push(seeAllHref) }}
                 style={{
                   background: 'none', border: 'none', cursor: 'pointer',
                   fontSize: 12, color: 'var(--wimc-text-secondary)', fontWeight: 500,

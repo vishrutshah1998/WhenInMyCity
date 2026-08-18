@@ -92,6 +92,34 @@
 }
 
 /*
+ * Explorer workspace — Night Discovery palette
+ * Deep violet-black. Lavender = Explorer identity, matches the accent already
+ * hardcoded across Explorer's dashboard (ExplorerTopBar, ExplorerSidebar,
+ * ExplorerProfileHubClient). Text primary/secondary values are chosen to match
+ * ExplorerProfileHubClient.tsx's existing TEXT/MUTED constants exactly, so this
+ * variant is visually consistent with the one Explorer surface that was already dark.
+ */
+.venue-theme.explorer-variant {
+  --venue-bg-base:     #0A0814;
+  --venue-bg-surface:  #120F1E;
+  --venue-bg-elevated: #191527;
+  --venue-bg-overlay:  #211C33;
+  --venue-bg-hover:    #2B2440;
+
+  --venue-border-subtle:  rgba(155, 143, 255, 0.07);
+  --venue-border-default: rgba(155, 143, 255, 0.13);
+  --venue-border-strong:  rgba(155, 143, 255, 0.24);
+
+  --venue-text-primary:   #F0EFF8;
+  --venue-text-secondary: #9896B0;
+  --venue-text-muted:     #5A5875;
+
+  --venue-accent:        #9B8FFF;
+  --venue-accent-tint:   rgba(155, 143, 255, 0.10);
+  --venue-accent-border: rgba(155, 143, 255, 0.22);
+}
+
+/*
  * Brand workspace — Executive Office palette
  * Warm espresso-black. Gold accent in a warm (not cold) dark context.
  */
