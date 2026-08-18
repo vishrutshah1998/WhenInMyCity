@@ -3,9 +3,8 @@ import { redirect } from 'next/navigation'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getVenueNotifications } from '@/app/actions/venue-notifications'
 import VenueSidebar from '@/components/venue/VenueSidebar'
-import MobileBottomNav from '@/components/ui/MobileBottomNav'
-import { venueBottomNavConfig, resolveWorkspaces } from '@/lib/constants/bottomNavConfigs'
 import VenueNotificationBell from '@/components/venue/VenueNotificationBell'
+import VenueAuthenticatedTopBar from '@/components/venue/VenueAuthenticatedTopBar'
 import Link from 'next/link'
 import { WimcWordmark } from '@/components/WimcWordmark'
 
@@ -17,16 +16,15 @@ export default async function VenueLayout({ children }: { children: React.ReactN
   const { user } = await requireAuth('/business/venue/dashboard')
   const admin = createAdminClient()
 
-  const [{ data: venue }, { data: userProfile }] = await Promise.all([
-    admin.from('venue_profiles').select('id, name, slug').eq('auth_user_id', user.id).maybeSingle(),
-    admin.from('user_profiles').select('personas').eq('id', user.id).maybeSingle(),
-  ])
+  const { data: venue } = await admin
+    .from('venue_profiles')
+    .select('id, name, slug, city')
+    .eq('auth_user_id', user.id)
+    .maybeSingle()
 
   if (!venue) redirect('/business/venue/onboard')
 
-  const { notifications, unreadCount, totalUnreadCount } = await getVenueNotifications(venue.id, 10)
-  const venuePersonas = (userProfile?.personas ?? []) as string[]
-  const mobileWorkspaces = resolveWorkspaces(venuePersonas, 'venue')
+  const { notifications, unreadCount } = await getVenueNotifications(venue.id, 10)
 
   const ownerName =
     (user.user_metadata?.full_name as string | undefined) ??
@@ -58,14 +56,29 @@ export default async function VenueLayout({ children }: { children: React.ReactN
           minHeight: '100vh',
         }}
       >
-        {/* Sticky topbar */}
+        {/* New top bar is mobile-only this session (Part 1 of 3) — lg:hidden matches the
+            gate already proven for Explorer's and Creator's equivalent swap. Desktop keeps
+            the original header unchanged below. */}
+        <div className="lg:hidden">
+          <VenueAuthenticatedTopBar
+            city={venue.city ?? ''}
+            initials={getInitials(ownerName)}
+            displayName={ownerName}
+            profileHref="/business/venue/profile/hub"
+            venueId={venue.id}
+            notifications={notifications}
+            unreadCount={unreadCount}
+          />
+        </div>
+
+        {/* Desktop — restored unchanged from before this session */}
         <header
-          className="venue-page-topbar"
+          className="venue-page-topbar hidden lg:flex"
           style={{
             position: 'sticky', top: 0, height: 48, zIndex: 40,
             background: 'rgba(6,13,17,0.92)', backdropFilter: 'blur(12px)',
             borderBottom: '1px solid var(--venue-border-subtle)',
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            alignItems: 'center', justifyContent: 'space-between',
             padding: '0 20px', flexShrink: 0,
           }}
         >
@@ -83,11 +96,13 @@ export default async function VenueLayout({ children }: { children: React.ReactN
           />
         </header>
 
-        <main className="mob-nav-pb" style={{ flex: 1 }}>
+        {/* No fixed bottom nav left to clear (MobileBottomNav removed for Venue,
+            replaced by the Home page's swipe carousel) — just the iOS
+            home-indicator safe area, which mob-nav-pb used to cover too. */}
+        <main style={{ flex: 1, paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
           {children}
         </main>
       </div>
-      <MobileBottomNav config={venueBottomNavConfig} badges={{ inbox: totalUnreadCount }} workspaces={mobileWorkspaces} />
     </div>
   )
 }

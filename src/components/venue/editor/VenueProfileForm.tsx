@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { updateVenueContactInfo, type UpdateVenueContactInput } from '@/app/actions/venue'
+import { signOut } from '@/app/actions/auth'
 import type { VenueProfile } from '@/types/database'
 
 // ── Design tokens ─────────────────────────────────────────────────────────────
@@ -89,6 +90,7 @@ export default function VenueProfileForm({ venue, authEmail }: Props) {
   }
 
   return (
+    <>
     <div style={{ background: T.surface, border: `1px solid ${T.borderMd}`, borderRadius: 2 }}>
 
       {/* Section header */}
@@ -206,5 +208,37 @@ export default function VenueProfileForm({ venue, authEmail }: Props) {
 
       </div>
     </div>
+
+    {/* ── Account ──────────────────────────────────────────────────────── */}
+    <div style={{ background: T.surface, border: `1px solid ${T.borderMd}`, borderRadius: 2, marginTop: 20 }}>
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: 8,
+        padding: '14px 20px', borderBottom: `1px solid ${T.border}`,
+      }}>
+        <span className="material-symbols-outlined" style={{ fontSize: 16, color: T.muted }}>manage_accounts</span>
+        <span style={{ fontFamily: MONO, fontSize: 10, color: T.muted, letterSpacing: '1.4px', textTransform: 'uppercase' }}>
+          Account
+        </span>
+      </div>
+      <div style={{ padding: '20px' }}>
+        <button
+          type="button"
+          onClick={() => signOut()}
+          style={{
+            display: 'flex', alignItems: 'center', gap: 8, width: '100%',
+            padding: '10px 14px', fontFamily: INTER, fontSize: 14, fontWeight: 500,
+            background: 'var(--venue-bg-elevated)', color: T.secondary,
+            border: `1px solid ${T.borderMd}`, borderRadius: 2, cursor: 'pointer',
+            transition: 'background 160ms ease',
+          }}
+          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'var(--venue-bg-overlay)' }}
+          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'var(--venue-bg-elevated)' }}
+        >
+          <span className="material-symbols-outlined" style={{ fontSize: 18, color: T.muted }}>logout</span>
+          Sign out
+        </button>
+      </div>
+    </div>
+    </>
   )
 }

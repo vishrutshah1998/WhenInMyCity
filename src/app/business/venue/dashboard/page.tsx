@@ -15,6 +15,9 @@ import WeekStrip from '@/components/venue/dashboard/WeekStrip'
 import PendingRequests from '@/components/venue/dashboard/PendingRequests'
 import RevenueTrend from '@/components/venue/dashboard/RevenueTrend'
 import type { MonthlyRevenue } from '@/components/venue/dashboard/charts/RevenueTrendChart'
+import VenueCarousel from './VenueCarousel'
+import VenueSettingsSlot from './VenueSettingsSlot'
+import VenueOperationsSlot from './VenueOperationsSlot'
 import type { VenueProfile, VenueTier } from '@/types/database'
 
 // ---------------------------------------------------------------------------
@@ -203,11 +206,20 @@ export default async function VenueDashboardPage() {
 
   if (!venue) redirect('/business/venue/onboard')
 
-  const [result, { data: userProfile }, allNotifications] = await Promise.all([
+  const [result, { data: userProfile }, allNotifications, { count: confirmedProposalCount }] = await Promise.all([
     getVenueDashboardData(venue.id),
     admin.from('user_profiles').select('personas').eq('id', user.id).maybeSingle(),
     getNotificationsForUser(),
+    // Same computation as VenueSidebar.tsx's hasAnyConfirmedBooking — reused here for the
+    // Business carousel page's Analytics/Payouts "unlocks after first booking" sublabel.
+    admin
+      .from('maker_venue_proposals')
+      .select('id', { count: 'exact', head: true })
+      .eq('venue_id', venue.id)
+      .eq('status', 'accepted'),
   ])
+
+  const hasAnyConfirmedBooking = (confirmedProposalCount ?? 0) > 0
 
   const confirmedNotifications = allNotifications.filter(
     (n) => !n.is_read && (n.type === 'venue_proposal_accepted' || n.type === 'venue_counter_accepted'),
@@ -271,7 +283,12 @@ export default async function VenueDashboardPage() {
 
   const revenueTrendData = buildRevenueTrend()
 
-  return (
+  // Reused as-is for both the desktop view and the mobile carousel's Home
+  // slot — this content already reflows responsively via its own
+  // @media(max-width:767px) rules below, so no separate mobile extraction
+  // is needed (unlike Creator's Home, which had genuinely separate
+  // desktop/mobile JSX trees).
+  const homeContent = (
     <>
       <style>{`
         @media (max-width: 767px) {
@@ -366,6 +383,26 @@ export default async function VenueDashboardPage() {
         <RevenueTrend data={revenueTrendData} />
 
         <TierProgressCard venue={venueProfile} reviewCount={reviewCount} />
+      </div>
+    </>
+  )
+
+  return (
+    <>
+      {/* Desktop — unchanged content/logic, just re-gated from unconditional to
+          hidden lg:block so it stays mutually exclusive with the lg:hidden
+          carousel below (matches the lg convention VenueAuthenticatedTopBar
+          already uses in layout.tsx). */}
+      <div className="hidden lg:block">{homeContent}</div>
+
+      {/* Mobile — swipe carousel replacing MobileBottomNav as the primary
+          mobile nav surface for /business/venue. */}
+      <div className="lg:hidden">
+        <VenueCarousel
+          homeSlot={homeContent}
+          venueSlot={<VenueSettingsSlot />}
+          businessSlot={<VenueOperationsSlot hasAnyConfirmedBooking={hasAnyConfirmedBooking} />}
+        />
       </div>
     </>
   )
