@@ -289,21 +289,40 @@ export async function getEventBySlug(slug: string): Promise<{
 }> {
   // Use the session-aware client: logged-in creators can see their own drafts.
   const supabase = await createClient()
+  const admin = createAdminClient()
 
-  const { data: event, error } = await supabase
+  const { data: sessionEvent } = await supabase
     .from('events')
     .select('*')
     .eq('slug', slug)
     .maybeSingle()
 
-  if (error || !event) {
+  // RLS (events_select_public_or_own) only exposes 'published' rows to
+  // non-creators, so a cancelled event 404s for everyone but its creator —
+  // including attendees who were just refunded. Fall back to an admin
+  // lookup scoped strictly to 'cancelled' so this one slug page can still
+  // resolve and show a cancellation notice. Do not widen to other
+  // non-published statuses (draft/completed stay hidden), and this only
+  // affects this single-event lookup — it doesn't touch the RLS policy
+  // itself, so public listings/search (which filter status explicitly)
+  // are unaffected.
+  let event = sessionEvent
+  if (!event) {
+    const { data: cancelledEvent } = await admin
+      .from('events')
+      .select('*')
+      .eq('slug', slug)
+      .eq('status', 'cancelled')
+      .maybeSingle()
+    event = cancelledEvent
+  }
+
+  if (!event) {
     return { event: null, rsvpCount: 0, spotsLeft: null }
   }
 
   // Count confirmed attendees (payment_status = 'captured').
   // We use admin here to bypass rsvps RLS (which restricts to creator or own).
-  const admin = createAdminClient()
-
   const { count: rsvpCount } = await admin
     .from('rsvps')
     .select('id', { count: 'exact', head: true })

@@ -5,6 +5,7 @@ import { getMyRSVPForEvent } from '@/app/actions/rsvp'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
 import EventPage, { type EventReview } from './event-page'
+import CancelledEventNotice from './CancelledEventNotice'
 
 export async function generateMetadata({
   params,
@@ -46,7 +47,22 @@ export default async function EventSlugPage({
   const { data: { session } } = await supabase.auth.getSession()
   const isAuthenticated = !!session
 
-  const [{ data: creator }, { data: reviewHistory }, { rsvp: myRSVP }] = await Promise.all([
+  if (event.status === 'cancelled') {
+    let hadBooking = false
+    if (session) {
+      const { data: rsvp } = await admin
+        .from('rsvps')
+        .select('id')
+        .eq('event_id', event.id)
+        .eq('attendee_user_id', session.user.id)
+        .in('payment_status', ['captured', 'refunded', 'refund_failed'])
+        .maybeSingle()
+      hadBooking = !!rsvp
+    }
+    return <CancelledEventNotice event={event} hadBooking={hadBooking} />
+  }
+
+  const [{ data: creator }, { data: reviewHistory }, { rsvp: myRSVP }, { data: viewerProfile }] = await Promise.all([
     admin
       .from('user_profiles')
       .select('display_name, avatar_url, username, city, creator_type, is_verified, user_tier, lantern_since, beacon_since, tier_recovery_until')
@@ -60,7 +76,25 @@ export default async function EventSlugPage({
       .order('rated_at', { ascending: false })
       .limit(20),
     getMyRSVPForEvent(event.id),
+    session
+      ? admin.from('user_profiles').select('display_name').eq('id', session.user.id).maybeSingle()
+      : Promise.resolve({ data: null }),
   ])
+
+  // Prefill source for the RSVP sheet's Name/Phone fields (authenticated
+  // viewers only). Phone comes from the auth user record — the same source
+  // already used for prefill elsewhere (getOnboardingStudioBootstrap's
+  // `authPhone`) — because `user_profiles.phone` is only populated on the
+  // creator onboarding path, not the explorer path, and would be null for
+  // most Explorers.
+  const viewerName = viewerProfile?.display_name ?? null
+  const rawViewerPhone = session?.user.phone ?? null
+  const viewerPhoneDigits = rawViewerPhone
+    ? (() => {
+        const digits = rawViewerPhone.replace(/\D/g, '').slice(-10)
+        return /^[6-9]\d{9}$/.test(digits) ? digits : null
+      })()
+    : null
 
   // Hydrate reviewer display names in a single batch query.
   let reviews: EventReview[] = []
@@ -92,6 +126,8 @@ export default async function EventSlugPage({
       myRSVP={myRSVP}
       isAuthenticated={isAuthenticated}
       discoverySource={discoverySource}
+      viewerName={viewerName}
+      viewerPhoneDigits={viewerPhoneDigits}
     />
   )
 }

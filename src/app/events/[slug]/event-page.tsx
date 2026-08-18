@@ -74,6 +74,10 @@ interface EventPageProps {
   isAuthenticated: boolean
   /** How the visitor arrived at this booking page (?src= query param). Undefined = 'direct'. */
   discoverySource?: 'creator_link' | 'platform_discovery'
+  /** Authenticated viewer's display_name, for prefilling the RSVP sheet's Name field. Null if signed out or unset. */
+  viewerName?: string | null
+  /** Authenticated viewer's OTP-verified phone (10 digits, no +91), for prefilling the RSVP sheet's Phone field. Null if signed out or unavailable. */
+  viewerPhoneDigits?: string | null
 }
 
 type Sheet = 'none' | 'step1' | 'step2' | 'confirmed'
@@ -151,7 +155,7 @@ declare global {
   }
 }
 
-export default function EventPage({ event, rsvpCount, spotsLeft, creator, reviews = [], myRSVP = null, isAuthenticated, discoverySource }: EventPageProps) {
+export default function EventPage({ event, rsvpCount, spotsLeft, creator, reviews = [], myRSVP = null, isAuthenticated, discoverySource, viewerName = null, viewerPhoneDigits = null }: EventPageProps) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const isCasual = (event as any).rsvp_style === 'casual' || event.ticket_price === 0
@@ -167,9 +171,11 @@ export default function EventPage({ event, rsvpCount, spotsLeft, creator, review
   const [selectedTierId, setSelectedTierId] = useState<string>(hasFanTiers ? fanTiers[0].id : '')
   const selectedTier = hasFanTiers ? (fanTiers.find((t) => t.id === selectedTierId) ?? fanTiers[0]) : null
 
-  // Step 1 form
-  const [name, setName] = useState('')
-  const [phoneDigits, setPhoneDigits] = useState('')
+  // Step 1 form — prefilled from the authenticated viewer's existing
+  // name/phone where available, but stays fully editable (e.g. booking for
+  // someone else).
+  const [name, setName] = useState(viewerName ?? '')
+  const [phoneDigits, setPhoneDigits] = useState(viewerPhoneDigits ?? '')
   const [quantity, setQuantity] = useState(1)
   const [step1Error, setStep1Error] = useState<string | null>(null)
 
@@ -197,6 +203,7 @@ export default function EventPage({ event, rsvpCount, spotsLeft, creator, review
 
   const phone = phoneDigits ? `+91${phoneDigits}` : ''
   const soldOut = spotsLeft !== null && spotsLeft === 0
+  const goingCount = event.capacity !== null && rsvpCount >= 5 ? `${rsvpCount} of ${event.capacity}` : `${rsvpCount}`
   const isPast = new Date(event.starts_at) <= new Date()
   const canBook = event.status === 'published' && !soldOut && !isPast
   const maxQty = Math.min(10, spotsLeft ?? 10)
@@ -583,7 +590,7 @@ export default function EventPage({ event, rsvpCount, spotsLeft, creator, review
             {rsvpCount > 0 && (
               <div className="flex flex-col gap-0.5">
                 <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-on-surface-variant">Going</span>
-                <span className="font-mono text-[12px] text-on-surface">{rsvpCount}</span>
+                <span className="font-mono text-[12px] text-on-surface">{goingCount}</span>
               </div>
             )}
             <div className="hidden md:block ml-auto h-10 w-24 barcode-strip text-on-surface opacity-30" />
@@ -946,7 +953,7 @@ export default function EventPage({ event, rsvpCount, spotsLeft, creator, review
                         )}
                         {rsvpCount > 0 && (
                           <p className="text-center font-mono text-[10px] text-[#57423e]">
-                            {rsvpCount} going
+                            {goingCount} going
                           </p>
                         )}
                       </div>
@@ -1104,7 +1111,7 @@ export default function EventPage({ event, rsvpCount, spotsLeft, creator, review
                   </div>
                 )}
                 {rsvpCount > 0 && (
-                  <p className="text-center text-on-surface-variant text-xs font-mono">{rsvpCount} going</p>
+                  <p className="text-center text-on-surface-variant text-xs font-mono">{goingCount} going</p>
                 )}
               </div>
             ) : (
