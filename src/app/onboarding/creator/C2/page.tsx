@@ -7,6 +7,7 @@ import { generateUsernameFromName } from '@/app/actions/onboarding'
 import { useExistingProfileData } from '@/hooks/useExistingProfileData'
 import { prefillCreatorKeys } from '@/lib/onboarding/prefill'
 import { PAPER } from '@/lib/onboarding/design-tokens'
+import { ONBOARDING_CTA } from '@/lib/constants/onboarding-cta-copy'
 
 const LEFT_BG  = '#1A2744'
 const RIGHT_BG = PAPER.bg
@@ -429,6 +430,11 @@ function C2Content() {
           <p style={{ fontFamily: 'var(--font-dm-sans), sans-serif', fontSize: 11, color: 'rgba(255,255,255,0.35)', margin: 0 }}>
             Your name as you want to appear on your page.
           </p>
+          {canProceed && (
+            <p style={{ fontFamily: 'var(--font-dm-sans), sans-serif', fontSize: 13, color: CORAL, margin: '10px 0 0' }}>
+              Nice to meet you, {displayName.trim()}.
+            </p>
+          )}
         </div>
 
         {/* ── Footer — same 72px band / padding as every other onboarding
@@ -461,7 +467,7 @@ function C2Content() {
               transition:    'all 140ms',
             }}
           >
-            {ctaLoading ? 'Building…' : 'Continue →'}
+            {ctaLoading ? 'Building…' : ONBOARDING_CTA.C2}
           </button>
         </div>
       </div>

@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { SK } from '@/lib/onboarding/session-keys'
+import { ONBOARDING_CTA } from '@/lib/constants/onboarding-cta-copy'
 const ACCENT = '#9B8FFF'
 
 interface City { name: string; state: string }
@@ -217,6 +218,12 @@ export default function E4Page() {
             }}
           />
         </div>
+
+        {selectedCity && (
+          <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 13, color: ACCENT, margin: '14px 0 0' }}>
+            {selectedCity.name} — got it.
+          </p>
+        )}
       </div>
 
       <footer style={{
@@ -242,7 +249,7 @@ export default function E4Page() {
             boxShadow:     canProceed ? '8px 8px 0px 0px #000000' : 'none',
             cursor:        canProceed ? 'pointer' : 'not-allowed',
           }}>
-          Continue →
+          {ONBOARDING_CTA.E4}
         </button>
       </footer>
     </>

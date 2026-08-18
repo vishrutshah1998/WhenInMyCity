@@ -6,6 +6,7 @@ import { SK } from '@/lib/onboarding/session-keys'
 import { ExplorerPass } from '@/components/onboarding/BoardingPassArtifact'
 import { useExistingProfileData } from '@/hooks/useExistingProfileData'
 import { prefillExplorerKeys } from '@/lib/onboarding/prefill'
+import { ONBOARDING_CTA } from '@/lib/constants/onboarding-cta-copy'
 
 const ACCENT = '#9B8FFF'
 
@@ -93,6 +94,12 @@ function E2Content() {
             }}
           />
         </div>
+
+        {canProceed && (
+          <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 13, color: ACCENT, margin: '14px 0 0' }}>
+            Hey {displayName.trim()}, glad you&apos;re here.
+          </p>
+        )}
       </div>
 
       <footer style={{
@@ -119,7 +126,7 @@ function E2Content() {
             cursor:        canProceed ? 'pointer' : 'not-allowed',
             transition:    'background 200ms',
           }}>
-          Continue →
+          {ONBOARDING_CTA.E2}
         </button>
       </footer>
     </>

@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { SK } from '@/lib/onboarding/session-keys'
 import { INTEREST_TAGS } from '@/lib/constants/interests'
+import { ONBOARDING_CTA } from '@/lib/constants/onboarding-cta-copy'
 
 const ACCENT = '#9B8FFF'
 const MIN_TAGS = 3
@@ -240,7 +241,7 @@ export default function E5Page() {
             cursor:        canProceed ? 'pointer' : 'not-allowed',
             transition:    'all 150ms',
           }}>
-          {canProceed ? `Continue (${selected.length})` : `Pick ${MIN_TAGS - selected.length} more`}
+          {canProceed ? ONBOARDING_CTA.E5.withCount(selected.length) : `Pick ${MIN_TAGS - selected.length} more`}
         </button>
       </footer>
     </>

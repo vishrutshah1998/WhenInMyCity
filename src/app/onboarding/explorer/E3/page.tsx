@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { SK } from '@/lib/onboarding/session-keys'
+import { ONBOARDING_CTA } from '@/lib/constants/onboarding-cta-copy'
 
 const ACCENT = '#9B8FFF'
 const NAVY   = '#1A2744'
@@ -179,7 +180,7 @@ export default function E3Page() {
             transition:    'all 150ms',
           }}
         >
-          Continue →
+          {ONBOARDING_CTA.E3}
         </button>
       </footer>
     </>

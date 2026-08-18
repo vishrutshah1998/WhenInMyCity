@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { SK } from '@/lib/onboarding/session-keys'
 import { VenueNoticePoster } from '@/components/onboarding/BoardingPassArtifact'
+import { ONBOARDING_CTA } from '@/lib/constants/onboarding-cta-copy'
 
 const ACCENT = '#5DD9D0'
 
@@ -270,7 +271,7 @@ export default function VCPage() {
             cursor:        'pointer',
             opacity:       isSaving ? 0.7 : 1,
           }}>
-          {isSaving ? 'Saving…' : hasAny ? `Continue →` : 'Skip for now →'}
+          {isSaving ? 'Saving…' : hasAny ? ONBOARDING_CTA.VC : 'Skip for now →'}
         </button>
       </footer>
     </>

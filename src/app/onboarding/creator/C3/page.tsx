@@ -6,6 +6,7 @@ import { SK } from '@/lib/onboarding/session-keys'
 import { CREATOR_CATEGORIES } from '@/lib/constants/categories'
 import { CreatorEventTicket } from '@/components/onboarding/BoardingPassArtifact'
 import { getCategoryColour } from '@/lib/onboarding/design-tokens'
+import { ONBOARDING_CTA } from '@/lib/constants/onboarding-cta-copy'
 
 const NAVY = '#1A2744'
 
@@ -147,7 +148,7 @@ export default function C3Page() {
             transition:    'all 150ms',
           }}
         >
-          Continue →
+          {ONBOARDING_CTA.C3}
         </button>
       </footer>
     </>

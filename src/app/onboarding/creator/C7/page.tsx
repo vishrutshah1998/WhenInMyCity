@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { SK } from '@/lib/onboarding/session-keys'
 import { INTEREST_TAGS, INTEREST_CATEGORY_COLORS, type InterestCategory } from '@/lib/constants/interests'
 import { getCategoryColour } from '@/lib/onboarding/design-tokens'
+import { ONBOARDING_CTA } from '@/lib/constants/onboarding-cta-copy'
 
 const MIN_TAGS = 3
 const SCENE_BLUE = '#5EC8F2'
@@ -294,7 +295,7 @@ export default function C7Page() {
               cursor:        canProceed ? 'pointer' : 'not-allowed',
               transition:    'all 150ms',
             }}>
-            {canProceed ? `Continue (${selected.length})` : `Pick ${MIN_TAGS - selected.length} more`}
+            {canProceed ? ONBOARDING_CTA.C7.withCount(selected.length) : `Pick ${MIN_TAGS - selected.length} more`}
           </button>
         </div>
       </footer>

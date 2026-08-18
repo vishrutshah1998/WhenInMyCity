@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { SK } from '@/lib/onboarding/session-keys'
+import { ONBOARDING_CTA } from '@/lib/constants/onboarding-cta-copy'
 
 const TEAL   = '#5DD9D0'
 const AMBER  = '#F5A800'
@@ -218,7 +219,7 @@ export default function B3Page() {
             transition:    'all 150ms',
           }}
         >
-          Continue →
+          {ONBOARDING_CTA.B3}
         </button>
       </footer>
     </>

@@ -6,6 +6,7 @@ import { SK } from '@/lib/onboarding/session-keys'
 import { VenueNoticePoster } from '@/components/onboarding/BoardingPassArtifact'
 import { saveVenueOnboardingStep } from '@/app/actions/venue-onboarding'
 import { PRICING_MODELS, PRICING_TO_VALID, EVENT_TYPES, type PricingId } from '@/lib/constants/venueOnboarding'
+import { ONBOARDING_CTA } from '@/lib/constants/onboarding-cta-copy'
 
 const ACCENT = '#5DD9D0'
 const MONO   = "var(--font-jetbrains-mono), 'JetBrains Mono', monospace"
@@ -949,7 +950,7 @@ export default function V7Page() {
           <span className="material-symbols-outlined" style={{ fontSize: 16, lineHeight: 1 }}>
             {isSaving ? 'pending' : 'arrow_forward'}
           </span>
-          {isSaving ? 'Saving…' : 'Next step'}
+          {isSaving ? 'Saving…' : ONBOARDING_CTA.V7}
         </button>
       </footer>
     </>

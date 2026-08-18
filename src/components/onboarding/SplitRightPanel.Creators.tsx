@@ -7,6 +7,7 @@ import { CREATOR_CATEGORIES } from '@/lib/constants/categories'
 import { INTEREST_TAGS, INTEREST_CATEGORY_COLORS, type InterestCategory } from '@/lib/constants/interests'
 import ProfilePreview from '@/app/onboarding/creator/_components/ProfilePreview'
 import { BARCODE, getCityCoords, type Snap } from './SplitRightPanel.shared'
+import { ONBOARDING_CTA } from '@/lib/constants/onboarding-cta-copy'
 
 // ── Category name sizing — scales down so the longest word still fits on one
 // line within the card's ~340px content width (380px card − 20px padding × 2).
@@ -298,7 +299,7 @@ export function C3RightPanel({ snap }: { snap: Snap }) {
             transition: 'all 150ms',
           }}
         >
-          CONTINUE
+          {ONBOARDING_CTA.C3}
           <span className="material-symbols-outlined" style={{ fontWeight: 700, fontSize: 22 }}>
             arrow_forward
           </span>

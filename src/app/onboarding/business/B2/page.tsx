@@ -8,6 +8,7 @@ import { BusinessCardArtifact } from '@/components/onboarding/BoardingPassArtifa
 import { useExistingProfileData } from '@/hooks/useExistingProfileData'
 import { prefillVenueKeys, prefillBrandKeys } from '@/lib/onboarding/prefill'
 import { prefetchGooglePhotos } from '@/app/actions/google-photos'
+import { ONBOARDING_CTA } from '@/lib/constants/onboarding-cta-copy'
 
 const ACCENT = '#5DD9D0'
 const MONO   = "var(--font-jetbrains-mono), 'JetBrains Mono', monospace"
@@ -595,7 +596,7 @@ function B2Content() {
             transition:    'all 150ms',
           }}
         >
-          {isPrefetching ? 'Importing…' : isAdvancing ? 'Loading…' : 'Continue →'}
+          {isPrefetching ? 'Importing…' : isAdvancing ? 'Loading…' : ONBOARDING_CTA.B2}
         </button>
       </footer>
     </>

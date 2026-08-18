@@ -6,6 +6,7 @@ import { SK } from '@/lib/onboarding/session-keys'
 import { PLATFORM_REGISTRY } from '@/lib/platforms'
 import { CreatorEventTicket } from '@/components/onboarding/BoardingPassArtifact'
 import { getCategoryColour } from '@/lib/onboarding/design-tokens'
+import { ONBOARDING_CTA } from '@/lib/constants/onboarding-cta-copy'
 
 // Local icon filenames in /public/platform-icons/
 const ICON_FILE: Record<string, string> = {
@@ -204,7 +205,7 @@ export default function C6Page() {
               cursor:        canProceed ? 'pointer' : 'not-allowed',
               transition:    'background 200ms',
             }}>
-            {canProceed ? `Continue (${selected.length})` : 'Continue'}
+            {canProceed ? ONBOARDING_CTA.C6.withCount(selected.length) : ONBOARDING_CTA.C6.base}
           </button>
         </div>
       </footer>

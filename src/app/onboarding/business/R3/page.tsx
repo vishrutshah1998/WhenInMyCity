@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { SK } from '@/lib/onboarding/session-keys'
 import { BrandNoticeAd } from '@/components/onboarding/BoardingPassArtifact'
+import { ONBOARDING_CTA } from '@/lib/constants/onboarding-cta-copy'
 
 const ACCENT = '#F5A800'
 const NAVY   = '#1A2744'
@@ -98,6 +99,10 @@ export default function R3Page() {
   }
 
   const canProceed = aesthetic !== ''
+  const aestheticRawLabel = AESTHETICS.find(a => a.id === aesthetic)?.label
+  const aestheticLabel = aestheticRawLabel
+    ? aestheticRawLabel.charAt(0) + aestheticRawLabel.slice(1).toLowerCase()
+    : ''
 
   return (
     <>
@@ -208,6 +213,11 @@ export default function R3Page() {
           })}
         </div>
 
+        {aesthetic && (
+          <p style={{ fontFamily: DM, fontSize: 13, color: ACCENT, margin: '20px 0 0' }}>
+            {aestheticLabel} — that tracks.
+          </p>
+        )}
       </div>
 
       <footer style={{
@@ -238,7 +248,7 @@ export default function R3Page() {
               cursor:        canProceed ? 'pointer' : 'not-allowed',
               transition:    'all 150ms',
             }}>
-            NEXT STEP →
+            {ONBOARDING_CTA.R3}
           </button>
         </div>
       </footer>

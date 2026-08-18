@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { SK } from '@/lib/onboarding/session-keys'
 import { uploadOnboardingAvatar } from '@/app/actions/onboarding'
 import { BrandNoticeAd } from '@/components/onboarding/BoardingPassArtifact'
+import { ONBOARDING_CTA } from '@/lib/constants/onboarding-cta-copy'
 
 const ACCENT = '#F5A800'
 const NAVY   = '#1A2744'
@@ -256,6 +257,12 @@ export default function R1Page() {
             </button>
           )}
         </div>
+
+        {canProceed && (
+          <p style={{ fontFamily: DM, fontSize: 13, color: ACCENT, margin: '20px 0 0' }}>
+            Got it — {bName.trim()}.
+          </p>
+        )}
       </div>
 
       <footer style={{
@@ -286,7 +293,7 @@ export default function R1Page() {
               cursor:        canProceed ? 'pointer' : 'not-allowed',
               transition:    'all 150ms',
             }}>
-            NEXT STEP →
+            {ONBOARDING_CTA.R1}
           </button>
         </div>
       </footer>

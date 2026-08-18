@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { SK } from '@/lib/onboarding/session-keys'
 import { BrandNoticeAd } from '@/components/onboarding/BoardingPassArtifact'
+import { ONBOARDING_CTA } from '@/lib/constants/onboarding-cta-copy'
 
 const ACCENT = '#F5A800'
 const NAVY   = '#1A2744'
@@ -421,7 +422,7 @@ export default function R4Page() {
               cursor:        canProceed ? 'pointer' : 'not-allowed',
               transition:    'all 150ms',
             }}>
-            NEXT STEP →
+            {ONBOARDING_CTA.R4}
           </button>
         </div>
       </footer>

@@ -6,6 +6,7 @@ import { SK } from '@/lib/onboarding/session-keys'
 import { CITIES, type City } from '@/lib/constants/interests'
 import { CreatorEventTicket } from '@/components/onboarding/BoardingPassArtifact'
 import { getCategoryColour } from '@/lib/onboarding/design-tokens'
+import { ONBOARDING_CTA } from '@/lib/constants/onboarding-cta-copy'
 
 const DEFAULT_TOP = ['Ahmedabad', 'Gandhinagar']
 
@@ -194,7 +195,7 @@ export default function C4Page() {
             cursor:       canProceed ? 'pointer' : 'not-allowed',
             transition:   'background 200ms',
           }}>
-          Continue →
+          {ONBOARDING_CTA.C4}
         </button>
       </footer>
     </>

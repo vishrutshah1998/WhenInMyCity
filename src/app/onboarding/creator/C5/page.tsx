@@ -8,6 +8,7 @@ import { getCategoryColour } from '@/lib/onboarding/design-tokens'
 import { getSubtypePopularity } from '@/app/actions/onboarding'
 import type { CreatorType } from '@/types/database'
 import { CreatorEventTicket } from '@/components/onboarding/BoardingPassArtifact'
+import { ONBOARDING_CTA } from '@/lib/constants/onboarding-cta-copy'
 
 const NOT_YET = 'not_yet'
 
@@ -181,7 +182,7 @@ export default function C5Page() {
               cursor:        canProceed ? 'pointer' : 'not-allowed',
               transition:    'background 200ms',
             }}>
-            {canProceed ? `Continue (${selected.length})` : 'Continue'}
+            {canProceed ? ONBOARDING_CTA.C5.withCount(selected.length) : ONBOARDING_CTA.C5.base}
           </button>
         </div>
       </footer>

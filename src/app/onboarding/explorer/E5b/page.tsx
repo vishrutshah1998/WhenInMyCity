@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { SK } from '@/lib/onboarding/session-keys'
+import { ONBOARDING_CTA } from '@/lib/constants/onboarding-cta-copy'
 
 const ACCENT  = '#9B8FFF'
 const TEAL    = '#5DD9D0'
@@ -196,7 +197,7 @@ export default function E5bPage() {
             cursor:        isAdvancing ? 'wait' : 'pointer',
             opacity:       isAdvancing ? 0.7 : 1,
           }}>
-          Continue →
+          {ONBOARDING_CTA.E5b}
         </button>
       </footer>
     </>

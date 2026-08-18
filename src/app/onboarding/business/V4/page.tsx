@@ -6,6 +6,7 @@ import { SK } from '@/lib/onboarding/session-keys'
 import { VenueNoticePoster } from '@/components/onboarding/BoardingPassArtifact'
 import { saveVenueOnboardingStep } from '@/app/actions/venue-onboarding'
 import { deriveWimcTypes } from '@/lib/onboarding/google-type-map'
+import { ONBOARDING_CTA } from '@/lib/constants/onboarding-cta-copy'
 
 const ACCENT = '#5DD9D0'
 const MONO   = "var(--font-jetbrains-mono), 'JetBrains Mono', monospace"
@@ -379,7 +380,7 @@ export default function V4Page() {
             transition:    'all 150ms',
           }}
         >
-          {advancing ? 'Saving…' : canProceed ? `Next (${venueTypes.length}) →` : 'Next →'}
+          {advancing ? 'Saving…' : canProceed ? ONBOARDING_CTA.V4.withCount(venueTypes.length) : ONBOARDING_CTA.V4.base}
         </button>
       </footer>
     </>
