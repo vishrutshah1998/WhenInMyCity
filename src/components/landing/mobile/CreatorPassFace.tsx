@@ -5,7 +5,7 @@ import { PersonaShowcasePhone } from './PersonaShowcasePhone'
 
 export function CreatorPassFace() {
   return (
-    <div style={{ height: '100%', overflowY: 'auto', overflowX: 'hidden', padding: '16px 18px 20px 20px' }}>
+    <div style={{ height: '100%', overflowY: 'auto', overflowX: 'hidden', overscrollBehavior: 'contain', padding: '16px 18px 20px 20px' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
         <div style={{ width: 18, height: 1, background: '#FFC53D' }} />
         <span className="font-vib-stamp" style={{ fontFamily: 'monospace', fontSize: 8, fontWeight: 700, letterSpacing: '0.18em', color: '#D8432E' }}>YOUR CREATOR PAGE</span>

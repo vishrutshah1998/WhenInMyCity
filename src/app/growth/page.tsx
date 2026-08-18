@@ -5,6 +5,8 @@ import Image from 'next/image'
 import { useRef, useEffect, useState } from 'react'
 import { motion, useScroll, useTransform, useInView } from 'framer-motion'
 import { WimcWordmark } from '@/components/WimcWordmark'
+import { HumanTearDivider } from '@/components/landing/HumanTearDivider'
+import { MobileHeader } from '@/components/landing/mobile/MobileHeader'
 
 const E = [0.22, 1, 0.36, 1] as const
 const VP = { once: true, margin: '0px 0px -8% 0px' } as const
@@ -100,51 +102,6 @@ function AnimatedCounter({ target, suffix = '' }: { target: number; suffix?: str
   return <span ref={ref}>{display}{suffix}</span>
 }
 
-/* ── Scissors ticket-cut divider ── */
-function TicketCutDivider({ accentColor = '#FF6B35' }: { accentColor?: string }) {
-  const ref = useRef<HTMLDivElement>(null)
-  const { scrollYProgress } = useScroll({ target: ref, offset: ['start 0.9', 'end 0.1'] })
-  const scissorsLeft = useTransform(scrollYProgress, [0.05, 0.85], ['0%', '94%'])
-  const topY = useTransform(scrollYProgress, [0.5, 0.95], ['0px', '-10px'])
-  const botY = useTransform(scrollYProgress, [0.5, 0.95], ['0px', '10px'])
-
-  return (
-    <div ref={ref} aria-hidden="true" style={{ position: 'relative', height: 56, overflow: 'visible', zIndex: 10 }}>
-      <motion.div style={{ y: topY, position: 'absolute', top: 0, left: 0, right: 0, height: '50%' }}>
-        <div style={{
-          position: 'absolute', bottom: 0, left: 0, right: 0, height: 1,
-          backgroundImage: `radial-gradient(circle, ${accentColor}77 5px, transparent 5px)`,
-          backgroundSize: '18px 10px', backgroundRepeat: 'repeat-x', backgroundPosition: 'center',
-        }} />
-      </motion.div>
-      <motion.div style={{ y: botY, position: 'absolute', bottom: 0, left: 0, right: 0, height: '50%' }}>
-        <div style={{
-          position: 'absolute', top: 0, left: 0, right: 0, height: 1,
-          backgroundImage: `radial-gradient(circle, ${accentColor}44 5px, transparent 5px)`,
-          backgroundSize: '18px 10px', backgroundRepeat: 'repeat-x', backgroundPosition: 'center',
-        }} />
-      </motion.div>
-      <motion.div
-        style={{
-          position: 'absolute', top: '50%', left: scissorsLeft,
-          transform: 'translateY(-50%)',
-          zIndex: 20,
-        }}
-      >
-        <svg width="28" height="20" viewBox="0 0 28 20" fill="none" style={{ display: 'block', filter: `drop-shadow(0 0 5px ${accentColor}88)` }}>
-          <circle cx="6" cy="6" r="4.5" stroke={accentColor} strokeWidth="1.5" fill="none" />
-          <circle cx="6" cy="14" r="4.5" stroke={accentColor} strokeWidth="1.5" fill="none" />
-          <line x1="10" y1="8" x2="26" y2="2" stroke={accentColor} strokeWidth="1.5" strokeLinecap="round" />
-          <line x1="10" y1="12" x2="26" y2="18" stroke={accentColor} strokeWidth="1.5" strokeLinecap="round" />
-        </svg>
-      </motion.div>
-      <div className="font-vib-stamp" style={{ position: 'absolute', top: '50%', right: 20, transform: 'translateY(-50%)', fontSize: 9, letterSpacing: '0.22em', textTransform: 'uppercase', color: `${accentColor}99` }}>
-        TEAR HERE
-      </div>
-    </div>
-  )
-}
-
 /* ── Ambient blob ── */
 function AmbientBlob({ color, top, left, width, scrollRef }: { color: string; top: string; left: string; width: string; scrollRef: React.RefObject<HTMLElement | null> }) {
   const { scrollYProgress } = useScroll({ target: scrollRef, offset: ['start end', 'end start'] })
@@ -219,8 +176,11 @@ export default function GrowthPage() {
         }}
       />
 
-      {/* Nav */}
-      <nav className="relative z-20 flex items-center justify-between px-6 py-3 md:px-14 border-b border-vib-ink/10" style={{ background: 'rgba(251,243,231,0.9)', backdropFilter: 'blur(14px)', WebkitBackdropFilter: 'blur(14px)', position: 'sticky', top: 0 }}>
+      {/* Nav — hamburger menu on mobile, full link row on desktop */}
+      <div className="md:hidden sticky top-0 z-20">
+        <MobileHeader />
+      </div>
+      <nav className="relative z-20 hidden md:flex items-center justify-between px-6 py-3 md:px-14 border-b border-vib-ink/10" style={{ background: 'rgba(251,243,231,0.9)', backdropFilter: 'blur(14px)', WebkitBackdropFilter: 'blur(14px)', position: 'sticky', top: 0 }}>
         <Link href="/" style={{ display: 'flex', alignItems: 'center', textDecoration: 'none' }}><WimcWordmark color="black" height={30} /></Link>
         <div className="flex items-center gap-1">
           <Link href="/mission" className="hidden md:flex items-center justify-center w-24 font-mono text-[10px] tracking-[0.15em] uppercase text-vib-text-3 hover:text-vib-text-2 transition-colors">Mission</Link>
@@ -265,7 +225,7 @@ export default function GrowthPage() {
         </div>
       </section>
 
-      <TicketCutDivider accentColor="#FF6B35" />
+      <HumanTearDivider accentColor="#FF6B35" />
 
       {/* Stats */}
       <section ref={statsRef} className="relative z-10 px-6 py-14 md:px-14 overflow-hidden bg-vib-cream-2 border-b border-vib-ink/10">
@@ -303,7 +263,7 @@ export default function GrowthPage() {
         </div>
       </section>
 
-      <TicketCutDivider accentColor="#1F8A70" />
+      <HumanTearDivider accentColor="#1F8A70" />
 
       {/* Tiers */}
       <section ref={tiersRef} className="relative z-10 px-6 py-20 md:px-14 overflow-hidden bg-vib-cream border-b border-vib-ink/10">

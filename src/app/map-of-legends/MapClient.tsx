@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { WimcWordmark } from '@/components/WimcWordmark'
+import { MobileHeader } from '@/components/landing/mobile/MobileHeader'
 import type { LegendaryVenue } from '@/app/actions/mapOfLegends'
 
 // ---------------------------------------------------------------------------
@@ -207,12 +208,15 @@ export default function MapClient({ venues }: Props) {
     <div style={{ minHeight: '100vh', background: '#FBF3E7', color: '#201A12' }}>
 
       {/* ── Nav ──────────────────────────────────────────────────────────────── */}
-      <nav style={{
+      <div className="md:hidden sticky top-0 z-40">
+        <MobileHeader />
+      </div>
+      <nav className="hidden md:flex" style={{
         position: 'sticky', top: 0, zIndex: 40,
         background: 'rgba(251,243,231,0.92)', backdropFilter: 'blur(12px)',
         borderBottom: '1px solid rgba(32,26,18,0.08)',
         padding: '0 32px', height: 60,
-        display: 'flex', alignItems: 'center', gap: 16,
+        alignItems: 'center', gap: 16,
       }}>
         <Link href="/" style={{ display: 'flex', alignItems: 'center', textDecoration: 'none' }}>
           <WimcWordmark color="#FF6B35" height={20} />

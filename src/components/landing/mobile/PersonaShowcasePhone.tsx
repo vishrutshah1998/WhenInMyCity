@@ -97,7 +97,7 @@ function CtaLink({ label, bg, color }: { label: string; bg: string; color: strin
   )
 }
 
-const bodyWrap: React.CSSProperties = { padding: '34px 14px 16px', display: 'flex', flexDirection: 'column', gap: 9, height: '100%', overflowY: 'auto', overflowX: 'hidden', touchAction: 'pan-y' }
+const bodyWrap: React.CSSProperties = { padding: '34px 14px 16px', display: 'flex', flexDirection: 'column', gap: 9, height: '100%', overflowY: 'auto', overflowX: 'hidden', overscrollBehavior: 'contain', touchAction: 'pan-y' }
 const headWrap: React.CSSProperties = { display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }
 
 // ── Persona 1 — Creator ──────────────────────────────────────────────────

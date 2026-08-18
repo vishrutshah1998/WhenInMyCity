@@ -5,9 +5,9 @@ import Link from 'next/link'
 import { AnimatePresence, motion } from 'framer-motion'
 import { WimcWordmark } from '@/components/WimcWordmark'
 
-export const MOBILE_HEADER_H = 46
+export const MOBILE_HEADER_H = 58
 
-const BAR: React.CSSProperties = { position: 'absolute', left: 0, right: 0, height: 2, background: '#201A12', borderRadius: 1 }
+const BAR: React.CSSProperties = { position: 'absolute', left: 0, right: 0, height: 2.5, background: '#201A12', borderRadius: 1.5 }
 
 export function MobileHeader() {
   const [open, setOpen] = useState(false)
@@ -23,17 +23,17 @@ export function MobileHeader() {
         padding: '0 18px',
       }}>
         <Link href="/" aria-label="When in My City" style={{ display: 'flex', alignItems: 'center', textDecoration: 'none' }}>
-          <WimcWordmark color="black" height={18} />
+          <WimcWordmark color="black" height={23} />
         </Link>
         <button
           onClick={() => setOpen((v) => !v)}
           aria-label={open ? 'Close menu' : 'Open menu'}
           aria-expanded={open}
-          style={{ width: 22, height: 16, position: 'relative', background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}
+          style={{ width: 27, height: 19, position: 'relative', background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}
         >
-          <motion.span style={{ ...BAR, top: 0 }} animate={open ? { top: 7, rotate: 45 } : { top: 0, rotate: 0 }} transition={{ duration: 0.25 }} />
-          <motion.span style={{ ...BAR, top: 7 }} animate={{ opacity: open ? 0 : 1 }} transition={{ duration: 0.2 }} />
-          <motion.span style={{ ...BAR, top: 14 }} animate={open ? { top: 7, rotate: -45 } : { top: 14, rotate: 0 }} transition={{ duration: 0.25 }} />
+          <motion.span style={{ ...BAR, top: 0 }} animate={open ? { top: 8.5, rotate: 45 } : { top: 0, rotate: 0 }} transition={{ duration: 0.25 }} />
+          <motion.span style={{ ...BAR, top: 8.5 }} animate={{ opacity: open ? 0 : 1 }} transition={{ duration: 0.2 }} />
+          <motion.span style={{ ...BAR, top: 17 }} animate={open ? { top: 8.5, rotate: -45 } : { top: 17, rotate: 0 }} transition={{ duration: 0.25 }} />
         </button>
       </div>
 

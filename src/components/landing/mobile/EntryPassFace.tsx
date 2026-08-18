@@ -19,7 +19,7 @@ export function EntryPassFace() {
       </div>
 
       {/* Body */}
-      <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', padding: '16px 18px 4px 20px', position: 'relative' }}>
+      <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', overscrollBehavior: 'contain', padding: '16px 18px 4px 20px', position: 'relative' }}>
         <h1 className="font-vib-stamp" style={{ fontSize: 30, lineHeight: 1.0, letterSpacing: '-0.01em', color: '#201A12' }}>
           Culture lives<br />
           <span className="font-vib-script" style={{ fontWeight: 700, color: '#FF6B35' }}>offline.</span><br />
@@ -52,7 +52,7 @@ export function EntryPassFace() {
 
         {/* Watermark stamp — bleeds off bottom-right */}
         <div aria-hidden style={{ position: 'absolute', right: -46, bottom: -14, width: 220, height: 260, opacity: 0.42, pointerEvents: 'none' }}>
-          <Image src="/logo-stamp.png" alt="" width={220} height={220} style={{ width: '100%', height: 'auto', objectFit: 'contain' }} />
+          <Image src="/logo-stamp.png" alt="" width={220} height={220} priority style={{ width: '100%', height: 'auto', objectFit: 'contain' }} />
         </div>
       </div>
 

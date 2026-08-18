@@ -22,7 +22,7 @@ interface RoleSelectFaceProps {
 export function RoleSelectFace(props: RoleSelectFaceProps) {
   const { eyebrow, price, titleLines, watermarkNum, accent, bodyText, features, ctaLabel, ctaHref, ctaBg, ctaColor, chipsLabel, chips } = props
   return (
-    <div style={{ height: '100%', overflowY: 'auto', overflowX: 'hidden', padding: '18px 18px 20px 20px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+    <div style={{ height: '100%', overflowY: 'auto', overflowX: 'hidden', overscrollBehavior: 'contain', padding: '18px 18px 20px 20px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
       <div style={{ maxWidth: 240 }}>
         <h2 className="font-vib-stamp" style={{ fontSize: 27, lineHeight: 1.0, letterSpacing: '-0.01em', color: '#201A12' }}>Choose<br />your role.</h2>
         <p style={{ fontSize: 12.5, lineHeight: 1.5, color: '#58503F', marginTop: 9 }}>
@@ -71,7 +71,7 @@ export function RoleSelectFace(props: RoleSelectFaceProps) {
       </div>
 
       <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 10 }}>
-        <Image src="/logo-stamp.png" alt="" width={64} height={64} style={{ width: 64, height: 64, opacity: 0.5 }} />
+        <Image src="/logo-stamp.png" alt="" width={64} height={64} priority style={{ width: 64, height: 64, opacity: 0.5 }} />
       </div>
     </div>
   )

@@ -56,3 +56,21 @@ export function buildHorizTearClip(tearProgress: number, perfY: number): string 
   // Visible region: full main body + right stub still attached (tearX → 100%)
   return `polygon(0% 0%, 100% 0%, 100% 100%, ${tearX.toFixed(2)}% 100%, ${tearX.toFixed(2)}% ${perfY.toFixed(2)}%, ${jagPts}, 0% ${perfY.toFixed(2)}%)`
 }
+
+// ── Torn-edge strip (for section dividers, e.g. mission/growth page breaks) ────
+// Reuses the same irregular jag rhythm as HORIZ_JAGS above — rescaled from
+// "fraction of ticket height" to an arbitrary pixel amplitude — so a thin divider
+// strip tears with the same hand-torn character as the ticket-stack cards instead
+// of a second, separately-tuned jag pattern.
+const HORIZ_JAGS_PEAK = Math.max(...HORIZ_JAGS.map(([, dy]) => Math.abs(dy)))
+
+// Builds an SVG path `d` string for one torn edge across a `widthUnits`-wide strip,
+// as an open polyline (M ... L ... L ...) at baseYUnits +/- ampUnits.
+export function buildTearEdgePath(widthUnits: number, baseYUnits: number, ampUnits: number): string {
+  const pts = HORIZ_JAGS.map(([x, dy]) => {
+    const px = x * widthUnits
+    const py = baseYUnits + (dy / HORIZ_JAGS_PEAK) * ampUnits
+    return `${px.toFixed(2)},${py.toFixed(2)}`
+  })
+  return `M ${pts.map((p, i) => (i === 0 ? p : `L ${p}`)).join(' ')}`
+}

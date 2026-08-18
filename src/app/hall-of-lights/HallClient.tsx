@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { WimcWordmark } from '@/components/WimcWordmark'
+import { MobileHeader } from '@/components/landing/mobile/MobileHeader'
 import type { ShowcasedCreator } from '@/app/actions/hallOfLights'
 import type { UserTier } from '@/types/marketplace'
 import { cityToSlug } from '@/lib/profile-url'
@@ -221,29 +222,34 @@ export default function HallClient({ creators, viewerCity, viewerTier, inDashboa
 
       {/* ── Nav — only for the standalone public page; the dashboard shell supplies its own topbar ── */}
       {!inDashboard && (
-        <nav style={{
-          position: 'sticky', top: 0, zIndex: 40,
-          background: 'rgba(251,243,231,0.9)', backdropFilter: 'blur(12px)',
-          borderBottom: '1px solid rgba(32,26,18,0.08)',
-          padding: '0 32px', height: 60,
-          display: 'flex', alignItems: 'center', gap: 16,
-        }}>
-          <Link href="/" style={{ display: 'flex', alignItems: 'center', textDecoration: 'none' }}>
-            <WimcWordmark color="#FF6B35" height={20} />
-          </Link>
-          <span style={{ color: 'rgba(32,26,18,0.25)' }}>·</span>
-          <span style={{ fontFamily: 'var(--font-syne)', fontWeight: 600, fontSize: 14, color: '#6B4EFF' }}>
-            Hall of Lights
-          </span>
-          <div style={{ flex: 1 }} />
-          <Link href="/signin" style={{
-            padding: '6px 16px', borderRadius: 8, fontSize: 12.5, fontWeight: 600,
-            background: '#FF6B35', color: '#fff', textDecoration: 'none',
-            fontFamily: 'var(--font-syne)',
+        <>
+          <div className="md:hidden sticky top-0 z-40">
+            <MobileHeader />
+          </div>
+          <nav className="hidden md:flex" style={{
+            position: 'sticky', top: 0, zIndex: 40,
+            background: 'rgba(251,243,231,0.9)', backdropFilter: 'blur(12px)',
+            borderBottom: '1px solid rgba(32,26,18,0.08)',
+            padding: '0 32px', height: 60,
+            alignItems: 'center', gap: 16,
           }}>
-            Join WIMC
-          </Link>
-        </nav>
+            <Link href="/" style={{ display: 'flex', alignItems: 'center', textDecoration: 'none' }}>
+              <WimcWordmark color="#FF6B35" height={20} />
+            </Link>
+            <span style={{ color: 'rgba(32,26,18,0.25)' }}>·</span>
+            <span style={{ fontFamily: 'var(--font-syne)', fontWeight: 600, fontSize: 14, color: '#6B4EFF' }}>
+              Hall of Lights
+            </span>
+            <div style={{ flex: 1 }} />
+            <Link href="/signin" style={{
+              padding: '6px 16px', borderRadius: 8, fontSize: 12.5, fontWeight: 600,
+              background: '#FF6B35', color: '#fff', textDecoration: 'none',
+              fontFamily: 'var(--font-syne)',
+            }}>
+              Join WIMC
+            </Link>
+          </nav>
+        </>
       )}
 
       <div style={{ maxWidth: 1040, margin: '0 auto', padding: '40px 24px 80px' }}>
