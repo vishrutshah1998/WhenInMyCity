@@ -1,0 +1,40 @@
+/*
+ * Soft-UI ("Vintage Postal") shared interaction primitive.
+ * Shadow/border VALUES are computed per persona in src/lib/softUI.ts and
+ * passed in here as inline CSS custom properties (--soft-ui-*) — this file
+ * only defines the shared shapes/selectors, mirroring how venue-tokens.css
+ * separates per-variant color values from shared structural rules.
+ */
+
+.soft-ui-socket {
+  border: var(--soft-ui-dash);
+  box-shadow: var(--soft-ui-inset);
+  transition: border-color 160ms ease, box-shadow 160ms ease;
+}
+.soft-ui-socket:hover,
+.soft-ui-socket:focus-visible {
+  border-color: var(--soft-ui-accent);
+  box-shadow: var(--soft-ui-inset), 0 0 0 3px var(--soft-ui-focus);
+  outline: none;
+}
+
+.soft-ui-toggle-option {
+  box-shadow: var(--soft-ui-raised);
+  transition: box-shadow 160ms ease, background 160ms ease, color 160ms ease;
+}
+.soft-ui-toggle-option:hover,
+.soft-ui-toggle-option:focus-visible {
+  box-shadow: var(--soft-ui-raised), 0 0 0 3px var(--soft-ui-focus);
+  outline: none;
+}
+.soft-ui-toggle-option[data-active='true'] {
+  box-shadow: var(--soft-ui-pressed);
+}
+.soft-ui-toggle-option[data-active='true']:hover,
+.soft-ui-toggle-option[data-active='true']:focus-visible {
+  box-shadow: var(--soft-ui-pressed), 0 0 0 3px var(--soft-ui-focus);
+}
+
+.soft-ui-ring-track {
+  box-shadow: var(--soft-ui-inset);
+}
