@@ -1,20 +1,7 @@
 'use client'
 
 import type { CityAttraction } from '@/app/actions/cityGuide'
-
-// ── Category display config ───────────────────────────────────────────────────
-
-const CATEGORY_META: Record<string, { emoji: string; color: string }> = {
-  heritage:   { emoji: '🏛', color: '#E8A838' },
-  park:       { emoji: '🌳', color: '#4CAF50' },
-  market:     { emoji: '🛍', color: '#E8705A' },
-  food:       { emoji: '🍽', color: '#FF7043' },
-  temple:     { emoji: '🛕', color: '#9C27B0' },
-  nature:     { emoji: '🌿', color: '#2E7D32' },
-  arts:       { emoji: '🎨', color: '#1976D2' },
-  shopping:   { emoji: '🏬', color: '#0288D1' },
-  attraction: { emoji: '⭐', color: '#F5A800' },
-}
+import { CATEGORY_META } from './categoryMeta'
 
 // External directions link — routes to Google Maps, never to WIMC ticketing.
 function directionsUrl(lat: number, lng: number): string {

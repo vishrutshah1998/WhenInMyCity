@@ -6,6 +6,7 @@ import { Drawer } from 'vaul'
 import type { CityAttraction, CityAttractionSource, TransitRoute } from '@/app/actions/cityGuide'
 import type { CivicPOI, ActiveLayer } from './CityMap'
 import PlaceCard from './PlaceCard'
+import { CATEGORY_META } from './categoryMeta'
 import CivicPanel from './CivicPanel'
 import TransitPanel from './TransitPanel'
 import EmergencyPanel from './EmergencyPanel'
@@ -43,20 +44,6 @@ const GUIDE_GROUPS: Record<GuideGroup, {
   culture:  { key: 'culture', label: 'Arts & Culture',emoji: '🎨',  color: '#9C27B0', bg: 'rgba(156,39,176,0.12)', categories: ['heritage', 'arts', 'temple'] },
   nature:   { key: 'nature',  label: 'Parks & Nature',emoji: '🌿',  color: '#4CAF50', bg: 'rgba(76,175,80,0.12)',  categories: ['park', 'nature'] },
   discover: { key: 'discover',label: 'Must See',      emoji: '⭐',  color: '#F5A800', bg: 'rgba(245,168,0,0.12)',  categories: ['attraction', 'shopping'] },
-}
-
-// Fine-grained category display config — reuses the same palette as CityMap icons
-const CATEGORY_META: Record<string, { emoji: string; label: string; color: string }> = {
-  all:        { emoji: '🗺',  label: 'All',       color: '#9B8FFF' },
-  heritage:   { emoji: '🏛',  label: 'Heritage',  color: '#E8A838' },
-  park:       { emoji: '🌳',  label: 'Parks',     color: '#4CAF50' },
-  market:     { emoji: '🛍',  label: 'Markets',   color: '#E8705A' },
-  food:       { emoji: '🍽',  label: 'Food',      color: '#FF7043' },
-  temple:     { emoji: '🛕',  label: 'Temples',   color: '#9C27B0' },
-  nature:     { emoji: '🌿',  label: 'Nature',    color: '#2E7D32' },
-  arts:       { emoji: '🎨',  label: 'Arts',      color: '#1976D2' },
-  shopping:   { emoji: '🏬',  label: 'Shopping',  color: '#0288D1' },
-  attraction: { emoji: '⭐',  label: 'Must-See',  color: '#F5A800' },
 }
 
 // ── DPDP consent ──────────────────────────────────────────────────────────────

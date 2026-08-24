@@ -6,6 +6,7 @@ import type { Map as LeafletMap } from 'leaflet'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import type { CityAttraction } from '@/app/actions/cityGuide'
+import { CATEGORY_META } from './categoryMeta'
 
 // OSM-sourced POI — coordinates come from OpenStreetMap and may safely be
 // rendered on this OSM/Leaflet map.  Do NOT populate with Google Places
@@ -21,18 +22,6 @@ export type CivicPOI = {
 export type ActiveLayer = 'toilet' | 'hospital' | 'police' | 'petrol'
 
 // ── Icon factories ────────────────────────────────────────────────────────────
-
-const CATEGORY_ICONS: Record<string, { emoji: string; color: string }> = {
-  heritage:   { emoji: '🏛', color: '#E8A838' },
-  park:       { emoji: '🌳', color: '#4CAF50' },
-  market:     { emoji: '🛍', color: '#E8705A' },
-  food:       { emoji: '🍽', color: '#FF7043' },
-  temple:     { emoji: '🛕', color: '#9C27B0' },
-  nature:     { emoji: '🌿', color: '#2E7D32' },
-  arts:       { emoji: '🎨', color: '#1976D2' },
-  shopping:   { emoji: '🏬', color: '#0288D1' },
-  attraction: { emoji: '⭐', color: '#F5A800' },
-}
 
 const LAYER_ICONS: Record<ActiveLayer, { emoji: string; color: string }> = {
   toilet:   { emoji: '🚻', color: '#5DD9D0' },
@@ -104,7 +93,7 @@ export default function CityMap({
   }, [])
 
   return (
-    <div style={{ position: 'relative', width: '100%' }}>
+    <div style={{ position: 'relative', width: '100%', height: '100%' }}>
       <MapContainer
         center={AHM_CENTRE}
         zoom={12}
@@ -120,7 +109,7 @@ export default function CityMap({
 
         {/* Attraction pins */}
         {showAttractions && attractions.map(a => {
-          const meta = CATEGORY_ICONS[a.category] ?? { emoji: '📍', color: '#9B8FFF' }
+          const meta = CATEGORY_META[a.category] ?? { emoji: '📍', color: '#9B8FFF' }
           return (
             <Marker
               key={a.id}
