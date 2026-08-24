@@ -103,7 +103,13 @@ export default function ExplorerTopBar({ city, onCitySelect, avatar = null, sign
       {/* ── Right: location pill (or static city label) + optional bell ────── */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
         {onCitySelect ? (
-          <LocationPill activeCity={city} onSelect={onCitySelect} accentColor={accentColor} />
+          <LocationPill
+            activeCity={city}
+            onSelect={onCitySelect}
+            accentColor={accentColor}
+            mutedText={pillTextColor}
+            borderColor={pillBorderColor}
+          />
         ) : (
           <div
             title={city}
