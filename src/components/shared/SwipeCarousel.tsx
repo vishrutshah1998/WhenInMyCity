@@ -1,7 +1,10 @@
 'use client'
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
-import { motion, useMotionValue, animate } from 'framer-motion'
+import { motion, useMotionValue, useTransform, animate, type MotionValue } from 'framer-motion'
+import { NAV_HEIGHT, PersonaNavBar, restingXOf, slideWidthOf } from './PersonaNav'
+
+export { NAV_HEIGHT }
 
 // useLayoutEffect warns when it runs during SSR (it's a no-op there anyway,
 // since there's no paint to block) — this is the standard workaround: a
@@ -10,14 +13,17 @@ import { motion, useMotionValue, animate } from 'framer-motion'
 const useIsomorphicLayoutEffect = typeof window !== 'undefined' ? useLayoutEffect : useEffect
 
 // ── Layout constants ──────────────────────────────────────────────────────────
-const NAV_HEIGHT = 56
-const PEEK       = 28  // px of adjacent-page sliver visible at each edge
-const GAP        = 10  // px gap between slides
+// No peek — pages are exactly full-width, nothing of a neighbor page visible
+// at rest, so each page reads as its own screen rather than one continuous
+// horizontal plane. The circular nav (not content bleed) now carries the
+// "there's more to swipe to" affordance instead. slideWidthOf/restingXOf are
+// shared with PersonaNav.tsx (single source of truth — the nav's own sliding
+// track has to stay in exact sync with these, so they must never drift).
+const GAP = 10  // px gap between slides — must match PersonaNav.tsx's own GAP
 
-const SPRING = { type: 'spring', stiffness: 340, damping: 34, mass: 0.9 } as const
-
-function slideWidthOf(w: number) { return Math.max(0, w - 2 * PEEK) }
-function restingXOf(index: number, w: number) { return PEEK - index * (slideWidthOf(w) + GAP) }
+// Damping ratio ~0.91 (was ~0.97, near-critical) — a touch softer so page
+// settles read as a glide rather than a snap, without visible overshoot.
+const PAGE_SPRING = { type: 'spring', stiffness: 300, damping: 30, mass: 0.9 } as const
 
 export interface SwipeCarouselPage {
   key:     string
@@ -31,6 +37,14 @@ export interface SwipeCarouselPage {
    * Defaults to false (full-surface capture).
    */
   gutterOnly?: boolean
+  /**
+   * When true, this page's slide skips the shared rounded-corner/scroll-clip
+   * treatment (edge-to-edge content, e.g. a full-bleed Leaflet map). The
+   * page's own content is responsible for reserving space above the
+   * circular nav (NAV_HEIGHT) so interactive elements aren't rendered
+   * underneath it. Defaults to false (existing rounded-card treatment).
+   */
+  fullBleed?: boolean
 }
 
 interface Props {
@@ -45,6 +59,52 @@ interface Props {
   borderColor:      string
   /** px from the top the carousel starts below (matches the persona's top bar height). Default 48. */
   topOffset?:       number
+}
+
+// A single page's slide — split out from the parent so its depth/parallax
+// effect can call useTransform (a hook) once per page even though the parent
+// renders a variable number of pages (Explorer/Venue/Brand are 3, Creator is
+// 4). Derives scale/opacity directly from the shared trackX motion
+// value, so the off-center dim/shrink stays in sync automatically whether
+// the user is mid-drag or the page is mid-spring-settle — no extra state.
+function CarouselSlide({ page, index, trackX, width, isLast, bgColor }: {
+  page:    SwipeCarouselPage
+  index:   number
+  trackX:  MotionValue<number>
+  width:   number
+  isLast:  boolean
+  bgColor: string
+}) {
+  const sw     = slideWidthOf(width)
+  const center = restingXOf(index, width)
+  const span   = sw + GAP
+  // Distance from this slide's own centered position, normalized 0 (centered) → 1 (one slide away).
+  const progress = useTransform(trackX, [center + span, center, center - span], [1, 0, 1])
+  // CRED/Stripe-style depth range — deliberately more pronounced than a
+  // barely-perceptible dim, so an off-center page visibly "recedes" and the
+  // incoming one grows toward the user. A feel decision, tuned live.
+  const scale     = useTransform(progress, [0, 1], [1, 0.90])
+  const opacity   = useTransform(progress, [0, 1], [1, 0.82])
+
+  return (
+    <motion.div
+      style={{
+        flexShrink: 0,
+        width: sw || '100%',
+        height: '100%',
+        marginRight: isLast ? 0 : GAP,
+        overflowY: page.fullBleed ? 'hidden' : 'auto',
+        overflowX: 'hidden',
+        borderRadius: page.fullBleed ? 0 : 18,
+        background: bgColor,
+        scale,
+        opacity,
+        willChange: 'transform, opacity',
+      }}
+    >
+      {page.content}
+    </motion.div>
+  )
 }
 
 // Hand-rolled Framer Motion swipe carousel — N fixed pages, no wraparound.
@@ -116,7 +176,7 @@ export default function SwipeCarousel({
   const goToPage = useCallback((idx: number) => {
     if (idx === pageIndex || idx < 0 || idx > lastIndex || width === 0) return
     setPageIndex(idx)
-    animate(trackX, restingX(idx, width), SPRING)
+    animate(trackX, restingX(idx, width), PAGE_SPRING)
   }, [pageIndex, width, trackX, restingX, lastIndex])
 
   // ── One-time first-use swipe hint ─────────────────────────────────────────
@@ -261,15 +321,13 @@ export default function SwipeCarousel({
     else if (delta > thresh && start > 0) next = start - 1
 
     if (next === start) {
-      animate(trackX, restingX(start, w), SPRING)
+      animate(trackX, restingX(start, w), PAGE_SPRING)
     } else {
       goToPage(next)
     }
     capturedRef.current = false
     axisLockRef.current = null
   }
-
-  const sw = slideWidth(width)
 
   return (
     <div
@@ -295,88 +353,24 @@ export default function SwipeCarousel({
     >
       <motion.div style={{ display: 'flex', height: '100%', x: trackX, willChange: 'transform' }}>
         {pages.map((page, i) => (
-          <div
+          <CarouselSlide
             key={page.key}
-            style={{
-              flexShrink: 0,
-              width: sw || '100%',
-              height: '100%',
-              marginRight: i < lastIndex ? GAP : 0,
-              overflowY: 'auto',
-              overflowX: 'hidden',
-              borderRadius: 18,
-              background: bgColor,
-            }}
-          >
-            {page.content}
-          </div>
+            page={page}
+            index={i}
+            trackX={trackX}
+            width={width}
+            isLast={i === lastIndex}
+            bgColor={bgColor}
+          />
         ))}
       </motion.div>
 
-      <DotBar
+      <PersonaNavBar
         pages={pages} active={pageIndex} onSelect={goToPage}
+        trackX={trackX} width={width}
         accentColor={accentColor} mutedColor={mutedColor}
         elevatedBgColor={elevatedBgColor} borderColor={borderColor}
       />
     </div>
-  )
-}
-
-// ── Labeled, tappable dot bar ─────────────────────────────────────────────────
-// Reuses MobileBottomNav's own height (56) and z-[55] stacking convention for
-// consistency, even though MobileBottomNav itself is not rendered here — this
-// bar is the primary mobile nav surface wherever a SwipeCarousel is mounted.
-function DotBar({ pages, active, onSelect, accentColor, mutedColor, elevatedBgColor, borderColor }: {
-  pages: SwipeCarouselPage[]
-  active: number
-  onSelect: (i: number) => void
-  accentColor: string
-  mutedColor: string
-  elevatedBgColor: string
-  borderColor: string
-}) {
-  return (
-    <nav
-      aria-label="Carousel pages"
-      className="absolute bottom-0 left-0 right-0 z-[55] flex"
-      style={{
-        height: NAV_HEIGHT,
-        background: elevatedBgColor,
-        borderTop: `1px solid ${borderColor}`,
-        paddingBottom: 'env(safe-area-inset-bottom, 0px)',
-      }}
-    >
-      {pages.map((p, i) => {
-        const isActive = i === active
-        return (
-          <button
-            key={p.key}
-            onClick={() => onSelect(i)}
-            aria-current={isActive ? 'page' : undefined}
-            aria-label={p.label}
-            className="flex-1 flex flex-col items-center justify-center"
-            style={{ background: 'transparent', border: 'none', cursor: 'pointer', minHeight: 44 }}
-          >
-            <span
-              style={{
-                display: 'block',
-                width: isActive ? 20 : 6, height: 6, borderRadius: 3,
-                background: isActive ? accentColor : mutedColor,
-                opacity: isActive ? 1 : 0.6,
-                transition: 'all 0.3s cubic-bezier(0.22,1,0.36,1)',
-                marginBottom: 5,
-              }}
-            />
-            <span style={{
-              fontFamily: 'var(--font-jetbrains-mono)',
-              fontSize: 10, fontWeight: 700, letterSpacing: '0.06em',
-              color: isActive ? accentColor : mutedColor,
-            }}>
-              {p.label}
-            </span>
-          </button>
-        )
-      })}
-    </nav>
   )
 }
