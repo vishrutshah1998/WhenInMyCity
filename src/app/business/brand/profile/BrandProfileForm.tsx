@@ -1,10 +1,12 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useState, useRef, useEffect, useTransition } from 'react'
+import Image from 'next/image'
 import { updateBrandProfile } from '@/app/actions/business'
 import { signOut } from '@/app/actions/auth'
-import { deleteAccount } from '@/app/actions/profile'
+import { deleteAccount, uploadAvatar } from '@/app/actions/profile'
 import type { UserProfile } from '@/types/database'
+import { SOFT_UI, softUICssVars } from '@/lib/softUI'
 
 const T = {
   surface:   'var(--venue-bg-surface)',
@@ -69,6 +71,24 @@ export default function BrandProfileForm({ profile }: Props) {
   const [success, setSuccess] = useState(false)
   const [error,   setError]   = useState<string | null>(null)
 
+  // Avatar upload
+  const fileInputRef              = useRef<HTMLInputElement>(null)
+  const [avatarUrl, setAvatarUrl] = useState(profile.avatar_url ?? null)
+  const [avatarFile, setAvatarFile]       = useState<File | null>(null)
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null)
+
+  useEffect(() => {
+    return () => { if (avatarPreview) URL.revokeObjectURL(avatarPreview) }
+  }, [avatarPreview])
+
+  function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (avatarPreview) URL.revokeObjectURL(avatarPreview)
+    setAvatarFile(file)
+    setAvatarPreview(URL.createObjectURL(file))
+  }
+
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [isDeleting, startDeleting] = useTransition()
 
@@ -85,6 +105,16 @@ export default function BrandProfileForm({ profile }: Props) {
     setError(null)
     setSuccess(false)
 
+    let newAvatarUrl: string | undefined
+    if (avatarFile) {
+      const fd = new FormData()
+      fd.append('file', avatarFile)
+      const { url, error: upErr } = await uploadAvatar(fd)
+      if (upErr) { setSaving(false); setError(upErr); return }
+      newAvatarUrl = url ?? undefined
+      if (newAvatarUrl) setAvatarUrl(newAvatarUrl)
+    }
+
     const result = await updateBrandProfile({
       bio:              bio || undefined,
       contact_email:    contactEmail,
@@ -92,6 +122,7 @@ export default function BrandProfileForm({ profile }: Props) {
       website_url:      websiteUrl,
       wimc_goals:       wimcGoals,
       target_audience:  targetAudience,
+      avatar_url:       newAvatarUrl,
     })
 
     setSaving(false)
@@ -99,6 +130,7 @@ export default function BrandProfileForm({ profile }: Props) {
       setError(result.error)
     } else {
       setSuccess(true)
+      setAvatarFile(null)
       setTimeout(() => setSuccess(false), 3000)
     }
   }
@@ -119,6 +151,61 @@ export default function BrandProfileForm({ profile }: Props) {
       </div>
 
       <div style={{ padding: '24px 20px', display: 'flex', flexDirection: 'column', gap: 22 }}>
+
+        {/* Avatar */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            className="soft-ui-socket"
+            style={{
+              position: 'relative', width: 72, height: 72, borderRadius: '50%',
+              overflow: 'hidden', flexShrink: 0,
+              background: T.elevated, cursor: 'pointer', padding: 0,
+              ...softUICssVars(SOFT_UI.brand),
+            }}
+          >
+            {(avatarPreview || avatarUrl) ? (
+              <Image
+                src={avatarPreview ?? avatarUrl!}
+                alt="Brand avatar"
+                fill
+                className="object-cover"
+                unoptimized
+              />
+            ) : (
+              <div style={{
+                width: '100%', height: '100%', display: 'grid', placeItems: 'center',
+                color: T.amber,
+                background: 'rgba(245,168,0,0.10)',
+              }}>
+                <span className="material-symbols-outlined" style={{ fontSize: 26 }}>local_post_office</span>
+              </div>
+            )}
+          </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            className="hidden"
+            onChange={handleAvatarChange}
+          />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <span style={{ fontFamily: INTER, fontSize: 13, fontWeight: 600, color: T.text }}>
+              {avatarFile ? avatarFile.name : 'Brand photo'}
+            </span>
+            <span style={{ fontFamily: INTER, fontSize: 11, color: T.muted }}>JPG, PNG or WebP · max 5 MB</span>
+            {avatarFile && (
+              <button
+                type="button"
+                onClick={() => { setAvatarFile(null); setAvatarPreview(null) }}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, textAlign: 'left', fontFamily: INTER, fontSize: 11, color: T.danger, textDecoration: 'underline' }}
+              >
+                Remove
+              </button>
+            )}
+          </div>
+        </div>
 
         {/* Bio */}
         <div>

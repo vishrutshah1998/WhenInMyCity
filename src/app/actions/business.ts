@@ -20,6 +20,7 @@ const UpdateBrandProfileSchema = z.object({
   website_url:     z.string().url().optional().or(z.literal('')),
   wimc_goals:      z.array(z.string()).optional(),
   target_audience: z.array(z.string()).optional(),
+  avatar_url:      z.string().url().optional(),
 })
 
 export type UpdateBrandProfileInput = z.infer<typeof UpdateBrandProfileSchema>
@@ -44,6 +45,7 @@ export async function updateBrandProfile(
       ...(d.website_url      !== undefined ? { website_url:     d.website_url || null }      : {}),
       ...(d.wimc_goals       !== undefined ? { wimc_goals:      d.wimc_goals }               : {}),
       ...(d.target_audience  !== undefined ? { target_audience: d.target_audience }          : {}),
+      ...(d.avatar_url       !== undefined ? { avatar_url:      d.avatar_url || null }       : {}),
       updated_at: new Date().toISOString(),
     })
     .eq('id', user.id)

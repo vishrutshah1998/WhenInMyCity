@@ -1073,6 +1073,7 @@ export interface UpdateExplorerInput {
   }
   explorer_scene?: string
   explorer_creator_intent?: string[]
+  avatar_url?: string
 }
 
 /**
@@ -1086,15 +1087,33 @@ export async function updateExplorerProfile(
   if (!data.display_name.trim()) return { error: 'Name is required.' }
   if (!data.city) return { error: 'City is required.' }
 
-  if (data.interest_tags.length < 3 || data.interest_tags.length > 5) {
-    return { error: 'Please select between 3 and 5 interests.' }
-  }
-
-  const validIds = new Set(INTEREST_TAGS.map((t) => t.id))
-  const invalid = data.interest_tags.filter((t) => !validIds.has(t))
-  if (invalid.length) return { error: `Invalid interest tag(s): ${invalid.join(', ')}` }
-
   const admin = createAdminClient()
+
+  // Only validate interest_tags if the caller actually changed them — this is a
+  // full-replace save (every field, not just interests), so an account whose
+  // stored tag count already sits outside 3-5 (pre-existing data, not touched
+  // in this save) must still be able to save unrelated fields like avatar/name.
+  const { data: existingEp } = await admin
+    .from('explorer_profiles')
+    .select('interest_tags')
+    .eq('auth_user_id', user.id)
+    .maybeSingle()
+
+  const storedTags = new Set(existingEp?.interest_tags ?? [])
+  const incomingTags = new Set(data.interest_tags)
+  const tagsChanged =
+    storedTags.size !== incomingTags.size ||
+    [...storedTags].some((t) => !incomingTags.has(t))
+
+  if (tagsChanged) {
+    if (data.interest_tags.length < 3 || data.interest_tags.length > 5) {
+      return { error: 'Please select between 3 and 5 interests.' }
+    }
+
+    const validIds = new Set(INTEREST_TAGS.map((t) => t.id))
+    const invalid = data.interest_tags.filter((t) => !validIds.has(t))
+    if (invalid.length) return { error: `Invalid interest tag(s): ${invalid.join(', ')}` }
+  }
 
   const { error: epError } = await admin
     .from('explorer_profiles')
@@ -1106,6 +1125,7 @@ export async function updateExplorerProfile(
       price_range_max_paise:    data.price_range_max_paise,
       preferred_formats:        data.preferred_formats,
       notification_preferences: data.notification_preferences,
+      ...(data.avatar_url !== undefined ? { avatar_url: data.avatar_url } : {}),
     })
     .eq('auth_user_id', user.id)
 
@@ -1114,10 +1134,14 @@ export async function updateExplorerProfile(
     return { error: 'Failed to save your settings. Please try again.' }
   }
 
-  if (data.explorer_scene !== undefined || data.explorer_creator_intent !== undefined) {
+  // user_profiles.avatar_url is kept in sync alongside explorer_profiles.avatar_url:
+  // the dashboard/sidebar/topbar reads prefer explorer_profiles with a user_profiles
+  // fallback, but the public profile page ([username]/[slug]) reads user_profiles only.
+  if (data.explorer_scene !== undefined || data.explorer_creator_intent !== undefined || data.avatar_url !== undefined) {
     const upUpdates: Record<string, unknown> = {}
     if (data.explorer_scene !== undefined) upUpdates.explorer_scene = data.explorer_scene || null
     if (data.explorer_creator_intent !== undefined) upUpdates.explorer_creator_intent = data.explorer_creator_intent
+    if (data.avatar_url !== undefined) upUpdates.avatar_url = data.avatar_url
 
     const { error: upError } = await admin
       .from('user_profiles')
@@ -1147,11 +1171,29 @@ export async function updateExplorerStudioProfile(input: {
 
   if (!input.display_name.trim()) return { error: 'Name is required.' }
   if (!input.city) return { error: 'City is required.' }
-  if (input.interest_tags.length < 1 || input.interest_tags.length > 5) {
-    return { error: 'Select between 1 and 5 interests.' }
-  }
 
   const admin = createAdminClient()
+
+  // Only validate interest_tags if the caller actually changed them — this is a
+  // full-replace save (every content field, not just interests), so an account whose
+  // stored tag count already sits outside 1-5 (e.g. synced from Creator onboarding,
+  // which has no upper cap) must still be able to save unrelated fields like name/city.
+  // Mirrors the same "only validate if changed" check in updateExplorerProfile.
+  const { data: existingEp } = await admin
+    .from('explorer_profiles')
+    .select('interest_tags')
+    .eq('auth_user_id', user.id)
+    .maybeSingle()
+
+  const storedTags = new Set(existingEp?.interest_tags ?? [])
+  const incomingTags = new Set(input.interest_tags)
+  const tagsChanged =
+    storedTags.size !== incomingTags.size ||
+    [...storedTags].some((t) => !incomingTags.has(t))
+
+  if (tagsChanged && (input.interest_tags.length < 1 || input.interest_tags.length > 5)) {
+    return { error: 'Select between 1 and 5 interests.' }
+  }
 
   const { error } = await admin
     .from('explorer_profiles')

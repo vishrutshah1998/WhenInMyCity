@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { signOut } from '@/app/actions/auth'
 import type { WorkspaceLink } from '@/lib/constants/bottomNavConfigs'
 import WorkspaceSwitcherList from '@/components/nav/WorkspaceSwitcherList'
+import { SOFT_UI } from '@/lib/softUI'
 
 const PANEL  = 'var(--venue-bg-elevated)'
 const BORDER = 'var(--venue-border-default)'
@@ -16,6 +17,7 @@ interface Props {
   brandName:   string
   username:    string
   initials:    string
+  avatarUrl:   string | null
   bio:         string | null
   workspaces:  WorkspaceLink[]
   accentColor: string
@@ -28,7 +30,7 @@ interface Props {
 // fabricating content. signOut() is the same existing action every other
 // persona's hub already calls — no new auth logic here.
 export default function BrandProfileHubClient({
-  brandName, username, initials, bio, workspaces, accentColor,
+  brandName, username, initials, avatarUrl, bio, workspaces, accentColor,
 }: Props) {
   const [confirmingLogout, setConfirmingLogout] = useState(false)
   const [loggingOut, setLoggingOut] = useState(false)
@@ -42,15 +44,28 @@ export default function BrandProfileHubClient({
     <div style={{ maxWidth: 680, margin: '0 auto', padding: '32px 24px 80px' }}>
       {/* ── Header ─────────────────────────────────────────────────────────── */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: bio ? 12 : 28 }}>
-        <div style={{
-          width: 64, height: 64, borderRadius: '50%',
-          background: `linear-gradient(135deg, ${accentColor}, ${accentColor}80)`,
-          display: 'grid', placeItems: 'center',
-          fontWeight: 700, fontSize: 22, color: '#000',
-          flexShrink: 0,
-        }}>
-          {initials}
-        </div>
+        {avatarUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={avatarUrl}
+            alt={brandName}
+            style={{
+              width: 64, height: 64, borderRadius: '50%', objectFit: 'cover', flexShrink: 0,
+              border: SOFT_UI.brand.dash, boxShadow: SOFT_UI.brand.inset,
+            }}
+          />
+        ) : (
+          <div style={{
+            width: 64, height: 64, borderRadius: '50%',
+            background: `linear-gradient(135deg, ${accentColor}, ${accentColor}80)`,
+            display: 'grid', placeItems: 'center',
+            fontWeight: 700, fontSize: 22, color: '#000',
+            flexShrink: 0,
+            border: SOFT_UI.brand.dash, boxShadow: SOFT_UI.brand.inset,
+          }}>
+            {initials}
+          </div>
+        )}
         <div style={{ minWidth: 0 }}>
           <h1 style={{ fontFamily: 'var(--font-outfit)', fontSize: 22, fontWeight: 900, color: TEXT, margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {brandName}

@@ -18,6 +18,7 @@ import {
   getCategoryConfig,
 } from '@/lib/constants/categories'
 import type { SocialPlatformConfig } from '@/lib/constants/categories'
+import { SOFT_UI, softUICssVars } from '@/lib/softUI'
 import { V2_CREATOR_TYPES } from '@/types/onboarding'
 
 type V2CreatorType = typeof V2_CREATOR_TYPES[number]
@@ -633,7 +634,8 @@ export default function ProfileForm() {
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
-            className="relative w-20 h-20 rounded-full overflow-hidden shrink-0 border-2 border-white/10 hover:opacity-80 transition-opacity active:scale-95 group" style={{ background: 'var(--wimc-bg-overlay)' }}
+            className="soft-ui-socket relative w-20 h-20 rounded-full overflow-hidden shrink-0 active:scale-95 group"
+            style={{ background: 'var(--wimc-bg-overlay)', ...softUICssVars(SOFT_UI.creator, { accent: journeyAccent, focusRing: `${journeyAccent}59` }) }}
           >
             {(avatarPreview || avatarUrl) ? (
               <Image
@@ -645,10 +647,10 @@ export default function ProfileForm() {
               />
             ) : (
               <div
-                className="w-full h-full flex items-center justify-center text-3xl font-bold"
+                className="w-full h-full flex items-center justify-center"
                 style={{ backgroundColor: `${colors.primary}20`, color: colors.primary }}
               >
-                {displayName.charAt(0).toUpperCase()}
+                <span className="material-symbols-outlined text-3xl">local_post_office</span>
               </div>
             )}
             <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">

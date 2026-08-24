@@ -17,6 +17,7 @@ export default async function BrandProfileHubPage() {
       brandName={displayName}
       username={profile.username ?? ''}
       initials={initials}
+      avatarUrl={profile.avatar_url ?? null}
       bio={profile.bio ?? null}
       workspaces={workspaces}
       accentColor={BRAND_ACCENT}

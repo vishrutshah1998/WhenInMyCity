@@ -1,9 +1,12 @@
 'use client'
 
-import { useState, useEffect, useTransition, useMemo } from 'react'
+import { useState, useRef, useEffect, useTransition, useMemo } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { updateExplorerProfile } from '@/app/actions/explorer'
+import { uploadAvatar } from '@/app/actions/profile'
 import { INTEREST_TAGS, CITIES } from '@/lib/constants/interests'
+import { SOFT_UI, softUICssVars } from '@/lib/softUI'
 
 const LAVENDER = '#9B8FFF'
 const CITY_GUIDE_CONSENT_KEY = 'wimc_city_guide_consent_v1'
@@ -73,6 +76,17 @@ export default function ExplorerSettingsClient({ profile, explorerScene, explore
   const [selectedCity, setSelectedCity]   = useState(profile.city)
   const validTagIds = useMemo(() => new Set(INTEREST_TAGS.map(t => t.id)), [])
   const [tags, setTags]                   = useState<string[]>((profile.interest_tags ?? []).filter(t => validTagIds.has(t)))
+  // Stored interest_tags can predate the current 3-5 range (migration drift, old test
+  // data) — only gate the Save button on tag count once the user actually edits the
+  // picker, so an out-of-range account can still save unrelated fields. Mirrors the
+  // same "only validate if changed" check in updateExplorerProfile server-side.
+  const initialTagsRef = useRef(tags)
+  const tagsChanged = useMemo(() => {
+    const initial = new Set(initialTagsRef.current)
+    const current = new Set(tags)
+    return initial.size !== current.size || [...initial].some(t => !current.has(t))
+  }, [tags])
+  const tagsInvalidForSave = tagsChanged && (tags.length < 3 || tags.length > 5)
   const [formats, setFormats]             = useState<string[]>(profile.preferred_formats ?? [])
   const [neighbourhood, setNeighbourhood] = useState(profile.neighbourhood_preference ?? '')
   const [anyPrice, setAnyPrice]           = useState(profile.price_range_max_paise === 999999)
@@ -86,6 +100,24 @@ export default function ExplorerSettingsClient({ profile, explorerScene, explore
   const [saved, setSaved]                 = useState(false)
   const [saveError, setSaveError]         = useState<string | null>(null)
   const [isPending, startTransition]      = useTransition()
+
+  // ── Avatar upload ─────────────────────────────────────────────────────────
+  const fileInputRef                      = useRef<HTMLInputElement>(null)
+  const [avatarUrl, setAvatarUrl]         = useState(profile.avatar_url)
+  const [avatarFile, setAvatarFile]       = useState<File | null>(null)
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null)
+
+  useEffect(() => {
+    return () => { if (avatarPreview) URL.revokeObjectURL(avatarPreview) }
+  }, [avatarPreview])
+
+  function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (avatarPreview) URL.revokeObjectURL(avatarPreview)
+    setAvatarFile(file)
+    setAvatarPreview(URL.createObjectURL(file))
+  }
 
   const groupedTags = useMemo(() =>
     INTEREST_TAGS.reduce<Record<string, typeof INTEREST_TAGS>>((acc, tag) => {
@@ -120,6 +152,16 @@ export default function ExplorerSettingsClient({ profile, explorerScene, explore
     setSaveError(null)
     setSaved(false)
     startTransition(async () => {
+      let newAvatarUrl: string | undefined
+      if (avatarFile) {
+        const fd = new FormData()
+        fd.append('file', avatarFile)
+        const { url, error: upErr } = await uploadAvatar(fd)
+        if (upErr) { setSaveError(upErr); return }
+        newAvatarUrl = url ?? undefined
+        if (newAvatarUrl) setAvatarUrl(newAvatarUrl)
+      }
+
       const result = await updateExplorerProfile({
         display_name:             displayName.trim(),
         city:                     selectedCity,
@@ -133,9 +175,10 @@ export default function ExplorerSettingsClient({ profile, explorerScene, explore
         },
         explorer_scene:           scene || undefined,
         explorer_creator_intent:  intent ? [intent] : [],
+        avatar_url:               newAvatarUrl,
       })
       if (result.error) setSaveError(result.error)
-      else setSaved(true)
+      else { setSaved(true); setAvatarFile(null) }
     })
   }
 
@@ -199,6 +242,60 @@ export default function ExplorerSettingsClient({ profile, explorerScene, explore
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="soft-ui-socket"
+              style={{
+                position: 'relative', width: 72, height: 72, borderRadius: '50%',
+                overflow: 'hidden', flexShrink: 0,
+                background: '#1E2A45', cursor: 'pointer', padding: 0,
+                ...softUICssVars(SOFT_UI.explorer),
+              }}
+            >
+              {(avatarPreview || avatarUrl) ? (
+                <Image
+                  src={avatarPreview ?? avatarUrl!}
+                  alt="Avatar"
+                  fill
+                  className="object-cover"
+                  unoptimized
+                />
+              ) : (
+                <div style={{
+                  width: '100%', height: '100%', display: 'grid', placeItems: 'center',
+                  color: LAVENDER,
+                  background: 'rgba(155,143,255,0.10)',
+                }}>
+                  <span className="material-symbols-outlined" style={{ fontSize: 26 }}>local_post_office</span>
+                </div>
+              )}
+            </button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              className="hidden"
+              onChange={handleAvatarChange}
+            />
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              <span style={{ fontSize: 13, fontWeight: 600, color: '#F0EFF8', fontFamily: 'var(--font-dm-sans)' }}>
+                {avatarFile ? avatarFile.name : 'Profile photo'}
+              </span>
+              <span style={{ fontSize: 11, color: '#9896B0' }}>JPG, PNG or WebP · max 5 MB</span>
+              {avatarFile && (
+                <button
+                  type="button"
+                  onClick={() => { setAvatarFile(null); setAvatarPreview(null) }}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, textAlign: 'left', fontSize: 11, color: '#F472B6', textDecoration: 'underline' }}
+                >
+                  Remove
+                </button>
+              )}
+            </div>
+          </div>
+
           <div>
             <label style={fieldLabelStyle}>Display Name</label>
             <input
@@ -406,7 +503,7 @@ export default function ExplorerSettingsClient({ profile, explorerScene, explore
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <button
               onClick={handleSave}
-              disabled={isPending || displayName.trim().length === 0 || tags.length < 3}
+              disabled={isPending || displayName.trim().length === 0 || tagsInvalidForSave}
               style={{
                 padding: '12px 28px',
                 background: LAVENDER,
@@ -415,7 +512,7 @@ export default function ExplorerSettingsClient({ profile, explorerScene, explore
                 fontSize: 11, fontWeight: 700,
                 letterSpacing: '0.1em', textTransform: 'uppercase',
                 border: 'none', cursor: 'pointer',
-                opacity: isPending || displayName.trim().length === 0 || tags.length < 3 ? 0.6 : 1,
+                opacity: isPending || displayName.trim().length === 0 || tagsInvalidForSave ? 0.6 : 1,
                 transition: 'opacity 150ms',
               }}
             >
