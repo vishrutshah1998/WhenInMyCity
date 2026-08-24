@@ -16,6 +16,7 @@ import PendingRequests from '@/components/venue/dashboard/PendingRequests'
 import RevenueTrend from '@/components/venue/dashboard/RevenueTrend'
 import type { MonthlyRevenue } from '@/components/venue/dashboard/charts/RevenueTrendChart'
 import VenueCarousel from './VenueCarousel'
+import { VENUE_NAV_PAGES } from '@/lib/constants/personaNavPages'
 import VenueSettingsSlot from './VenueSettingsSlot'
 import VenueOperationsSlot from './VenueOperationsSlot'
 import type { VenueProfile, VenueTier } from '@/types/database'
@@ -193,8 +194,16 @@ function KpiRow({ mtdRevenuePaise, occupancyPercent, avgBookingPaise, pendingCou
 // Page
 // ---------------------------------------------------------------------------
 
-export default async function VenueDashboardPage() {
+export default async function VenueDashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ panel?: string }>
+}) {
   const { user } = await requireAuth('/business/venue/dashboard')
+
+  const sp = await searchParams
+  const panelIndex = sp.panel ? VENUE_NAV_PAGES.findIndex(p => p.key === sp.panel) : -1
+  const defaultIndex = panelIndex !== -1 ? panelIndex : 1
 
   const admin = createAdminClient()
 
@@ -402,6 +411,7 @@ export default async function VenueDashboardPage() {
           homeSlot={homeContent}
           venueSlot={<VenueSettingsSlot />}
           businessSlot={<VenueOperationsSlot hasAnyConfirmedBooking={hasAnyConfirmedBooking} />}
+          defaultIndex={defaultIndex}
         />
       </div>
     </>

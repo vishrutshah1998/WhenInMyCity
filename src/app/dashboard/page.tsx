@@ -1,7 +1,7 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { Suspense, useEffect, useState } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import type { UserProfile, Event } from '@/types/database'
@@ -11,10 +11,10 @@ import { getPayableEvents } from '@/app/actions/payouts'
 import { getNotificationsForUser } from '@/app/actions/notifications'
 import { profileUrl } from '@/lib/profile-url'
 import { TIER_THRESHOLDS } from '@/lib/constants/interests'
-import { isLocalPlus } from '@/lib/tier'
 import PersonaSwitcherPills from '@/components/PersonaSwitcherPills'
 import BookingConfirmedBanner from '@/components/shared/BookingConfirmedBanner'
 import CreatorCarousel from './CreatorCarousel'
+import { getCreatorNavPages } from '@/lib/constants/personaNavPages'
 import CreatorHomeMobile from './CreatorHomeMobile'
 import CreatorBusinessSlot from './CreatorBusinessSlot'
 import CreatorCommunitySlot from './CreatorCommunitySlot'
@@ -156,6 +156,20 @@ function Postmark({ text, rotate = 0, opacity = 0.07 }: { text: string; rotate?:
   )
 }
 
+// Reads the `?panel=` query param (set by a persistent-nav tap on a
+// sub-route, e.g. /dashboard/notifications) to land the carousel directly
+// on the right tab. Split into its own component because useSearchParams()
+// requires a Suspense boundary in Next.js 15 — wrapping just this small
+// reader (not the whole already-'use client' page) keeps that requirement
+// minimal and localized.
+function CreatorCarouselWithPanel(props: Omit<React.ComponentProps<typeof CreatorCarousel>, 'defaultIndex'>) {
+  const searchParams = useSearchParams()
+  const panel = searchParams.get('panel')
+  const pages = getCreatorNavPages()
+  const panelIndex = panel ? pages.findIndex(p => p.key === panel) : -1
+  return <CreatorCarousel {...props} defaultIndex={panelIndex !== -1 ? panelIndex : 1} />
+}
+
 // ── Main component ─────────────────────────────────────────────────────────────
 
 export default function DashboardPage() {
@@ -258,10 +272,6 @@ export default function DashboardPage() {
 
   const isFirstLogin = events.length === 0 && requests.length === 0 && !profile?.bio
 
-  // Same conditional shape as dashboard/layout.tsx's isHubEnabled/showBookings
-  // (hasAnyEvent || hasAnyRsvp) — reused here to drive the mobile carousel's
-  // Community page inclusion and the Business page's Bookings card.
-  const isHubEnabled = isLocalPlus(profile?.user_tier ?? 'wanderer')
   const showBookings = events.length > 0 || hasAnyRsvp
 
   const completionItems = [
@@ -288,6 +298,32 @@ export default function DashboardPage() {
   // ── Render ───────────────────────────────────────────────────────────────────
 
   const personas = profile?.personas ?? []
+
+  // Computed once so the same slots can be reused for both the Suspense
+  // fallback (rendered before useSearchParams() resolves) and the real,
+  // panel-aware carousel below — without duplicating this JSX twice.
+  const creatorCarouselProps = {
+    accentColor: 'var(--wimc-accent)',
+    homeSlot: (
+      <CreatorHomeMobile
+        displayName={displayName}
+        profile={profile}
+        subscriberCount={subscriberCount}
+        upcomingEvents={upcomingEvents}
+        requestsCount={requests.length}
+        availablePaise={availablePaise}
+        mtdEarnedPaise={mtdEarnedPaise}
+        confirmedNotifications={confirmedNotifications}
+        soldCountMap={soldCountMap}
+        onPostCreated={(post: CreatorPost) => setDashPosts(prev => [post, ...prev].slice(0, 5))}
+      />
+    ),
+    businessSlot: <CreatorBusinessSlot showBookings={showBookings} accentColor="var(--wimc-accent)" />,
+    communitySlot: profile ? (
+      <CreatorCommunitySlot currentUserId={profile.id} profile={profile} accentColor="var(--wimc-accent)" />
+    ) : null,
+    progressSlot: <CreatorProgressSlot viewerCity={profile?.city ?? null} />,
+  }
 
   return (
     <>
@@ -786,29 +822,13 @@ export default function DashboardPage() {
           lg:hidden (not the old md:hidden) so it stays mutually exclusive with the
           desktop block above — matches the lg convention the top bar already uses. */}
       <div className="lg:hidden">
-        <CreatorCarousel
-          isHubEnabled={isHubEnabled}
-          accentColor="var(--wimc-accent)"
-          homeSlot={
-            <CreatorHomeMobile
-              displayName={displayName}
-              profile={profile}
-              subscriberCount={subscriberCount}
-              upcomingEvents={upcomingEvents}
-              requestsCount={requests.length}
-              availablePaise={availablePaise}
-              mtdEarnedPaise={mtdEarnedPaise}
-              confirmedNotifications={confirmedNotifications}
-              soldCountMap={soldCountMap}
-              onPostCreated={(post) => setDashPosts(prev => [post, ...prev].slice(0, 5))}
-            />
-          }
-          businessSlot={<CreatorBusinessSlot showBookings={showBookings} accentColor="var(--wimc-accent)" />}
-          communitySlot={isHubEnabled && profile ? (
-            <CreatorCommunitySlot currentUserId={profile.id} userTier={profile.user_tier ?? 'wanderer'} accentColor="var(--wimc-accent)" />
-          ) : null}
-          progressSlot={<CreatorProgressSlot viewerCity={profile?.city ?? null} />}
-        />
+        {/* Suspense-wrapped since CreatorCarouselWithPanel calls useSearchParams()
+            (reads `?panel=` from a persistent-nav tap on a sub-route) — the
+            fallback renders the same carousel defaulting to Home, matching
+            behavior before this param existed. */}
+        <Suspense fallback={<CreatorCarousel {...creatorCarouselProps} defaultIndex={1} />}>
+          <CreatorCarouselWithPanel {...creatorCarouselProps} />
+        </Suspense>
       </div>
     </>
   )

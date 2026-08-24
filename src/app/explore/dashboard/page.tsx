@@ -9,7 +9,9 @@ import ExploreClient, {
 } from '@/app/explore/ExploreClient'
 import ExplorerMapPanel from './ExplorerMapPanel'
 import ExplorerCarousel from './ExplorerCarousel'
-import CommunitiesComingSoon from '@/components/explore/CommunitiesComingSoon'
+import { EXPLORER_NAV_PAGES } from '@/lib/constants/personaNavPages'
+import ExplorerCommunitiesPanel from '@/components/explore/ExplorerCommunitiesPanel'
+import { getCommunitiesForUser } from '@/app/actions/communities'
 
 // Explorer's dashboard root — a swipe-based 3-page carousel (Map / Home /
 // Communities) on mobile, replacing the old ExplorerTabStrip + this page's
@@ -22,14 +24,32 @@ import CommunitiesComingSoon from '@/components/explore/CommunitiesComingSoon'
 export default async function ExplorerDashboardIndexPage({
   searchParams,
 }: {
-  searchParams: Promise<{ tab?: string; city?: string }>
+  searchParams: Promise<{ tab?: string; city?: string; panel?: string }>
 }) {
   const admin      = createAdminClient()
   const userClient = await createClient()
 
-  const sp   = await searchParams
-  const tab  = sp.tab  ?? 'all'
-  const city = sp.city ?? 'Ahmedabad'
+  const sp  = await searchParams
+  const tab = sp.tab ?? 'all'
+
+  // Which carousel page lands active — e.g. a `?panel=map` link from a
+  // persistent-nav tap on a sub-route. Falls back to today's default (Home)
+  // if absent or unrecognized.
+  const panelIndex = sp.panel ? EXPLORER_NAV_PAGES.findIndex(p => p.key === sp.panel) : -1
+  const defaultIndex = panelIndex !== -1 ? panelIndex : 1
+
+  // Falls back to the explorer's stored profile city (same source layout.tsx
+  // uses for the header's LocationPill) rather than hardcoding Ahmedabad —
+  // otherwise a Gandhinagar-based explorer lands here with the pill showing
+  // GNR active while every section below silently shows Ahmedabad data.
+  let city = sp.city
+  if (!city) {
+    const { data: { user: pillUser } } = await userClient.auth.getUser()
+    const { data: profileCity } = pillUser
+      ? await admin.from('explorer_profiles').select('city').eq('auth_user_id', pillUser.id).maybeSingle()
+      : { data: null }
+    city = profileCity?.city === 'Gandhinagar' ? 'Gandhinagar' : 'Ahmedabad'
+  }
 
   const now         = new Date().toISOString()
   const eventsLimit = tab === 'events' ? 8 : 4
@@ -124,6 +144,8 @@ export default async function ExplorerDashboardIndexPage({
     // Optional tables may not exist yet
   }
 
+  const joinedCommunities = viewerUserId ? await getCommunitiesForUser(viewerUserId) : []
+
   const homeContent = (
     <ExploreClient
       tab={tab}
@@ -147,9 +169,10 @@ export default async function ExplorerDashboardIndexPage({
           homeSlot={homeContent}
           communitiesSlot={
             <div style={{ maxWidth: 640, margin: '0 auto', padding: '32px 24px 80px' }}>
-              <CommunitiesComingSoon />
+              <ExplorerCommunitiesPanel communities={joinedCommunities} />
             </div>
           }
+          defaultIndex={defaultIndex}
         />
       </div>
       <div className="hidden lg:block">

@@ -3,6 +3,7 @@ import Link from 'next/link'
 import PersonaSwitcherPills from '@/components/PersonaSwitcherPills'
 import DashPageLink from '@/components/DashPageLink'
 import BrandCarousel from './BrandCarousel'
+import { BRAND_NAV_PAGES } from '@/lib/constants/personaNavPages'
 import BrandEnquiriesPage from '../enquiries/page'
 import BrandCreatorsPage from '../creators/page'
 
@@ -117,8 +118,16 @@ function EmptyState({ icon, message, cta, href }: { icon: string; message: strin
 }
 
 // ── Page ──────────────────────────────────────────────────────────────────────
-export default async function BrandDashboardPage() {
+export default async function BrandDashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ panel?: string }>
+}) {
   const { profile } = await requireProfile()
+
+  const sp = await searchParams
+  const panelIndex = sp.panel ? BRAND_NAV_PAGES.findIndex(p => p.key === sp.panel) : -1
+  const defaultIndex = panelIndex !== -1 ? panelIndex : 1
 
   const brandName   = profile.display_name ?? profile.username ?? 'BRAND'
   const city        = profile.city ?? '—'
@@ -380,6 +389,7 @@ export default async function BrandDashboardPage() {
           homeSlot={homeContent}
           enquiriesSlot={<BrandEnquiriesPage />}
           creatorsSlot={<BrandCreatorsPage />}
+          defaultIndex={defaultIndex}
         />
       </div>
     </>
