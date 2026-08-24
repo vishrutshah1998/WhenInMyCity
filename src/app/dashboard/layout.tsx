@@ -5,17 +5,20 @@ import { redirect } from 'next/navigation'
 import Sidebar from '@/components/dashboard/Sidebar'
 import NotificationBell from '@/components/dashboard/NotificationBell'
 import CreatorAuthenticatedTopBar from '@/components/dashboard/CreatorAuthenticatedTopBar'
+import PersonaNavGate from '@/components/shared/PersonaNavGate'
+import { getCreatorNavPages, NAV_HEIGHT, CREATOR_SECTION_ROUTES } from '@/lib/constants/personaNavPages'
 import { getNotificationsForUser } from '@/app/actions/notifications'
 import { getUnreadMessageCount } from '@/app/actions/hub'
 import Link from 'next/link'
 import { WimcWordmark } from '@/components/WimcWordmark'
-import { getCategoryColors } from '@/lib/constants/categories'
 import { isLocalPlus } from '@/lib/tier'
-import type { CreatorType } from '@/types/database'
 
-// Map journey persona to a default accent when no creator_type is set
+// Canonical persona brand colors — matches PATH_COLOURS in
+// src/lib/onboarding/design-tokens.ts (Explorer lavender, Venue teal, Brand
+// gold, Creator coral), the same flat one-color-per-persona scheme Venue and
+// Brand's dashboards already use unconditionally.
 const EXPLORER_ACCENT = '#9B8FFF'
-const DEFAULT_ACCENT  = '#E8705A'
+const CREATOR_ACCENT  = '#E8705A'
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { profile } = await requireProfile()
@@ -42,10 +45,17 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   const isHubEnabled = isLocalPlus(profile.user_tier)
 
-  // Compute the per-category accent color for sidebar + CSS variable
+  // Dashboard chrome (sidebar/top bar/nav) always uses the flat persona
+  // color, not the creator's chosen category color — that per-category color
+  // (getCategoryColors(creator_type), set in onboarding step C3) is for the
+  // creator's PUBLIC-facing page/profile theming ("shapes your page colour
+  // and who discovers your work", per C3's own copy), not internal dashboard
+  // chrome. Was previously falling through to getCategoryColors() here too,
+  // which meant two categories (dance, literature_poetry) rendered the whole
+  // dashboard pink instead of Creator's actual coral brand color.
   const accentColor = profile.user_role === 'explorer'
     ? EXPLORER_ACCENT
-    : getCategoryColors(profile.creator_type as CreatorType | null).primary || DEFAULT_ACCENT
+    : CREATOR_ACCENT
 
   const [eventsRes, publishedRes, rsvpsRes, notifications, unreadHub, pendingConnRes] = await Promise.all([
     supabase.from('events').select('id', { count: 'exact', head: true }).eq('creator_id', profile.id),
@@ -92,6 +102,28 @@ export default async function DashboardLayout({ children }: { children: React.Re
     >
       {/* Grain texture — editorial aesthetic */}
       <div className="wimc-grain" aria-hidden />
+
+      {/* Persistent circular nav on every sub-route below /dashboard — the
+          index route's own SwipeCarousel already renders a live version of
+          this; PersonaNavGate no-ops there to avoid a double nav. Deliberately
+          a sibling of .dash-content, NOT nested inside it: .dash-content has a
+          mount entrance animation (globals.css, transform: translateY(28px)
+          in its keyframes) — a transform anywhere in an ancestor's keyframes
+          establishes a new containing block for position:fixed descendants,
+          so this nav was anchoring to .dash-content's own scrolling box
+          instead of the viewport, only scrolling into view near the bottom
+          of a long page. */}
+      <PersonaNavGate
+        pages={getCreatorNavPages()}
+        homeKey="home"
+        indexHref="/dashboard"
+        sectionRoutes={CREATOR_SECTION_ROUTES}
+        accentColor={accentColor}
+        mutedColor="var(--wimc-text-secondary)"
+        elevatedBgColor="var(--wimc-bg-elevated)"
+        borderColor="var(--wimc-border-default)"
+      />
+
       <div className="hidden md:block">
         <Sidebar
           username={profile.username ?? ''}
@@ -144,7 +176,11 @@ export default async function DashboardLayout({ children }: { children: React.Re
         </div>
         {/* No fixed bottom nav left to clear (MobileBottomNav removed for Creator) —
             just the iOS home-indicator safe area, which mob-nav-pb used to cover too. */}
-        <main style={{ flex: 1, minWidth: 0, paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
+        {/* lg:!pb-0 cancels the mobile-only reserve below at desktop, where
+            PersonaNavGate never renders (it's lg:hidden) — without this,
+            sub-route content's last bit scrolls in behind the fixed
+            standalone nav and can never be fully brought into view. */}
+        <main className="lg:!pb-0" style={{ flex: 1, minWidth: 0, paddingBottom: `calc(${NAV_HEIGHT}px + env(safe-area-inset-bottom, 0px))` }}>
           {children}
         </main>
       </div>

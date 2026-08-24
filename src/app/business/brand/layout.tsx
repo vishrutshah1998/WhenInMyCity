@@ -3,6 +3,8 @@ import { redirect } from 'next/navigation'
 import { createAdminClient } from '@/lib/supabase/admin'
 import BrandSidebarServer from '@/components/business/BrandSidebarServer'
 import BrandAuthenticatedTopBar from '@/components/business/BrandAuthenticatedTopBar'
+import PersonaNavGate from '@/components/shared/PersonaNavGate'
+import { BRAND_NAV_PAGES, NAV_HEIGHT, BRAND_SECTION_ROUTES } from '@/lib/constants/personaNavPages'
 import Link from 'next/link'
 import { WimcWordmark } from '@/components/WimcWordmark'
 import NotificationBell from '@/components/dashboard/NotificationBell'
@@ -42,6 +44,26 @@ export default async function BrandLayout({ children }: { children: React.ReactN
     >
       {/* Grain texture — matches creator dashboard aesthetic */}
       <div className="wimc-grain" aria-hidden />
+
+      {/* Persistent circular nav on every sub-route below /business/brand/dashboard —
+          the index route's own SwipeCarousel already renders a live version
+          of this; PersonaNavGate no-ops there to avoid a double nav. Deliberately
+          a sibling of .dash-content, NOT nested inside it: .dash-content has a
+          mount entrance animation (globals.css, transform: translateY(28px) in
+          its keyframes) — a transform anywhere in an ancestor's keyframes
+          establishes a new containing block for position:fixed descendants, so
+          this nav was anchoring to .dash-content's own scrolling box instead of
+          the viewport, only scrolling into view near the bottom of a long page. */}
+      <PersonaNavGate
+        pages={BRAND_NAV_PAGES}
+        homeKey="home"
+        indexHref="/business/brand/dashboard"
+        sectionRoutes={BRAND_SECTION_ROUTES}
+        accentColor="var(--venue-accent)"
+        mutedColor="var(--venue-text-secondary)"
+        elevatedBgColor="var(--venue-bg-elevated)"
+        borderColor="var(--venue-border-default)"
+      />
 
       <div className="hidden md:block">
         <BrandSidebarServer />
@@ -87,7 +109,11 @@ export default async function BrandLayout({ children }: { children: React.ReactN
         {/* No fixed bottom nav left to clear (MobileBottomNav removed for Brand,
             replaced by the Home page's swipe carousel) — just the iOS
             home-indicator safe area, which mob-nav-pb used to cover too. */}
-        <main style={{ flex: 1, minWidth: 0, paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
+        {/* lg:!pb-0 cancels the mobile-only reserve below at desktop, where
+            PersonaNavGate never renders (it's lg:hidden) — without this,
+            sub-route content's last bit scrolls in behind the fixed
+            standalone nav and can never be fully brought into view. */}
+        <main className="lg:!pb-0" style={{ flex: 1, minWidth: 0, paddingBottom: `calc(${NAV_HEIGHT}px + env(safe-area-inset-bottom, 0px))` }}>
           {children}
         </main>
       </div>

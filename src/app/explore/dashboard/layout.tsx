@@ -3,6 +3,8 @@ import { requireAuth } from '@/lib/auth/requireAuth'
 import { createAdminClient } from '@/lib/supabase/admin'
 import ExplorerSidebar from '@/components/explore/ExplorerSidebar'
 import ExplorerAuthenticatedTopBar from '@/components/explore/ExplorerAuthenticatedTopBar'
+import PersonaNavGate from '@/components/shared/PersonaNavGate'
+import { EXPLORER_NAV_PAGES, NAV_HEIGHT, EXPLORER_SECTION_ROUTES } from '@/lib/constants/personaNavPages'
 import { getNotificationsForUser } from '@/app/actions/notifications'
 
 export default async function ExplorerDashboardLayout({
@@ -51,6 +53,27 @@ export default async function ExplorerDashboardLayout({
       }}
     >
       <div className="wimc-grain" aria-hidden />
+
+      {/* Persistent circular nav on every sub-route below /explore/dashboard —
+          the index route's own SwipeCarousel already renders a live version
+          of this; PersonaNavGate no-ops there to avoid a double nav. A sibling
+          of the inner content wrapper, NOT nested inside it — Creator/Venue/
+          Brand's equivalent wrapper (.dash-content) has a mount entrance
+          animation with a transform in its keyframes, and any transform on an
+          ancestor establishes a new containing block for position:fixed
+          descendants, breaking their viewport anchoring. Explorer's wrapper
+          doesn't carry that class today, but keeping this nav shallow avoids
+          the same class of bug if one is ever added here too. */}
+      <PersonaNavGate
+        pages={EXPLORER_NAV_PAGES}
+        homeKey="home"
+        indexHref="/explore/dashboard"
+        sectionRoutes={EXPLORER_SECTION_ROUTES}
+        accentColor="var(--venue-accent)"
+        mutedColor="var(--venue-text-secondary)"
+        elevatedBgColor="var(--venue-bg-elevated)"
+        borderColor="var(--venue-border-default)"
+      />
 
       <div className="hidden md:block">
         <ExplorerSidebar
@@ -109,7 +132,11 @@ export default async function ExplorerDashboardLayout({
 
         {/* No fixed bottom nav left to clear (MobileBottomNav removed for Explorer) —
             just the iOS home-indicator safe area, which mob-nav-pb used to cover too. */}
-        <main style={{ flex: 1, minWidth: 0, paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
+        {/* lg:!pb-0 cancels the mobile-only reserve below at desktop, where
+            PersonaNavGate never renders (it's lg:hidden) — without this,
+            sub-route content's last bit scrolls in behind the fixed
+            standalone nav and can never be fully brought into view. */}
+        <main className="lg:!pb-0" style={{ flex: 1, minWidth: 0, paddingBottom: `calc(${NAV_HEIGHT}px + env(safe-area-inset-bottom, 0px))` }}>
           {children}
         </main>
       </div>
