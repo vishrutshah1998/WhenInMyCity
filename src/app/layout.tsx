@@ -6,6 +6,7 @@ import {
 } from 'next/font/google'
 import './globals.css'
 import '../../styles/venue-tokens.css'
+import '../../styles/soft-ui.css'
 
 // ── Profile theme fonts ──────────────────────────────────────────────────────
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' })

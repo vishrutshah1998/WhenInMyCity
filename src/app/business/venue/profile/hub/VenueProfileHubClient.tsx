@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { signOut } from '@/app/actions/auth'
 import type { WorkspaceLink } from '@/lib/constants/bottomNavConfigs'
 import WorkspaceSwitcherList from '@/components/nav/WorkspaceSwitcherList'
+import { SOFT_UI, softUICssVars } from '@/lib/softUI'
 
 const ACCENT = 'var(--venue-accent)'
 const PANEL  = 'var(--venue-bg-elevated)'
@@ -112,6 +113,8 @@ export default function VenueProfileHubClient({
               <button
                 key={tab}
                 onClick={() => setActivityTab(tab)}
+                className="soft-ui-toggle-option"
+                data-active={active}
                 style={{
                   flex: 1, padding: '9px 0',
                   background: active ? accentColor : 'transparent',
@@ -119,6 +122,7 @@ export default function VenueProfileHubClient({
                   border: 'none', cursor: 'pointer',
                   fontFamily: 'var(--font-jetbrains-mono)',
                   fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase',
+                  ...softUICssVars(SOFT_UI.venue, { accent: accentColor, focusRing: `${accentColor}59` }),
                 }}
               >
                 {tab === 'upcoming' ? 'Upcoming' : 'Past'} · {count}

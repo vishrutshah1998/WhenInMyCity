@@ -4,6 +4,7 @@ import React from 'react'
 import Link from 'next/link'
 import type { UserTier } from '@/types/database'
 import { TIER_THRESHOLDS } from '@/lib/constants/interests'
+import { SOFT_UI, SOFT_UI_LABEL_FONT } from '@/lib/softUI'
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -334,6 +335,35 @@ export default function TierClient({ tier, metrics, eventsAttendedIn90d, eventsH
               <div style={{ fontFamily: 'var(--font-syne)', fontSize: 22, fontWeight: 800, color: '#FFD166' }}>{nextMeta.label}</div>
             </div>
           )}
+        </div>
+
+        {/* Tier progress ring — soft-UI (Vintage Postal) */}
+        <div data-testid="tier-progress-ring" style={{
+          background: 'var(--wimc-bg-base)', border: '1px solid var(--wimc-border-default)',
+          borderRadius: 0, padding: 24, display: 'flex', alignItems: 'center', gap: 20,
+        }}>
+          <div style={{
+            position: 'relative', width: 88, height: 88, borderRadius: '50%', flexShrink: 0,
+            background: SOFT_UI.creator.ring(overallPct), padding: 8, boxSizing: 'border-box',
+          }}>
+            <div style={{
+              width: '100%', height: '100%', borderRadius: '50%',
+              background: 'var(--wimc-bg-overlay)', display: 'grid', placeItems: 'center',
+              boxShadow: SOFT_UI.creator.inset, border: SOFT_UI.creator.dashThin,
+            }}>
+              <span style={{ fontFamily: 'var(--font-syne)', fontSize: 20, fontWeight: 800, color: 'var(--wimc-text-primary)' }}>
+                {overallPct}%
+              </span>
+            </div>
+          </div>
+          <div>
+            <div style={{ fontFamily: 'var(--font-jetbrains-mono)', fontSize: 10, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--wimc-text-muted)', marginBottom: 4 }}>
+              Tier Progress
+            </div>
+            <div style={{ fontFamily: SOFT_UI_LABEL_FONT, fontSize: 16, color: 'var(--wimc-text-primary)' }}>
+              {nextMeta ? `${overallPct}% of the way to ${nextMeta.label}` : 'Highest tier reached'}
+            </div>
+          </div>
         </div>
 
         {/* Tier roadmap */}
