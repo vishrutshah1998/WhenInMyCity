@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useCallback, useTransition, useRef } from 'react'
+import Link from 'next/link'
 import { updateVenueStudioContent } from '@/app/actions/venue'
 import { updateProfileTheme } from '@/app/actions/profile'
 import { reorderBlocks } from '@/app/actions/blocks'
@@ -524,6 +525,13 @@ export default function VenueStudioClient({ venue, initialBlocks, upcomingEvents
         borderBottom: `1px solid ${S.border}`,
         display: 'flex', alignItems: 'center', padding: '0 16px', gap: 10,
       }}>
+        <Link
+          href="/business/venue/dashboard?panel=venue"
+          aria-label="Back to Venue"
+          style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 28, height: 28, borderRadius: 8, color: S.textSub, flexShrink: 0 }}
+        >
+          <span className="material-symbols-outlined" style={{ fontSize: 18 }}>arrow_back</span>
+        </Link>
         <div style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '4px', background: 'rgba(0,0,0,0.3)', borderRadius: 8 }}>
           <TabBtn label="Content" icon="edit"    active={tab === 'content'} onClick={() => setTab('content')} />
           <TabBtn label="Blocks"  icon="add_box" active={tab === 'blocks'}  onClick={() => setTab('blocks')}  />

@@ -587,11 +587,20 @@ export default function VenuesClient({ profileId: _profileId, defaultCity, maker
   return (
     <>
       <header style={topbar}>
-        <div>
-          <div style={{ fontSize: 10, fontFamily: 'var(--font-jetbrains-mono)', color: 'var(--wimc-text-muted)', letterSpacing: '1.8px', textTransform: 'uppercase', marginBottom: 2 }}>
-            Creator Studio
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <Link
+            href="/dashboard?panel=business"
+            aria-label="Back to Business"
+            style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 32, height: 32, borderRadius: 9999, color: 'var(--wimc-text-primary)', flexShrink: 0 }}
+          >
+            <span className="material-symbols-outlined" style={{ fontSize: 20 }}>arrow_back</span>
+          </Link>
+          <div>
+            <div style={{ fontSize: 10, fontFamily: 'var(--font-jetbrains-mono)', color: 'var(--wimc-text-muted)', letterSpacing: '1.8px', textTransform: 'uppercase', marginBottom: 2 }}>
+              Creator Studio
+            </div>
+            <div style={{ fontFamily: 'var(--font-abril)', fontSize: 22, lineHeight: 1, color: 'var(--wimc-text-primary)' }}>Find a Venue</div>
           </div>
-          <div style={{ fontFamily: 'var(--font-abril)', fontSize: 22, lineHeight: 1, color: 'var(--wimc-text-primary)' }}>Find a Venue</div>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <Link

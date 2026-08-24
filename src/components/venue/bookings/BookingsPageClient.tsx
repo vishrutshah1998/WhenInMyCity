@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useMemo } from 'react'
+import Link from 'next/link'
 import type { ProposalWithMaker } from '@/app/actions/venue-bookings'
 import type { PricingConfig, PricingModel, ProposedSplitConfig } from '@/types/marketplace'
 import type { Json } from '@/types/database'
@@ -295,6 +296,25 @@ export default function BookingsPageClient({ venueId, currentUserId, pricingMode
           background: 'var(--venue-bg-surface)',
           overflow: 'hidden',
         }}>
+
+          {/* Back to Business */}
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 8,
+            padding: '10px 16px',
+            borderBottom: '1px solid var(--venue-border-subtle)',
+            flexShrink: 0,
+          }}>
+            <Link
+              href="/business/venue/dashboard?panel=business"
+              aria-label="Back to Business"
+              style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 28, height: 28, borderRadius: 8, color: 'var(--venue-text-primary)', flexShrink: 0 }}
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: 18 }}>arrow_back</span>
+            </Link>
+            <span style={{ fontFamily: 'var(--font-inter), system-ui, sans-serif', fontWeight: 700, fontSize: 14, color: 'var(--venue-text-primary)' }}>
+              Bookings
+            </span>
+          </div>
 
           {/* Tab bar */}
           <div style={{

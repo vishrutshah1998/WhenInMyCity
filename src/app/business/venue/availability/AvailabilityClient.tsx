@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useTransition } from 'react'
+import Link from 'next/link'
 import type { AvailabilityRule } from '@/app/actions/venue-availability'
 import {
   createAvailabilityRule,
@@ -206,6 +207,13 @@ export default function AvailabilityClient({ venueId, initialRules }: Props) {
 
       {/* Page header */}
       <div style={{ marginBottom: 28 }}>
+        <Link
+          href="/business/venue/dashboard?panel=venue"
+          style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontFamily: "'DM Sans', sans-serif", fontSize: 13, fontWeight: 600, color: A.textSub, textDecoration: 'none', marginBottom: 10 }}
+        >
+          <span className="material-symbols-outlined" style={{ fontSize: 16 }}>arrow_back</span>
+          Venue
+        </Link>
         <h1 style={{ fontFamily: "'DM Sans', sans-serif", fontWeight: 700, fontSize: 24, color: A.text, margin: '0 0 6px' }}>
           Availability Rules
         </h1>

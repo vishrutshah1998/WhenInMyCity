@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useTransition } from 'react'
+import Link from 'next/link'
 import type { VenuePayoutSummary, PayableBooking, PayoutRequest } from '@/app/actions/venue-payouts'
 import { requestVenuePayout } from '@/app/actions/venue-payouts'
 
@@ -109,6 +110,13 @@ export default function VenuePayoutsClient({
 
       {/* Page header */}
       <div style={{ marginBottom: 28 }}>
+        <Link
+          href="/business/venue/dashboard?panel=business"
+          style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontFamily: "'DM Sans', sans-serif", fontSize: 13, fontWeight: 600, color: A.textSub, textDecoration: 'none', marginBottom: 10 }}
+        >
+          <span className="material-symbols-outlined" style={{ fontSize: 16 }}>arrow_back</span>
+          Business
+        </Link>
         <h1 style={{ fontFamily: "'DM Sans', sans-serif", fontWeight: 700, fontSize: 24, color: A.text, margin: '0 0 6px' }}>
           Payouts
         </h1>

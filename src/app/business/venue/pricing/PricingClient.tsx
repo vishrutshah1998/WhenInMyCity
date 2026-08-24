@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
+import Link from 'next/link'
 import { AnimatePresence, motion } from 'framer-motion'
 import type { VenueProfile } from '@/types/database'
 import type { PricingRule } from '@/components/venue/editor/types'
@@ -141,13 +142,22 @@ export default function PricingClient({ venue }: Props) {
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         padding: '0 28px', gap: 16,
       }}>
-        <h1 style={{
-          fontFamily: 'var(--font-inter), sans-serif',
-          fontWeight: 700, fontSize: 15,
-          color: 'var(--venue-text-primary)', margin: 0,
-        }}>
-          Pricing
-        </h1>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <Link
+            href="/business/venue/dashboard?panel=venue"
+            aria-label="Back to Venue"
+            style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 28, height: 28, borderRadius: 8, color: 'var(--venue-text-primary)', flexShrink: 0 }}
+          >
+            <span className="material-symbols-outlined" style={{ fontSize: 18 }}>arrow_back</span>
+          </Link>
+          <h1 style={{
+            fontFamily: 'var(--font-inter), sans-serif',
+            fontWeight: 700, fontSize: 15,
+            color: 'var(--venue-text-primary)', margin: 0,
+          }}>
+            Pricing
+          </h1>
+        </div>
 
         {/* Save indicator */}
         <AnimatePresence mode="wait">

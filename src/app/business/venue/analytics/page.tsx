@@ -39,19 +39,28 @@ export default async function VenueAnalyticsPage() {
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         padding: '0 28px 20px',
       }}>
-        <div>
-          <div style={{
-            fontSize: 20, fontWeight: 700,
-            color: 'var(--venue-text-primary)',
-            fontFamily: 'var(--font-inter), system-ui, sans-serif',
-          }}>
-            Analytics
-          </div>
-          <div style={{
-            fontSize: 11, color: 'var(--venue-text-muted)',
-            fontFamily: 'var(--font-jetbrains-mono), monospace', marginTop: 2,
-          }}>
-            {venue.name}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <Link
+            href="/business/venue/dashboard?panel=business"
+            aria-label="Back to Business"
+            style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 32, height: 32, borderRadius: 8, color: 'var(--venue-text-primary)', flexShrink: 0 }}
+          >
+            <span className="material-symbols-outlined" style={{ fontSize: 20 }}>arrow_back</span>
+          </Link>
+          <div>
+            <div style={{
+              fontSize: 20, fontWeight: 700,
+              color: 'var(--venue-text-primary)',
+              fontFamily: 'var(--font-inter), system-ui, sans-serif',
+            }}>
+              Analytics
+            </div>
+            <div style={{
+              fontSize: 11, color: 'var(--venue-text-muted)',
+              fontFamily: 'var(--font-jetbrains-mono), monospace', marginTop: 2,
+            }}>
+              {venue.name}
+            </div>
           </div>
         </div>
         <Link

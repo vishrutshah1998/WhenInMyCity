@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { formatDistanceToNow } from 'date-fns'
 import type { Notification } from '@/types/database'
 import { NOTIFICATION_META } from '@/lib/notifications/types'
@@ -71,24 +72,33 @@ export function VenueNotificationsClient({ notifications: initial, unreadCount: 
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         marginBottom: 20,
       }}>
-        <div>
-          <h1 style={{
-            fontFamily: 'var(--font-inter), system-ui, sans-serif',
-            fontSize: 22, fontWeight: 800,
-            color: 'var(--venue-text-primary)',
-            margin: '0 0 4px',
-          }}>
-            Notifications
-          </h1>
-          {unreadCount > 0 && (
-            <p style={{
-              fontFamily: 'var(--font-jetbrains-mono)',
-              fontSize: 11, color: TEAL,
-              margin: 0, letterSpacing: '0.05em',
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <Link
+            href="/business/venue/dashboard?panel=business"
+            aria-label="Back to Business"
+            style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 32, height: 32, borderRadius: 8, color: 'var(--venue-text-primary)', flexShrink: 0 }}
+          >
+            <span className="material-symbols-outlined" style={{ fontSize: 20 }}>arrow_back</span>
+          </Link>
+          <div>
+            <h1 style={{
+              fontFamily: 'var(--font-inter), system-ui, sans-serif',
+              fontSize: 22, fontWeight: 800,
+              color: 'var(--venue-text-primary)',
+              margin: '0 0 4px',
             }}>
-              {unreadCount} unread
-            </p>
-          )}
+              Notifications
+            </h1>
+            {unreadCount > 0 && (
+              <p style={{
+                fontFamily: 'var(--font-jetbrains-mono)',
+                fontSize: 11, color: TEAL,
+                margin: 0, letterSpacing: '0.05em',
+              }}>
+                {unreadCount} unread
+              </p>
+            )}
+          </div>
         </div>
         {unreadCount > 0 && (
           <button

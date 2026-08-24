@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useCallback, useMemo, useEffect } from 'react'
+import Link from 'next/link'
 import { Calendar, momentLocalizer, Views } from 'react-big-calendar'
 import withDragAndDrop from 'react-big-calendar/lib/addons/dragAndDrop'
 import moment from 'moment'
@@ -465,6 +466,25 @@ export default function VenueCalendarClient({ venueName, venueId, googleCalendar
       color: 'var(--venue-text-primary)',
       fontFamily: 'var(--font-inter), system-ui, sans-serif',
     }}>
+      {/* Back to Business */}
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: 8,
+        padding: '10px 16px',
+        borderBottom: '1px solid var(--venue-border-subtle)',
+        flexShrink: 0,
+      }}>
+        <Link
+          href="/business/venue/dashboard?panel=business"
+          aria-label="Back to Business"
+          style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 28, height: 28, borderRadius: 8, color: 'var(--venue-text-primary)', flexShrink: 0 }}
+        >
+          <span className="material-symbols-outlined" style={{ fontSize: 18 }}>arrow_back</span>
+        </Link>
+        <span style={{ fontFamily: 'var(--font-inter), system-ui, sans-serif', fontWeight: 700, fontSize: 14, color: 'var(--venue-text-primary)' }}>
+          Calendar
+        </span>
+      </div>
+
       {/* Calendar */}
       <div style={{ flex: 1, minHeight: 0, position: 'relative' }}>
         <DnDCalendar
