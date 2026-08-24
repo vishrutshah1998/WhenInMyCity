@@ -3,7 +3,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { motion, useMotionValue, useTransform, useSpring, animate } from 'framer-motion'
 import type { MotionValue } from 'framer-motion'
-import { buildHorizTearClip } from '@/lib/ticketTear'
+import { buildPerfTearClip, buildFlyAwayKeyframes, buildOvershootAnim } from '@/lib/ticketTear'
+import type { FlyAwayKeyframes } from '@/lib/ticketTear'
 import { MobileHeader } from './MobileHeader'
 import { MobileTicketChrome, HEADER_H, stubHeight } from './MobileTicketChrome'
 import { EntryPassFace } from './EntryPassFace'
@@ -20,7 +21,7 @@ function MobileTicketSection({ index, tearP }: { index: number; tearP: MotionVal
   const meta = TICKET_META[index]
   const stubH = stubHeight(meta)
   return (
-    <div style={{ position: 'relative', width: '100%', height: '100%', background: meta.bg, overflow: 'hidden' }}>
+    <div style={{ position: 'relative', width: '100%', height: '100%', background: meta.bg, overflow: 'hidden', borderRadius: 16 }}>
       <MobileTicketChrome meta={meta} tearP={tearP} />
       <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: stubH, paddingTop: HEADER_H, overflow: 'hidden' }}>
         {index === 0 && <EntryPassFace />}
@@ -82,11 +83,15 @@ export function MobileLandingStack() {
   const dirRef = useRef<1 | -1>(1)
   const touchYRef = useRef(0)
   const stageRef = useRef<HTMLDivElement>(null)
-  const perfYRef = useRef(95)
+  // Stage's real rendered size (px) + perf-line y (px) — updated below
+  const dimsRef = useRef({ w: 0, h: 0, perfY: 0 })
+  const flyAwayRef = useRef<FlyAwayKeyframes>(buildFlyAwayKeyframes())
 
   const tearP = useMotionValue(0)
   const zeroP = useMotionValue(0)
-  const currentClipPath = useTransform(tearP, (v: number) => buildHorizTearClip(v, perfYRef.current))
+  const currentClipPath = useTransform(tearP, (v: number) =>
+    buildPerfTearClip(v, dimsRef.current.w, dimsRef.current.h, dimsRef.current.perfY, 18, 3)
+  )
   const driftX = useTransform(tearP, [0, 1], [0, 8])
   const driftY = useTransform(tearP, [0, 1], [0, -6])
 
@@ -113,12 +118,15 @@ export function MobileLandingStack() {
   // mismatch (previewP itself, which gates the commit, is unaffected).
   const previewP = useMotionValue(0)
   const previewPSpring = useSpring(previewP, { stiffness: 300, damping: 30, mass: 0.9 })
-  const previewY = useTransform(previewPSpring, [0, 1], ['-116%', '0%'])
-  const previewX = useTransform(previewPSpring, [0, 1], ['6%', '0%'])
-  const previewRotateX = useTransform(previewPSpring, [0, 1], [20, 0])
-  const previewRotate = useTransform(previewPSpring, [0, 1], [-2, 0])
-  const previewScale = useTransform(previewPSpring, [0, 1], [0.92, 1])
-  const previewOpacity = useTransform(previewPSpring, [0, 1], [0.55, 1])
+  // clamp:false lets the commit-time overshoot (previewP animated past 1, see doTear)
+  // actually extrapolate past the settled pose instead of being clipped back to it.
+  const clampOff = { clamp: false }
+  const previewY = useTransform(previewPSpring, [0, 1], ['-116%', '0%'], clampOff)
+  const previewX = useTransform(previewPSpring, [0, 1], ['6%', '0%'], clampOff)
+  const previewRotateX = useTransform(previewPSpring, [0, 1], [20, 0], clampOff)
+  const previewRotate = useTransform(previewPSpring, [0, 1], [-2, 0], clampOff)
+  const previewScale = useTransform(previewPSpring, [0, 1], [0.92, 1], clampOff)
+  const previewOpacity = useTransform(previewPSpring, [0, 1], [0.55, 1], { clamp: true })
 
   // Perf-line y-position as % of stage height — depends on the active card's stub height
   // (Card 4's tall footer stub), so recompute on active change too, not just resize.
@@ -127,8 +135,8 @@ export function MobileLandingStack() {
     if (!el) return
     const stubH = stubHeight(TICKET_META[active])
     const update = () => {
-      const h = el.getBoundingClientRect().height
-      if (h > 0) perfYRef.current = ((h - stubH) / h) * 100
+      const { width: w, height: h } = el.getBoundingClientRect()
+      if (h > 0 && w > 0) dimsRef.current = { w, h, perfY: h - stubH }
     }
     update()
     const ro = new ResizeObserver(update)
@@ -154,18 +162,21 @@ export function MobileLandingStack() {
     if (dirRef.current > 0) {
       setPreviewTarget(target)
       const cv = tearP.get()
+      flyAwayRef.current = buildFlyAwayKeyframes()
       setTearState('flying')
       if (cv < 0.98) animate(tearP, 1, { duration: Math.max(0.06, (1 - cv) * 0.16), ease: [0.5, 0, 1, 1] })
       await new Promise<void>((r) => setTimeout(r, 420))
     } else {
       // previewP itself (the raw, ungated value) already tracks scroll/touch progress
-      // 1:1 (see onDelta) — if the gesture carried it to 1 already, this is a no-op.
-      // Only actually does something for non-scroll triggers (dot-rail click, arrow
-      // key) that never ran it through onDelta — setting it here lets the spring
-      // (previewPSpring, driving the visuals) animate the catch-up naturally, same as
-      // it does for a fast scroll gesture.
+      // 1:1 (see onDelta). On commit, overshoot it past 1 then settle at 1 — every
+      // derived transform (previewY/X/rotateX/rotate/scale, see clampOff above)
+      // overshoots proportionally for free, and starting from previewP's CURRENT value
+      // handles both a live drag (already near 1) and a non-scroll trigger like
+      // dot-rail click / arrow key (still at 0) in one motion. previewPSpring still
+      // smooths the result, same as it already does for a fast scroll gesture.
       setPreviewTarget(target)
-      if (previewP.get() < 0.98) previewP.set(1)
+      const { duration, times, ease, overshoot } = buildOvershootAnim()
+      animate(previewP, [previewP.get(), overshoot, 1], { duration, times, ease })
     }
 
     tearP.set(0)
@@ -178,10 +189,9 @@ export function MobileLandingStack() {
     if (dirRef.current < 0) {
       // The Current layer now already shows this exact content at rest, so keeping
       // previewTarget mounted a bit longer is invisible in terms of WHAT's on screen —
-      // it just gives previewPSpring time to actually finish its settle motion (see
-      // its declaration above) instead of being cut off mid-flight by an instant
-      // unmount. ~400ms comfortably covers the spring's settle for a full 0->1 swing.
-      await new Promise<void>((r) => setTimeout(r, 400))
+      // it just gives the commit overshoot (started above) plus the spring's own lag
+      // time to actually finish before being cut off mid-flight by an instant unmount.
+      await new Promise<void>((r) => setTimeout(r, 520))
       previewP.set(0)
     }
     setPreviewTarget(null)
@@ -318,9 +328,11 @@ export function MobileLandingStack() {
   }, [active, doTear, tearP, previewP])
 
   // Walk up from the touch/wheel target to find a scrollable ancestor still inside the
-  // stage — lets card body text (EntryPassFace/CreatorPassFace/RoleSelectFace, all
-  // overflowY: 'auto') consume its own drag instead of that gesture bubbling up and
-  // accumulating toward a tear. Only once that inner scroll hits its edge should the
+  // stage — a safety net so that IF any nested content is ever internally scrollable
+  // (none of EntryPassFace/CreatorPassFace/RoleSelectFace are anymore — their content is
+  // scaled to fit via ScaleToFit instead — but e.g. PersonaShowcasePhone's inner persona
+  // previews still are), it consumes its own drag instead of that gesture bubbling up
+  // and accumulating toward a tear. Only once that inner scroll hits its edge should the
   // rest of the drag count toward swiping to the next/prev card.
   function findScrollableAncestor(target: EventTarget | null): HTMLElement | null {
     let el = target instanceof HTMLElement ? target : null
@@ -440,10 +452,10 @@ export function MobileLandingStack() {
             }}
             animate={
               tearState === 'flying'
-                ? { y: '-116%', x: '6%', rotateX: 20, rotate: -2, scale: 0.92, opacity: 0.5 }
+                ? flyAwayRef.current.keyframes
                 : { y: 0, x: 0, rotateX: 0, rotate: 0, scale: 1, opacity: 1 }
             }
-            transition={tearState === 'flying' ? { duration: 0.42, ease: [0.22, 1, 0.36, 1] } : { duration: 0 }}
+            transition={tearState === 'flying' ? flyAwayRef.current.transition : { duration: 0 }}
           >
             <MobileTicketSection index={active} tearP={tearP} />
           </motion.div>

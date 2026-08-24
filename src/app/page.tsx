@@ -9,7 +9,8 @@ import { WimcWordmark } from '@/components/WimcWordmark'
 import { UsernameClaimInput } from '@/components/landing/UsernameClaimInput'
 import { useIsMobile } from '@/hooks/useIsMobile'
 import { MobileLandingStack } from '@/components/landing/mobile/MobileLandingStack'
-import { E, buildHorizTearClip } from '@/lib/ticketTear'
+import { E, buildPerfTearClip, buildFlyAwayKeyframes, buildOvershootAnim } from '@/lib/ticketTear'
+import type { FlyAwayKeyframes } from '@/lib/ticketTear'
 
 const NAV_H = 100
 const STUB_H = 34  // bottom info strip height (fixed px)
@@ -696,16 +697,29 @@ export default function LandingPage() {
   const tearIdleTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const tearDirRef    = useRef<1 | -1>(1)
   const tearP         = useMotionValue(0)
+  const backTearP      = useMotionValue(0)
   const zeroP         = useMotionValue(0)
-  // Perf-line y-position as % of ticket height — updated by ResizeObserver below
-  const perfYRef      = useRef(95)
+  // Ticket element's real rendered size (px) + perf-line y (px) — updated by ResizeObserver below
+  const dimsRef       = useRef({ w: 0, h: 0, perfY: 0 })
+  const flyAwayRef    = useRef<FlyAwayKeyframes>(buildFlyAwayKeyframes())
   // Clips away the torn left-portion of the current ticket's stub
   const currentClipPath = useTransform(tearP, (v: number) =>
-    buildHorizTearClip(v, perfYRef.current)
+    buildPerfTearClip(v, dimsRef.current.w, dimsRef.current.h, dimsRef.current.perfY)
   )
   // Ticket body drifts upper-right as tear propagates — simulates paper being freed from the stub
   const driftX = useTransform(tearP, [0, 1], [0, 12])
   const driftY = useTransform(tearP, [0, 1], [0, -8])
+  // Backward tension: previous ticket peeks in proportionally to how far the gesture has
+  // pulled back, from hidden-above to fully-settled (mirrors forward's proportional peel).
+  // clamp:false lets the commit's overshoot (backTearP animated past 1, see doTear) actually
+  // extrapolate past the settled pose instead of being clipped back to it.
+  const clampOff = { clamp: false }
+  const backPreviewY       = useTransform(backTearP, [0, 1], ['-116%', '0%'], clampOff)
+  const backPreviewX       = useTransform(backTearP, [0, 1], ['6%', '0%'], clampOff)
+  const backPreviewRotateX = useTransform(backTearP, [0, 1], [22, 0], clampOff)
+  const backPreviewRotate  = useTransform(backTearP, [0, 1], [-2, 0], clampOff)
+  const backPreviewScale   = useTransform(backTearP, [0, 1], [0.92, 1], clampOff)
+  const backPreviewOpacity = useTransform(backTearP, [0, 1], [0.58, 1], { clamp: true })
 
   // Parallax for hero only
   const mouseX = useMotionValue(0)
@@ -730,8 +744,8 @@ export default function LandingPage() {
     const el = ticketRef.current
     if (!el) return
     const update = () => {
-      const h = el.getBoundingClientRect().height
-      if (h > 0) perfYRef.current = ((h - STUB_H) / h) * 100
+      const { width: w, height: h } = el.getBoundingClientRect()
+      if (h > 0 && w > 0) dimsRef.current = { w, h, perfY: h - STUB_H }
     }
     update()
     const ro = new ResizeObserver(update)
@@ -753,19 +767,27 @@ export default function LandingPage() {
       setPreviewTarget(target)
       const cv = tearP.get()
       // Lift-off starts immediately — stub tear races to completion in the background
+      flyAwayRef.current = buildFlyAwayKeyframes()
       setTearState('flying')
       if (cv < 0.98) {
         animate(tearP, 1, { duration: Math.max(0.08, (1 - cv) * 0.18), ease: [0.5, 0, 1, 1] })
       }
       await new Promise<void>((r) => setTimeout(r, 560))
     } else {
-      // Backward: preview flies in on top (zIndex 3); current ticket stays put underneath
+      // Backward: preview flies in on top (zIndex 3); current ticket stays put underneath.
+      // Overshoot backTearP itself past 1 then settle — every derived transform (y/x/
+      // rotateX/rotate/scale) overshoots proportionally for free (see clampOff above).
+      // Starting from backTearP's CURRENT value handles both a live drag (already near 1)
+      // and a discrete trigger like dot-click/arrow-key (still at 0) in one motion.
       setPreviewTarget(target)
-      await new Promise<void>((r) => setTimeout(r, 520))
+      const { duration, times, ease, overshoot } = buildOvershootAnim()
+      animate(backTearP, [backTearP.get(), overshoot, 1], { duration, times, ease })
+      await new Promise<void>((r) => setTimeout(r, duration * 1000 + 40))
     }
 
     // Commit: synchronously reset tearP so new ticket mounts without clip
     tearP.set(0)
+    backTearP.set(0)
     tearAccRef.current = 0
     setActive(target)
     setPreviewTarget(null)
@@ -774,7 +796,7 @@ export default function LandingPage() {
     await new Promise<void>((r) => setTimeout(r, 480))
     setTearState('idle')
     isAnimRef.current = false
-  }, [active, tearP])
+  }, [active, tearP, backTearP])
 
   // Input handlers — inert on mobile; MobileLandingStack owns its own gesture engine.
   useEffect(() => {
@@ -800,12 +822,19 @@ export default function LandingPage() {
           setPreviewTarget(active + 1)
         }
         tearP.set(tearAccRef.current / THRESH)
+        backTearP.set(0)
       } else if (tearAccRef.current < 0 && active > 0) {
-        // Backward scroll (also handles mid-tear reversal crossing 0)
+        // Backward scroll: drive backTearP to proportionally peek in the previous ticket
+        if (prevAcc >= 0) {
+          tearDirRef.current = -1
+          setPreviewTarget(active - 1)
+        }
         tearP.set(0)
+        backTearP.set(-tearAccRef.current / THRESH)
       } else {
         // Out-of-bounds or at rest — reset completely
         tearP.set(0)
+        backTearP.set(0)
         setPreviewTarget(null)
       }
 
@@ -828,6 +857,7 @@ export default function LandingPage() {
         tearAccRef.current = 0
         setPreviewTarget(null)
         animate(tearP, 0, { duration: 0.5, ease: [0.36, 1, 0.4, 1] })
+        animate(backTearP, 0, { duration: 0.5, ease: [0.36, 1, 0.4, 1] })
       }, 380)
     }
     window.addEventListener('wheel', onWheel, { passive: true })
@@ -835,7 +865,7 @@ export default function LandingPage() {
       window.removeEventListener('wheel', onWheel)
       if (tearIdleTimer.current) clearTimeout(tearIdleTimer.current)
     }
-  }, [active, doTear, tearP, isMobile])
+  }, [active, doTear, tearP, backTearP, isMobile])
 
   useEffect(() => {
     if (isMobile) return
@@ -912,12 +942,16 @@ export default function LandingPage() {
 
           {/* ── Preview ticket ── */}
           {previewTarget !== null && (tearDirRef.current < 0 ? (
-            // Backward: fly in on top so the current ticket stays visible underneath
+            // Backward: fly in on top so the current ticket stays visible underneath.
+            // Both the live tension-phase drag AND the commit-time overshoot are driven
+            // entirely by backTearP (see doTear) — no separate animate/transition needed.
             <motion.div
-              initial={{ y: '-116%', x: '6%', rotateX: 22, rotate: -2, scale: 0.92, opacity: 0.58 }}
-              animate={{ y: 0, x: 0, rotateX: 0, rotate: 0, scale: 1, opacity: 1 }}
-              transition={{ duration: 0.50, ease: [0.44, 0, 0.82, 1] }}
-              style={{ position: 'absolute', inset: 0, zIndex: 3, transformPerspective: 1000 }}
+              initial={false}
+              style={{
+                position: 'absolute', inset: 0, zIndex: 3, transformPerspective: 1000,
+                y: backPreviewY, x: backPreviewX, rotateX: backPreviewRotateX,
+                rotate: backPreviewRotate, scale: backPreviewScale, opacity: backPreviewOpacity,
+              }}
             >
               <TicketSection index={previewTarget} tearP={zeroP} revealDelay={9999} fast={false} {...sharedProps} />
             </motion.div>
@@ -935,10 +969,10 @@ export default function LandingPage() {
             style={{ position: 'absolute', inset: 0, zIndex: 2, clipPath: currentClipPath, transformPerspective: 1000, x: driftX, y: driftY }}
             animate={
               tearState === 'flying'
-                ? { y: '-116%', x: '6%', rotateX: 22, rotate: -2, scale: 0.92, opacity: 0.58 }
+                ? flyAwayRef.current.keyframes
                 : { y: 0, x: 0, rotateX: 0, rotate: 0, scale: 1, opacity: 1 }
             }
-            transition={tearState === 'flying' ? { duration: 0.50, ease: [0.18, 0, 0.56, 1] } : { duration: 0 }}
+            transition={tearState === 'flying' ? flyAwayRef.current.transition : { duration: 0 }}
           >
             <TicketSection
               index={active}

@@ -35,7 +35,7 @@ export function HumanTearDivider({ accentColor = '#FF6B35', bg = '#FBF3E7' }: { 
         preserveAspectRatio="none"
       >
         <path d={TOP_FILL} fill={bg} />
-        <path d={EDGE} fill="none" stroke={accentColor} strokeOpacity={0.45} strokeWidth={1.25} />
+        <path d={EDGE} fill="none" stroke={accentColor} strokeOpacity={0.5} strokeWidth={1.5} strokeDasharray="1 5" strokeLinecap="round" />
       </motion.svg>
       <motion.svg
         style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', y: botY }}
@@ -43,12 +43,8 @@ export function HumanTearDivider({ accentColor = '#FF6B35', bg = '#FBF3E7' }: { 
         preserveAspectRatio="none"
       >
         <path d={BOTTOM_FILL} fill={bg} />
-        <path d={EDGE} fill="none" stroke={accentColor} strokeOpacity={0.3} strokeWidth={1.25} />
+        <path d={EDGE} fill="none" stroke={accentColor} strokeOpacity={0.35} strokeWidth={1.5} strokeDasharray="1 5" strokeLinecap="round" />
       </motion.svg>
-
-      <div className="font-vib-stamp" style={{ position: 'absolute', top: '50%', right: 20, transform: 'translateY(-50%)', fontSize: 9, fontWeight: 400, letterSpacing: '0.22em', textTransform: 'uppercase', color: `${accentColor}99`, zIndex: 20, pointerEvents: 'none' }}>
-        TEAR HERE
-      </div>
     </div>
   )
 }
