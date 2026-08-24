@@ -48,7 +48,7 @@ export default function CommunityClient({ supported }: Props) {
       {/* Header */}
       <div>
         <h1 style={{ fontFamily: 'var(--font-syne)', fontWeight: 800, fontSize: 26, margin: 0 }}>
-          Your Circles
+          Common Circles
         </h1>
         <p style={{ color: 'var(--wimc-text-secondary)', fontSize: 14, marginTop: 6 }}>
           The creators you&apos;ve supported most — your personal 1,000 true fans, in reverse.

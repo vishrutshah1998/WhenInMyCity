@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Drawer } from 'vaul'
 import { createEvent, publishEvent } from '@/app/actions/events'
+import { linkEventToCommunity } from '@/app/actions/communities'
 import { uploadEventCover } from '@/app/actions/upload'
 import { WimcWordmark } from '@/components/WimcWordmark'
 import { WheelColumn, WHEEL_ITEM_H, WHEEL_PAD, WHEEL_TIME_SLOTS, WHEEL_AMPM_SLOTS, to12Hour, to24Hour } from '@/components/shared/TimeOverlayMobile'
@@ -415,7 +416,7 @@ function Toggle({ on, onToggle, label, badge }: { on: boolean; onToggle: () => v
 
 // ── Main form ─────────────────────────────────────────────────────────────────
 
-export default function CreateEventForm({ profile }: { profile: ProfileData | null }) {
+export default function CreateEventForm({ profile, communityId }: { profile: ProfileData | null; communityId?: string }) {
   const router = useRouter()
   const isMobile = useIsMobile()
   const [isPending, startTransition] = useTransition()
@@ -596,6 +597,7 @@ export default function CreateEventForm({ profile }: { profile: ProfileData | nu
       if (cr.error || !cr.event) { setPublishError(cr.error ?? 'Could not create event.'); return }
       const pr = await publishEvent(cr.event.id)
       if (pr.error) { setPublishError(pr.error); return }
+      if (communityId) await linkEventToCommunity(cr.event.id, communityId)
       router.push(`/dashboard/events/${cr.event.id}/published`)
     })
   }
@@ -624,6 +626,7 @@ export default function CreateEventForm({ profile }: { profile: ProfileData | nu
         cover_image_url: coverUrl,
       })
       if (cr.error || !cr.event) { setPublishError(cr.error ?? 'Could not save draft.'); return }
+      if (communityId) await linkEventToCommunity(cr.event.id, communityId)
       router.push(`/dashboard/events/${cr.event.id}/manage`)
     })
   }

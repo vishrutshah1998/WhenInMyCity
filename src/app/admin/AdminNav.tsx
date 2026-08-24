@@ -8,6 +8,7 @@ const NAV = [
   { href: '/admin/venue-payouts',  label: 'Venue Payouts', icon: 'storefront' },
   { href: '/admin/events',        label: 'Events',        icon: 'event' },
   { href: '/admin/venues',         label: 'Venues',         icon: 'apartment' },
+  { href: '/admin/communities',    label: 'Communities',    icon: 'groups' },
 ]
 
 export default function AdminNav() {
