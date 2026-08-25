@@ -823,10 +823,24 @@ export default function DashboardPage() {
           desktop block above — matches the lg convention the top bar already uses. */}
       <div className="lg:hidden">
         {/* Suspense-wrapped since CreatorCarouselWithPanel calls useSearchParams()
-            (reads `?panel=` from a persistent-nav tap on a sub-route) — the
-            fallback renders the same carousel defaulting to Home, matching
-            behavior before this param existed. */}
-        <Suspense fallback={<CreatorCarousel {...creatorCarouselProps} defaultIndex={1} />}>
+            (reads `?panel=` from a persistent-nav tap on a sub-route). The
+            fallback is a lightweight skeleton, NOT the real carousel — an
+            earlier version reused creatorCarouselProps (the same slot
+            elements, including CreatorCommunitySlot) for both the fallback
+            and the real children. If that fallback ever painted, it mounted
+            CreatorCommunitySlot's data-fetching effect, which then got torn
+            down and restarted the moment Suspense swapped to the real
+            children — discarding the in-flight fetch before it could commit
+            `loading=false`, so the Community tab hung on "Loading…"
+            indefinitely. A skeleton fallback never mounts any data-fetching
+            slot, so there's nothing to discard. */}
+        <Suspense fallback={
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh', background: '#F2EDE3' }}>
+            <p style={{ color: '#1A2744', fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.25em', fontFamily: 'var(--font-jetbrains-mono)' }}>
+              LOADING BOARD...
+            </p>
+          </div>
+        }>
           <CreatorCarouselWithPanel {...creatorCarouselProps} />
         </Suspense>
       </div>

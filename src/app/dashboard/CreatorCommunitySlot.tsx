@@ -70,18 +70,27 @@ export default function CreatorCommunitySlot({ currentUserId, profile, accentCol
   useEffect(() => {
     let cancelled = false
     ;(async () => {
-      const [d, c, s, comm] = await Promise.all([
-        hubAllowed ? getDiscoverCreators(20) : Promise.resolve([]),
-        hubAllowed ? getConnections() : Promise.resolve([]),
-        getSupportedCreators(),
-        getCommunitiesForUser(currentUserId),
-      ])
-      if (cancelled) return
-      setDiscover(d)
-      setConnections(c)
-      setSupported(s)
-      setCommunities(comm)
-      setLoading(false)
+      try {
+        const [d, c, s, comm] = await Promise.all([
+          hubAllowed ? getDiscoverCreators(20) : Promise.resolve([]),
+          hubAllowed ? getConnections() : Promise.resolve([]),
+          getSupportedCreators(),
+          getCommunitiesForUser(currentUserId),
+        ])
+        if (cancelled) return
+        setDiscover(d)
+        setConnections(c)
+        setSupported(s)
+        setCommunities(comm)
+      } catch (err) {
+        // Without this, a rejection from any single call (e.g. a thrown
+        // server-action error) left Promise.all rejected and setLoading(false)
+        // unreached below — the tab hung on "Loading…" forever with no
+        // console signal beyond an unhandled rejection.
+        console.error('[CreatorCommunitySlot] failed to load', err)
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
     })()
     return () => { cancelled = true }
   }, [currentUserId, hubAllowed])
