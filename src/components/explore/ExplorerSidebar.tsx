@@ -31,6 +31,10 @@ interface NavItem {
 
 const DISCOVER_NAV: NavItem[] = [
   { href: '/explore/dashboard/browse',        icon: 'explore',             label: 'Explore',       exact: false },
+  // Circles (getCommunitiesForUser/requestCommunity, '@/app/actions/communities')
+  // has no persona/role gate — requireProfile() only — so any Explorer can
+  // browse/join/start one, same as a Creator.
+  { href: '/circles',                         icon: 'groups',              label: 'Circles',       exact: false },
 ]
 
 const DISCOVER_NAV_AFTER_SAVED: NavItem[] = [

@@ -44,6 +44,12 @@ const SPACES_NAV: NavItem[] = [
   { href: '/dashboard/venues', icon: 'apartment',  label: 'Venues' },
 ]
 
+// Circles (getCommunitiesForUser/requestCommunity, '@/app/actions/communities')
+// is deliberately not tier-gated anywhere else in the system (see
+// CreatorCommunitySlot.tsx), so unlike CORE_NAV's Community group below,
+// this link renders unconditionally.
+const CIRCLES_ITEM: NavItem = { href: '/circles', icon: 'groups', label: 'Circles' }
+
 const EXPANDED_W = 220
 const COLLAPSED_W = 60
 
@@ -440,6 +446,7 @@ export default function Sidebar({
         ))}
 
         {!c && <SectionLabel>Community</SectionLabel>}
+        <NavLink item={CIRCLES_ITEM} active={isActive(CIRCLES_ITEM)} collapsed={c} />
         <TabbedNavGroup
           icon="diversity_3"
           label="Community"
@@ -448,7 +455,7 @@ export default function Sidebar({
           theme={NAV_GROUP_THEME}
           tabs={[
             { label: 'Creator Hub', href: '/dashboard/hub', badge: (unreadHubMessages + pendingHubRequests) > 0 ? unreadHubMessages + pendingHubRequests : undefined },
-            { label: 'My Circles', href: '/dashboard/community' },
+            { label: 'Common Circles', href: '/dashboard/community' },
           ]}
         />
         <TabbedNavGroup
