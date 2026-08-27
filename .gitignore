@@ -19,6 +19,12 @@ build/
 # Netlify
 .netlify/
 
+# Supabase CLI local tooling state — drifts on every `supabase` CLI invocation,
+# not application source. (Other supabase/.temp/* files stay tracked — they
+# hold project-link config other clones need.)
+supabase/.temp/cli-latest
+supabase/.branches/
+
 # Debug logs
 npm-debug.log*
 yarn-debug.log*
