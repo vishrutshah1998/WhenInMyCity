@@ -321,7 +321,7 @@ async function handlePaymentCaptured(
   const priceRupees = event.ticket_price ? `₹${Math.round(event.ticket_price / 100)}` : 'Free'
 
   for (const rsvp of updated) {
-    const qrUrl = `${appUrl}/api/qr/${rsvp.qr_code_token}`
+    const qrUrl = `${appUrl}/ticket/${rsvp.qr_code_token}`
 
     const whatsappMsg = [
       `✅ Booking confirmed! You're going to "${event.title}"`,

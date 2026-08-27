@@ -40,6 +40,8 @@ import { bumpUserMetric } from '@/lib/metrics'
 import { updateAttendanceStreak } from '@/lib/streak'
 import { redeemReferralCode } from '@/app/actions/referral'
 import { createNotification } from '@/app/actions/notifications'
+import { isGuestPhoneVerified } from '@/app/actions/guest-otp'
+import { sendWhatsAppMessage } from '@/lib/whatsapp'
 import type { UserTier } from '@/types/database'
 
 // ---------------------------------------------------------------------------
@@ -171,12 +173,24 @@ export async function initiateRSVP(params: {
   const { data: { user } } = await supabase.auth.getUser()
   const attendeeUserId = user?.id ?? null
 
+  // Guests (no WIMC session) must have OTP-verified this phone number via
+  // sendRsvpGuestOtp/verifyRsvpGuestOtp within the last 15 minutes — a
+  // lightweight anti-abuse check since guest bookings otherwise carry no
+  // identity verification at all. Authenticated users skip this: they're
+  // already OTP-verified through Supabase sign-in.
+  if (!attendeeUserId) {
+    const verified = await isGuestPhoneVerified(attendeePhone)
+    if (!verified) {
+      return { ...EMPTY, error: 'Please verify your phone number before booking.' }
+    }
+  }
+
   const admin = createAdminClient()
 
   // ── 3. Fetch and validate the event ─────────────────────────────────────
   const { data: event, error: eventError } = await admin
     .from('events')
-    .select('id, status, ticket_price, capacity, title, starts_at, creator_id, venue_id, early_access_at, ticket_tiers')
+    .select('id, status, ticket_price, capacity, title, starts_at, creator_id, venue_id, early_access_at, ticket_tiers, venue_name, venue_address, slug')
     .eq('id', eventId)
     .maybeSingle()
 
@@ -322,6 +336,26 @@ export async function initiateRSVP(params: {
     if (appliedReferralCode) {
       redeemReferralCode(appliedReferralCode, inserted[0].id).catch((err) => {
         console.error('[initiateRSVP] referral code redemption failed', err)
+      })
+    }
+
+    // Free RSVPs have no payment webhook to send a confirmation from, so send
+    // it here — the only record a guest (no account) gets of their booking
+    // beyond what's shown in-app before they close the tab.
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://www.wheninmycity.com'
+    const eventDate = new Date(event.starts_at).toLocaleDateString('en-IN', {
+      weekday: 'long', day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit',
+    })
+    for (const row of inserted) {
+      const ticketUrl = `${appUrl}/ticket/${row.qr_code_token}`
+      const whatsappMsg = [
+        `✅ Booking confirmed! You're going to "${event.title}"`,
+        `📅 ${eventDate}`,
+        `📍 ${event.venue_name}${event.venue_address ? `, ${event.venue_address}` : ''}`,
+        `🎫 Show your QR at the door: ${ticketUrl}`,
+      ].join('\n')
+      sendWhatsAppMessage(attendeePhone, whatsappMsg).catch((err) => {
+        console.error('[initiateRSVP] free-RSVP WhatsApp send failed', { rsvpId: row.id, error: String(err) })
       })
     }
 
