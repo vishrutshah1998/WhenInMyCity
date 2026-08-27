@@ -434,8 +434,17 @@ export default function CheckInClient({ eventId, eventTitle, attendees: initial 
 
                   {/* Info */}
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 14, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {a.attendee_name}
+                    <div style={{ fontSize: 14, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.attendee_name}</span>
+                      {a.casual_intent === 'maybe' && (
+                        <span style={{
+                          fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em',
+                          padding: '1px 6px', borderRadius: 4, flexShrink: 0,
+                          background: 'rgba(245,158,11,0.15)', color: '#b45309',
+                        }}>
+                          Maybe
+                        </span>
+                      )}
                     </div>
                     <div style={{ fontSize: 12, color: 'var(--wimc-text-muted)', fontFamily: 'var(--font-jetbrains-mono)' }}>
                       {a.attendee_phone}

@@ -321,13 +321,16 @@ export async function getEventBySlug(slug: string): Promise<{
     return { event: null, rsvpCount: 0, spotsLeft: null }
   }
 
-  // Count confirmed attendees (payment_status = 'captured').
+  // Count confirmed attendees (payment_status = 'captured'). Excludes casual
+  // "Maybe"/"Can't go" responses (casual_intent) — a ticketed/paid booking
+  // has casual_intent = null and always counts.
   // We use admin here to bypass rsvps RLS (which restricts to creator or own).
   const { count: rsvpCount } = await admin
     .from('rsvps')
     .select('id', { count: 'exact', head: true })
     .eq('event_id', event.id)
     .eq('payment_status', 'captured')
+    .or('casual_intent.is.null,casual_intent.eq.going')
 
   const confirmed = rsvpCount ?? 0
 

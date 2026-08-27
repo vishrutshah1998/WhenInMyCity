@@ -9,6 +9,7 @@ import { addEventToPage } from '@/app/actions/blocks'
 interface PublishedViewProps {
   event: Event
   rsvpCount: number
+  maybeCount: number
 }
 
 function formatDate(iso: string): string {
@@ -26,7 +27,7 @@ function formatPrice(paise: number): string {
   return `₹${(paise / 100).toLocaleString('en-IN')}`
 }
 
-export default function PublishedView({ event, rsvpCount }: PublishedViewProps) {
+export default function PublishedView({ event, rsvpCount, maybeCount }: PublishedViewProps) {
   const router = useRouter()
   const eventUrl = `${typeof window !== 'undefined' ? window.location.origin : ''}/events/${event.slug}`
   const [addState, setAddState] = useState<'idle' | 'loading' | 'success'>('idle')
@@ -132,7 +133,10 @@ export default function PublishedView({ event, rsvpCount }: PublishedViewProps) 
                 <span className="font-headline font-bold text-xl text-primary">{formatPrice(event.ticket_price)}</span>
                 <div className="flex items-center gap-2 text-on-surface-variant text-sm">
                   <span className="material-symbols-outlined text-sm">people</span>
-                  <span>{rsvpCount} attendee{rsvpCount !== 1 ? 's' : ''}</span>
+                  <span>
+                    {rsvpCount} attendee{rsvpCount !== 1 ? 's' : ''}
+                    {maybeCount > 0 && <span className="text-on-surface-variant/70"> · {maybeCount} maybe</span>}
+                  </span>
                 </div>
               </div>
             </div>

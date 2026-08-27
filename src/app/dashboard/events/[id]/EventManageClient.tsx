@@ -59,6 +59,7 @@ function Section({ title, icon, children }: SectionProps) {
 interface Props {
   event: Event
   rsvpCount: number
+  maybeCount: number
   creatorTier: string
   referralUrl?: string | null
   referralStats?: { total: number; redeemed: number }
@@ -96,7 +97,7 @@ function CopyButton({ text, label = 'Copy', style }: {
   )
 }
 
-export default function EventManageClient({ event: initial, rsvpCount, creatorTier, referralUrl, referralStats }: Props) {
+export default function EventManageClient({ event: initial, rsvpCount, maybeCount, creatorTier, referralUrl, referralStats }: Props) {
   const router = useRouter()
   const [event, setEvent] = useState(initial)
 
@@ -301,6 +302,7 @@ export default function EventManageClient({ event: initial, rsvpCount, creatorTi
           <div style={{ fontSize: 13, color: 'var(--wimc-text-secondary)', display: 'flex', alignItems: 'center', gap: 6 }}>
             <span className="material-symbols-outlined" style={{ fontSize: 16 }}>confirmation_number</span>
             {rsvpCount} confirmed
+            {maybeCount > 0 && <span style={{ opacity: 0.7 }}>&nbsp;· {maybeCount} maybe</span>}
           </div>
           {isPublished && (
             <button

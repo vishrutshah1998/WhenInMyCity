@@ -14,10 +14,11 @@ export default async function EventManagePage({
   const { user } = await requireAuth()
   const admin = createAdminClient()
 
-  const [{ data: event }, { data: profile }, { count: rsvpCount }] = await Promise.all([
+  const [{ data: event }, { data: profile }, { count: rsvpCount }, { count: maybeCount }] = await Promise.all([
     admin.from('events').select('*').eq('id', id).eq('creator_id', user.id).maybeSingle(),
     admin.from('user_profiles').select('user_tier, username, city').eq('id', user.id).single(),
-    admin.from('rsvps').select('id', { count: 'exact', head: true }).eq('event_id', id).eq('payment_status', 'captured'),
+    admin.from('rsvps').select('id', { count: 'exact', head: true }).eq('event_id', id).eq('payment_status', 'captured').or('casual_intent.is.null,casual_intent.eq.going'),
+    admin.from('rsvps').select('id', { count: 'exact', head: true }).eq('event_id', id).eq('payment_status', 'captured').eq('casual_intent', 'maybe'),
   ])
 
   if (!event) notFound()
@@ -41,6 +42,7 @@ export default async function EventManagePage({
     <EventManageClient
       event={event}
       rsvpCount={rsvpCount ?? 0}
+      maybeCount={maybeCount ?? 0}
       creatorTier={(profile?.user_tier ?? 'wanderer') as string}
       referralUrl={referralUrl}
       referralStats={referralStats}

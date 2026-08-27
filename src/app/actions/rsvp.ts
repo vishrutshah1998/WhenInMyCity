@@ -797,11 +797,14 @@ export interface AttendeeRow {
   checked_in_at: string | null
   amount_paid:   number | null
   created_at:    string
+  /** 'going' | 'maybe' | null — null for ticketed/paid bookings, which have no casual intent. */
+  casual_intent: 'going' | 'maybe' | 'not_going' | null
 }
 
 /**
  * Returns all captured RSVPs for an event, ordered by check-in status then name.
- * Caller must be the event's creator.
+ * Excludes casual "Can't go" responses — they aren't attendees. Caller must
+ * be the event's creator.
  */
 export async function getEventAttendees(
   eventId: string,
@@ -821,9 +824,10 @@ export async function getEventAttendees(
 
   const { data, error } = await admin
     .from('rsvps')
-    .select('id, attendee_name, attendee_phone, checked_in, checked_in_at, amount_paid, created_at')
+    .select('id, attendee_name, attendee_phone, checked_in, checked_in_at, amount_paid, created_at, casual_intent')
     .eq('event_id', eventId)
     .eq('payment_status', 'captured')
+    .or('casual_intent.is.null,casual_intent.neq.not_going')
     .order('checked_in', { ascending: true })
     .order('attendee_name', { ascending: true })
 
@@ -939,8 +943,7 @@ export async function getMyRSVPForEvent(
 /**
  * Records a Going / Maybe / Not Going signal for a free casual event.
  *
- * Intent is stored in attendee_name as a bracket prefix ("[going] Name",
- * "[maybe] Name", "[not_going] Name") to avoid a schema migration.
+ * Intent is stored in the `casual_intent` column (see migration 074).
  * Upserts so the user can change their mind without creating duplicate rows.
  */
 export async function casualRSVP(params: {
@@ -972,9 +975,8 @@ export async function casualRSVP(params: {
     .maybeSingle()
 
   const displayName = profile?.display_name ?? 'Guest'
-  const prefixedName = `[${params.intent}] ${displayName}`
 
-  // Upsert: update attendee_name if already RSVPed, otherwise insert a fresh row
+  // Upsert: update casual_intent if already RSVPed, otherwise insert a fresh row
   const { data: existing } = await admin
     .from('rsvps')
     .select('id')
@@ -986,7 +988,7 @@ export async function casualRSVP(params: {
   if (existing) {
     const { error: updateError } = await admin
       .from('rsvps')
-      .update({ attendee_name: prefixedName })
+      .update({ casual_intent: params.intent })
       .eq('id', existing.id)
 
     if (updateError) return { error: 'Failed to update your RSVP.' }
@@ -998,8 +1000,9 @@ export async function casualRSVP(params: {
         attendee_user_id:    user.id,
         payment_status:      'captured' as const,
         amount_paid:         0,
-        attendee_name:       prefixedName,
+        attendee_name:       displayName,
         attendee_phone:      '',
+        casual_intent:       params.intent,
         platform_fee_paise:  0,
         maker_payout_paise:  0,
         venue_fee_paise:     0,
@@ -1008,6 +1011,119 @@ export async function casualRSVP(params: {
       })
 
     if (insertError) return { error: 'Failed to save your RSVP.' }
+  }
+
+  return { error: null }
+}
+
+// ---------------------------------------------------------------------------
+// casualRSVPGuest
+// ---------------------------------------------------------------------------
+
+const CasualRSVPGuestSchema = z.object({
+  eventId: z.string().uuid('eventId must be a valid UUID'),
+  intent:  z.enum(['going', 'maybe', 'not_going']),
+  name:    z.string().trim().min(1, 'Please enter your name.').max(100, 'Name must be at most 100 characters'),
+  phone:   z.string().regex(/^\+91[6-9]\d{9}$/, 'Please enter a valid 10-digit Indian mobile number.'),
+})
+
+/**
+ * Records a Going / Maybe / Not Going signal for a free casual event from an
+ * unauthenticated visitor — name + phone, OTP-verified via the same
+ * sendRsvpGuestOtp/verifyRsvpGuestOtp pair used by the ticketed guest-
+ * checkout flow (guest-otp.ts). No account is created and no persona/
+ * interest onboarding runs; `attendee_user_id` stays null, mirroring the
+ * guest rows initiateRSVP already writes for ticketed bookings.
+ *
+ * Dedupes on (event, phone) rather than a user id — a guest can revisit and
+ * change their mind (going → maybe) without creating duplicate rows, same
+ * as the authenticated casualRSVP above.
+ */
+export async function casualRSVPGuest(params: {
+  eventId: string
+  intent: 'going' | 'maybe' | 'not_going'
+  name: string
+  phone: string
+}): Promise<{ error: string | null }> {
+  const parsed = CasualRSVPGuestSchema.safeParse(params)
+  if (!parsed.success) return { error: parsed.error.errors[0].message }
+  const { eventId, intent, name, phone } = parsed.data
+
+  const verified = await isGuestPhoneVerified(phone)
+  if (!verified) return { error: 'Please verify your phone number before continuing.' }
+
+  const admin = createAdminClient()
+
+  const { data: event } = await admin
+    .from('events')
+    .select('id, status, starts_at, ticket_price, title, venue_name, venue_address')
+    .eq('id', eventId)
+    .maybeSingle()
+
+  if (!event) return { error: 'Event not found.' }
+  if (event.status !== 'published') return { error: 'This event is not available for RSVP.' }
+  if (new Date(event.starts_at) <= new Date()) return { error: 'This event has already started.' }
+  if (event.ticket_price !== 0) return { error: 'Casual RSVP is only available for free events.' }
+
+  const { data: existing } = await admin
+    .from('rsvps')
+    .select('id, casual_intent')
+    .eq('event_id', eventId)
+    .is('attendee_user_id', null)
+    .eq('attendee_phone', phone)
+    .eq('payment_status', 'captured')
+    .maybeSingle()
+
+  if (existing) {
+    const { error: updateError } = await admin
+      .from('rsvps')
+      .update({ attendee_name: name, casual_intent: intent })
+      .eq('id', existing.id)
+
+    if (updateError) return { error: 'Failed to update your RSVP.' }
+  } else {
+    const { error: insertError } = await admin
+      .from('rsvps')
+      .insert({
+        event_id:            eventId,
+        attendee_user_id:    null,
+        payment_status:      'captured' as const,
+        amount_paid:         0,
+        attendee_name:       name,
+        attendee_phone:      phone,
+        casual_intent:       intent,
+        platform_fee_paise:  0,
+        maker_payout_paise:  0,
+        venue_fee_paise:     0,
+        split_tier:          null,
+        discovery_source:    'direct' as const,
+      })
+
+    if (insertError) return { error: 'Failed to save your RSVP.' }
+  }
+
+  // Immediate confirmation only. The day-before reminder is handled separately
+  // by the event-reminders cron (src/app/api/cron/event-reminders/route.ts),
+  // which now runs via a Netlify Scheduled Function (netlify/functions/
+  // event-reminders.mts) rather than the vercel.json cron config Netlify never
+  // executed. That cron queries captured RSVPs without filtering on
+  // casual_intent, so casual "going"/"maybe" guests are picked up too. Skip
+  // here for "not_going" — nothing to confirm or remind. Sent on every
+  // going/maybe save (not just new rows) so switching from maybe → going
+  // gets its own confirmation.
+  if (intent !== 'not_going') {
+    const eventDate = new Date(event.starts_at).toLocaleDateString('en-IN', {
+      weekday: 'long', day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit',
+    })
+    const label = intent === 'going' ? "You're marked Going" : "You're marked Maybe"
+    const whatsappMsg = [
+      `✅ ${label} to "${event.title}"`,
+      `📅 ${eventDate}`,
+      `📍 ${event.venue_name}${event.venue_address ? `, ${event.venue_address}` : ''}`,
+    ].join('\n')
+    sendWhatsAppMessage(phone, whatsappMsg).catch((err) => {
+      console.error('[casualRSVPGuest] WhatsApp send failed', { eventId, error: String(err) })
+    })
   }
 
   return { error: null }

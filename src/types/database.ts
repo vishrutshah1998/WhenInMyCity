@@ -727,6 +727,8 @@ export interface Database {
           ticket_tier_name: string | null
           /** How the attendee arrived at this booking. See migration 050. */
           discovery_source: 'creator_link' | 'platform_discovery' | 'direct'
+          /** Going/Maybe/Can't-go signal for casual (free) RSVPs. NULL for ticketed/paid bookings. See migration 074. */
+          casual_intent: 'going' | 'maybe' | 'not_going' | null
           created_at: string
         }
         Insert: {
@@ -749,6 +751,7 @@ export interface Database {
           ticket_tier_id?: string | null
           ticket_tier_name?: string | null
           discovery_source?: 'creator_link' | 'platform_discovery' | 'direct'
+          casual_intent?: 'going' | 'maybe' | 'not_going' | null
           created_at?: string
         }
         Update: {
@@ -771,6 +774,7 @@ export interface Database {
           ticket_tier_id?: string | null
           ticket_tier_name?: string | null
           discovery_source?: 'creator_link' | 'platform_discovery' | 'direct'
+          casual_intent?: 'going' | 'maybe' | 'not_going' | null
           created_at?: string
         }
         Relationships: [
