@@ -73,11 +73,16 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
     // ── ATTENDEE REMINDERS ──────────────────────────────────────────────────
 
+    // Excludes casual "Can't go" responses — a decline shouldn't get a "see you
+    // there tomorrow" reminder. "Maybe" guests still get one, as a nudge; ticketed
+    // bookings (casual_intent = null) are unaffected. Same filter as
+    // getEventAttendees (src/app/actions/rsvp.ts).
     const { data: rsvps } = await admin
       .from('rsvps')
       .select('attendee_user_id, attendee_name, attendee_phone')
       .eq('event_id', event.id)
       .eq('payment_status', 'captured')
+      .or('casual_intent.is.null,casual_intent.neq.not_going')
 
     for (const rsvp of rsvps ?? []) {
       try {
