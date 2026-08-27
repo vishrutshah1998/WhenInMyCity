@@ -1,16 +1,16 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { SK } from '@/lib/onboarding/session-keys'
-import { INTEREST_TAGS } from '@/lib/constants/interests'
+import { INTEREST_TAGS, INTEREST_CATEGORY_ORDER } from '@/lib/constants/interests'
 import { ONBOARDING_CTA } from '@/lib/constants/onboarding-cta-copy'
+import InterestTagPicker from '@/components/shared/InterestTagPicker'
 
 const ACCENT = '#9B8FFF'
 const MIN_TAGS = 3
-const MAX_TAGS = 5
 
-const CATEGORY_ORDER = ['performance', 'arts', 'education', 'lifestyle', 'tech', 'food_culture', 'outdoors']
+const CATEGORY_ORDER: string[] = INTEREST_CATEGORY_ORDER
 const CATEGORY_LABELS: Record<string, string> = {
   performance:  'Performance',
   arts:         'Arts & Craft',
@@ -53,19 +53,8 @@ export default function E5Page() {
     } catch {}
   }, [router])
 
-  const grouped = useMemo(() =>
-    INTEREST_TAGS.reduce<Record<string, typeof INTEREST_TAGS>>((acc, tag) => {
-      if (!acc[tag.category]) acc[tag.category] = []
-      acc[tag.category].push(tag)
-      return acc
-    }, {})
-  , [])
-
   function toggle(id: string) {
-    let next: string[]
-    if (selected.includes(id)) next = selected.filter(t => t !== id)
-    else if (selected.length >= MAX_TAGS) next = selected
-    else next = [...selected, id]
+    const next = selected.includes(id) ? selected.filter(t => t !== id) : [...selected, id]
     setSelected(next)
     try { sessionStorage.setItem(SK.e_interests, JSON.stringify(next)) } catch {}
     window.dispatchEvent(new Event('ob-snap-update'))
@@ -88,7 +77,6 @@ export default function E5Page() {
   }
 
   const canProceed = selected.length >= MIN_TAGS
-  const atLimit    = selected.length >= MAX_TAGS
 
   return (
     <>
@@ -103,118 +91,100 @@ export default function E5Page() {
           What do you want to discover?
         </h1>
         <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 15, color: '#9896B0', margin: '0 0 4px', maxWidth: 400 }}>
-          Pick 3–5 things that pull you in.
+          Pick at least 3 things that pull you in.
         </p>
-        <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 13, color: atLimit ? '#F59E0B' : '#9896B0', margin: '0 0 32px' }}>
-          {selected.length}/{MAX_TAGS} selected{atLimit ? ' — limit reached' : ''}
+        <p style={{ fontFamily: "'DM Sans', sans-serif", fontSize: 13, color: '#9896B0', margin: '0 0 32px' }}>
+          {selected.length} selected
         </p>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxWidth: 560 }}>
-          {CATEGORY_ORDER.filter(cat => grouped[cat]).map(cat => {
-            const isOpen   = openCategories.has(cat)
-            const catCount = grouped[cat].filter(tag => selected.includes(tag.id)).length
-            return (
-              <div key={cat} style={{ background: 'rgba(255,255,255,0.02)', border: `1px dashed ${ACCENT}20` }}>
-                <button
-                  type="button"
-                  onClick={() => toggleCategory(cat)}
-                  style={{
-                    width:        '100%',
-                    display:      'flex', alignItems: 'center', gap: 10,
-                    padding:      '10px 14px',
-                    background:   isOpen ? `${ACCENT}08` : 'transparent',
-                    border:       'none', cursor: 'pointer',
-                    borderBottom: isOpen ? `1px solid ${ACCENT}20` : 'none',
-                    transition:   'background 150ms',
-                  }}
-                >
-                  <span
-                    className="material-symbols-outlined"
-                    style={{
-                      fontSize:             16, lineHeight: 1,
-                      color:                catCount > 0 ? ACCENT : 'rgba(255,255,255,0.28)',
-                      fontVariationSettings: catCount > 0 ? "'FILL' 1" : "'FILL' 0",
-                      transition:           'all 150ms',
-                    }}
-                  >
-                    {CATEGORY_ICONS[cat] ?? 'category'}
-                  </span>
-                  <span style={{
-                    fontFamily:    "var(--font-jetbrains-mono), 'JetBrains Mono', monospace",
-                    fontSize:      9,
-                    fontWeight:    700,
-                    color:         catCount > 0 ? '#F0EFF8' : ACCENT,
-                    letterSpacing: '0.2em',
-                    textTransform: 'uppercase',
-                    flex:          1, textAlign: 'left',
-                    transition:    'color 150ms',
-                  }}>
-                    {CATEGORY_LABELS[cat] ?? cat}
-                  </span>
-                  {catCount > 0 && (
-                    <span style={{
-                      fontFamily: "var(--font-jetbrains-mono), 'JetBrains Mono', monospace",
-                      fontSize:   9,
-                      color:      ACCENT,
-                      background: `${ACCENT}20`,
-                      padding:    '2px 8px', borderRadius: 999,
-                      flexShrink: 0,
-                    }}>
-                      {catCount}
-                    </span>
-                  )}
-                  <span
-                    className="material-symbols-outlined"
-                    style={{
-                      fontSize:   16, lineHeight: 1,
-                      color:      'rgba(255,255,255,0.22)',
-                      transform:  isOpen ? 'rotate(180deg)' : 'rotate(0deg)',
-                      transition: 'transform 200ms',
-                      flexShrink: 0,
-                    }}
-                  >
-                    expand_more
-                  </span>
-                </button>
-
-                {isOpen && (
-                  <div style={{ padding: '12px 14px', display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                    {grouped[cat].map(tag => {
-                      const isSel      = selected.includes(tag.id)
-                      const isDisabled = !isSel && atLimit
-                      return (
-                        <button
-                          key={tag.id}
-                          type="button"
-                          onClick={() => toggle(tag.id)}
-                          disabled={isDisabled}
-                          style={{
-                            padding:      '8px 14px',
-                            borderRadius: 9999,
-                            border:       `1px solid ${isSel ? ACCENT : 'rgba(155,143,255,0.25)'}`,
-                            background:   isSel ? 'rgba(155,143,255,0.15)' : 'transparent',
-                            color:        isSel ? ACCENT : isDisabled ? 'rgba(255,255,255,0.20)' : 'rgba(255,255,255,0.60)',
-                            fontFamily:   "'DM Sans', sans-serif",
-                            fontWeight:   500,
-                            fontSize:     13,
-                            cursor:       isDisabled ? 'not-allowed' : 'pointer',
-                            transition:   'all 150ms',
-                            display:      'flex',
-                            alignItems:   'center',
-                            gap:          5,
-                          }}
-                        >
-                          <span>{tag.emoji}</span>
-                          {tag.label}
-                        </button>
-                      )
-                    })}
-                  </div>
-                )}
-              </div>
-            )
+        <InterestTagPicker
+          selected={selected}
+          onToggle={toggle}
+          categories={CATEGORY_ORDER.map(key => ({ key, label: CATEGORY_LABELS[key] ?? key, icon: CATEGORY_ICONS[key] }))}
+          openCategories={openCategories}
+          onToggleCategory={toggleCategory}
+          wrapperStyle={{ maxWidth: 560 }}
+          sectionWrapperStyle={() => ({ background: 'rgba(255,255,255,0.02)', border: `1px dashed ${ACCENT}20` })}
+          renderCategoryHeader={({ category, isOpen, count, toggle: toggleCat }) => (
+            <button
+              type="button"
+              onClick={toggleCat}
+              style={{
+                width:        '100%',
+                display:      'flex', alignItems: 'center', gap: 10,
+                padding:      '10px 14px',
+                background:   isOpen ? `${ACCENT}08` : 'transparent',
+                border:       'none', cursor: 'pointer',
+                borderBottom: isOpen ? `1px solid ${ACCENT}20` : 'none',
+                transition:   'background 150ms',
+              }}
+            >
+              <span
+                className="material-symbols-outlined"
+                style={{
+                  fontSize:             16, lineHeight: 1,
+                  color:                count > 0 ? ACCENT : 'rgba(255,255,255,0.28)',
+                  fontVariationSettings: count > 0 ? "'FILL' 1" : "'FILL' 0",
+                  transition:           'all 150ms',
+                }}
+              >
+                {category.icon ?? 'category'}
+              </span>
+              <span style={{
+                fontFamily:    "var(--font-jetbrains-mono), 'JetBrains Mono', monospace",
+                fontSize:      9,
+                fontWeight:    700,
+                color:         count > 0 ? '#F0EFF8' : ACCENT,
+                letterSpacing: '0.2em',
+                textTransform: 'uppercase',
+                flex:          1, textAlign: 'left',
+                transition:    'color 150ms',
+              }}>
+                {category.label}
+              </span>
+              {count > 0 && (
+                <span style={{
+                  fontFamily: "var(--font-jetbrains-mono), 'JetBrains Mono', monospace",
+                  fontSize:   9,
+                  color:      ACCENT,
+                  background: `${ACCENT}20`,
+                  padding:    '2px 8px', borderRadius: 999,
+                  flexShrink: 0,
+                }}>
+                  {count}
+                </span>
+              )}
+              <span
+                className="material-symbols-outlined"
+                style={{
+                  fontSize:   16, lineHeight: 1,
+                  color:      'rgba(255,255,255,0.22)',
+                  transform:  isOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+                  transition: 'transform 200ms',
+                  flexShrink: 0,
+                }}
+              >
+                expand_more
+              </span>
+            </button>
+          )}
+          chipsRowStyle={{ padding: '12px 14px' }}
+          chipStyle={(tag, isSel) => ({
+            padding:      '8px 14px',
+            borderRadius: 9999,
+            border:       `1px solid ${isSel ? ACCENT : 'rgba(155,143,255,0.25)'}`,
+            background:   isSel ? 'rgba(155,143,255,0.15)' : 'transparent',
+            color:        isSel ? ACCENT : 'rgba(255,255,255,0.60)',
+            fontFamily:   "'DM Sans', sans-serif",
+            fontWeight:   500,
+            fontSize:     13,
+            cursor:       'pointer',
+            transition:   'all 150ms',
+            display:      'flex',
+            alignItems:   'center',
+            gap:          5,
           })}
-        </div>
+        />
       </div>
 
       <footer style={{

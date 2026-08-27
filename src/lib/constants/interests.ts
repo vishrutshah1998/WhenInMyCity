@@ -8,6 +8,12 @@
 
 export type InterestCategory = 'performance' | 'arts' | 'education' | 'lifestyle' | 'tech' | 'food_culture' | 'outdoors'
 
+// Canonical display order for the 7 interest categories — shared by every
+// tag-picker surface (Creator + Explorer onboarding, dashboard settings/studio).
+export const INTEREST_CATEGORY_ORDER: InterestCategory[] = [
+  'performance', 'arts', 'education', 'lifestyle', 'tech', 'food_culture', 'outdoors',
+]
+
 // HSV Value axis cluster — encodes the typical photonic conditions of the activity.
 // dark: night venues, cinema, clubs, candlelit rooms (Value 5–25%)
 // warm: stage light, kitchens, studios with artificial warm light (Value 35–55%)
@@ -37,8 +43,9 @@ export const INTEREST_CATEGORY_COLORS: Record<InterestCategory, string> = {
 }
 
 /**
- * 30 curated interest tags shown during onboarding (step 2).
- * Users select 3–5 to describe the kinds of events they host or attend.
+ * Curated interest tags shown across onboarding and profile settings.
+ * Users select at least 3 (no upper bound) to describe the kinds of events
+ * they host or attend. Tag count is `INTEREST_TAGS.length` — don't hardcode it.
  */
 export const INTEREST_TAGS: InterestTag[] = [
   // --- Performance -----------------------------------------------------------

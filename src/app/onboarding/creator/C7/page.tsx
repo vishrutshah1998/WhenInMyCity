@@ -1,16 +1,17 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { SK } from '@/lib/onboarding/session-keys'
-import { INTEREST_TAGS, INTEREST_CATEGORY_COLORS, type InterestCategory } from '@/lib/constants/interests'
+import { INTEREST_TAGS, INTEREST_CATEGORY_COLORS, INTEREST_CATEGORY_ORDER, type InterestCategory } from '@/lib/constants/interests'
 import { getCategoryColour } from '@/lib/onboarding/design-tokens'
 import { ONBOARDING_CTA } from '@/lib/constants/onboarding-cta-copy'
+import InterestTagPicker from '@/components/shared/InterestTagPicker'
 
 const MIN_TAGS = 3
 const SCENE_BLUE = '#5EC8F2'
 
-const CATEGORY_ORDER = ['performance', 'arts', 'education', 'lifestyle', 'tech', 'food_culture', 'outdoors']
+const CATEGORY_ORDER: string[] = INTEREST_CATEGORY_ORDER
 const CATEGORY_LABELS: Record<string, string> = {
   performance:  'Performance',
   arts:         'Arts & Craft',
@@ -55,14 +56,6 @@ export default function C7Page() {
       }
     } catch {}
   }, [router])
-
-  const grouped = useMemo(() =>
-    INTEREST_TAGS.reduce<Record<string, typeof INTEREST_TAGS>>((acc, tag) => {
-      if (!acc[tag.category]) acc[tag.category] = []
-      acc[tag.category].push(tag)
-      return acc
-    }, {})
-  , [])
 
   function toggle(id: string) {
     const next = selected.includes(id) ? selected.filter(t => t !== id) : [...selected, id]
@@ -156,114 +149,106 @@ export default function C7Page() {
           </div>
         )}
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxWidth: 560 }}>
-          {CATEGORY_ORDER.filter(cat => grouped[cat]).map(cat => {
-            const isOpen    = openCategories.has(cat)
-            const catCount  = grouped[cat].filter(tag => selected.includes(tag.id)).length
-            const catColor  = INTEREST_CATEGORY_COLORS[cat as InterestCategory]
+        <InterestTagPicker
+          selected={selected}
+          onToggle={toggle}
+          categories={CATEGORY_ORDER.map(key => ({ key, label: CATEGORY_LABELS[key] ?? key, icon: CATEGORY_ICONS[key] }))}
+          openCategories={openCategories}
+          onToggleCategory={toggleCategory}
+          wrapperStyle={{ maxWidth: 560 }}
+          sectionWrapperStyle={({ category, isOpen }) => {
+            const catColor = INTEREST_CATEGORY_COLORS[category.key as InterestCategory]
+            return {
+              background: 'rgba(255,255,255,0.02)', border: `1px dashed ${catColor}30`,
+              opacity: isOpen ? 1 : 0.7, transition: 'opacity 150ms',
+            }
+          }}
+          renderCategoryHeader={({ category, isOpen, count, toggle: toggleCat }) => {
+            const catColor = INTEREST_CATEGORY_COLORS[category.key as InterestCategory]
             return (
-              <div key={cat} style={{
-                background: 'rgba(255,255,255,0.02)', border: `1px dashed ${catColor}30`,
-                opacity: isOpen ? 1 : 0.7, transition: 'opacity 150ms',
-              }}>
-                <button
-                  type="button"
-                  onClick={() => toggleCategory(cat)}
+              <button
+                type="button"
+                onClick={toggleCat}
+                style={{
+                  width:        '100%',
+                  display:      'flex', alignItems: 'center', gap: 10,
+                  padding:      '10px 14px',
+                  background:   isOpen ? `${catColor}0D` : 'transparent',
+                  border:       'none', cursor: 'pointer',
+                  borderBottom: isOpen ? `1px solid ${catColor}25` : 'none',
+                  transition:   'background 150ms',
+                }}
+              >
+                <span
+                  className="material-symbols-outlined"
                   style={{
-                    width:        '100%',
-                    display:      'flex', alignItems: 'center', gap: 10,
-                    padding:      '10px 14px',
-                    background:   isOpen ? `${catColor}0D` : 'transparent',
-                    border:       'none', cursor: 'pointer',
-                    borderBottom: isOpen ? `1px solid ${catColor}25` : 'none',
-                    transition:   'background 150ms',
+                    fontSize:             16, lineHeight: 1,
+                    color:                count > 0 ? catColor : 'rgba(255,255,255,0.28)',
+                    fontVariationSettings: count > 0 ? "'FILL' 1" : "'FILL' 0",
+                    transition:           'all 150ms',
                   }}
                 >
-                  <span
-                    className="material-symbols-outlined"
-                    style={{
-                      fontSize:             16, lineHeight: 1,
-                      color:                catCount > 0 ? catColor : 'rgba(255,255,255,0.28)',
-                      fontVariationSettings: catCount > 0 ? "'FILL' 1" : "'FILL' 0",
-                      transition:           'all 150ms',
-                    }}
-                  >
-                    {CATEGORY_ICONS[cat] ?? 'category'}
-                  </span>
+                  {category.icon ?? 'category'}
+                </span>
+                <span style={{
+                  fontFamily:    "var(--font-jetbrains-mono), 'JetBrains Mono', monospace",
+                  fontSize:      9,
+                  fontWeight:    700,
+                  color:         count > 0 ? '#F0EFF8' : catColor,
+                  letterSpacing: '0.2em',
+                  textTransform: 'uppercase',
+                  flex:          1, textAlign: 'left',
+                  transition:    'color 150ms',
+                }}>
+                  {category.label}
+                </span>
+                {count > 0 && (
                   <span style={{
-                    fontFamily:    "var(--font-jetbrains-mono), 'JetBrains Mono', monospace",
-                    fontSize:      9,
-                    fontWeight:    700,
-                    color:         catCount > 0 ? '#F0EFF8' : catColor,
-                    letterSpacing: '0.2em',
-                    textTransform: 'uppercase',
-                    flex:          1, textAlign: 'left',
-                    transition:    'color 150ms',
+                    fontFamily: "var(--font-jetbrains-mono), 'JetBrains Mono', monospace",
+                    fontSize:   9,
+                    color:      catColor,
+                    background: `${catColor}25`,
+                    padding:    '2px 8px', borderRadius: 999,
+                    flexShrink: 0,
                   }}>
-                    {CATEGORY_LABELS[cat] ?? cat}
+                    {count}
                   </span>
-                  {catCount > 0 && (
-                    <span style={{
-                      fontFamily: "var(--font-jetbrains-mono), 'JetBrains Mono', monospace",
-                      fontSize:   9,
-                      color:      catColor,
-                      background: `${catColor}25`,
-                      padding:    '2px 8px', borderRadius: 999,
-                      flexShrink: 0,
-                    }}>
-                      {catCount}
-                    </span>
-                  )}
-                  <span
-                    className="material-symbols-outlined"
-                    style={{
-                      fontSize:   16, lineHeight: 1,
-                      color:      'rgba(255,255,255,0.22)',
-                      transform:  isOpen ? 'rotate(180deg)' : 'rotate(0deg)',
-                      transition: 'transform 200ms',
-                      flexShrink: 0,
-                    }}
-                  >
-                    expand_more
-                  </span>
-                </button>
-
-                {isOpen && (
-                  <div style={{ padding: '12px 14px', display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                    {grouped[cat].map(tag => {
-                      const isSel = selected.includes(tag.id)
-                      return (
-                        <button
-                          key={tag.id}
-                          type="button"
-                          onClick={() => toggle(tag.id)}
-                          style={{
-                            padding:      '8px 14px',
-                            borderRadius: 9999,
-                            border:       `1px solid ${isSel ? catColor : `${catColor}40`}`,
-                            background:   isSel ? catColor : 'transparent',
-                            color:        isSel ? '#1A2744' : 'rgba(255,255,255,0.60)',
-                            fontFamily:   "'DM Sans', sans-serif",
-                            fontWeight:   isSel ? 700 : 500,
-                            fontSize:     13,
-                            cursor:       'pointer',
-                            transition:   'all 150ms',
-                            display:      'flex',
-                            alignItems:   'center',
-                            gap:          5,
-                          }}
-                        >
-                          <span>{tag.emoji}</span>
-                          {tag.label}
-                        </button>
-                      )
-                    })}
-                  </div>
                 )}
-              </div>
+                <span
+                  className="material-symbols-outlined"
+                  style={{
+                    fontSize:   16, lineHeight: 1,
+                    color:      'rgba(255,255,255,0.22)',
+                    transform:  isOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+                    transition: 'transform 200ms',
+                    flexShrink: 0,
+                  }}
+                >
+                  expand_more
+                </span>
+              </button>
             )
-          })}
-        </div>
+          }}
+          chipsRowStyle={{ padding: '12px 14px' }}
+          chipStyle={(tag, isSel) => {
+            const catColor = INTEREST_CATEGORY_COLORS[tag.category as InterestCategory]
+            return {
+              padding:      '8px 14px',
+              borderRadius: 9999,
+              border:       `1px solid ${isSel ? catColor : `${catColor}40`}`,
+              background:   isSel ? catColor : 'transparent',
+              color:        isSel ? '#1A2744' : 'rgba(255,255,255,0.60)',
+              fontFamily:   "'DM Sans', sans-serif",
+              fontWeight:   isSel ? 700 : 500,
+              fontSize:     13,
+              cursor:       'pointer',
+              transition:   'all 150ms',
+              display:      'flex',
+              alignItems:   'center',
+              gap:          5,
+            }
+          }}
+        />
       </div>
 
       <footer style={{

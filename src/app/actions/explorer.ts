@@ -79,46 +79,6 @@ export async function createExplorerProfile(
 }
 
 // ---------------------------------------------------------------------------
-// updateExplorerInterests
-// ---------------------------------------------------------------------------
-
-/**
- * Updates the interest tags for the authenticated Explorer.
- * Validates that 3–5 tags are provided and all are valid INTEREST_TAGS ids.
- *
- * @returns `{ error: string | null }`
- */
-export async function updateExplorerInterests(
-  tags: string[],
-): Promise<{ error: string | null }> {
-  const { user } = await requireAuth()
-
-  if (tags.length < 3 || tags.length > 5) {
-    return { error: 'Please select between 3 and 5 interests.' }
-  }
-
-  const validIds = new Set(INTEREST_TAGS.map((t) => t.id))
-  const invalid = tags.filter((t) => !validIds.has(t))
-  if (invalid.length) {
-    return { error: `Invalid interest tag(s): ${invalid.join(', ')}` }
-  }
-
-  const admin = createAdminClient()
-
-  const { error } = await admin
-    .from('explorer_profiles')
-    .update({ interest_tags: tags })
-    .eq('auth_user_id', user.id)
-
-  if (error) {
-    console.error('[updateExplorerInterests]', error.message)
-    return { error: 'Failed to update your interests. Please try again.' }
-  }
-
-  return { error: null }
-}
-
-// ---------------------------------------------------------------------------
 // getPersonalisedEvents
 // ---------------------------------------------------------------------------
 
@@ -1091,7 +1051,7 @@ export async function updateExplorerProfile(
 
   // Only validate interest_tags if the caller actually changed them — this is a
   // full-replace save (every field, not just interests), so an account whose
-  // stored tag count already sits outside 3-5 (pre-existing data, not touched
+  // stored tag count already sits below 3 (pre-existing data, not touched
   // in this save) must still be able to save unrelated fields like avatar/name.
   const { data: existingEp } = await admin
     .from('explorer_profiles')
@@ -1106,8 +1066,8 @@ export async function updateExplorerProfile(
     [...storedTags].some((t) => !incomingTags.has(t))
 
   if (tagsChanged) {
-    if (data.interest_tags.length < 3 || data.interest_tags.length > 5) {
-      return { error: 'Please select between 3 and 5 interests.' }
+    if (data.interest_tags.length < 3) {
+      return { error: 'Please select at least 3 interests.' }
     }
 
     const validIds = new Set(INTEREST_TAGS.map((t) => t.id))
@@ -1176,8 +1136,8 @@ export async function updateExplorerStudioProfile(input: {
 
   // Only validate interest_tags if the caller actually changed them — this is a
   // full-replace save (every content field, not just interests), so an account whose
-  // stored tag count already sits outside 1-5 (e.g. synced from Creator onboarding,
-  // which has no upper cap) must still be able to save unrelated fields like name/city.
+  // stored tag count already sits below 3 (pre-existing data, not touched in this
+  // save) must still be able to save unrelated fields like name/city.
   // Mirrors the same "only validate if changed" check in updateExplorerProfile.
   const { data: existingEp } = await admin
     .from('explorer_profiles')
@@ -1191,8 +1151,8 @@ export async function updateExplorerStudioProfile(input: {
     storedTags.size !== incomingTags.size ||
     [...storedTags].some((t) => !incomingTags.has(t))
 
-  if (tagsChanged && (input.interest_tags.length < 1 || input.interest_tags.length > 5)) {
-    return { error: 'Select between 1 and 5 interests.' }
+  if (tagsChanged && input.interest_tags.length < 3) {
+    return { error: 'Please select at least 3 interests.' }
   }
 
   const { error } = await admin

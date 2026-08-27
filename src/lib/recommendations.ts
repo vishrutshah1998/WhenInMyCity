@@ -446,7 +446,12 @@ export async function updateExplorerScore(explorerId: string): Promise<void> {
       }
     }
 
-    const totalProfileTags = (explorer.interest_tags ?? []).length
+    // Cap the denominator at 5 — the same practical signal ceiling the tag-match
+    // scoring above already treats as "enough" (TAG MATCH stops counting past 5
+    // overlapping tags). Without this cap, an explorer with no upper bound on
+    // interest_tags would see this ratio — and thus their score — mechanically
+    // shrink the more tags they select, independent of actual attendance variety.
+    const totalProfileTags = Math.min((explorer.interest_tags ?? []).length, 5)
     if (totalProfileTags > 0) {
       varietyScore = Math.min(
         30,

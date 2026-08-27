@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useTransition, useRef } from 'react'
+import { useState, useCallback, useTransition, useRef, useMemo } from 'react'
 import { updateExplorerStudioProfile, updateExplorerPublicProfile } from '@/app/actions/explorer'
 import { updateProfileTheme } from '@/app/actions/profile'
 import { reorderBlocks } from '@/app/actions/blocks'
@@ -8,9 +8,34 @@ import BlockEditor from '@/components/dashboard/BlockEditor'
 import ThemeEditor from '@/components/dashboard/ThemeEditor'
 import ExplorerPagePreview from './ExplorerPagePreview'
 import StudioShell, { type StudioTab } from '@/components/dashboard/StudioShell'
-import { INTEREST_TAGS } from '@/lib/constants/interests'
+import { INTEREST_TAGS, INTEREST_CATEGORY_ORDER } from '@/lib/constants/interests'
+import InterestTagPicker from '@/components/shared/InterestTagPicker'
 import type { PageBlock } from '@/types/database'
 import type { ProfileTheme } from '@/types/theme'
+
+const MIN_TAGS = 3
+
+// Mirrors E5 (Explorer onboarding)'s labels/icons for terminology consistency
+// within the Explorer persona.
+const CATEGORY_ORDER: string[] = INTEREST_CATEGORY_ORDER
+const CATEGORY_LABELS: Record<string, string> = {
+  performance:  'Performance',
+  arts:         'Arts & Craft',
+  education:    'Education',
+  lifestyle:    'Lifestyle',
+  tech:         'Tech & Business',
+  food_culture: 'Food & Culture',
+  outdoors:     'Outdoors',
+}
+const CATEGORY_ICONS: Record<string, string> = {
+  performance:  'theater_comedy',
+  arts:         'palette',
+  education:    'school',
+  lifestyle:    'self_improvement',
+  tech:         'business_center',
+  food_culture: 'restaurant',
+  outdoors:     'park',
+}
 
 // ── Design tokens ──────────────────────────────────────────────────────────────
 
@@ -107,6 +132,13 @@ export default function ExplorerStudioClient({ explorerProfile, userProfile, ini
   const [bio,              setBio]              = useState(userProfile?.bio ?? '')
   const [city,             setCity]             = useState(explorerProfile.city ?? '')
   const [interestTags,     setInterestTags]     = useState<string[]>((explorerProfile.interest_tags as string[] | null) ?? [])
+  const [openInterestCategories, setOpenInterestCategories] = useState<Set<string>>(() => {
+    const saved = (explorerProfile.interest_tags as string[] | null) ?? []
+    const autoOpen = CATEGORY_ORDER.filter(cat =>
+      INTEREST_TAGS.some(tag => tag.category === cat && saved.includes(tag.id))
+    )
+    return new Set(autoOpen.length > 0 ? autoOpen : [CATEGORY_ORDER[0]])
+  })
   const [instagramHandle,  setInstagramHandle]  = useState(userProfile?.instagram_handle ?? '')
   const [contentDirty,     setContentDirty]     = useState(false)
   const [contentSaving,    setContentSaving]    = useState(false)
@@ -137,21 +169,37 @@ export default function ExplorerStudioClient({ explorerProfile, userProfile, ini
   const origTheme  = useRef<ProfileTheme>({ ...initialTheme })
 
   // ── Derived ────────────────────────────────────────────────────────────────
+  // Mirrors the "only validate if changed" pattern used server-side in
+  // updateExplorerStudioProfile — an account whose stored tag count already
+  // sits below 3 (pre-existing data) can still save unrelated content fields.
+  const tagsChanged = useMemo(() => {
+    const initial = new Set(origContent.current.interestTags)
+    const current = new Set(interestTags)
+    return initial.size !== current.size || [...initial].some((t) => !current.has(t))
+  }, [interestTags])
+  const contentInvalid = tagsChanged && interestTags.length < MIN_TAGS
+
   const isDirty  = tab === 'content' ? contentDirty : tab === 'blocks' ? blocksDirty : themeDirty
   const isSaving = tab === 'content' ? contentSaving : tab === 'blocks' ? blocksSaving : themeSaving
   const status   = tab === 'content' ? contentStatus : tab === 'blocks' ? blocksStatus : themeStatus
+  const saveDisabled = isSaving || !isDirty || (tab === 'content' && contentInvalid)
 
   // ── Content handlers ───────────────────────────────────────────────────────
 
   function markContentDirty() { setContentDirty(true); setContentStatus('idle') }
 
   function toggleInterestTag(id: string) {
-    setInterestTags((prev) => {
-      if (prev.includes(id)) return prev.filter((t) => t !== id)
-      if (prev.length >= 5) return prev
-      return [...prev, id]
-    })
+    setInterestTags((prev) => prev.includes(id) ? prev.filter((t) => t !== id) : [...prev, id])
     markContentDirty()
+  }
+
+  function toggleInterestCategory(key: string) {
+    setOpenInterestCategories((prev) => {
+      const next = new Set(prev)
+      if (next.has(key)) next.delete(key)
+      else next.add(key)
+      return next
+    })
   }
 
   async function handleContentSave() {
@@ -317,33 +365,50 @@ export default function ExplorerStudioClient({ explorerProfile, userProfile, ini
 
         {/* Interests */}
         <div>
-          <FieldLabel label={`Interests (${interestTags.length}/5)`} icon="interests" />
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, maxHeight: 240, overflowY: 'auto', padding: '2px 0' }}>
-            {INTEREST_TAGS.map((tag) => {
-              const active = interestTags.includes(tag.id)
-              const maxed  = !active && interestTags.length >= 5
-              return (
-                <button
-                  key={tag.id}
-                  onClick={() => !maxed && toggleInterestTag(tag.id)}
-                  title={maxed ? 'Remove a tag to select another' : undefined}
-                  style={{
-                    padding: '4px 9px', fontSize: 11, border: '1px solid',
-                    borderColor: active ? S.lav : 'rgba(155,143,255,0.2)',
-                    background: active ? S.lavTint : 'transparent',
-                    color: active ? S.lav : maxed ? S.muted : S.textSub,
-                    borderRadius: 4, cursor: maxed ? 'not-allowed' : 'pointer',
-                    fontFamily: INTER, transition: 'all 160ms ease',
-                    opacity: maxed ? 0.45 : 1,
-                  }}
+          <FieldLabel label={`Interests (${interestTags.length} selected)`} icon="interests" />
+          <InterestTagPicker
+            selected={interestTags}
+            onToggle={toggleInterestTag}
+            categories={CATEGORY_ORDER.map(key => ({ key, label: CATEGORY_LABELS[key] ?? key, icon: CATEGORY_ICONS[key] }))}
+            openCategories={openInterestCategories}
+            onToggleCategory={toggleInterestCategory}
+            wrapperStyle={{ gap: 6 }}
+            sectionWrapperStyle={() => ({ background: 'rgba(255,255,255,0.02)', border: `1px solid ${S.border}`, borderRadius: 4 })}
+            renderCategoryHeader={({ category, isOpen, count, toggle }) => (
+              <button
+                type="button"
+                onClick={toggle}
+                style={{
+                  width: '100%', display: 'flex', alignItems: 'center', gap: 8,
+                  padding: '7px 10px', background: isOpen ? S.lavTint : 'transparent',
+                  border: 'none', cursor: 'pointer', borderRadius: 4,
+                  fontFamily: MONO, fontSize: 10, letterSpacing: '0.06em', textTransform: 'uppercase',
+                  color: count > 0 ? S.lav : S.textSub,
+                }}
+              >
+                <span style={{ flex: 1, textAlign: 'left' }}>{category.label}</span>
+                {count > 0 && <span style={{ color: S.lav }}>{count}</span>}
+                <span
+                  className="material-symbols-outlined"
+                  style={{ fontSize: 14, color: S.muted, transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 200ms' }}
                 >
-                  {tag.emoji} {tag.label}
-                </button>
-              )
+                  expand_more
+                </span>
+              </button>
+            )}
+            chipsRowStyle={{ padding: '6px 10px 10px', gap: 5 }}
+            chipStyle={(tag, active) => ({
+              padding: '4px 9px', fontSize: 11, border: '1px solid',
+              borderColor: active ? S.lav : 'rgba(155,143,255,0.2)',
+              background: active ? S.lavTint : 'transparent',
+              color: active ? S.lav : S.textSub,
+              borderRadius: 4, cursor: 'pointer',
+              fontFamily: INTER, transition: 'all 160ms ease',
             })}
-          </div>
+            chipContent={(tag) => `${tag.emoji} ${tag.label}`}
+          />
           <p style={{ fontFamily: MONO, fontSize: 9, color: S.muted, marginTop: 6 }}>
-            Pick up to 5. These appear as pills on your public page.
+            Add as many as you like — minimum 3. These appear as pills on your public page.
           </p>
         </div>
 
@@ -404,12 +469,12 @@ export default function ExplorerStudioClient({ explorerProfile, userProfile, ini
             )}
             <button
               onClick={handleContentSave}
-              disabled={contentSaving || !contentDirty}
+              disabled={contentSaving || !contentDirty || contentInvalid}
               style={{
-                background: contentSaving || !contentDirty ? 'rgba(155,143,255,0.25)' : S.lav,
+                background: contentSaving || !contentDirty || contentInvalid ? 'rgba(155,143,255,0.25)' : S.lav,
                 border: 'none', borderRadius: 4, padding: '5px 14px',
-                color: contentSaving || !contentDirty ? 'rgba(0,0,0,0.4)' : '#0F1629',
-                cursor: contentSaving || !contentDirty ? 'not-allowed' : 'pointer',
+                color: contentSaving || !contentDirty || contentInvalid ? 'rgba(0,0,0,0.4)' : '#0F1629',
+                cursor: contentSaving || !contentDirty || contentInvalid ? 'not-allowed' : 'pointer',
                 fontFamily: MONO, fontSize: 10, fontWeight: 700,
                 letterSpacing: '0.8px', textTransform: 'uppercase',
               }}
@@ -529,13 +594,13 @@ export default function ExplorerStudioClient({ explorerProfile, userProfile, ini
 
         <button
           onClick={handleSave}
-          disabled={isSaving || !isDirty}
+          disabled={saveDisabled}
           style={{
             display: 'flex', alignItems: 'center', gap: 5,
-            background: isSaving || !isDirty ? 'rgba(155,143,255,0.25)' : S.lav,
+            background: saveDisabled ? 'rgba(155,143,255,0.25)' : S.lav,
             border: 'none', borderRadius: 6, padding: '7px 18px',
-            color: isSaving || !isDirty ? 'rgba(0,0,0,0.4)' : '#0F1629',
-            cursor: isSaving || !isDirty ? 'not-allowed' : 'pointer',
+            color: saveDisabled ? 'rgba(0,0,0,0.4)' : '#0F1629',
+            cursor: saveDisabled ? 'not-allowed' : 'pointer',
             fontFamily: MONO, fontSize: 11, fontWeight: 700,
             letterSpacing: '0.8px', textTransform: 'uppercase',
           }}

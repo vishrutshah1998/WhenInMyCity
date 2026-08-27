@@ -5,8 +5,9 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { updateExplorerProfile } from '@/app/actions/explorer'
 import { uploadAvatar } from '@/app/actions/profile'
-import { INTEREST_TAGS, CITIES } from '@/lib/constants/interests'
+import { INTEREST_TAGS, INTEREST_CATEGORY_ORDER, CITIES } from '@/lib/constants/interests'
 import { SOFT_UI, softUICssVars } from '@/lib/softUI'
+import InterestTagPicker from '@/components/shared/InterestTagPicker'
 
 const LAVENDER = '#9B8FFF'
 const CITY_GUIDE_CONSENT_KEY = 'wimc_city_guide_consent_v1'
@@ -42,7 +43,7 @@ const INTENT_OPTIONS = [
   { id: 'discover', label: "Nah, I'm purely here to discover"               },
 ]
 
-const CATEGORY_ORDER = ['performance', 'arts', 'education', 'lifestyle', 'tech', 'food_culture', 'outdoors']
+const CATEGORY_ORDER: string[] = INTEREST_CATEGORY_ORDER
 const CATEGORY_LABELS: Record<string, string> = {
   performance:  'Performance',
   arts:         'Arts & Craft',
@@ -76,8 +77,8 @@ export default function ExplorerSettingsClient({ profile, explorerScene, explore
   const [selectedCity, setSelectedCity]   = useState(profile.city)
   const validTagIds = useMemo(() => new Set(INTEREST_TAGS.map(t => t.id)), [])
   const [tags, setTags]                   = useState<string[]>((profile.interest_tags ?? []).filter(t => validTagIds.has(t)))
-  // Stored interest_tags can predate the current 3-5 range (migration drift, old test
-  // data) — only gate the Save button on tag count once the user actually edits the
+  // Stored interest_tags can predate the current 3-minimum floor (migration drift, old
+  // test data) — only gate the Save button on tag count once the user actually edits the
   // picker, so an out-of-range account can still save unrelated fields. Mirrors the
   // same "only validate if changed" check in updateExplorerProfile server-side.
   const initialTagsRef = useRef(tags)
@@ -86,7 +87,7 @@ export default function ExplorerSettingsClient({ profile, explorerScene, explore
     const current = new Set(tags)
     return initial.size !== current.size || [...initial].some(t => !current.has(t))
   }, [tags])
-  const tagsInvalidForSave = tagsChanged && (tags.length < 3 || tags.length > 5)
+  const tagsInvalidForSave = tagsChanged && tags.length < 3
   const [formats, setFormats]             = useState<string[]>(profile.preferred_formats ?? [])
   const [neighbourhood, setNeighbourhood] = useState(profile.neighbourhood_preference ?? '')
   const [anyPrice, setAnyPrice]           = useState(profile.price_range_max_paise === 999999)
@@ -119,14 +120,6 @@ export default function ExplorerSettingsClient({ profile, explorerScene, explore
     setAvatarPreview(URL.createObjectURL(file))
   }
 
-  const groupedTags = useMemo(() =>
-    INTEREST_TAGS.reduce<Record<string, typeof INTEREST_TAGS>>((acc, tag) => {
-      if (!acc[tag.category]) acc[tag.category] = []
-      acc[tag.category].push(tag)
-      return acc
-    }, {})
-  , [])
-
   // ── DPDP consent state ────────────────────────────────────────────────────
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [cityGuideConsent,  setCityGuideConsent]  = useState(false)
@@ -141,7 +134,7 @@ export default function ExplorerSettingsClient({ profile, explorerScene, explore
   }
 
   function toggleTag(id: string) {
-    setTags(prev => prev.includes(id) ? prev.filter(t => t !== id) : [...prev, id].slice(0, 5))
+    setTags(prev => prev.includes(id) ? prev.filter(t => t !== id) : [...prev, id])
   }
 
   function toggleFormat(id: string) {
@@ -331,46 +324,35 @@ export default function ExplorerSettingsClient({ profile, explorerScene, explore
 
           <div>
             <label style={{ ...fieldLabelStyle, marginBottom: 4 }}>
-              Interests <span style={{ color: '#9896B0', fontSize: 10 }}>({tags.length}/5)</span>
+              Interests <span style={{ color: '#9896B0', fontSize: 10 }}>({tags.length} selected)</span>
             </label>
             <p style={{ fontSize: 12, color: '#9896B0', margin: '0 0 16px' }}>
-              Pick 3–5 themes you explore.{tags.length >= 5 ? ' Limit reached.' : ''}
+              Pick at least 3 themes you explore.
             </p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-              {CATEGORY_ORDER.filter(cat => groupedTags[cat]).map(cat => (
-                <div key={cat}>
-                  <div style={{ fontSize: 9, fontWeight: 700, color: LAVENDER, letterSpacing: '0.2em', textTransform: 'uppercase', fontFamily: 'var(--font-jetbrains-mono)', marginBottom: 8 }}>
-                    {CATEGORY_LABELS[cat]}
-                  </div>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                    {groupedTags[cat].map(tag => {
-                      const sel        = tags.includes(tag.id)
-                      const isDisabled = !sel && tags.length >= 5
-                      return (
-                        <button
-                          key={tag.id}
-                          onClick={() => toggleTag(tag.id)}
-                          disabled={isDisabled}
-                          style={{
-                            padding: '5px 11px', borderRadius: 9999,
-                            border: `1px solid ${sel ? LAVENDER : 'rgba(155,143,255,0.2)'}`,
-                            background: sel ? 'rgba(155,143,255,0.15)' : 'transparent',
-                            color: sel ? LAVENDER : isDisabled ? 'rgba(152,150,176,0.35)' : '#9896B0',
-                            fontSize: 12, cursor: isDisabled ? 'not-allowed' : 'pointer',
-                            fontFamily: 'var(--font-dm-sans)',
-                            transition: 'all 150ms',
-                            display: 'flex', alignItems: 'center', gap: 4,
-                          }}
-                        >
-                          <span style={{ fontSize: 11 }}>{tag.emoji}</span>
-                          {tag.label}
-                        </button>
-                      )
-                    })}
-                  </div>
+            <InterestTagPicker
+              selected={tags}
+              onToggle={toggleTag}
+              categories={CATEGORY_ORDER.map(key => ({ key, label: CATEGORY_LABELS[key] ?? key }))}
+              collapsible={false}
+              wrapperStyle={{ gap: 18 }}
+              renderCategoryHeader={({ category }) => (
+                <div style={{ fontSize: 9, fontWeight: 700, color: LAVENDER, letterSpacing: '0.2em', textTransform: 'uppercase', fontFamily: 'var(--font-jetbrains-mono)', marginBottom: 8 }}>
+                  {category.label}
                 </div>
-              ))}
-            </div>
+              )}
+              chipsRowStyle={{ gap: 6 }}
+              chipStyle={(tag, sel) => ({
+                padding: '5px 11px', borderRadius: 9999,
+                border: `1px solid ${sel ? LAVENDER : 'rgba(155,143,255,0.2)'}`,
+                background: sel ? 'rgba(155,143,255,0.15)' : 'transparent',
+                color: sel ? LAVENDER : '#9896B0',
+                fontSize: 12, cursor: 'pointer',
+                fontFamily: 'var(--font-dm-sans)',
+                transition: 'all 150ms',
+                display: 'flex', alignItems: 'center', gap: 4,
+              })}
+              chipContent={(tag) => <><span style={{ fontSize: 11 }}>{tag.emoji}</span>{tag.label}</>}
+            />
           </div>
 
           <div>

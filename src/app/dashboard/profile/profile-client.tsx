@@ -10,7 +10,8 @@ import { isInAppBrowser } from '@/lib/instagram/in-app-browser'
 import { signOut } from '@/app/actions/auth'
 import type { CreatorType } from '@/types/database'
 import { createClient } from '@/lib/supabase/client'
-import { CITIES, INTEREST_TAGS } from '@/lib/constants/interests'
+import { CITIES } from '@/lib/constants/interests'
+import InterestTagPicker from '@/components/shared/InterestTagPicker'
 import {
   CREATOR_CATEGORIES,
   EXPLORING_OPTION,
@@ -818,104 +819,87 @@ export default function ProfileForm() {
           <p style={{ fontSize: 12, color: 'var(--wimc-text-secondary)', marginTop: -8, fontFamily: 'var(--font-dm-sans)' }}>
             Pick all that apply — helps us match you with the right Venues and audiences.
           </p>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {(
-              [
-                { key: 'performance',  label: 'Performance',          icon: 'mic'             },
-                { key: 'arts',         label: 'Arts',                  icon: 'palette'         },
-                { key: 'education',    label: 'Education & Wellness',  icon: 'school'          },
-                { key: 'lifestyle',    label: 'Lifestyle',             icon: 'self_improvement'},
-                { key: 'tech',         label: 'Tech',                  icon: 'laptop'          },
-                { key: 'food_culture', label: 'Food & Culture',        icon: 'restaurant'      },
-                { key: 'outdoors',     label: 'Outdoors & Adventure',  icon: 'forest'          },
-              ] as const
-            ).map(({ key, label, icon }) => {
-              const isOpen   = openInterestCategories.has(key)
-              const tags     = INTEREST_TAGS.filter(t => t.category === key)
-              const catCount = tags.filter(t => interestTags.includes(t.id)).length
-              return (
-                <div key={key} style={{ background: 'var(--wimc-bg-overlay)', border: `1px dashed ${catCount > 0 ? colors.primary + '50' : 'var(--wimc-border-default)'}` }}>
-                  <button
-                    type="button"
-                    onClick={() => toggleInterestCategory(key)}
-                    style={{
-                      width: '100%', display: 'flex', alignItems: 'center', gap: 10,
-                      padding: '10px 14px', background: isOpen ? `${colors.primary}08` : 'transparent',
-                      border: 'none', cursor: 'pointer',
-                      borderBottom: isOpen ? `1px solid ${colors.primary}20` : 'none',
-                      transition: 'background 150ms',
-                    }}
-                  >
-                    <span
-                      className="material-symbols-outlined"
-                      style={{
-                        fontSize: 16, lineHeight: 1,
-                        color: catCount > 0 ? colors.primary : 'var(--wimc-text-muted)',
-                        fontVariationSettings: catCount > 0 ? "'FILL' 1" : "'FILL' 0",
-                        transition: 'all 150ms',
-                      }}
-                    >
-                      {icon}
-                    </span>
-                    <span style={{
-                      fontFamily: 'var(--font-jetbrains-mono)', fontWeight: 700, fontSize: 11,
-                      letterSpacing: '0.12em', textTransform: 'uppercase',
-                      color: catCount > 0 ? 'var(--wimc-text-primary)' : 'var(--wimc-text-secondary)',
-                      flex: 1, textAlign: 'left', transition: 'color 150ms',
-                    }}>
-                      {label}
-                    </span>
-                    {catCount > 0 && (
-                      <span style={{
-                        fontFamily: 'var(--font-jetbrains-mono)', fontSize: 9,
-                        color: colors.primary, background: `${colors.primary}20`,
-                        padding: '2px 8px', borderRadius: 999, flexShrink: 0,
-                      }}>
-                        {catCount}
-                      </span>
-                    )}
-                    <span
-                      className="material-symbols-outlined"
-                      style={{
-                        fontSize: 16, lineHeight: 1, color: 'var(--wimc-text-muted)',
-                        transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)',
-                        transition: 'transform 200ms', flexShrink: 0,
-                      }}
-                    >
-                      expand_more
-                    </span>
-                  </button>
-
-                  {isOpen && (
-                    <div style={{ padding: '12px 14px', display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                      {tags.map(tag => {
-                        const isSel = interestTags.includes(tag.id)
-                        return (
-                          <button
-                            key={tag.id}
-                            type="button"
-                            onClick={() => toggleInterestTag(tag.id)}
-                            style={{
-                              padding: '6px 14px', borderRadius: 999, cursor: 'pointer',
-                              background: isSel ? colors.primary : 'transparent',
-                              border: `1px dashed ${isSel ? 'transparent' : 'var(--wimc-border-strong)'}`,
-                              fontFamily: 'var(--font-dm-sans)', fontWeight: isSel ? 700 : 400,
-                              fontSize: 13, color: isSel ? '#ffffff' : 'var(--wimc-text-secondary)',
-                              transition: 'all 150ms', whiteSpace: 'nowrap',
-                              display: 'flex', alignItems: 'center', gap: 6,
-                            }}
-                          >
-                            <span>{tag.emoji}</span>
-                            {tag.label}
-                          </button>
-                        )
-                      })}
-                    </div>
-                  )}
-                </div>
-              )
+          <InterestTagPicker
+            selected={interestTags}
+            onToggle={toggleInterestTag}
+            categories={[
+              { key: 'performance',  label: 'Performance',          icon: 'mic'             },
+              { key: 'arts',         label: 'Arts',                  icon: 'palette'         },
+              { key: 'education',    label: 'Education & Wellness',  icon: 'school'          },
+              { key: 'lifestyle',    label: 'Lifestyle',             icon: 'self_improvement'},
+              { key: 'tech',         label: 'Tech',                  icon: 'laptop'          },
+              { key: 'food_culture', label: 'Food & Culture',        icon: 'restaurant'      },
+              { key: 'outdoors',     label: 'Outdoors & Adventure',  icon: 'forest'          },
+            ]}
+            openCategories={openInterestCategories}
+            onToggleCategory={toggleInterestCategory}
+            sectionWrapperStyle={({ count }) => ({
+              background: 'var(--wimc-bg-overlay)',
+              border: `1px dashed ${count > 0 ? colors.primary + '50' : 'var(--wimc-border-default)'}`,
             })}
-          </div>
+            renderCategoryHeader={({ category, isOpen, count, toggle }) => (
+              <button
+                type="button"
+                onClick={toggle}
+                style={{
+                  width: '100%', display: 'flex', alignItems: 'center', gap: 10,
+                  padding: '10px 14px', background: isOpen ? `${colors.primary}08` : 'transparent',
+                  border: 'none', cursor: 'pointer',
+                  borderBottom: isOpen ? `1px solid ${colors.primary}20` : 'none',
+                  transition: 'background 150ms',
+                }}
+              >
+                <span
+                  className="material-symbols-outlined"
+                  style={{
+                    fontSize: 16, lineHeight: 1,
+                    color: count > 0 ? colors.primary : 'var(--wimc-text-muted)',
+                    fontVariationSettings: count > 0 ? "'FILL' 1" : "'FILL' 0",
+                    transition: 'all 150ms',
+                  }}
+                >
+                  {category.icon}
+                </span>
+                <span style={{
+                  fontFamily: 'var(--font-jetbrains-mono)', fontWeight: 700, fontSize: 11,
+                  letterSpacing: '0.12em', textTransform: 'uppercase',
+                  color: count > 0 ? 'var(--wimc-text-primary)' : 'var(--wimc-text-secondary)',
+                  flex: 1, textAlign: 'left', transition: 'color 150ms',
+                }}>
+                  {category.label}
+                </span>
+                {count > 0 && (
+                  <span style={{
+                    fontFamily: 'var(--font-jetbrains-mono)', fontSize: 9,
+                    color: colors.primary, background: `${colors.primary}20`,
+                    padding: '2px 8px', borderRadius: 999, flexShrink: 0,
+                  }}>
+                    {count}
+                  </span>
+                )}
+                <span
+                  className="material-symbols-outlined"
+                  style={{
+                    fontSize: 16, lineHeight: 1, color: 'var(--wimc-text-muted)',
+                    transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+                    transition: 'transform 200ms', flexShrink: 0,
+                  }}
+                >
+                  expand_more
+                </span>
+              </button>
+            )}
+            chipsRowStyle={{ padding: '12px 14px' }}
+            chipStyle={(tag, isSel) => ({
+              padding: '6px 14px', borderRadius: 999, cursor: 'pointer',
+              background: isSel ? colors.primary : 'transparent',
+              border: `1px dashed ${isSel ? 'transparent' : 'var(--wimc-border-strong)'}`,
+              fontFamily: 'var(--font-dm-sans)', fontWeight: isSel ? 700 : 400,
+              fontSize: 13, color: isSel ? '#ffffff' : 'var(--wimc-text-secondary)',
+              transition: 'all 150ms', whiteSpace: 'nowrap',
+              display: 'flex', alignItems: 'center', gap: 6,
+            })}
+          />
         </Section>
       )}
 
