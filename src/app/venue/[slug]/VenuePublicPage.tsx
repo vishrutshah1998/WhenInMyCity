@@ -4,7 +4,6 @@ import type { VenueProfile, Event, UserProfile } from '@/types/database'
 import { WimcWordmark } from '@/components/WimcWordmark'
 import type { PricingConfig } from '@/types/marketplace'
 import { BottomNav } from '@/components/ui/BottomNav'
-import { VenueViewTracker } from '@/components/venue/VenueViewTracker'
 import type { ProfileTheme } from '@/types/theme'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -268,7 +267,6 @@ export default function VenuePublicPage({ venue, upcomingEvents, stats, theme, i
 
   return (
     <>
-      {!isPreview && <VenueViewTracker venueId={venue.id} />}
       <style>{`
         @keyframes thump {
           0%   { transform: scaleY(1); }

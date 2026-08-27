@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation'
 import type { Metadata } from 'next'
 import { getVenuePublicPage } from '@/app/actions/venue'
+import { trackBlockAnalytics } from '@/app/actions/blocks'
 import VenuePublicPage from './VenuePublicPage'
 
 export async function generateMetadata({
@@ -34,6 +35,8 @@ export default async function VenueSlugPage({
   const result = await getVenuePublicPage(slug)
 
   if ('error' in result) notFound()
+
+  await trackBlockAnalytics('venue', result.venue.id, 'view')
 
   return (
     <VenuePublicPage
