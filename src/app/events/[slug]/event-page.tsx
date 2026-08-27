@@ -4,8 +4,9 @@ import { useState, useTransition, useRef, useCallback } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { initiateRSVP, checkRSVPStatus, getConfirmedRSVPToken, confirmRSVPPayment, casualRSVP } from '@/app/actions/rsvp'
+import { initiateRSVP, checkRSVPStatus, getConfirmedRSVPToken, confirmRSVPPayment, casualRSVP, casualRSVPGuest } from '@/app/actions/rsvp'
 import type { MyRSVP } from '@/app/actions/rsvp'
+import { sendRsvpGuestOtp, verifyRsvpGuestOtp } from '@/app/actions/guest-otp'
 import { validateReferralCode } from '@/app/actions/referral'
 import type { Event } from '@/types/database'
 import { TornEdge } from '@/components/ui/TornEdge'
@@ -80,7 +81,7 @@ interface EventPageProps {
   viewerPhoneDigits?: string | null
 }
 
-type Sheet = 'none' | 'step1' | 'step2' | 'confirmed'
+type Sheet = 'none' | 'step1' | 'step2' | 'confirmed' | 'casualGuest'
 
 interface ConfirmedData {
   qrToken: string | null
@@ -162,6 +163,13 @@ export default function EventPage({ event, rsvpCount, spotsLeft, creator, review
   const [sheet, setSheet] = useState<Sheet>(() => (myRSVP && !isCasual) ? 'confirmed' : 'none')
   const [casualIntent, setCasualIntent] = useState<'going' | 'maybe' | 'not_going' | null>(() => myRSVP ? 'going' : null)
   const [casualPending, startCasualTransition] = useTransition()
+
+  // Guest casual RSVP — the intent tapped (Going/Maybe/Can't go) before the
+  // guest sheet opens, and its own pending/error state (separate from the
+  // ticketed step1 sheet's, so the two flows never cross-talk).
+  const [pendingCasualIntent, setPendingCasualIntent] = useState<'going' | 'maybe' | 'not_going' | null>(null)
+  const [casualGuestError, setCasualGuestError] = useState<string | null>(null)
+  const [guestPending, startGuestTransition] = useTransition()
   const [descExpanded, setDescExpanded] = useState(false)
 
   // Fan tiers
@@ -178,6 +186,12 @@ export default function EventPage({ event, rsvpCount, spotsLeft, creator, review
   const [phoneDigits, setPhoneDigits] = useState(viewerPhoneDigits ?? '')
   const [quantity, setQuantity] = useState(1)
   const [step1Error, setStep1Error] = useState<string | null>(null)
+
+  // Guest phone verification — only relevant when !isAuthenticated. A guest
+  // must OTP-verify their phone before initiateRSVP will accept the booking.
+  const [otpSent, setOtpSent] = useState(false)
+  const [otpVerified, setOtpVerified] = useState(false)
+  const [otpCode, setOtpCode] = useState('')
 
   // Referral code
   const [refExpanded, setRefExpanded] = useState(false)
@@ -240,10 +254,65 @@ export default function EventPage({ event, rsvpCount, spotsLeft, creator, review
   // ── Casual RSVP ────────────────────────────────────────────────────────────
 
   function handleCasualRSVP(intent: 'going' | 'maybe' | 'not_going') {
+    if (!isAuthenticated) {
+      setPendingCasualIntent(intent)
+      setCasualGuestError(null)
+      setOtpSent(false); setOtpVerified(false); setOtpCode('')
+      setSheet('casualGuest')
+      return
+    }
     setCasualIntent(intent)  // optimistic update
     startCasualTransition(async () => {
       await casualRSVP({ eventId: event.id, intent })
     })
+  }
+
+  // ── Casual RSVP — guest (unauthenticated) ──────────────────────────────────
+
+  async function submitCasualGuestRSVP() {
+    if (!pendingCasualIntent) return
+    const result = await casualRSVPGuest({
+      eventId: event.id,
+      intent:  pendingCasualIntent,
+      name:    name.trim(),
+      phone,
+    })
+    if (result.error) { setCasualGuestError(result.error); return }
+    setCasualIntent(pendingCasualIntent)
+    setSheet('none')
+  }
+
+  function handleCasualGuestSubmit() {
+    setCasualGuestError(null)
+    if (!name.trim()) { setCasualGuestError('Please enter your name.'); return }
+    if (!/^[6-9]\d{9}$/.test(phoneDigits)) {
+      setCasualGuestError('Please enter a valid 10-digit Indian mobile number.')
+      return
+    }
+
+    if (!otpVerified) {
+      if (!otpSent) {
+        startGuestTransition(async () => {
+          const r = await sendRsvpGuestOtp(phone)
+          if (!r.success) { setCasualGuestError(r.error ?? 'Could not send verification code.'); return }
+          setOtpSent(true)
+        })
+        return
+      }
+      if (!/^\d{6}$/.test(otpCode)) {
+        setCasualGuestError('Enter the 6-digit code sent to your phone.')
+        return
+      }
+      startGuestTransition(async () => {
+        const r = await verifyRsvpGuestOtp(phone, otpCode)
+        if (!r.success) { setCasualGuestError(r.error ?? 'Incorrect code.'); return }
+        setOtpVerified(true)
+        await submitCasualGuestRSVP()
+      })
+      return
+    }
+
+    startGuestTransition(submitCasualGuestRSVP)
   }
 
   // ── Referral code apply ────────────────────────────────────────────────────
@@ -264,6 +333,47 @@ export default function EventPage({ event, rsvpCount, spotsLeft, creator, review
 
   // ── Step 1 submit ──────────────────────────────────────────────────────────
 
+  async function submitRSVP() {
+    const result = await initiateRSVP({
+      eventId: event.id,
+      attendeeName: name.trim(),
+      attendeePhone: phone,
+      quantity,
+      ...(refApplied ? { referralCode: refApplied } : {}),
+      ...(hasFanTiers && selectedTier ? { ticketTierId: selectedTier.id } : {}),
+      ...(discoverySource ? { discoverySource } : {}),
+    })
+
+    if (result.error) { setStep1Error(result.error); return }
+
+    const tierName = hasFanTiers && selectedTier ? selectedTier.name : null
+
+    if (result.isFree) {
+      setConfirmed({
+        qrToken: result.qrToken,
+        isFree: true,
+        razorpayOrderId: null,
+        amount: 0,
+        rsvpId: result.orderId,
+        tierName,
+      })
+      setSheet('confirmed')
+      return
+    }
+
+    // Paid: launch Razorpay Checkout.js modal
+    const orderData = {
+      qrToken: null,
+      isFree: false,
+      razorpayOrderId: result.razorpayOrderId!,
+      amount: result.amount,
+      rsvpId: result.orderId,
+      tierName,
+    }
+    setConfirmed(orderData)
+    await openRazorpayCheckout(orderData, name.trim(), phone)
+  }
+
   function handleStep1Submit() {
     setStep1Error(null)
     if (!name.trim()) { setStep1Error('Please enter your name.'); return }
@@ -272,46 +382,31 @@ export default function EventPage({ event, rsvpCount, spotsLeft, creator, review
       return
     }
 
-    startTransition(async () => {
-      const result = await initiateRSVP({
-        eventId: event.id,
-        attendeeName: name.trim(),
-        attendeePhone: phone,
-        quantity,
-        ...(refApplied ? { referralCode: refApplied } : {}),
-        ...(hasFanTiers && selectedTier ? { ticketTierId: selectedTier.id } : {}),
-        ...(discoverySource ? { discoverySource } : {}),
-      })
-
-      if (result.error) { setStep1Error(result.error); return }
-
-      const tierName = hasFanTiers && selectedTier ? selectedTier.name : null
-
-      if (result.isFree) {
-        setConfirmed({
-          qrToken: result.qrToken,
-          isFree: true,
-          razorpayOrderId: null,
-          amount: 0,
-          rsvpId: result.orderId,
-          tierName,
+    // Guests (no WIMC session) must OTP-verify their phone before booking.
+    // Authenticated users skip straight to submitRSVP, unchanged from before.
+    if (!isAuthenticated && !otpVerified) {
+      if (!otpSent) {
+        startTransition(async () => {
+          const r = await sendRsvpGuestOtp(phone)
+          if (!r.success) { setStep1Error(r.error ?? 'Could not send verification code.'); return }
+          setOtpSent(true)
         })
-        setSheet('confirmed')
         return
       }
-
-      // Paid: launch Razorpay Checkout.js modal
-      const orderData = {
-        qrToken: null,
-        isFree: false,
-        razorpayOrderId: result.razorpayOrderId!,
-        amount: result.amount,
-        rsvpId: result.orderId,
-        tierName,
+      if (!/^\d{6}$/.test(otpCode)) {
+        setStep1Error('Enter the 6-digit code sent to your phone.')
+        return
       }
-      setConfirmed(orderData)
-      await openRazorpayCheckout(orderData, name.trim(), phone)
-    })
+      startTransition(async () => {
+        const r = await verifyRsvpGuestOtp(phone, otpCode)
+        if (!r.success) { setStep1Error(r.error ?? 'Incorrect code.'); return }
+        setOtpVerified(true)
+        await submitRSVP()
+      })
+      return
+    }
+
+    startTransition(submitRSVP)
   }
 
   // ── Razorpay Standard Checkout ─────────────────────────────────────────────
@@ -901,55 +996,54 @@ export default function EventPage({ event, rsvpCount, spotsLeft, creator, review
                   {isCasual ? (
                     canBook ? (
                       <div className="flex flex-col gap-3">
-                        {!isAuthenticated ? (
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            disabled={casualPending}
+                            onClick={() => handleCasualRSVP('going')}
+                            className={`flex-1 flex flex-col items-center gap-0.5 py-2.5 border-2 text-xs font-mono uppercase tracking-wider transition-colors ${
+                              casualIntent === 'going'
+                                ? 'bg-[#006a43] text-white border-[#006a43]'
+                                : 'bg-transparent text-[#07070A] border-[#07070A] hover:bg-[#F0E8DC]'
+                            }`}
+                          >
+                            <span className="text-base">✓</span>
+                            Going
+                          </button>
+                          <button
+                            type="button"
+                            disabled={casualPending}
+                            onClick={() => handleCasualRSVP('maybe')}
+                            className={`flex-1 flex flex-col items-center gap-0.5 py-2.5 border-2 text-xs font-mono uppercase tracking-wider transition-colors ${
+                              casualIntent === 'maybe'
+                                ? 'bg-amber-500 text-white border-amber-500'
+                                : 'bg-transparent text-[#07070A] border-[#07070A] hover:bg-[#F0E8DC]'
+                            }`}
+                          >
+                            <span className="text-base">~</span>
+                            Maybe
+                          </button>
+                          <button
+                            type="button"
+                            disabled={casualPending}
+                            onClick={() => handleCasualRSVP('not_going')}
+                            className={`flex-1 flex flex-col items-center gap-0.5 py-2.5 border-2 text-xs font-mono uppercase tracking-wider transition-colors ${
+                              casualIntent === 'not_going'
+                                ? 'bg-[#57423e] text-white border-[#57423e]'
+                                : 'bg-transparent text-[#07070A] border-[#07070A] hover:bg-[#F0E8DC]'
+                            }`}
+                          >
+                            <span className="text-base">✗</span>
+                            Can&apos;t go
+                          </button>
+                        </div>
+                        {!isAuthenticated && (
                           <Link
                             href={`/signin?next=/events/${event.slug}`}
-                            className="w-full text-center font-mono text-xs uppercase tracking-wider text-[#07070A] bg-[#F0E8DC] border-2 border-[#07070A] py-3 hover:bg-[#E5DDD0] transition-colors"
+                            className="text-center font-mono text-[10px] uppercase tracking-wider text-[#57423e] hover:underline"
                           >
-                            Sign in to RSVP
+                            Sign in instead
                           </Link>
-                        ) : (
-                          <div className="flex gap-2">
-                            <button
-                              type="button"
-                              disabled={casualPending}
-                              onClick={() => handleCasualRSVP('going')}
-                              className={`flex-1 flex flex-col items-center gap-0.5 py-2.5 border-2 text-xs font-mono uppercase tracking-wider transition-colors ${
-                                casualIntent === 'going'
-                                  ? 'bg-[#006a43] text-white border-[#006a43]'
-                                  : 'bg-transparent text-[#07070A] border-[#07070A] hover:bg-[#F0E8DC]'
-                              }`}
-                            >
-                              <span className="text-base">✓</span>
-                              Going
-                            </button>
-                            <button
-                              type="button"
-                              disabled={casualPending}
-                              onClick={() => handleCasualRSVP('maybe')}
-                              className={`flex-1 flex flex-col items-center gap-0.5 py-2.5 border-2 text-xs font-mono uppercase tracking-wider transition-colors ${
-                                casualIntent === 'maybe'
-                                  ? 'bg-amber-500 text-white border-amber-500'
-                                  : 'bg-transparent text-[#07070A] border-[#07070A] hover:bg-[#F0E8DC]'
-                              }`}
-                            >
-                              <span className="text-base">~</span>
-                              Maybe
-                            </button>
-                            <button
-                              type="button"
-                              disabled={casualPending}
-                              onClick={() => handleCasualRSVP('not_going')}
-                              className={`flex-1 flex flex-col items-center gap-0.5 py-2.5 border-2 text-xs font-mono uppercase tracking-wider transition-colors ${
-                                casualIntent === 'not_going'
-                                  ? 'bg-[#57423e] text-white border-[#57423e]'
-                                  : 'bg-transparent text-[#07070A] border-[#07070A] hover:bg-[#F0E8DC]'
-                              }`}
-                            >
-                              <span className="text-base">✗</span>
-                              Can&apos;t go
-                            </button>
-                          </div>
                         )}
                         {rsvpCount > 0 && (
                           <p className="text-center font-mono text-[10px] text-[#57423e]">
@@ -982,19 +1076,31 @@ export default function EventPage({ event, rsvpCount, spotsLeft, creator, review
                               >+</button>
                             </div>
                           </div>
-                          <button
-                            onClick={() => {
-                              if (!isAuthenticated) {
-                                router.push(`/signin?next=/events/${event.slug}`)
-                                return
-                              }
-                              setSheet('step1')
-                            }}
-                            className="w-full bg-[#07070A] text-[#FAF7F0] font-sans font-semibold py-3.5 uppercase flex justify-center items-center gap-2 hover:bg-primary transition-colors border-2 border-[#07070A] group text-sm tracking-wider"
-                          >
-                            {isAuthenticated ? 'Get Tickets' : 'Sign in to Book'}
-                            <span className="material-symbols-outlined text-sm group-hover:translate-x-1 transition-transform" style={{ fontVariationSettings: "'FILL' 0" }}>arrow_forward</span>
-                          </button>
+                          {isAuthenticated ? (
+                            <button
+                              onClick={() => setSheet('step1')}
+                              className="w-full bg-[#07070A] text-[#FAF7F0] font-sans font-semibold py-3.5 uppercase flex justify-center items-center gap-2 hover:bg-primary transition-colors border-2 border-[#07070A] group text-sm tracking-wider"
+                            >
+                              Get Tickets
+                              <span className="material-symbols-outlined text-sm group-hover:translate-x-1 transition-transform" style={{ fontVariationSettings: "'FILL' 0" }}>arrow_forward</span>
+                            </button>
+                          ) : (
+                            <div className="flex flex-col gap-2">
+                              <button
+                                onClick={() => setSheet('step1')}
+                                className="w-full bg-[#07070A] text-[#FAF7F0] font-sans font-semibold py-3.5 uppercase flex justify-center items-center gap-2 hover:bg-primary transition-colors border-2 border-[#07070A] group text-sm tracking-wider"
+                              >
+                                Continue as Guest
+                                <span className="material-symbols-outlined text-sm group-hover:translate-x-1 transition-transform" style={{ fontVariationSettings: "'FILL' 0" }}>arrow_forward</span>
+                              </button>
+                              <Link
+                                href={`/signin?next=/events/${event.slug}`}
+                                className="w-full text-center font-mono text-xs uppercase tracking-wider text-[#07070A] py-1 hover:underline"
+                              >
+                                Sign in instead
+                              </Link>
+                            </div>
+                          )}
                         </>
                       )}
 
@@ -1060,55 +1166,54 @@ export default function EventPage({ event, rsvpCount, spotsLeft, creator, review
           {isCasual ? (
             canBook ? (
               <div className="flex flex-col gap-2">
-                {!isAuthenticated ? (
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    disabled={casualPending}
+                    onClick={() => handleCasualRSVP('going')}
+                    className={`flex-1 flex flex-col items-center gap-0.5 py-3.5 rounded-lg text-sm font-headline font-bold uppercase tracking-wider transition-all active:scale-95 ${
+                      casualIntent === 'going'
+                        ? 'bg-[#006a43] text-white shadow-[0_-8px_24px_rgba(0,106,67,0.2)]'
+                        : 'bg-surface-container-high text-on-surface hover:bg-surface-container-highest'
+                    }`}
+                  >
+                    <span>✓</span>
+                    Going
+                  </button>
+                  <button
+                    type="button"
+                    disabled={casualPending}
+                    onClick={() => handleCasualRSVP('maybe')}
+                    className={`flex-1 flex flex-col items-center gap-0.5 py-3.5 rounded-lg text-sm font-headline font-bold uppercase tracking-wider transition-all active:scale-95 ${
+                      casualIntent === 'maybe'
+                        ? 'bg-amber-500 text-white'
+                        : 'bg-surface-container-high text-on-surface hover:bg-surface-container-highest'
+                    }`}
+                  >
+                    <span>~</span>
+                    Maybe
+                  </button>
+                  <button
+                    type="button"
+                    disabled={casualPending}
+                    onClick={() => handleCasualRSVP('not_going')}
+                    className={`flex-1 flex flex-col items-center gap-0.5 py-3.5 rounded-lg text-sm font-headline font-bold uppercase tracking-wider transition-all active:scale-95 ${
+                      casualIntent === 'not_going'
+                        ? 'bg-on-surface-variant text-surface'
+                        : 'bg-surface-container-high text-on-surface hover:bg-surface-container-highest'
+                    }`}
+                  >
+                    <span>✗</span>
+                    Can&apos;t go
+                  </button>
+                </div>
+                {!isAuthenticated && (
                   <Link
                     href={`/signin?next=/events/${event.slug}`}
-                    className="bg-surface-container-high text-on-surface rounded-lg px-8 py-4 w-full flex items-center justify-center gap-2 font-headline font-bold text-sm uppercase tracking-wider hover:bg-surface-container-highest transition-all active:scale-95"
+                    className="text-center text-on-surface-variant text-xs font-mono uppercase tracking-wider hover:underline"
                   >
-                    Sign in to RSVP
+                    Sign in instead
                   </Link>
-                ) : (
-                  <div className="flex gap-2">
-                    <button
-                      type="button"
-                      disabled={casualPending}
-                      onClick={() => handleCasualRSVP('going')}
-                      className={`flex-1 flex flex-col items-center gap-0.5 py-3.5 rounded-lg text-sm font-headline font-bold uppercase tracking-wider transition-all active:scale-95 ${
-                        casualIntent === 'going'
-                          ? 'bg-[#006a43] text-white shadow-[0_-8px_24px_rgba(0,106,67,0.2)]'
-                          : 'bg-surface-container-high text-on-surface hover:bg-surface-container-highest'
-                      }`}
-                    >
-                      <span>✓</span>
-                      Going
-                    </button>
-                    <button
-                      type="button"
-                      disabled={casualPending}
-                      onClick={() => handleCasualRSVP('maybe')}
-                      className={`flex-1 flex flex-col items-center gap-0.5 py-3.5 rounded-lg text-sm font-headline font-bold uppercase tracking-wider transition-all active:scale-95 ${
-                        casualIntent === 'maybe'
-                          ? 'bg-amber-500 text-white'
-                          : 'bg-surface-container-high text-on-surface hover:bg-surface-container-highest'
-                      }`}
-                    >
-                      <span>~</span>
-                      Maybe
-                    </button>
-                    <button
-                      type="button"
-                      disabled={casualPending}
-                      onClick={() => handleCasualRSVP('not_going')}
-                      className={`flex-1 flex flex-col items-center gap-0.5 py-3.5 rounded-lg text-sm font-headline font-bold uppercase tracking-wider transition-all active:scale-95 ${
-                        casualIntent === 'not_going'
-                          ? 'bg-on-surface-variant text-surface'
-                          : 'bg-surface-container-high text-on-surface hover:bg-surface-container-highest'
-                      }`}
-                    >
-                      <span>✗</span>
-                      Can&apos;t go
-                    </button>
-                  </div>
                 )}
                 {rsvpCount > 0 && (
                   <p className="text-center text-on-surface-variant text-xs font-mono">{goingCount} going</p>
@@ -1128,19 +1233,31 @@ export default function EventPage({ event, rsvpCount, spotsLeft, creator, review
               View My Ticket
             </button>
           ) : canBook ? (
-            <button
-              onClick={() => {
-                if (!isAuthenticated) {
-                  router.push(`/signin?next=/events/${event.slug}`)
-                  return
-                }
-                setSheet('step1')
-              }}
-              className="bg-gradient-to-r from-[#AB2E00] to-[#CF4519] text-white rounded-lg px-8 py-4 w-full flex items-center justify-center gap-2 font-headline font-bold text-sm uppercase tracking-wider shadow-[0_-8px_24px_rgba(171,46,0,0.12)] hover:brightness-110 transition-all active:scale-95"
-            >
-              <span className="material-symbols-outlined">confirmation_number</span>
-              {isAuthenticated ? ctaLabel : 'SIGN IN TO GET TICKETS'}
-            </button>
+            isAuthenticated ? (
+              <button
+                onClick={() => setSheet('step1')}
+                className="bg-gradient-to-r from-[#AB2E00] to-[#CF4519] text-white rounded-lg px-8 py-4 w-full flex items-center justify-center gap-2 font-headline font-bold text-sm uppercase tracking-wider shadow-[0_-8px_24px_rgba(171,46,0,0.12)] hover:brightness-110 transition-all active:scale-95"
+              >
+                <span className="material-symbols-outlined">confirmation_number</span>
+                {ctaLabel}
+              </button>
+            ) : (
+              <div className="flex flex-col gap-1.5 w-full">
+                <button
+                  onClick={() => setSheet('step1')}
+                  className="bg-gradient-to-r from-[#AB2E00] to-[#CF4519] text-white rounded-lg px-8 py-4 w-full flex items-center justify-center gap-2 font-headline font-bold text-sm uppercase tracking-wider shadow-[0_-8px_24px_rgba(171,46,0,0.12)] hover:brightness-110 transition-all active:scale-95"
+                >
+                  <span className="material-symbols-outlined">confirmation_number</span>
+                  Continue as Guest
+                </button>
+                <Link
+                  href={`/signin?next=/events/${event.slug}`}
+                  className="text-center text-on-surface-variant text-xs font-mono uppercase tracking-wider py-1 hover:underline"
+                >
+                  Sign in instead
+                </Link>
+              </div>
+            )
           ) : (
             <div className="w-full py-4 text-center text-on-surface-variant text-sm font-semibold bg-surface-container-low rounded-lg">
               {soldOut ? 'Sold Out' : isPast ? 'Event Ended' : event.status === 'cancelled' ? 'Event Cancelled' : ''}
@@ -1247,12 +1364,48 @@ export default function EventPage({ event, rsvpCount, spotsLeft, creator, review
                       <input
                         type="tel"
                         value={phoneDigits}
-                        onChange={(e) => setPhoneDigits(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                        onChange={(e) => {
+                          setPhoneDigits(e.target.value.replace(/\D/g, '').slice(0, 10))
+                          if (!isAuthenticated) { setOtpSent(false); setOtpVerified(false); setOtpCode('') }
+                        }}
                         placeholder="98765 43210"
                         className="w-full bg-surface-container-low border-none rounded-xl px-4 py-4 focus:outline-none focus:ring-2 focus:ring-outline transition-all text-on-surface placeholder:text-outline-variant"
                       />
                     </div>
                   </div>
+
+                  {/* Guest phone verification — shown once a code has been sent */}
+                  {!isAuthenticated && otpSent && !otpVerified && (
+                    <div className="p-4 bg-surface-container-high rounded-xl flex flex-col gap-3">
+                      <div>
+                        <span className="block font-headline font-bold text-on-surface text-sm">Verify your number</span>
+                        <span className="text-xs text-on-surface-variant">Enter the 6-digit code sent to +91 {phoneDigits}</span>
+                      </div>
+                      <input
+                        type="tel"
+                        inputMode="numeric"
+                        value={otpCode}
+                        onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                        placeholder="000000"
+                        className="w-full bg-surface-container-lowest border-none rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-outline transition-all text-on-surface placeholder:text-outline-variant font-mono text-lg tracking-[0.3em] text-center"
+                      />
+                      <button
+                        type="button"
+                        disabled={isPending}
+                        onClick={() => {
+                          setStep1Error(null)
+                          setOtpCode('')
+                          startTransition(async () => {
+                            const r = await sendRsvpGuestOtp(phone)
+                            if (!r.success) setStep1Error(r.error ?? 'Could not resend code.')
+                          })
+                        }}
+                        className="self-start text-xs font-mono uppercase tracking-wider text-primary hover:underline disabled:opacity-50"
+                      >
+                        Resend code
+                      </button>
+                    </div>
+                  )}
 
                   {/* Quantity */}
                   <div className="flex items-center justify-between p-4 bg-surface-container-high rounded-xl">
@@ -1375,16 +1528,139 @@ export default function EventPage({ event, rsvpCount, spotsLeft, creator, review
                   >
                     {isPending
                       ? 'Processing…'
-                      : effectivePrice === 0
-                        ? 'Confirm RSVP'
-                        : `Pay ${formatPrice(totalPaise)}`}
+                      : (!isAuthenticated && !otpVerified && !otpSent)
+                        ? 'Send verification code'
+                        : (!isAuthenticated && !otpVerified && otpSent)
+                          ? 'Verify & continue'
+                          : effectivePrice === 0
+                            ? 'Confirm RSVP'
+                            : `Pay ${formatPrice(totalPaise)}`}
                     {!isPending && <span className="material-symbols-outlined">arrow_forward</span>}
                   </button>
 
                   <p className="text-center text-xs text-on-surface-variant">
-                    By clicking {effectivePrice === 0 ? 'Confirm' : 'Pay'}, you agree to our{' '}
+                    By {(!isAuthenticated && !otpVerified) ? 'continuing' : `clicking ${effectivePrice === 0 ? 'Confirm' : 'Pay'}`}, you agree to our{' '}
                     <span className="underline font-semibold cursor-pointer">Terms of Service</span>
                   </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* ════════════════════════════════════════════════════════════════════ */}
+      {/* Casual RSVP: guest sheet (name + phone + OTP, no account created)   */}
+      {/* ════════════════════════════════════════════════════════════════════ */}
+      {sheet === 'casualGuest' && (
+        <>
+          <SheetBackdrop onClick={() => setSheet('none')} />
+          <div className="fixed bottom-0 left-0 w-full z-[70]">
+            <div className="bg-surface-container-lowest rounded-t-[32px] shadow-[0_-12px_32px_rgba(171,46,0,0.12)] max-w-2xl mx-auto overflow-hidden">
+              <SheetGrabber />
+              <div className="px-6 pb-8 pt-2">
+                <header className="mb-8">
+                  <h2 className="font-headline text-2xl font-bold text-on-surface">
+                    {pendingCasualIntent === 'going' ? "You're going" : pendingCasualIntent === 'maybe' ? "Maybe you'll go" : "Can't make it"}
+                  </h2>
+                  <p className="text-on-surface-variant text-sm">Just your name and number — no account needed.</p>
+                </header>
+
+                <div className="space-y-6">
+                  {/* Name */}
+                  <div>
+                    <label className="block text-xs font-bold text-on-surface-variant uppercase tracking-widest mb-2 px-1">
+                      Full Name
+                    </label>
+                    <input
+                      type="text"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      placeholder="Enter your name"
+                      className="w-full bg-surface-container-low border-none rounded-xl px-4 py-4 focus:outline-none focus:ring-2 focus:ring-outline transition-all text-on-surface placeholder:text-outline-variant"
+                    />
+                  </div>
+
+                  {/* Phone */}
+                  <div>
+                    <label className="block text-xs font-bold text-on-surface-variant uppercase tracking-widest mb-2 px-1">
+                      WhatsApp Number
+                    </label>
+                    <div className="flex gap-2">
+                      <div className="bg-surface-container-low rounded-xl px-4 py-4 flex items-center gap-2 text-on-surface font-semibold shrink-0">
+                        <span className="text-xs">🇮🇳</span>
+                        <span>+91</span>
+                      </div>
+                      <input
+                        type="tel"
+                        value={phoneDigits}
+                        onChange={(e) => {
+                          setPhoneDigits(e.target.value.replace(/\D/g, '').slice(0, 10))
+                          setOtpSent(false); setOtpVerified(false); setOtpCode('')
+                        }}
+                        placeholder="98765 43210"
+                        className="w-full bg-surface-container-low border-none rounded-xl px-4 py-4 focus:outline-none focus:ring-2 focus:ring-outline transition-all text-on-surface placeholder:text-outline-variant"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Guest phone verification — shown once a code has been sent */}
+                  {otpSent && !otpVerified && (
+                    <div className="p-4 bg-surface-container-high rounded-xl flex flex-col gap-3">
+                      <div>
+                        <span className="block font-headline font-bold text-on-surface text-sm">Verify your number</span>
+                        <span className="text-xs text-on-surface-variant">Enter the 6-digit code sent to +91 {phoneDigits}</span>
+                      </div>
+                      <input
+                        type="tel"
+                        inputMode="numeric"
+                        value={otpCode}
+                        onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                        placeholder="000000"
+                        className="w-full bg-surface-container-lowest border-none rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-outline transition-all text-on-surface placeholder:text-outline-variant font-mono text-lg tracking-[0.3em] text-center"
+                      />
+                      <button
+                        type="button"
+                        disabled={guestPending}
+                        onClick={() => {
+                          setCasualGuestError(null)
+                          setOtpCode('')
+                          startGuestTransition(async () => {
+                            const r = await sendRsvpGuestOtp(phone)
+                            if (!r.success) setCasualGuestError(r.error ?? 'Could not resend code.')
+                          })
+                        }}
+                        className="self-start text-xs font-mono uppercase tracking-wider text-primary hover:underline disabled:opacity-50"
+                      >
+                        Resend code
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Error */}
+                  {casualGuestError && (
+                    <p className="text-error text-sm flex items-start gap-1.5">
+                      <span className="material-symbols-outlined text-base shrink-0 mt-0.5">error</span>
+                      {casualGuestError}
+                    </p>
+                  )}
+
+                  {/* CTA */}
+                  <button
+                    type="button"
+                    onClick={handleCasualGuestSubmit}
+                    disabled={guestPending}
+                    className="w-full bg-gradient-to-r from-primary to-primary-container text-on-primary py-5 rounded-xl font-headline font-bold text-lg flex items-center justify-center gap-3 shadow-[0_12px_32px_rgba(171,46,0,0.15)] active:scale-[0.98] transition-all disabled:opacity-50"
+                  >
+                    {guestPending
+                      ? 'Processing…'
+                      : !otpSent
+                        ? 'Send verification code'
+                        : !otpVerified
+                          ? 'Verify & continue'
+                          : 'Confirm'}
+                    {!guestPending && <span className="material-symbols-outlined">arrow_forward</span>}
+                  </button>
                 </div>
               </div>
             </div>
