@@ -1,8 +1,8 @@
 // =============================================================================
 // WIMC — Payment Reconciliation Cron
 //
-// Runs every 15 minutes (configure in vercel.json or your cron provider).
-// Finds RSVP rows that are still 'pending' after 15 minutes — meaning the
+// Runs every 15 minutes via a Netlify Scheduled Function
+// (netlify/functions/reconcile-payments.mts). Finds RSVP rows that are still 'pending' after 15 minutes — meaning the
 // Razorpay webhook either hasn't fired or was missed — and syncs their true
 // status from the Razorpay API.
 //
@@ -17,18 +17,9 @@
 // Recommended cron schedule: */15 * * * * (every 15 minutes)
 //
 // Protect this endpoint with a shared CRON_SECRET so it cannot be triggered
-// by arbitrary external requests:
-//
-//   # vercel.json
-//   {
-//     "crons": [{
-//       "path": "/api/cron/reconcile-payments",
-//       "schedule": "*/15 * * * *"
-//     }]
-//   }
-//
-// Vercel automatically injects `Authorization: Bearer <CRON_SECRET>` when
-// invoking cron routes.  For other platforms, send the header manually.
+// by arbitrary external requests. The Netlify Scheduled Function that calls
+// this route sends `Authorization: Bearer <CRON_SECRET>` — for other
+// platforms/local testing, send the header manually.
 // =============================================================================
 
 import { NextRequest, NextResponse } from 'next/server'

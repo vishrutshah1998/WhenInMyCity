@@ -6,10 +6,11 @@
 //   - Calls getPersonalisedFeed to fetch their top 5 upcoming events.
 //   - Logs the digest content that would be sent via WhatsApp (v2).
 //
-// Vercel cron schedule: "0 3 30 * 0"  (Sunday 3:30am UTC ≈ 9am IST)
+// Schedule: "30 3 * * 0"  (Sunday 3:30am UTC ≈ 9am IST), triggered by a
+// Netlify Scheduled Function (netlify/functions/weekly-digest.mts).
 //
-// Protected by CRON_SECRET — Vercel injects
-// `Authorization: Bearer <CRON_SECRET>` automatically.
+// Protected by CRON_SECRET — the scheduled function sends
+// `Authorization: Bearer <CRON_SECRET>`.
 // =============================================================================
 
 import { NextRequest, NextResponse } from 'next/server'

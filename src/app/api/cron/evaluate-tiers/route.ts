@@ -1,13 +1,14 @@
 // =============================================================================
 // WIMC — User Tier Evaluation Cron
 //
-// Runs daily at 2am IST (20:30 UTC previous day) via Vercel Cron.
-// Evaluates all active users against the unified Wanderer→Local→Lantern→Beacon
-// tier ladder and updates user_profiles accordingly.
+// Runs daily at 0200 UTC via a Netlify Scheduled Function
+// (netlify/functions/evaluate-tiers.mts). Evaluates all active users against
+// the unified Wanderer→Local→Lantern→Beacon tier ladder and updates
+// user_profiles accordingly.
 //
 // Protection:
-//   Vercel automatically injects `Authorization: Bearer <CRON_SECRET>` when
-//   invoking cron routes. For local testing, send the header manually.
+//   The scheduled function sends `Authorization: Bearer <CRON_SECRET>`. For
+//   local testing, send the header manually.
 //
 // Returns: { evaluated: number, upgraded: number, downgraded: number, nextCursor: string|null, done: boolean }
 //

@@ -1,8 +1,9 @@
 // =============================================================================
 // WIMC — Venue Tier Evaluation Cron
 //
-// Schedule: 0 21 * * 1  (every Monday at 21:00 UTC / 2:30 AM IST Tuesday)
-// Vercel automatically injects `Authorization: Bearer <CRON_SECRET>`.
+// Schedule: 0 21 * * 1  (every Monday at 21:00 UTC / 2:30 AM IST Tuesday),
+// triggered by a Netlify Scheduled Function (netlify/functions/evaluate-venue-tiers.mts)
+// which sends `Authorization: Bearer <CRON_SECRET>`.
 //
 // Trust axis:  evaluates every active Venue against Open/Verified/Beloved/Legendary
 // Velocity overlay: recomputes Trending status per city (final page only)

@@ -1,7 +1,8 @@
 // =============================================================================
 // WIMC — Event Reminder Cron
 //
-// Runs daily at 20:00 UTC (01:30 IST) via Vercel Cron.
+// Runs daily at 20:00 UTC (01:30 IST) via a Netlify Scheduled Function
+// (netlify/functions/event-reminders.mts).
 // Finds events starting 22–26 hours from now and sends reminders to:
 //   - Attendees (in-app + WhatsApp)
 //   - Creators (in-app + WhatsApp with ticket stats)
