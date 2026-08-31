@@ -7,7 +7,7 @@ import { INTEREST_TAGS } from '@/lib/constants/interests'
 import { CreateExplorerSchema, type CreateExplorerInput } from '@/types/marketplace'
 import type { Event, ExplorerProfile, Rsvp } from '@/types/database'
 import { evaluateMakerTier } from '@/app/actions/tier'
-import { sendWhatsAppMessage } from '@/lib/whatsapp'
+import { sendWhatsAppTemplate } from '@/lib/whatsapp'
 import { bumpUserMetric } from '@/lib/metrics'
 
 // ---------------------------------------------------------------------------
@@ -759,13 +759,9 @@ export async function triggerPostEventRating(eventId: string): Promise<void> {
       const { data: authUser } = await admin.auth.admin.getUserById(rsvp.attendee_user_id)
       const phone = authUser?.user?.phone
       if (phone) {
-        const reviewUrl = `${process.env.NEXT_PUBLIC_APP_URL ?? 'https://www.wheninmycity.com'}/events/${event.slug}`
-        const msg = [
-          `⭐ How was "${event.title}"?`,
-          `Your review helps other Explorers discover great events. Drop a quick rating here:`,
-          reviewUrl,
-        ].join('\n')
-        sendWhatsAppMessage(phone, msg).catch((err) => {
+        sendWhatsAppTemplate(phone, 'review_prompt', 'en_US', [
+          event.title,
+        ], [{ index: 0, urlParameter: `events/${event.slug}` }]).catch((err) => {
           console.error('[triggerPostEventRating] WhatsApp review prompt failed', { userId: rsvp.attendee_user_id }, String(err))
         })
       }

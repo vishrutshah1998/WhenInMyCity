@@ -17,7 +17,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { evaluateVenueTier, computeTrendingVenues } from '@/app/actions/venue-tiers'
-import { sendWhatsAppMessage } from '@/lib/whatsapp'
+import { sendWhatsAppTemplate } from '@/lib/whatsapp'
 import type { VenueTier } from '@/types/database'
 
 // ---------------------------------------------------------------------------
@@ -131,10 +131,12 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
                 .maybeSingle()
 
               if (ownerProfile?.phone) {
-                const msg = isUpgrade
-                  ? buildVenueUpgradeMessage(venue.name, result.newTier)
-                  : buildVenueDowngradeMessage(venue.name, result.newTier)
-                await sendWhatsAppMessage(ownerProfile.phone, msg)
+                const detailLine = isUpgrade
+                  ? "Your Venue's reputation is growing — keep hosting great events. 🎉"
+                  : 'Host more quality events to climb back up — your community is counting on you! 🙌'
+                await sendWhatsAppTemplate(ownerProfile.phone, 'tier_change_notice', 'en_US', [
+                  venue.name, `${VENUE_TIER_LABELS[result.newTier]} Venue`, detailLine,
+                ], [{ index: 0, urlParameter: 'business/venue/dashboard' }])
               }
             }
           }
@@ -198,7 +200,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 }
 
 // ---------------------------------------------------------------------------
-// WhatsApp message builders for venue tier changes
+// Tier display labels (used in the tier_change_notice WhatsApp template)
 // ---------------------------------------------------------------------------
 
 const VENUE_TIER_LABELS: Record<VenueTier, string> = {
@@ -206,18 +208,4 @@ const VENUE_TIER_LABELS: Record<VenueTier, string> = {
   verified:  'Verified',
   beloved:   'Beloved',
   legendary: 'Legendary',
-}
-
-function buildVenueUpgradeMessage(venueName: string, newTier: VenueTier): string {
-  return (
-    `🎉 *${venueName}* has been upgraded to *${VENUE_TIER_LABELS[newTier]} Venue* status on WIMC! ` +
-    `Your Venue's reputation is growing — keep hosting great events.`
-  )
-}
-
-function buildVenueDowngradeMessage(venueName: string, newTier: VenueTier): string {
-  return (
-    `Hi! *${venueName}* has been updated to *${VENUE_TIER_LABELS[newTier]} Venue* on WIMC. ` +
-    `Host more quality events to climb back up — your community is counting on you! 🙌`
-  )
 }

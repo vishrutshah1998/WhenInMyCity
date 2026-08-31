@@ -6,6 +6,7 @@
 // Finds events starting 22–26 hours from now and sends reminders to:
 //   - Attendees (in-app + WhatsApp)
 //   - Creators (in-app + WhatsApp with ticket stats)
+//   - The event's Venue owner, if the event has a linked venue_id (WhatsApp only)
 //
 // The 4-hour window (22–26h) accounts for cron timing variance and catches
 // events starting between ~23:30 IST tonight and ~03:30 IST the next morning.
@@ -16,7 +17,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { sendWhatsAppMessage } from '@/lib/whatsapp'
+import { sendWhatsAppTemplate } from '@/lib/whatsapp'
 import { createNotification } from '@/app/actions/notifications'
 
 function isAuthorized(request: NextRequest): boolean {
@@ -42,7 +43,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     .from('events')
     .select(`
       id, title, slug, starts_at, capacity,
-      creator_id, venue_name, venue_address,
+      creator_id, venue_name, venue_address, venue_id,
       creator:creator_id (
         display_name, username, city, phone
       )
@@ -62,6 +63,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
   let attendeeReminders = 0
   let creatorReminders  = 0
+  let venueReminders    = 0
   const errors: string[] = []
 
   for (const event of upcomingEvents) {
@@ -109,12 +111,10 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
         }
 
         if (rsvp.attendee_phone) {
-          const msg =
-            `🎟️ Reminder: *${event.title}* is tomorrow!\n\n` +
-            `📅 ${eventTime}\n` +
-            `📍 ${event.venue_name}${event.venue_address ? `, ${event.venue_address}` : ''}\n\n` +
-            `See you there! 🎉`
-          await sendWhatsAppMessage(rsvp.attendee_phone, msg)
+          const venueLine = `${event.venue_name}${event.venue_address ? `, ${event.venue_address}` : ''}`
+          await sendWhatsAppTemplate(rsvp.attendee_phone, 'event_reminder_attendee_v2', 'en_US', [
+            event.title, eventTime, venueLine,
+          ])
         }
 
         attendeeReminders++
@@ -157,23 +157,39 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
         })
       }
 
+      const soldString = `${sold}${capacity > 0 ? `/${capacity} (${pct}% full)` : ''}`
+
       const creator = Array.isArray(event.creator) ? event.creator[0] : event.creator
       if (creator && 'phone' in creator && creator.phone) {
         const creatorCity = 'city' in creator && creator.city
           ? String(creator.city).toLowerCase().replace(/\s+/g, '-') + '/'
           : ''
         const creatorUsername = 'username' in creator ? String(creator.username ?? '') : ''
-        const msg =
-          `⏰ *${event.title}* starts in 24 hours!\n\n` +
-          `🎟️ Tickets sold: ${sold}${capacity > 0 ? `/${capacity} (${pct}% full)` : ''}\n` +
-          `📍 ${event.venue_name}\n` +
-          `📅 ${eventTime}\n\n` +
-          `Share your page to get last-minute RSVPs:\n` +
-          `wheninmycity.com/${creatorCity}${creatorUsername}`
-        await sendWhatsAppMessage(String(creator.phone), msg)
+        const shareLink = `wheninmycity.com/${creatorCity}${creatorUsername}`
+        await sendWhatsAppTemplate(String(creator.phone), 'event_reminder_creator_v2', 'en_US', [
+          event.title, soldString, event.venue_name, eventTime, shareLink,
+        ])
       }
 
       creatorReminders++
+
+      // ── VENUE REMINDER ─────────────────────────────────────────────────
+      // Only for events booked at a partner Venue (venue_id set) — self-hosted
+      // events with just a free-text venue_name/venue_address have no owner to notify.
+      if (event.venue_id) {
+        const { data: venue } = await admin
+          .from('venue_profiles')
+          .select('name, contact_whatsapp')
+          .eq('id', event.venue_id)
+          .maybeSingle()
+
+        if (venue?.contact_whatsapp) {
+          await sendWhatsAppTemplate(venue.contact_whatsapp, 'venue_reminder', 'en_US', [
+            venue.name, event.title, eventTime, soldString,
+          ], [{ index: 0, urlParameter: 'business/venue/dashboard' }])
+          venueReminders++
+        }
+      }
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err)
       errors.push(`creator:${event.creator_id} event:${event.id} — ${msg}`)
@@ -184,6 +200,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     eventsProcessed: upcomingEvents.length,
     attendeeReminders,
     creatorReminders,
+    venueReminders,
     ...(errors.length ? { errors } : {}),
   }
 

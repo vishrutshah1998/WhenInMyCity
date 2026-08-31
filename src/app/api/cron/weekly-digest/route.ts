@@ -4,7 +4,15 @@
 // Runs every Sunday at ~9am IST (03:30 UTC).
 // For each Explorer with digest_frequency = 'weekly':
 //   - Calls getPersonalisedFeed to fetch their top 5 upcoming events.
-//   - Logs the digest content that would be sent via WhatsApp (v2).
+//   - Creates an in-app notification pointing at the Circles feed.
+//
+// This is a weekly_digest in-app notification, not a WhatsApp send — WhatsApp
+// Utility templates cannot carry promotional/recommendation content like this
+// (Meta would reject it), so per product research this digest stays in-app
+// only. It used to attempt a free-text sendWhatsAppMessage() here, which
+// would have failed against cold recipients (no open customer-service
+// window) once real WhatsApp credentials were added — removed 2026-08-30 in
+// favor of the in-app notification below rather than left silently broken.
 //
 // Schedule: "30 3 * * 0"  (Sunday 3:30am UTC ≈ 9am IST), triggered by a
 // Netlify Scheduled Function (netlify/functions/weekly-digest.mts).
@@ -16,7 +24,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getPersonalisedFeed } from '@/lib/recommendations'
-import { sendWhatsAppMessage } from '@/lib/whatsapp'
+import { createNotification } from '@/app/actions/notifications'
 
 // ---------------------------------------------------------------------------
 // Auth guard
@@ -65,28 +73,13 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       break
     }
 
-    // Batch-fetch phones for all explorers in this page to avoid N+1 queries.
-    const authUserIds = explorers.map((e) => e.auth_user_id)
-    const { data: phoneRows } = await admin
-      .from('user_profiles')
-      .select('id, phone')
-      .in('id', authUserIds)
-
-    const phoneByUserId = new Map<string, string | null>(
-      (phoneRows ?? []).map((r) => [r.id, r.phone])
-    )
-
     for (const explorer of explorers) {
       const prefs = explorer.notification_preferences as
         | { whatsapp?: boolean; digest_frequency?: string }
         | null
 
-      // Skip explorers who don't want a weekly digest or have WhatsApp off.
+      // Skip explorers who don't want a weekly digest.
       if (prefs?.digest_frequency !== 'weekly') continue
-      if (prefs?.whatsapp === false) continue
-
-      const phone = phoneByUserId.get(explorer.auth_user_id) ?? null
-      if (!phone) continue
 
       try {
         const feed = await getPersonalisedFeed(explorer.id, {
@@ -96,21 +89,17 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
         if (!feed.length) continue
 
-        const eventSummaries = feed.map((e, i) =>
-          `${i + 1}. ${e.title} — ${new Date(e.starts_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })} @ ${e.venue_name}`,
+        const eventSummaries = feed.map((e) =>
+          `${e.title} — ${new Date(e.starts_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })} @ ${e.venue_name}`,
         )
 
-        const message = [
-          `Hey ${explorer.display_name}! Here's your week in ${explorer.city} ✨`,
-          '',
-          ...eventSummaries,
-          '',
-          `Explore more: ${process.env.NEXT_PUBLIC_APP_URL ?? ''}/explore`,
-          '',
-          'Reply STOP to unsubscribe from these digests.',
-        ].join('\n')
-
-        await sendWhatsAppMessage(phone, message)
+        await createNotification({
+          recipientId: explorer.auth_user_id,
+          type:        'weekly_digest',
+          title:       `Your week in ${explorer.city} ✨`,
+          body:        eventSummaries.join(' · '),
+          actionUrl:   '/circles',
+        })
         processed++
       } catch (err) {
         console.error(

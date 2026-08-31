@@ -8,7 +8,7 @@
 
 import { requireAdmin } from '@/lib/auth/requireAuth'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { sendWhatsAppMessage } from '@/lib/whatsapp'
+import { sendWhatsAppTemplate } from '@/lib/whatsapp'
 import { z } from 'zod'
 import type { PayoutStatus, EventStatus } from '@/types/database'
 import { createNotification } from '@/app/actions/notifications'
@@ -142,21 +142,24 @@ export async function updatePayoutStatus(raw: unknown): Promise<{ success: boole
     const creatorId = payout.creator_id
     const amountRs = `₹${Math.round(payout.maker_paise / 100).toLocaleString('en-IN')}`
 
-    const messages: Record<typeof status, { title: string; body: string; whatsapp: string }> = {
+    const messages: Record<typeof status, { title: string; body: string; statusLabel: string; detailLine: string }> = {
       approved: {
-        title:    'Payout Approved',
-        body:     `Your payout of ${amountRs} has been approved and will be processed shortly.`,
-        whatsapp: `Hi! Your WIMC payout of ${amountRs} has been approved and will be processed shortly. 🎉`,
+        title:       'Payout Approved',
+        body:        `Your payout of ${amountRs} has been approved and will be processed shortly.`,
+        statusLabel: 'approved 🎉',
+        detailLine:  'It will be processed shortly.',
       },
       paid: {
-        title:    'Payout Sent',
-        body:     `Your payout of ${amountRs} has been sent to your bank account.`,
-        whatsapp: `Hi! Your WIMC payout of ${amountRs} has been sent to your bank account. It should reflect within 1–2 business days. 💸`,
+        title:       'Payout Sent',
+        body:        `Your payout of ${amountRs} has been sent to your bank account.`,
+        statusLabel: 'sent 💸',
+        detailLine:  'It should reflect within 1–2 business days.',
       },
       rejected: {
-        title:    'Payout Update',
-        body:     notes?.trim() || 'Your payout request could not be processed. Please contact support.',
-        whatsapp: `Hi! There was an issue with your WIMC payout request. Please check your dashboard or contact support.`,
+        title:       'Payout Update',
+        body:        notes?.trim() || 'Your payout request could not be processed. Please contact support.',
+        statusLabel: 'updated',
+        detailLine:  'There was an issue with your payout — please check your dashboard or contact support.',
       },
     }
 
@@ -178,7 +181,9 @@ export async function updatePayoutStatus(raw: unknown): Promise<{ success: boole
           .eq('id', creatorId)
           .maybeSingle()
         if (profile?.phone) {
-          await sendWhatsAppMessage(profile.phone, msg.whatsapp).catch(() => {})
+          await sendWhatsAppTemplate(profile.phone, 'payout_notice', 'en_US', [
+            profile.display_name ?? 'there', msg.statusLabel, amountRs, msg.detailLine,
+          ], [{ index: 0, urlParameter: 'dashboard/payouts' }]).catch(() => {})
         }
       })(),
     ])

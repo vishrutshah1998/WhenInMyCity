@@ -41,7 +41,7 @@ import { updateAttendanceStreak } from '@/lib/streak'
 import { redeemReferralCode } from '@/app/actions/referral'
 import { createNotification } from '@/app/actions/notifications'
 import { isGuestPhoneVerified } from '@/app/actions/guest-otp'
-import { sendWhatsAppMessage } from '@/lib/whatsapp'
+import { sendWhatsAppTemplate } from '@/lib/whatsapp'
 import type { UserTier } from '@/types/database'
 
 // ---------------------------------------------------------------------------
@@ -348,13 +348,10 @@ export async function initiateRSVP(params: {
     })
     for (const row of inserted) {
       const ticketUrl = `${appUrl}/ticket/${row.qr_code_token}`
-      const whatsappMsg = [
-        `✅ Booking confirmed! You're going to "${event.title}"`,
-        `📅 ${eventDate}`,
-        `📍 ${event.venue_name}${event.venue_address ? `, ${event.venue_address}` : ''}`,
-        `🎫 Show your QR at the door: ${ticketUrl}`,
-      ].join('\n')
-      sendWhatsAppMessage(attendeePhone, whatsappMsg).catch((err) => {
+      const venueLine = `${event.venue_name}${event.venue_address ? `, ${event.venue_address}` : ''}`
+      sendWhatsAppTemplate(attendeePhone, 'rsvp_confirmed_v3', 'en_US', [
+        event.title, eventDate, venueLine, ticketUrl,
+      ]).catch((err) => {
         console.error('[initiateRSVP] free-RSVP WhatsApp send failed', { rsvpId: row.id, error: String(err) })
       })
     }
@@ -1115,13 +1112,11 @@ export async function casualRSVPGuest(params: {
     const eventDate = new Date(event.starts_at).toLocaleDateString('en-IN', {
       weekday: 'long', day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit',
     })
-    const label = intent === 'going' ? "You're marked Going" : "You're marked Maybe"
-    const whatsappMsg = [
-      `✅ ${label} to "${event.title}"`,
-      `📅 ${eventDate}`,
-      `📍 ${event.venue_name}${event.venue_address ? `, ${event.venue_address}` : ''}`,
-    ].join('\n')
-    sendWhatsAppMessage(phone, whatsappMsg).catch((err) => {
+    const label = intent === 'going' ? 'Going' : 'Maybe'
+    const venueLine = `${event.venue_name}${event.venue_address ? `, ${event.venue_address}` : ''}`
+    sendWhatsAppTemplate(phone, 'rsvp_casual_confirmed_v2', 'en_US', [
+      label, event.title, eventDate, venueLine,
+    ]).catch((err) => {
       console.error('[casualRSVPGuest] WhatsApp send failed', { eventId, error: String(err) })
     })
   }

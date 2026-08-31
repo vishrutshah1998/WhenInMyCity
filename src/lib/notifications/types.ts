@@ -45,6 +45,8 @@ export const NOTIFICATION_META: Record<string, { icon: string; color: string; la
   connection_request:         { icon: 'person_add',          color: '#5DD9D0', label: 'Connection Request' },
   connection_accepted:        { icon: 'handshake',           color: '#4ADE80', label: 'Connection Accepted' },
   new_message:                { icon: 'chat_bubble',         color: '#9B8FFF', label: 'New Message'        },
+  // Digest
+  weekly_digest:              { icon: 'auto_awesome',        color: '#5DD9D0', label: 'Weekly Digest'      },
 }
 
 export type NotificationType = keyof typeof NOTIFICATION_META

@@ -27,7 +27,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { verifyWebhookSignature } from '@/lib/razorpay'
-import { sendWhatsAppMessage } from '@/lib/whatsapp'
+import { sendWhatsAppTemplate } from '@/lib/whatsapp'
 import { calculateChargeAmount } from '@/types/events'
 
 // Always return 200 — see rule #1 above.
@@ -320,17 +320,14 @@ async function handlePaymentCaptured(
   const eventPageUrl = creator?.username ? `${appUrl}/${creator.username}/${event.slug}` : appUrl
   const priceRupees = event.ticket_price ? `₹${Math.round(event.ticket_price / 100)}` : 'Free'
 
+  const venueLine = `${event.venue_name}${event.venue_address ? `, ${event.venue_address}` : ''}`
+
   for (const rsvp of updated) {
     const qrUrl = `${appUrl}/ticket/${rsvp.qr_code_token}`
 
-    const whatsappMsg = [
-      `✅ Booking confirmed! You're going to "${event.title}"`,
-      `📅 ${eventDate}`,
-      `📍 ${event.venue_name}${event.venue_address ? `, ${event.venue_address}` : ''}`,
-      `🎫 Show your QR at the door: ${qrUrl}`,
-    ].join('\n')
-
-    sendWhatsAppMessage(rsvp.attendee_phone, whatsappMsg).catch((err) => {
+    sendWhatsAppTemplate(rsvp.attendee_phone, 'rsvp_confirmed_v3', 'en_US', [
+      event.title, eventDate, venueLine, qrUrl,
+    ]).catch((err) => {
       console.error('[webhook:payment.captured] WhatsApp send failed', { rsvpId: rsvp.id, error: String(err) })
     })
   }

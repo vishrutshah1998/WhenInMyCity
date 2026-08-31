@@ -10,7 +10,7 @@ import {
   RazorpayApiError,
 } from '@/lib/razorpay'
 import { notifyFollowersOfNewEvent, notifyNearbyExplorers } from '@/lib/notifications'
-import { sendWhatsAppMessage } from '@/lib/whatsapp'
+import { sendWhatsAppTemplate } from '@/lib/whatsapp'
 import { CreateEventSchema, type CreateEventInput } from '@/types/events'
 import type { Event, UserProfile, BookingRow } from '@/types/database'
 
@@ -605,13 +605,12 @@ export async function cancelEvent(
   const attendeesWithPhone = (rsvps ?? []).filter((r) => r.attendee_phone)
   if (attendeesWithPhone.length > 0) {
     const refundLine = refundedCount > 0
-      ? ' A full refund has been initiated and will reflect within 5–7 business days.'
-      : ''
+      ? 'A full refund has been initiated and will reflect within 5–7 business days.'
+      : "We're sorry for the inconvenience."
     const notifyAll = attendeesWithPhone.map((r) =>
-      sendWhatsAppMessage(
-        r.attendee_phone,
-        `Hi ${r.attendee_name}, unfortunately "${event.title}" has been cancelled by the organiser.${refundLine} We're sorry for the inconvenience.`,
-      ).catch(() => { /* fire-and-forget — never block the response */ }),
+      sendWhatsAppTemplate(r.attendee_phone, 'event_cancellation_explorer', 'en_US', [
+        r.attendee_name, event.title, refundLine,
+      ], [{ index: 0, urlParameter: 'explore' }]).catch(() => { /* fire-and-forget — never block the response */ }),
     )
     await Promise.all(notifyAll)
   }
