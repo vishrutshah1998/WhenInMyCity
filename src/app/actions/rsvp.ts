@@ -56,7 +56,7 @@ const InitiateRSVPSchema = z.object({
     .max(100, 'Attendee name must be at most 100 characters'),
   attendeePhone: z
     .string()
-    .regex(/^\+91[6-9]\d{9}$/, 'Phone must be a valid Indian mobile in +91XXXXXXXXXX format'),
+    .regex(/^\+[1-9]\d{6,14}$/, 'Phone must be a valid E.164 number, e.g. +919876543210'),
   quantity: z
     .number()
     .int()
@@ -1024,7 +1024,7 @@ const CasualRSVPGuestSchema = z.object({
   eventId: z.string().uuid('eventId must be a valid UUID'),
   intent:  z.enum(['going', 'maybe', 'not_going']),
   name:    z.string().trim().min(1, 'Please enter your name.').max(100, 'Name must be at most 100 characters'),
-  phone:   z.string().regex(/^\+91[6-9]\d{9}$/, 'Please enter a valid 10-digit Indian mobile number.'),
+  phone:   z.string().regex(/^\+[1-9]\d{6,14}$/, 'Please enter a valid phone number.'),
 })
 
 /**
