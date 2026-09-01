@@ -292,7 +292,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   // per cron run; any remainder will be caught on the next cycle.
   const { data: failedRefunds } = await admin
     .from('rsvps')
-    .select('id, razorpay_payment_id, attendee_name, attendee_phone, event_id')
+    .select('id, razorpay_payment_id, attendee_name, attendee_phone, event_id, event:event_id (title, starts_at, slug)')
     .eq('payment_status', 'refund_failed')
     .limit(20)
 
@@ -321,9 +321,19 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
         console.info('[reconcile] refund retry succeeded', { rsvpId: rsvp.id })
 
         if (rsvp.attendee_phone) {
-          sendWhatsAppTemplate(rsvp.attendee_phone, 'refund_processed', 'en_US', [
-            rsvp.attendee_name,
-          ]).catch(() => {})
+          // NOTE: the "refund_processed" template's approved body text in Meta is
+          // wrong — it's a copy of "review_prompt"'s content ("Thank you for
+          // attending... we'd like to hear about your experience"), not an actual
+          // refund message. Structurally correct params are supplied below so the
+          // send succeeds, but the resulting message will read as nonsensical
+          // until the template's real content is fixed in Meta Business Manager.
+          const refundEvent = Array.isArray(rsvp.event) ? rsvp.event[0] : rsvp.event
+          const eventDateStr = refundEvent
+            ? new Date(refundEvent.starts_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
+            : ''
+          sendWhatsAppTemplate(rsvp.attendee_phone, 'refund_processed', 'en', [
+            refundEvent?.title ?? 'your event', eventDateStr, rsvp.attendee_name,
+          ], [{ index: 0, urlParameter: refundEvent?.slug ?? '' }]).catch(() => {})
         }
       }),
     )

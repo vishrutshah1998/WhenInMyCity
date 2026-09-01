@@ -515,7 +515,7 @@ export async function cancelEvent(
   // ── 1. Verify ownership ──────────────────────────────────────────────────
   const { data: event, error: fetchError } = await admin
     .from('events')
-    .select('id, creator_id, title, status, whatsapp_group_url')
+    .select('id, creator_id, title, status, whatsapp_group_url, starts_at, slug')
     .eq('id', eventId)
     .maybeSingle()
 
@@ -607,10 +607,13 @@ export async function cancelEvent(
     const refundLine = refundedCount > 0
       ? 'A full refund has been initiated and will reflect within 5–7 business days.'
       : "We're sorry for the inconvenience."
+    const eventDateStr = new Date(event.starts_at).toLocaleDateString('en-IN', {
+      weekday: 'long', day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit',
+    })
     const notifyAll = attendeesWithPhone.map((r) =>
-      sendWhatsAppTemplate(r.attendee_phone, 'event_cancellation_explorer', 'en_US', [
-        r.attendee_name, event.title, refundLine,
-      ], [{ index: 0, urlParameter: 'explore' }]).catch(() => { /* fire-and-forget — never block the response */ }),
+      sendWhatsAppTemplate(r.attendee_phone, 'event_cancellation_explorer', 'en', [
+        event.title, eventDateStr, refundLine,
+      ], [{ index: 0, urlParameter: event.slug }]).catch(() => { /* fire-and-forget — never block the response */ }),
     )
     await Promise.all(notifyAll)
   }

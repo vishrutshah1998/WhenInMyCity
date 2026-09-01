@@ -108,6 +108,9 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   let upgraded   = 0
   let downgraded = 0
   const errors: string[] = []
+  const effectiveDateStr = new Date().toLocaleDateString('en-IN', {
+    day: 'numeric', month: 'short', year: 'numeric',
+  })
 
   for (let i = 0; i < users.length; i += BATCH_SIZE) {
     const batch = users.slice(i, i + BATCH_SIZE)
@@ -135,9 +138,10 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
                   .eq('id', user.id)
               }
               if (user.phone) {
-                await sendWhatsAppTemplate(user.phone, 'tier_change_notice', 'en_US', [
-                  'You', TIER_LABELS[result.newTier], 'Your city is noticing — keep showing up. Open the app to see your new perks. 🎉',
-                ], [{ index: 0, urlParameter: 'dashboard' }])
+                await sendWhatsAppTemplate(user.phone, 'tier_change_notice', 'en', [
+                  TIER_LABELS[result.currentTier], TIER_LABELS[result.newTier], effectiveDateStr,
+                  'your listing limits and perks',
+                ])
               }
             } else {
               downgraded++
@@ -145,17 +149,19 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
                 userId: user.id, previousTier: result.currentTier, newTier: result.newTier,
               })
               if (user.phone) {
-                await sendWhatsAppTemplate(user.phone, 'tier_change_notice', 'en_US', [
-                  'You', TIER_LABELS[result.newTier], 'Keep attending and hosting events to climb back up — your community is waiting! 🙌',
-                ], [{ index: 0, urlParameter: 'dashboard' }])
+                await sendWhatsAppTemplate(user.phone, 'tier_change_notice', 'en', [
+                  TIER_LABELS[result.currentTier], TIER_LABELS[result.newTier], effectiveDateStr,
+                  'your listing limits and perks',
+                ])
               }
             }
           } else if (result.recoveryStarted) {
             console.info('[evaluate-tiers] BEACON RECOVERY START', { userId: user.id })
             if (user.phone) {
-              await sendWhatsAppTemplate(user.phone, 'tier_change_notice', 'en_US', [
-                'You', 'Beacon (Recovery)', 'Your Beacon status has entered a 90-day recovery period — meet all criteria before the window closes to stay at Beacon. ⚠️',
-              ], [{ index: 0, urlParameter: 'dashboard' }])
+              await sendWhatsAppTemplate(user.phone, 'tier_change_notice', 'en', [
+                TIER_LABELS[result.currentTier], 'Beacon (Recovery)', effectiveDateStr,
+                'your Beacon perks, frozen for a 90-day recovery window',
+              ])
             }
           }
         } catch (err) {

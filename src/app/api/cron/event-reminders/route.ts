@@ -81,7 +81,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     // getEventAttendees (src/app/actions/rsvp.ts).
     const { data: rsvps } = await admin
       .from('rsvps')
-      .select('attendee_user_id, attendee_name, attendee_phone')
+      .select('attendee_user_id, attendee_name, attendee_phone, qr_code_token')
       .eq('event_id', event.id)
       .eq('payment_status', 'captured')
       .or('casual_intent.is.null,casual_intent.neq.not_going')
@@ -112,8 +112,15 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
         if (rsvp.attendee_phone) {
           const venueLine = `${event.venue_name}${event.venue_address ? `, ${event.venue_address}` : ''}`
-          await sendWhatsAppTemplate(rsvp.attendee_phone, 'event_reminder_attendee_v2', 'en_US', [
+          await sendWhatsAppTemplate(rsvp.attendee_phone, 'event_reminder_attendee_v2', 'en', [
             event.title, eventTime, venueLine,
+          ], [
+            { index: 0, urlParameter: rsvp.qr_code_token ?? '' },
+            // Button 2 ("Get Directions") is a Google Maps search link
+            // (https://www.google.com/maps/search/?api=1&query={{1}}), not an
+            // internal route — the dynamic value is the venue address, not an
+            // event identifier.
+            { index: 1, urlParameter: encodeURIComponent(venueLine) },
           ])
         }
 
@@ -161,14 +168,12 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
       const creator = Array.isArray(event.creator) ? event.creator[0] : event.creator
       if (creator && 'phone' in creator && creator.phone) {
-        const creatorCity = 'city' in creator && creator.city
-          ? String(creator.city).toLowerCase().replace(/\s+/g, '-') + '/'
-          : ''
-        const creatorUsername = 'username' in creator ? String(creator.username ?? '') : ''
-        const shareLink = `wheninmycity.com/${creatorCity}${creatorUsername}`
-        await sendWhatsAppTemplate(String(creator.phone), 'event_reminder_creator_v2', 'en_US', [
-          event.title, soldString, event.venue_name, eventTime, shareLink,
-        ])
+        // Template body reads "...at {{2}}. Total tickets booked so far: {{3}}." —
+        // {{3}} is a ticket count, not the event date/time (eventTime isn't used
+        // by this template at all).
+        await sendWhatsAppTemplate(String(creator.phone), 'event_reminder_creator_v2', 'en', [
+          event.title, event.venue_name, soldString,
+        ], [{ index: 0, urlParameter: event.id }])
       }
 
       creatorReminders++
@@ -184,9 +189,10 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
           .maybeSingle()
 
         if (venue?.contact_whatsapp) {
-          await sendWhatsAppTemplate(venue.contact_whatsapp, 'venue_reminder', 'en_US', [
-            venue.name, event.title, eventTime, soldString,
-          ], [{ index: 0, urlParameter: 'business/venue/dashboard' }])
+          const hostName = creator && 'display_name' in creator ? String(creator.display_name ?? 'the host') : 'the host'
+          await sendWhatsAppTemplate(venue.contact_whatsapp, 'venue_reminder', 'en', [
+            event.title, eventTime, soldString, hostName,
+          ], [{ index: 0, urlParameter: event.id }])
           venueReminders++
         }
       }

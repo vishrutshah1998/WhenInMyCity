@@ -126,7 +126,7 @@ export async function updatePayoutStatus(raw: unknown): Promise<{ success: boole
   // Fetch payout + creator before updating so we can notify after
   const { data: payout } = await admin
     .from('payout_requests')
-    .select('creator_id, maker_paise')
+    .select('creator_id, maker_paise, event_ids, bank_name, upi_id')
     .eq('id', id)
     .single()
 
@@ -181,9 +181,16 @@ export async function updatePayoutStatus(raw: unknown): Promise<{ success: boole
           .eq('id', creatorId)
           .maybeSingle()
         if (profile?.phone) {
-          await sendWhatsAppTemplate(profile.phone, 'payout_notice', 'en_US', [
-            profile.display_name ?? 'there', msg.statusLabel, amountRs, msg.detailLine,
-          ], [{ index: 0, urlParameter: 'dashboard/payouts' }]).catch(() => {})
+          const eventCount = payout.event_ids?.length ?? 0
+          const eventLabel = eventCount === 1 ? '1 event' : `${eventCount} events`
+          const accountType = payout.upi_id ? 'UPI' : payout.bank_name ? 'bank' : 'payment'
+          const processedDateStr = new Date().toLocaleDateString('en-IN', {
+            day: 'numeric', month: 'short', year: 'numeric',
+          })
+          const referenceNumber = id.slice(0, 8).toUpperCase()
+          await sendWhatsAppTemplate(profile.phone, 'payout_notice', 'en', [
+            amountRs.replace('₹', ''), eventLabel, accountType, processedDateStr, referenceNumber,
+          ]).catch(() => {})
         }
       })(),
     ])

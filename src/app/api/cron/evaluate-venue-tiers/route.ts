@@ -132,11 +132,15 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
               if (ownerProfile?.phone) {
                 const detailLine = isUpgrade
-                  ? "Your Venue's reputation is growing — keep hosting great events. 🎉"
-                  : 'Host more quality events to climb back up — your community is counting on you! 🙌'
-                await sendWhatsAppTemplate(ownerProfile.phone, 'tier_change_notice', 'en_US', [
-                  venue.name, `${VENUE_TIER_LABELS[result.newTier]} Venue`, detailLine,
-                ], [{ index: 0, urlParameter: 'business/venue/dashboard' }])
+                  ? "your Venue's reputation, growing with every great event you host"
+                  : 'your Venue standing — host more quality events to climb back up'
+                const effectiveDateStr = new Date().toLocaleDateString('en-IN', {
+                  day: 'numeric', month: 'short', year: 'numeric',
+                })
+                await sendWhatsAppTemplate(ownerProfile.phone, 'tier_change_notice', 'en', [
+                  `${VENUE_TIER_LABELS[result.previousTier]} Venue`, `${VENUE_TIER_LABELS[result.newTier]} Venue`,
+                  effectiveDateStr, detailLine,
+                ])
               }
             }
           }

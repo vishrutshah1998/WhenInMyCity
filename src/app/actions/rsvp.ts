@@ -347,11 +347,10 @@ export async function initiateRSVP(params: {
       weekday: 'long', day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit',
     })
     for (const row of inserted) {
-      const ticketUrl = `${appUrl}/ticket/${row.qr_code_token}`
       const venueLine = `${event.venue_name}${event.venue_address ? `, ${event.venue_address}` : ''}`
-      sendWhatsAppTemplate(attendeePhone, 'rsvp_confirmed_v3', 'en_US', [
-        event.title, eventDate, venueLine, ticketUrl,
-      ]).catch((err) => {
+      sendWhatsAppTemplate(attendeePhone, 'rsvp_confirmed_v3', 'en', [
+        event.title, eventDate, venueLine, 'Free',
+      ], [{ index: 0, urlParameter: row.qr_code_token }]).catch((err) => {
         console.error('[initiateRSVP] free-RSVP WhatsApp send failed', { rsvpId: row.id, error: String(err) })
       })
     }
@@ -1053,7 +1052,7 @@ export async function casualRSVPGuest(params: {
 
   const { data: event } = await admin
     .from('events')
-    .select('id, status, starts_at, ticket_price, title, venue_name, venue_address')
+    .select('id, status, starts_at, ticket_price, title, venue_name, venue_address, slug')
     .eq('id', eventId)
     .maybeSingle()
 
@@ -1109,14 +1108,16 @@ export async function casualRSVPGuest(params: {
   // going/maybe save (not just new rows) so switching from maybe → going
   // gets its own confirmation.
   if (intent !== 'not_going') {
-    const eventDate = new Date(event.starts_at).toLocaleDateString('en-IN', {
-      weekday: 'long', day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit',
+    const eventDateOnly = new Date(event.starts_at).toLocaleDateString('en-IN', {
+      weekday: 'long', day: 'numeric', month: 'short', year: 'numeric',
+    })
+    const eventTimeOnly = new Date(event.starts_at).toLocaleTimeString('en-IN', {
+      hour: '2-digit', minute: '2-digit',
     })
     const label = intent === 'going' ? 'Going' : 'Maybe'
-    const venueLine = `${event.venue_name}${event.venue_address ? `, ${event.venue_address}` : ''}`
-    sendWhatsAppTemplate(phone, 'rsvp_casual_confirmed_v2', 'en_US', [
-      label, event.title, eventDate, venueLine,
-    ]).catch((err) => {
+    sendWhatsAppTemplate(phone, 'rsvp_casual_confirmed_v2', 'en', [
+      label, event.title, eventDateOnly, eventTimeOnly,
+    ], [{ index: 0, urlParameter: event.slug }]).catch((err) => {
       console.error('[casualRSVPGuest] WhatsApp send failed', { eventId, error: String(err) })
     })
   }

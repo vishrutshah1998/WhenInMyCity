@@ -685,7 +685,7 @@ export async function triggerPostEventRating(eventId: string): Promise<void> {
   // Fetch event details for the review prompt message.
   const { data: event } = await admin
     .from('events')
-    .select('title, slug')
+    .select('title, slug, starts_at, creator:creator_id (display_name)')
     .eq('id', eventId)
     .maybeSingle()
 
@@ -759,9 +759,14 @@ export async function triggerPostEventRating(eventId: string): Promise<void> {
       const { data: authUser } = await admin.auth.admin.getUserById(rsvp.attendee_user_id)
       const phone = authUser?.user?.phone
       if (phone) {
-        sendWhatsAppTemplate(phone, 'review_prompt', 'en_US', [
-          event.title,
-        ], [{ index: 0, urlParameter: `events/${event.slug}` }]).catch((err) => {
+        const eventDateStr = new Date(event.starts_at).toLocaleDateString('en-IN', {
+          weekday: 'long', day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit',
+        })
+        const creatorRow = Array.isArray(event.creator) ? event.creator[0] : event.creator
+        const hostName = creatorRow?.display_name ?? 'the host'
+        sendWhatsAppTemplate(phone, 'review_prompt', 'en', [
+          event.title, eventDateStr, hostName,
+        ], [{ index: 0, urlParameter: event.slug }]).catch((err) => {
           console.error('[triggerPostEventRating] WhatsApp review prompt failed', { userId: rsvp.attendee_user_id }, String(err))
         })
       }

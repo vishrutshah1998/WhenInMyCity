@@ -318,16 +318,14 @@ async function handlePaymentCaptured(
   })
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://www.wheninmycity.com'
   const eventPageUrl = creator?.username ? `${appUrl}/${creator.username}/${event.slug}` : appUrl
-  const priceRupees = event.ticket_price ? `₹${Math.round(event.ticket_price / 100)}` : 'Free'
+  const priceRupees = event.ticket_price ? `₹${Math.round(event.ticket_price / 100)} paid` : 'Free'
 
   const venueLine = `${event.venue_name}${event.venue_address ? `, ${event.venue_address}` : ''}`
 
   for (const rsvp of updated) {
-    const qrUrl = `${appUrl}/ticket/${rsvp.qr_code_token}`
-
-    sendWhatsAppTemplate(rsvp.attendee_phone, 'rsvp_confirmed_v3', 'en_US', [
-      event.title, eventDate, venueLine, qrUrl,
-    ]).catch((err) => {
+    sendWhatsAppTemplate(rsvp.attendee_phone, 'rsvp_confirmed_v3', 'en', [
+      event.title, eventDate, venueLine, priceRupees,
+    ], [{ index: 0, urlParameter: rsvp.qr_code_token }]).catch((err) => {
       console.error('[webhook:payment.captured] WhatsApp send failed', { rsvpId: rsvp.id, error: String(err) })
     })
   }
