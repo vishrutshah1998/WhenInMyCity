@@ -14,7 +14,10 @@
 //
 // Unlike src/lib/whatsapp.ts, this does NOT fail silently: callers rely on a
 // thrown error to know delivery genuinely failed, so `sendOtpSms` throws on
-// any failure.
+// any failure. AmazeSMS returns HTTP 200 on both success and failure — the
+// real signal is the response body's `status` field (the literal string
+// "success" on success; some other value, e.g. 114 or 600, on failure) — so
+// `response.ok` alone is not sufficient and the body must be parsed.
 // =============================================================================
 
 import 'server-only'
@@ -59,9 +62,21 @@ export async function sendOtpSms(phone: string, otp: string): Promise<void> {
     method: 'GET',
   })
 
-  const result = await response.text().catch(() => null)
+  const rawBody = await response.text().catch(() => null)
 
-  if (!response.ok) {
-    throw new Error(`AmazeSMS send failed: ${response.status} ${result}`)
+  // AmazeSMS returns HTTP 200 on both success and failure — the real signal
+  // is the body's `status` field, which is the literal string "success" (not
+  // 0, not "000") on success and some other value (e.g. 114, 600) on failure.
+  let parsed: { status?: unknown; description?: unknown } | null = null
+  try {
+    parsed = rawBody ? JSON.parse(rawBody) : null
+  } catch {
+    parsed = null
+  }
+
+  if (!response.ok || parsed?.status !== 'success') {
+    throw new Error(
+      `AmazeSMS send failed: ${response.status} status=${parsed?.status ?? 'unparseable'} description=${parsed?.description ?? rawBody}`,
+    )
   }
 }
