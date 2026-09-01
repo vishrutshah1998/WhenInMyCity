@@ -21,7 +21,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { evaluateUserTier, triggerTierCelebration } from '@/app/actions/tier'
-import { sendWhatsAppMessage } from '@/lib/whatsapp'
+import { sendWhatsAppTemplate } from '@/lib/whatsapp'
 import type { UserTier } from '@/types/marketplace'
 
 // ---------------------------------------------------------------------------
@@ -108,6 +108,9 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   let upgraded   = 0
   let downgraded = 0
   const errors: string[] = []
+  const effectiveDateStr = new Date().toLocaleDateString('en-IN', {
+    day: 'numeric', month: 'short', year: 'numeric',
+  })
 
   for (let i = 0; i < users.length; i += BATCH_SIZE) {
     const batch = users.slice(i, i + BATCH_SIZE)
@@ -135,7 +138,10 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
                   .eq('id', user.id)
               }
               if (user.phone) {
-                await sendWhatsAppMessage(user.phone, buildUpgradeMessage(result.newTier))
+                await sendWhatsAppTemplate(user.phone, 'tier_change_notice', 'en', [
+                  TIER_LABELS[result.currentTier], TIER_LABELS[result.newTier], effectiveDateStr,
+                  'your listing limits and perks',
+                ])
               }
             } else {
               downgraded++
@@ -143,13 +149,19 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
                 userId: user.id, previousTier: result.currentTier, newTier: result.newTier,
               })
               if (user.phone) {
-                await sendWhatsAppMessage(user.phone, buildDowngradeMessage(result.newTier))
+                await sendWhatsAppTemplate(user.phone, 'tier_change_notice', 'en', [
+                  TIER_LABELS[result.currentTier], TIER_LABELS[result.newTier], effectiveDateStr,
+                  'your listing limits and perks',
+                ])
               }
             }
           } else if (result.recoveryStarted) {
             console.info('[evaluate-tiers] BEACON RECOVERY START', { userId: user.id })
             if (user.phone) {
-              await sendWhatsAppMessage(user.phone, buildRecoveryMessage())
+              await sendWhatsAppTemplate(user.phone, 'tier_change_notice', 'en', [
+                TIER_LABELS[result.currentTier], 'Beacon (Recovery)', effectiveDateStr,
+                'your Beacon perks, frozen for a 90-day recovery window',
+              ])
             }
           }
         } catch (err) {
@@ -178,7 +190,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 }
 
 // ---------------------------------------------------------------------------
-// WhatsApp notification message builders (logged for now)
+// Tier display labels (used in the tier_change_notice WhatsApp template)
 // ---------------------------------------------------------------------------
 
 const TIER_LABELS: Record<UserTier, string> = {
@@ -186,26 +198,4 @@ const TIER_LABELS: Record<UserTier, string> = {
   local:    'Local',
   lantern:  'Lantern',
   beacon:   'Beacon',
-}
-
-function buildUpgradeMessage(newTier: UserTier): string {
-  return (
-    `🎉 You've been upgraded to *${TIER_LABELS[newTier]}* on WIMC! ` +
-    `Your city is noticing — keep showing up. Open the app to see your new perks.`
-  )
-}
-
-function buildDowngradeMessage(newTier: UserTier): string {
-  return (
-    `Hi! Your WIMC tier has been updated to *${TIER_LABELS[newTier]}*. ` +
-    `Keep attending and hosting events to climb back up — your community is waiting! 🙌`
-  )
-}
-
-function buildRecoveryMessage(): string {
-  return (
-    `⚠️ Your *Beacon* status has entered a 90-day recovery period on WIMC. ` +
-    `Your badge is dimmed and perks are frozen, but your rank won't drop yet. ` +
-    `Meet all Beacon criteria before the window closes to stay at Beacon. Open the app for details.`
-  )
 }

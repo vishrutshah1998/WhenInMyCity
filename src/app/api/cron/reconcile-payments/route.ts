@@ -26,7 +26,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { fetchPaymentStatus, refundPayment, RazorpayApiError } from '@/lib/razorpay'
 import { triggerPostEventRating } from '@/app/actions/explorer'
-import { sendWhatsAppMessage } from '@/lib/whatsapp'
+import { sendWhatsAppTemplate } from '@/lib/whatsapp'
 import { bumpUserMetric } from '@/lib/metrics'
 
 // ---------------------------------------------------------------------------
@@ -274,63 +274,17 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     }
   }
 
-  // ── 4. Send 24-hour event reminders ─────────────────────────────────────
-  // Look for events starting in 23–25 hours so each 15-min cron run covers
-  // the window exactly once without duplicates.
-  const reminderWindowStart = new Date(Date.now() + 23 * 60 * 60 * 1000).toISOString()
-  const reminderWindowEnd   = new Date(Date.now() + 25 * 60 * 60 * 1000).toISOString()
-
-  const { data: upcomingEvents, error: reminderFetchError } = await admin
-    .from('events')
-    .select('id, title, starts_at, venue_name, venue_address, slug, creator_id')
-    .eq('status', 'published')
-    .gte('starts_at', reminderWindowStart)
-    .lte('starts_at', reminderWindowEnd)
-
-  if (reminderFetchError) {
-    console.error('[reconcile] reminder fetch failed', reminderFetchError.message)
-  } else if (upcomingEvents?.length) {
-    console.info(`[reconcile] sending 24h reminders for ${upcomingEvents.length} event(s)`)
-
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://www.wheninmycity.com'
-
-    for (const ev of upcomingEvents) {
-      const { data: rsvps } = await admin
-        .from('rsvps')
-        .select('id, attendee_name, attendee_phone')
-        .eq('event_id', ev.id)
-        .eq('payment_status', 'captured')
-
-      if (!rsvps?.length) continue
-
-      const { data: creator } = await admin
-        .from('user_profiles')
-        .select('username')
-        .eq('id', ev.creator_id)
-        .maybeSingle()
-
-      const eventPageUrl = creator?.username
-        ? `${appUrl}/${creator.username}/${ev.slug}`
-        : appUrl
-
-      const eventDate = new Date(ev.starts_at).toLocaleDateString('en-IN', {
-        weekday: 'long', day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit',
-      })
-
-      for (const rsvp of rsvps) {
-        const whatsappMsg = [
-          `🌟 See you tomorrow at "${ev.title}"!`,
-          `📅 ${eventDate}`,
-          `📍 ${ev.venue_name}${ev.venue_address ? `, ${ev.venue_address}` : ''}`,
-          `🎫 View your QR code: ${eventPageUrl}`,
-        ].join('\n')
-
-        sendWhatsAppMessage(rsvp.attendee_phone, whatsappMsg).catch((err) => {
-          console.error('[reconcile] reminder WhatsApp failed', { rsvpId: rsvp.id, error: String(err) })
-        })
-      }
-    }
-  }
+  // NOTE: a "── 4. Send 24-hour event reminders ──" block used to live here.
+  // It predated the dedicated event-reminders cron (src/app/api/cron/
+  // event-reminders/route.ts, added 2026-06-28) and was never removed once
+  // that cron took over the same job — this block had no dedup guard and ran
+  // every 15 minutes against a 23–25h window (vs. the canonical cron's single
+  // daily pass over 22–26h), so every attendee of every event in that window
+  // was getting reminded from here in addition to the real cron. Removed
+  // 2026-08-30 rather than converted to a template, to avoid shipping two
+  // WhatsApp reminders per attendee per event once templates are approved.
+  // The canonical path is event-reminders/route.ts (event_reminder_attendee_v2
+  // / event_reminder_creator_v2 / venue_reminder).
 
   // ── 5. Retry failed refunds ──────────────────────────────────────────────
   // RSVPs with payment_status = 'refund_failed' were set during event
@@ -338,7 +292,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   // per cron run; any remainder will be caught on the next cycle.
   const { data: failedRefunds } = await admin
     .from('rsvps')
-    .select('id, razorpay_payment_id, attendee_name, attendee_phone, event_id')
+    .select('id, razorpay_payment_id, attendee_name, attendee_phone, event_id, event:event_id (title, starts_at, slug)')
     .eq('payment_status', 'refund_failed')
     .limit(20)
 
@@ -367,10 +321,19 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
         console.info('[reconcile] refund retry succeeded', { rsvpId: rsvp.id })
 
         if (rsvp.attendee_phone) {
-          sendWhatsAppMessage(
-            rsvp.attendee_phone,
-            `Hi ${rsvp.attendee_name}, your refund for the cancelled event has been processed and will reflect within 5–7 business days. Sorry for the delay! — When In My City`,
-          ).catch(() => {})
+          // NOTE: the "refund_processed" template's approved body text in Meta is
+          // wrong — it's a copy of "review_prompt"'s content ("Thank you for
+          // attending... we'd like to hear about your experience"), not an actual
+          // refund message. Structurally correct params are supplied below so the
+          // send succeeds, but the resulting message will read as nonsensical
+          // until the template's real content is fixed in Meta Business Manager.
+          const refundEvent = Array.isArray(rsvp.event) ? rsvp.event[0] : rsvp.event
+          const eventDateStr = refundEvent
+            ? new Date(refundEvent.starts_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
+            : ''
+          sendWhatsAppTemplate(rsvp.attendee_phone, 'refund_processed', 'en', [
+            refundEvent?.title ?? 'your event', eventDateStr, rsvp.attendee_name,
+          ], [{ index: 0, urlParameter: refundEvent?.slug ?? '' }]).catch(() => {})
         }
       }),
     )

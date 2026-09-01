@@ -41,7 +41,7 @@ import { updateAttendanceStreak } from '@/lib/streak'
 import { redeemReferralCode } from '@/app/actions/referral'
 import { createNotification } from '@/app/actions/notifications'
 import { isGuestPhoneVerified } from '@/app/actions/guest-otp'
-import { sendWhatsAppMessage } from '@/lib/whatsapp'
+import { sendWhatsAppTemplate } from '@/lib/whatsapp'
 import type { UserTier } from '@/types/database'
 
 // ---------------------------------------------------------------------------
@@ -56,7 +56,7 @@ const InitiateRSVPSchema = z.object({
     .max(100, 'Attendee name must be at most 100 characters'),
   attendeePhone: z
     .string()
-    .regex(/^\+91[6-9]\d{9}$/, 'Phone must be a valid Indian mobile in +91XXXXXXXXXX format'),
+    .regex(/^\+[1-9]\d{6,14}$/, 'Phone must be a valid E.164 number, e.g. +919876543210'),
   quantity: z
     .number()
     .int()
@@ -347,14 +347,10 @@ export async function initiateRSVP(params: {
       weekday: 'long', day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit',
     })
     for (const row of inserted) {
-      const ticketUrl = `${appUrl}/ticket/${row.qr_code_token}`
-      const whatsappMsg = [
-        `✅ Booking confirmed! You're going to "${event.title}"`,
-        `📅 ${eventDate}`,
-        `📍 ${event.venue_name}${event.venue_address ? `, ${event.venue_address}` : ''}`,
-        `🎫 Show your QR at the door: ${ticketUrl}`,
-      ].join('\n')
-      sendWhatsAppMessage(attendeePhone, whatsappMsg).catch((err) => {
+      const venueLine = `${event.venue_name}${event.venue_address ? `, ${event.venue_address}` : ''}`
+      sendWhatsAppTemplate(attendeePhone, 'rsvp_confirmed_v3', 'en', [
+        event.title, eventDate, venueLine, 'Free',
+      ], [{ index: 0, urlParameter: row.qr_code_token }]).catch((err) => {
         console.error('[initiateRSVP] free-RSVP WhatsApp send failed', { rsvpId: row.id, error: String(err) })
       })
     }
@@ -1024,7 +1020,7 @@ const CasualRSVPGuestSchema = z.object({
   eventId: z.string().uuid('eventId must be a valid UUID'),
   intent:  z.enum(['going', 'maybe', 'not_going']),
   name:    z.string().trim().min(1, 'Please enter your name.').max(100, 'Name must be at most 100 characters'),
-  phone:   z.string().regex(/^\+91[6-9]\d{9}$/, 'Please enter a valid 10-digit Indian mobile number.'),
+  phone:   z.string().regex(/^\+[1-9]\d{6,14}$/, 'Please enter a valid phone number.'),
 })
 
 /**
@@ -1056,7 +1052,7 @@ export async function casualRSVPGuest(params: {
 
   const { data: event } = await admin
     .from('events')
-    .select('id, status, starts_at, ticket_price, title, venue_name, venue_address')
+    .select('id, status, starts_at, ticket_price, title, venue_name, venue_address, slug')
     .eq('id', eventId)
     .maybeSingle()
 
@@ -1112,16 +1108,16 @@ export async function casualRSVPGuest(params: {
   // going/maybe save (not just new rows) so switching from maybe → going
   // gets its own confirmation.
   if (intent !== 'not_going') {
-    const eventDate = new Date(event.starts_at).toLocaleDateString('en-IN', {
-      weekday: 'long', day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit',
+    const eventDateOnly = new Date(event.starts_at).toLocaleDateString('en-IN', {
+      weekday: 'long', day: 'numeric', month: 'short', year: 'numeric',
     })
-    const label = intent === 'going' ? "You're marked Going" : "You're marked Maybe"
-    const whatsappMsg = [
-      `✅ ${label} to "${event.title}"`,
-      `📅 ${eventDate}`,
-      `📍 ${event.venue_name}${event.venue_address ? `, ${event.venue_address}` : ''}`,
-    ].join('\n')
-    sendWhatsAppMessage(phone, whatsappMsg).catch((err) => {
+    const eventTimeOnly = new Date(event.starts_at).toLocaleTimeString('en-IN', {
+      hour: '2-digit', minute: '2-digit',
+    })
+    const label = intent === 'going' ? 'Going' : 'Maybe'
+    sendWhatsAppTemplate(phone, 'rsvp_casual_confirmed_v2', 'en', [
+      label, event.title, eventDateOnly, eventTimeOnly,
+    ], [{ index: 0, urlParameter: event.slug }]).catch((err) => {
       console.error('[casualRSVPGuest] WhatsApp send failed', { eventId, error: String(err) })
     })
   }

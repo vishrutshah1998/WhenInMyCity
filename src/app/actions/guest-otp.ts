@@ -5,25 +5,50 @@
 //
 // Lightweight phone-OTP check for unauthenticated ("guest") RSVP checkout —
 // deliberately NOT Supabase Auth's phone sign-in (that creates a full account
-// + session, which guest checkout exists to avoid). This generates its own
-// code, stores it in the same Upstash Redis already used for rate limiting
-// (src/lib/ratelimit.ts), and delivers it via the existing MSG91 SMS sender
-// (src/lib/msg91.ts) — reusing infra rather than adding a new provider.
+// + session, which guest checkout exists to avoid).
 //
-// On successful verification, a short-lived "verified" flag is set for the
-// phone number. initiateRSVP (src/app/actions/rsvp.ts) checks this flag for
-// any booking where attendeeUserId is null, so a phone must be freshly
-// OTP-verified before a guest booking can be created. Authenticated bookings
-// are unaffected — they're already OTP-verified via Supabase sign-in.
+// Two delivery paths, split by country code:
+//   +91 (domestic) — the app generates its own code, stores it in the same
+//     Upstash Redis already used for rate limiting (src/lib/ratelimit.ts),
+//     and delivers it via AmazeSMS (src/lib/amazesms.ts). Unchanged from the
+//     original MSG91-backed design other than the transport swap.
+//   everything else (international) — MSG91's separate "OTP Widget" product
+//     (src/lib/msg91-international.ts) manages the whole code lifecycle
+//     itself, same shape as the Twilio Verify integration this replaced.
+//     There is no locally-generated code for this path — verification goes
+//     through MSG91's own check, not Redis. Channel (WhatsApp vs SMS) is
+//     mostly dashboard-configured on MSG91's side, not chosen per call — see
+//     src/lib/msg91-international.ts for the one exception ("Try SMS
+//     instead", which forces SMS via their resend/retry API).
+//
+// On successful verification (either path), a short-lived "verified" flag is
+// set in Redis for the phone number. initiateRSVP (src/app/actions/rsvp.ts)
+// checks this flag for any booking where attendeeUserId is null, so a phone
+// must be freshly OTP-verified before a guest booking can be created.
+// Authenticated bookings are unaffected — they're already OTP-verified via
+// Supabase sign-in (main /signin stays +91-only, see CLAUDE.md Known Debt).
 // =============================================================================
 
 import { z } from 'zod'
+import { parsePhoneNumberFromString } from 'libphonenumber-js'
 import { getRedis, checkGuestRsvpOtpRateLimit } from '@/lib/ratelimit'
-import { sendOtpSms } from '@/lib/msg91'
+import { sendOtpSms } from '@/lib/amazesms'
+import { sendInternationalOtp, resendInternationalOtpAsSms, checkInternationalOtp } from '@/lib/msg91-international'
+
+/** 'whatsapp' means "normal send" (channel is MSG91-dashboard-configured); 'sms' forces the SMS-specific resend/retry path. */
+export type OtpChannel = 'sms' | 'whatsapp'
 
 const PhoneSchema = z
   .string()
-  .regex(/^\+91[6-9]\d{9}$/, 'Please enter a valid 10-digit Indian mobile number.')
+  .refine((phone) => {
+    if (/^\+91[6-9]\d{9}$/.test(phone)) return true
+    const parsed = parsePhoneNumberFromString(phone)
+    return !!parsed && parsed.isValid() && parsed.country !== 'IN'
+  }, 'Please enter a valid phone number.')
+
+function isDomestic(phone: string): boolean {
+  return phone.startsWith('+91')
+}
 
 const OTP_TTL_SECONDS = 5 * 60
 const VERIFIED_TTL_SECONDS = 15 * 60
@@ -44,15 +69,46 @@ function verifiedKey(phone: string): string {
 const memOtpStore = new Map<string, { code: string; expiresAt: number }>()
 const memVerifiedStore = new Map<string, number>()
 
-export async function sendRsvpGuestOtp(phone: string): Promise<{ success: boolean; error: string | null }> {
+/** Shared by both the domestic (Redis-compared) and international (Twilio-checked) paths. */
+async function markVerified(phone: string): Promise<void> {
+  const redis = getRedis()
+  if (redis) {
+    await redis.del(otpKey(phone))
+    await redis.set(verifiedKey(phone), '1', { ex: VERIFIED_TTL_SECONDS })
+  } else {
+    memOtpStore.delete(phone)
+    memVerifiedStore.set(phone, Date.now() + VERIFIED_TTL_SECONDS * 1000)
+  }
+}
+
+export async function sendRsvpGuestOtp(
+  phone: string,
+  channel: OtpChannel = 'whatsapp',
+): Promise<{ success: boolean; error: string | null; channel: OtpChannel }> {
   const parsedPhone = PhoneSchema.safeParse(phone)
   if (!parsedPhone.success) {
-    return { success: false, error: parsedPhone.error.errors[0].message }
+    return { success: false, error: parsedPhone.error.errors[0].message, channel: 'sms' }
   }
 
   const rl = await checkGuestRsvpOtpRateLimit()
-  if (!rl.success) return { success: false, error: rl.error! }
+  if (!rl.success) return { success: false, error: rl.error!, channel: 'sms' }
 
+  // ── International: MSG91's OTP Widget manages code generation + delivery ───
+  if (!isDomestic(phone)) {
+    try {
+      if (channel === 'sms') {
+        await resendInternationalOtpAsSms(phone)
+      } else {
+        await sendInternationalOtp(phone)
+      }
+    } catch (err) {
+      console.error('[sendRsvpGuestOtp] MSG91 international send failed', String(err))
+      return { success: false, error: 'Could not send a verification code. Please check the number and try again.', channel }
+    }
+    return { success: true, error: null, channel }
+  }
+
+  // ── Domestic: app-generated code, Redis-stored, delivered via AmazeSMS ──────
   const code = Math.floor(100000 + Math.random() * 900000).toString()
   const redis = getRedis()
 
@@ -67,10 +123,10 @@ export async function sendRsvpGuestOtp(phone: string): Promise<{ success: boolea
     await sendOtpSms(phone, code)
   } catch (err) {
     console.error('[sendRsvpGuestOtp] SMS delivery failed', String(err))
-    return { success: false, error: 'Could not send a verification code. Please check the number and try again.' }
+    return { success: false, error: 'Could not send a verification code. Please check the number and try again.', channel: 'sms' }
   }
 
-  return { success: true, error: null }
+  return { success: true, error: null, channel: 'sms' }
 }
 
 export async function verifyRsvpGuestOtp(phone: string, code: string): Promise<{ success: boolean; error: string | null }> {
@@ -83,6 +139,21 @@ export async function verifyRsvpGuestOtp(phone: string, code: string): Promise<{
   const rl = await checkGuestRsvpOtpRateLimit()
   if (!rl.success) return { success: false, error: rl.error! }
 
+  // ── International: MSG91 owns verification state, nothing to compare locally ──
+  if (!isDomestic(phone)) {
+    let approved: boolean
+    try {
+      approved = await checkInternationalOtp(phone, code)
+    } catch (err) {
+      console.error('[verifyRsvpGuestOtp] MSG91 international check failed', String(err))
+      return { success: false, error: 'Could not verify the code. Please try again.' }
+    }
+    if (!approved) return { success: false, error: 'Incorrect or expired code. Please try again.' }
+    await markVerified(phone)
+    return { success: true, error: null }
+  }
+
+  // ── Domestic: compare against the app-generated code stored in Redis ───────
   const redis = getRedis()
 
   let stored: string | null = null
@@ -101,13 +172,7 @@ export async function verifyRsvpGuestOtp(phone: string, code: string): Promise<{
     return { success: false, error: 'Incorrect or expired code. Please try again.' }
   }
 
-  if (redis) {
-    await redis.del(otpKey(phone))
-    await redis.set(verifiedKey(phone), '1', { ex: VERIFIED_TTL_SECONDS })
-  } else {
-    memOtpStore.delete(phone)
-    memVerifiedStore.set(phone, Date.now() + VERIFIED_TTL_SECONDS * 1000)
-  }
+  await markVerified(phone)
 
   return { success: true, error: null }
 }

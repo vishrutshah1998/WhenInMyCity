@@ -6,17 +6,24 @@
 // Finds events starting 22–26 hours from now and sends reminders to:
 //   - Attendees (in-app + WhatsApp)
 //   - Creators (in-app + WhatsApp with ticket stats)
+//   - The event's Venue owner, if the event has a linked venue_id and a
+//     linked auth account (in-app + WhatsApp)
 //
 // The 4-hour window (22–26h) accounts for cron timing variance and catches
 // events starting between ~23:30 IST tonight and ~03:30 IST the next morning.
 //
-// Duplicate-reminder guard: checks notifications table for an existing
-// event_reminder sent in the last 24h before sending.
+// Duplicate-reminder guard: each recipient's WhatsApp send and in-app
+// notification are gated by the SAME existing-notification check (last 24h)
+// — they fire together or not at all, so a retried/re-triggered cron run
+// can't double-send. Guest RSVPs (no attendee_user_id) are the one
+// exception: notifications.recipient_id is a NOT NULL FK to auth.users, so
+// there's no record to key a dedup check off of for them — their WhatsApp
+// send stays unguarded, as it always has been.
 // =============================================================================
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { sendWhatsAppMessage } from '@/lib/whatsapp'
+import { sendWhatsAppTemplate } from '@/lib/whatsapp'
 import { createNotification } from '@/app/actions/notifications'
 
 function isAuthorized(request: NextRequest): boolean {
@@ -42,7 +49,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     .from('events')
     .select(`
       id, title, slug, starts_at, capacity,
-      creator_id, venue_name, venue_address,
+      creator_id, venue_name, venue_address, venue_id,
       creator:creator_id (
         display_name, username, city, phone
       )
@@ -62,6 +69,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
   let attendeeReminders = 0
   let creatorReminders  = 0
+  let venueReminders    = 0
   const errors: string[] = []
 
   for (const event of upcomingEvents) {
@@ -79,14 +87,18 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     // getEventAttendees (src/app/actions/rsvp.ts).
     const { data: rsvps } = await admin
       .from('rsvps')
-      .select('attendee_user_id, attendee_name, attendee_phone')
+      .select('attendee_user_id, attendee_name, attendee_phone, qr_code_token')
       .eq('event_id', event.id)
       .eq('payment_status', 'captured')
       .or('casual_intent.is.null,casual_intent.neq.not_going')
 
     for (const rsvp of rsvps ?? []) {
       try {
-        // Dedup check: skip if already reminded in last 24h
+        // Dedup check: skip both the in-app record and the WhatsApp send if
+        // already reminded in the last 24h. Guest RSVPs (no attendee_user_id)
+        // have no user to key a notification/dedup record off of — the
+        // WhatsApp send for those remains unguarded, same as before this fix.
+        let alreadyReminded = false
         if (rsvp.attendee_user_id) {
           const { data: existingNotif } = await admin
             .from('notifications')
@@ -97,7 +109,8 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
             .gte('created_at', dedupCutoff)
             .maybeSingle()
 
-          if (!existingNotif) {
+          alreadyReminded = !!existingNotif
+          if (!alreadyReminded) {
             void createNotification({
               recipientId: rsvp.attendee_user_id,
               type: 'event_reminder',
@@ -108,16 +121,21 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
           }
         }
 
-        if (rsvp.attendee_phone) {
-          const msg =
-            `🎟️ Reminder: *${event.title}* is tomorrow!\n\n` +
-            `📅 ${eventTime}\n` +
-            `📍 ${event.venue_name}${event.venue_address ? `, ${event.venue_address}` : ''}\n\n` +
-            `See you there! 🎉`
-          await sendWhatsAppMessage(rsvp.attendee_phone, msg)
+        if (!alreadyReminded && rsvp.attendee_phone) {
+          const venueLine = `${event.venue_name}${event.venue_address ? `, ${event.venue_address}` : ''}`
+          await sendWhatsAppTemplate(rsvp.attendee_phone, 'event_reminder_attendee_v2', 'en', [
+            event.title, eventTime, venueLine,
+          ], [
+            { index: 0, urlParameter: rsvp.qr_code_token ?? '' },
+            // Button 2 ("Get Directions") is a Google Maps search link
+            // (https://www.google.com/maps/search/?api=1&query={{1}}), not an
+            // internal route — the dynamic value is the venue address, not an
+            // event identifier.
+            { index: 1, urlParameter: encodeURIComponent(venueLine) },
+          ])
         }
 
-        attendeeReminders++
+        if (!alreadyReminded) attendeeReminders++
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err)
         errors.push(`rsvp:${rsvp.attendee_user_id ?? 'anon'} event:${event.id} — ${msg}`)
@@ -127,7 +145,22 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     // ── CREATOR REMINDER ───────────────────────────────────────────────────
 
     try {
-      // Dedup check for creator
+      // Ticket-sold figures are shared by the creator body and the venue
+      // body below, so compute them once regardless of either dedup outcome.
+      const { count: ticketCount } = await admin
+        .from('rsvps')
+        .select('id', { count: 'exact', head: true })
+        .eq('event_id', event.id)
+        .eq('payment_status', 'captured')
+
+      const sold       = ticketCount ?? 0
+      const capacity   = event.capacity ?? 0
+      const pct        = capacity > 0 ? Math.round((sold / capacity) * 100) : 0
+      const soldString = `${sold}${capacity > 0 ? `/${capacity} (${pct}% full)` : ''}`
+      const creator    = Array.isArray(event.creator) ? event.creator[0] : event.creator
+
+      // Dedup check for creator — gates the in-app record AND the WhatsApp
+      // send together, so neither fires without the other.
       const { data: existingCreatorNotif } = await admin
         .from('notifications')
         .select('id')
@@ -137,16 +170,6 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
         .gte('created_at', dedupCutoff)
         .maybeSingle()
 
-      const { count: ticketCount } = await admin
-        .from('rsvps')
-        .select('id', { count: 'exact', head: true })
-        .eq('event_id', event.id)
-        .eq('payment_status', 'captured')
-
-      const sold     = ticketCount ?? 0
-      const capacity = event.capacity ?? 0
-      const pct      = capacity > 0 ? Math.round((sold / capacity) * 100) : 0
-
       if (!existingCreatorNotif) {
         void createNotification({
           recipientId: event.creator_id,
@@ -155,25 +178,61 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
           body: `${event.title} · ${sold}${capacity > 0 ? `/${capacity}` : ''} tickets sold${capacity > 0 ? ` (${pct}%)` : ''}`,
           actionUrl: `/dashboard/events/${event.id}`,
         })
+
+        if (creator && 'phone' in creator && creator.phone) {
+          // Template body reads "...at {{2}}. Total tickets booked so far: {{3}}." —
+          // {{3}} is a ticket count, not the event date/time (eventTime isn't used
+          // by this template at all).
+          await sendWhatsAppTemplate(String(creator.phone), 'event_reminder_creator_v2', 'en', [
+            event.title, event.venue_name, soldString,
+          ], [{ index: 0, urlParameter: event.id }])
+        }
+
+        creatorReminders++
       }
 
-      const creator = Array.isArray(event.creator) ? event.creator[0] : event.creator
-      if (creator && 'phone' in creator && creator.phone) {
-        const creatorCity = 'city' in creator && creator.city
-          ? String(creator.city).toLowerCase().replace(/\s+/g, '-') + '/'
-          : ''
-        const creatorUsername = 'username' in creator ? String(creator.username ?? '') : ''
-        const msg =
-          `⏰ *${event.title}* starts in 24 hours!\n\n` +
-          `🎟️ Tickets sold: ${sold}${capacity > 0 ? `/${capacity} (${pct}% full)` : ''}\n` +
-          `📍 ${event.venue_name}\n` +
-          `📅 ${eventTime}\n\n` +
-          `Share your page to get last-minute RSVPs:\n` +
-          `wheninmycity.com/${creatorCity}${creatorUsername}`
-        await sendWhatsAppMessage(String(creator.phone), msg)
-      }
+      // ── VENUE REMINDER ─────────────────────────────────────────────────
+      // Only for events booked at a partner Venue (venue_id set) — self-hosted
+      // events with just a free-text venue_name/venue_address have no owner to notify.
+      // Independently deduped from the creator reminder above (own recipient,
+      // own notification record) — gates the in-app record AND the WhatsApp
+      // send together, same coupling as attendee/creator.
+      if (event.venue_id) {
+        const { data: venue } = await admin
+          .from('venue_profiles')
+          .select('name, contact_whatsapp, auth_user_id')
+          .eq('id', event.venue_id)
+          .maybeSingle()
 
-      creatorReminders++
+        if (venue?.contact_whatsapp && venue.auth_user_id) {
+          const { data: existingVenueNotif } = await admin
+            .from('notifications')
+            .select('id')
+            .eq('recipient_id', venue.auth_user_id)
+            .eq('type', 'event_reminder')
+            .eq('action_url', '/business/venue/bookings')
+            .gte('created_at', dedupCutoff)
+            .maybeSingle()
+
+          if (!existingVenueNotif) {
+            const hostName = creator && 'display_name' in creator ? String(creator.display_name ?? 'the host') : 'the host'
+
+            void createNotification({
+              recipientId: venue.auth_user_id,
+              type: 'event_reminder',
+              title: `${event.title} is tomorrow`,
+              body: `${eventTime} · ${soldString} tickets sold`,
+              actionUrl: '/business/venue/bookings',
+            })
+
+            await sendWhatsAppTemplate(venue.contact_whatsapp, 'venue_reminder', 'en', [
+              event.title, eventTime, soldString, hostName,
+            ], [{ index: 0, urlParameter: event.id }])
+
+            venueReminders++
+          }
+        }
+      }
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err)
       errors.push(`creator:${event.creator_id} event:${event.id} — ${msg}`)
@@ -184,6 +243,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     eventsProcessed: upcomingEvents.length,
     attendeeReminders,
     creatorReminders,
+    venueReminders,
     ...(errors.length ? { errors } : {}),
   }
 

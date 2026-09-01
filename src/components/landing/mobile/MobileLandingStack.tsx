@@ -64,6 +64,17 @@ export function MobileLandingStack() {
   // not a deliberate change of mind) gets a brief cooldown before it's allowed to
   // count, anywhere in the stack, not just at the first/last card.
   const lastTearAtRef = useRef(0)
+  // Real trackpad/touch momentum decays — each successive event in the tail is smaller
+  // than the last. A deliberate reversal swipe doesn't decay; it keeps supplying motion.
+  // So instead of making every reversal wait out the full cooldown clock (which made a
+  // genuine "scroll back up" swipe feel broken for up to ~1.4s after every forward
+  // tear), track how much reverse-direction magnitude has been absorbed since the last
+  // tear. Decaying momentum tapers off well before it reaches this budget; a real swipe
+  // blows past it almost immediately, at which point the cooldown is cleared early and
+  // the gesture starts counting normally — same physical feel as a real paper flip,
+  // where flipping back only takes as long as re-gripping the page, not a fixed wait.
+  const REVERSAL_ABSORB_BUDGET = THRESH * 0.6
+  const reversalAbsorbedRef = useRef(0)
   // Real trackpad momentum scrolling commonly keeps delivering wheel events for
   // several hundred ms — sometimes over a second — after the fingers actually lift.
   // 550ms was measured (via [TEAR] debug logging) to be too short: a swipe strong
@@ -183,6 +194,7 @@ export function MobileLandingStack() {
     accRef.current = 0
     boundaryLockRef.current = false
     lastTearAtRef.current = Date.now()
+    reversalAbsorbedRef.current = 0
     setActive(target)
     setTearState('entering')
 
@@ -255,16 +267,29 @@ export function MobileLandingStack() {
     }
 
     const reversesLastTear = (dy > 0 && dirRef.current < 0) || (dy < 0 && dirRef.current > 0)
+    if (!reversesLastTear) {
+      // Motion matches the direction we just tore in (or there's been no tear yet) —
+      // not a reversal attempt, so any budget from an earlier aborted reversal cluster
+      // is stale. Clear it so a later, unrelated reversal starts its own fresh budget.
+      reversalAbsorbedRef.current = 0
+    }
     if (reversesLastTear && Date.now() - lastTearAtRef.current < REVERSAL_COOLDOWN_MS) {
-      // This delta points opposite to the direction we JUST tore in, too soon after
-      // that tear to be a deliberate change of mind — almost certainly trackpad/touch
-      // momentum overshoot as the previous gesture's motion decays. Absorb it rather
-      // than let it start accumulating toward a tear back the way we came. A genuine
-      // reversal still works once REVERSAL_COOLDOWN_MS has passed.
-      accRef.current = 0
-      tearP.set(0)
-      recedePreview()
-      return
+      reversalAbsorbedRef.current += Math.abs(dy)
+      if (reversalAbsorbedRef.current < REVERSAL_ABSORB_BUDGET) {
+        // Still within both the time window and the noise budget — almost certainly
+        // trackpad/touch momentum overshoot as the previous gesture's motion decays.
+        // Absorb it rather than let it start accumulating toward a tear back the way
+        // we came.
+        accRef.current = 0
+        tearP.set(0)
+        recedePreview()
+        return
+      }
+      // Cumulative reverse magnitude blew past what decaying momentum would ever reach
+      // — this is a deliberate reversal. Clear the cooldown (push lastTearAtRef into
+      // the past) so this delta, and everything after it, counts normally instead of
+      // making the user wait out the rest of the window.
+      lastTearAtRef.current = 0
     }
 
     if ((dy > 0 && active >= N - 1) || (dy < 0 && active <= 0)) {

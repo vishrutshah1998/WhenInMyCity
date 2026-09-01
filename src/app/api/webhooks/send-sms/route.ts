@@ -4,8 +4,10 @@
 // Supabase Auth calls this endpoint instead of its built-in SMS provider
 // whenever it needs to deliver a phone-auth OTP (signInWithOtp / verifyOtp
 // call sites are untouched — see src/app/actions/auth.ts). This swaps the
-// delivery leg from Twilio (unreliable for Indian numbers) to MSG91, without
-// changing anything else about the phone-auth flow.
+// delivery leg from Twilio (unreliable for Indian numbers) to AmazeSMS
+// (originally MSG91, whose Flow OTP template was never actually approved),
+// without changing anything else about the phone-auth flow. This hook is
+// +91-only — see CLAUDE.md's Known Debt on international sign-in.
 //
 // CRITICAL RULES for this hook specifically (per Supabase's Send SMS Hook
 // contract — https://supabase.com/docs/guides/auth/auth-hooks/send-sms-hook):
@@ -24,7 +26,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { Webhook } from 'standardwebhooks'
-import { sendOtpSms } from '@/lib/msg91'
+import { sendOtpSms } from '@/lib/amazesms'
 
 interface SendSmsHookPayload {
   user: {
