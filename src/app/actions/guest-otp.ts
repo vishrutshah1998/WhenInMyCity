@@ -7,19 +7,19 @@
 // deliberately NOT Supabase Auth's phone sign-in (that creates a full account
 // + session, which guest checkout exists to avoid).
 //
-// Two delivery paths, split by country code:
-//   +91 (domestic) — the app generates its own code, stores it in the same
-//     Upstash Redis already used for rate limiting (src/lib/ratelimit.ts),
-//     and delivers it via AmazeSMS (src/lib/amazesms.ts). Unchanged from the
-//     original MSG91-backed design other than the transport swap.
-//   everything else (international) — MSG91's separate "OTP Widget" product
-//     (src/lib/msg91-international.ts) manages the whole code lifecycle
-//     itself, same shape as the Twilio Verify integration this replaced.
-//     There is no locally-generated code for this path — verification goes
-//     through MSG91's own check, not Redis. Channel (WhatsApp vs SMS) is
-//     mostly dashboard-configured on MSG91's side, not chosen per call — see
-//     src/lib/msg91-international.ts for the one exception ("Try SMS
-//     instead", which forces SMS via their resend/retry API).
+// Mechanics (code generation, Redis storage, delivery dispatch, comparison)
+// live in src/lib/otp.ts, shared with any future app-owned OTP flow. This
+// file is the guest-RSVP policy layer on top of it: phone validation, rate
+// limiting, and which channel a given phone number is allowed to use —
+//   +91 (domestic) — either channel: AmazeSMS (src/lib/amazesms.ts) for
+//     'sms', Meta WhatsApp Authentication template (src/lib/whatsapp-otp.ts)
+//     for 'whatsapp'.
+//   everything else (international) — WhatsApp only. AmazeSMS is a DLT-gated
+//     domestic-only transport, so 'sms' is not a valid choice for these
+//     numbers; the channel argument is overridden to 'whatsapp' regardless
+//     of what's passed. (Previously routed through MSG91's separate OTP
+//     Widget product — replaced by this unified path; no SMS fallback for
+//     international numbers for now.)
 //
 // On successful verification (either path), a short-lived "verified" flag is
 // set in Redis for the phone number. initiateRSVP (src/app/actions/rsvp.ts)
@@ -31,12 +31,12 @@
 
 import { z } from 'zod'
 import { parsePhoneNumberFromString } from 'libphonenumber-js'
-import { getRedis, checkGuestRsvpOtpRateLimit } from '@/lib/ratelimit'
-import { sendOtpSms } from '@/lib/amazesms'
-import { sendInternationalOtp, resendInternationalOtpAsSms, checkInternationalOtp } from '@/lib/msg91-international'
+import { checkGuestRsvpOtpRateLimit } from '@/lib/ratelimit'
+import { sendAppOwnedOtp, verifyAppOwnedOtp, isAppOwnedOtpVerified, type OtpChannel } from '@/lib/otp'
 
-/** 'whatsapp' means "normal send" (channel is MSG91-dashboard-configured); 'sms' forces the SMS-specific resend/retry path. */
-export type OtpChannel = 'sms' | 'whatsapp'
+export type { OtpChannel }
+
+const PURPOSE = 'guest-rsvp' as const
 
 const PhoneSchema = z
   .string()
@@ -50,40 +50,9 @@ function isDomestic(phone: string): boolean {
   return phone.startsWith('+91')
 }
 
-const OTP_TTL_SECONDS = 5 * 60
-const VERIFIED_TTL_SECONDS = 15 * 60
-
-function otpKey(phone: string): string {
-  return `wimc:guest-rsvp-otp:${phone}`
-}
-function verifiedKey(phone: string): string {
-  return `wimc:guest-rsvp-verified:${phone}`
-}
-
-// ---------------------------------------------------------------------------
-// In-memory fallback store — used only when Upstash isn't configured (local
-// dev without env vars). Mirrors the "app still works without Redis" graceful
-// degradation already used throughout src/lib/ratelimit.ts.
-// ---------------------------------------------------------------------------
-
-const memOtpStore = new Map<string, { code: string; expiresAt: number }>()
-const memVerifiedStore = new Map<string, number>()
-
-/** Shared by both the domestic (Redis-compared) and international (Twilio-checked) paths. */
-async function markVerified(phone: string): Promise<void> {
-  const redis = getRedis()
-  if (redis) {
-    await redis.del(otpKey(phone))
-    await redis.set(verifiedKey(phone), '1', { ex: VERIFIED_TTL_SECONDS })
-  } else {
-    memOtpStore.delete(phone)
-    memVerifiedStore.set(phone, Date.now() + VERIFIED_TTL_SECONDS * 1000)
-  }
-}
-
 export async function sendRsvpGuestOtp(
   phone: string,
-  channel: OtpChannel = 'whatsapp',
+  channel: OtpChannel,
 ): Promise<{ success: boolean; error: string | null; channel: OtpChannel }> {
   const parsedPhone = PhoneSchema.safeParse(phone)
   if (!parsedPhone.success) {
@@ -93,40 +62,11 @@ export async function sendRsvpGuestOtp(
   const rl = await checkGuestRsvpOtpRateLimit()
   if (!rl.success) return { success: false, error: rl.error!, channel: 'sms' }
 
-  // ── International: MSG91's OTP Widget manages code generation + delivery ───
-  if (!isDomestic(phone)) {
-    try {
-      if (channel === 'sms') {
-        await resendInternationalOtpAsSms(phone)
-      } else {
-        await sendInternationalOtp(phone)
-      }
-    } catch (err) {
-      console.error('[sendRsvpGuestOtp] MSG91 international send failed', String(err))
-      return { success: false, error: 'Could not send a verification code. Please check the number and try again.', channel }
-    }
-    return { success: true, error: null, channel }
-  }
+  // International numbers can't use AmazeSMS (DLT-gated, domestic-only) —
+  // WhatsApp is the only valid channel regardless of what was requested.
+  const effectiveChannel: OtpChannel = isDomestic(phone) ? channel : 'whatsapp'
 
-  // ── Domestic: app-generated code, Redis-stored, delivered via AmazeSMS ──────
-  const code = Math.floor(100000 + Math.random() * 900000).toString()
-  const redis = getRedis()
-
-  if (redis) {
-    await redis.set(otpKey(phone), code, { ex: OTP_TTL_SECONDS })
-  } else {
-    memOtpStore.set(phone, { code, expiresAt: Date.now() + OTP_TTL_SECONDS * 1000 })
-    console.warn('[sendRsvpGuestOtp] Upstash not configured — using in-memory OTP store (dev only)')
-  }
-
-  try {
-    await sendOtpSms(phone, code)
-  } catch (err) {
-    console.error('[sendRsvpGuestOtp] SMS delivery failed', String(err))
-    return { success: false, error: 'Could not send a verification code. Please check the number and try again.', channel: 'sms' }
-  }
-
-  return { success: true, error: null, channel: 'sms' }
+  return sendAppOwnedOtp({ phone, channel: effectiveChannel, purpose: PURPOSE })
 }
 
 export async function verifyRsvpGuestOtp(phone: string, code: string): Promise<{ success: boolean; error: string | null }> {
@@ -139,53 +79,10 @@ export async function verifyRsvpGuestOtp(phone: string, code: string): Promise<{
   const rl = await checkGuestRsvpOtpRateLimit()
   if (!rl.success) return { success: false, error: rl.error! }
 
-  // ── International: MSG91 owns verification state, nothing to compare locally ──
-  if (!isDomestic(phone)) {
-    let approved: boolean
-    try {
-      approved = await checkInternationalOtp(phone, code)
-    } catch (err) {
-      console.error('[verifyRsvpGuestOtp] MSG91 international check failed', String(err))
-      return { success: false, error: 'Could not verify the code. Please try again.' }
-    }
-    if (!approved) return { success: false, error: 'Incorrect or expired code. Please try again.' }
-    await markVerified(phone)
-    return { success: true, error: null }
-  }
-
-  // ── Domestic: compare against the app-generated code stored in Redis ───────
-  const redis = getRedis()
-
-  let stored: string | null = null
-  if (redis) {
-    // The Upstash client JSON-deserializes on read, so a numeric-looking
-    // string like "628821" comes back as the JS number 628821, not a
-    // string — String() it back before comparing against `code`.
-    const raw = await redis.get<string | number>(otpKey(phone))
-    stored = raw === null || raw === undefined ? null : String(raw)
-  } else {
-    const entry = memOtpStore.get(phone)
-    stored = entry && entry.expiresAt > Date.now() ? entry.code : null
-  }
-
-  if (!stored || stored !== code) {
-    return { success: false, error: 'Incorrect or expired code. Please try again.' }
-  }
-
-  await markVerified(phone)
-
-  return { success: true, error: null }
+  return verifyAppOwnedOtp(phone, code, PURPOSE)
 }
 
 /** Used by initiateRSVP to confirm a guest's phone was OTP-verified recently. */
 export async function isGuestPhoneVerified(phone: string): Promise<boolean> {
-  const redis = getRedis()
-  if (redis) {
-    // Same Upstash auto-deserialization quirk as verifyRsvpGuestOtp above —
-    // the stored '1' can come back as the number 1, not the string '1'.
-    const flag = await redis.get<string | number>(verifiedKey(phone))
-    return flag !== null && flag !== undefined && String(flag) === '1'
-  }
-  const expiresAt = memVerifiedStore.get(phone)
-  return !!expiresAt && expiresAt > Date.now()
+  return isAppOwnedOtpVerified(phone, PURPOSE)
 }

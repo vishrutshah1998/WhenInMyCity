@@ -4,41 +4,15 @@ import { useState, useEffect, useTransition, useRef, useCallback } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { getCountries, getCountryCallingCode, isValidPhoneNumber, type CountryCode } from 'libphonenumber-js'
+import { getCountryCallingCode, isValidPhoneNumber, type CountryCode } from 'libphonenumber-js'
 import { initiateRSVP, checkRSVPStatus, getConfirmedRSVPToken, confirmRSVPPayment, casualRSVP, casualRSVPGuest } from '@/app/actions/rsvp'
 import type { MyRSVP } from '@/app/actions/rsvp'
 import { sendRsvpGuestOtp, verifyRsvpGuestOtp } from '@/app/actions/guest-otp'
 import { validateReferralCode } from '@/app/actions/referral'
 import type { Event } from '@/types/database'
 import { TornEdge } from '@/components/ui/TornEdge'
+import { CountryCodeSelect } from '@/components/CountryCodeSelect'
 import { profileUrl } from '@/lib/profile-url'
-
-// ─── Phone country picker ───────────────────────────────────────────────────
-// Built from libphonenumber-js's metadata + Intl.DisplayNames rather than a
-// hand-maintained list, so it can't silently drift out of date.
-
-interface DialCountry {
-  iso:      CountryCode
-  name:     string
-  dialCode: string
-  flag:     string
-}
-
-function isoToFlagEmoji(iso: string): string {
-  return String.fromCodePoint(...[...iso.toUpperCase()].map((c) => 0x1f1e6 + c.charCodeAt(0) - 65))
-}
-
-const DIAL_COUNTRIES: DialCountry[] = (() => {
-  const regionNames = new Intl.DisplayNames(['en'], { type: 'region' })
-  const list = getCountries().map((iso) => ({
-    iso,
-    name: regionNames.of(iso) ?? iso,
-    dialCode: getCountryCallingCode(iso),
-    flag: isoToFlagEmoji(iso),
-  }))
-  list.sort((a, b) => (a.iso === 'IN' ? -1 : b.iso === 'IN' ? 1 : a.name.localeCompare(b.name)))
-  return list
-})()
 
 /** Domestic (+91) keeps its exact original validation; everything else defers to libphonenumber-js. */
 function isGuestPhoneValid(digits: string, iso: CountryCode): boolean {
@@ -225,26 +199,27 @@ export default function EventPage({ event, rsvpCount, spotsLeft, creator, review
 
   // Guest phone verification — only relevant when !isAuthenticated. A guest
   // must OTP-verify their phone before initiateRSVP will accept the booking.
-  // Domestic (+91) is unchanged — app-generated code over AmazeSMS. Any other
-  // country routes through Twilio Verify (WhatsApp by default, SMS fallback);
-  // `otpChannel` tracks which channel was actually used so the UI copy and
-  // "Try SMS instead" affordance can react to it.
+  // Domestic (+91) can use either channel (AmazeSMS or WhatsApp); non-India
+  // numbers are WhatsApp-only (AmazeSMS is domestic-only, no SMS fallback for
+  // international for now — see src/app/actions/guest-otp.ts). `otpChannel`
+  // tracks which channel was actually used so the UI copy and the "Try
+  // WhatsApp instead" affordance (domestic only) can react to it.
   const [otpSent, setOtpSent] = useState(false)
   const [otpVerified, setOtpVerified] = useState(false)
   const [otpCode, setOtpCode] = useState('')
   const [otpChannel, setOtpChannel] = useState<'sms' | 'whatsapp'>('whatsapp')
-  const [smsFallbackReady, setSmsFallbackReady] = useState(false)
+  const [whatsappFallbackReady, setWhatsappFallbackReady] = useState(false)
 
   const isIndia = countryIso === 'IN'
 
-  // 20s after an international WhatsApp OTP is sent, offer an SMS fallback.
+  // 20s after a domestic SMS OTP is sent, offer a WhatsApp fallback.
   useEffect(() => {
-    if (!otpSent || otpVerified || isIndia || otpChannel !== 'whatsapp') {
-      setSmsFallbackReady(false)
+    if (!otpSent || otpVerified || !isIndia || otpChannel !== 'sms') {
+      setWhatsappFallbackReady(false)
       return
     }
-    setSmsFallbackReady(false)
-    const t = setTimeout(() => setSmsFallbackReady(true), 20000)
+    setWhatsappFallbackReady(false)
+    const t = setTimeout(() => setWhatsappFallbackReady(true), 20000)
     return () => clearTimeout(t)
   }, [otpSent, otpVerified, isIndia, otpChannel])
 
@@ -349,7 +324,7 @@ export default function EventPage({ event, rsvpCount, spotsLeft, creator, review
     if (!otpVerified) {
       if (!otpSent) {
         startGuestTransition(async () => {
-          const r = await sendRsvpGuestOtp(phone)
+          const r = await sendRsvpGuestOtp(phone, isIndia ? 'sms' : 'whatsapp')
           if (!r.success) { setCasualGuestError(r.error ?? 'Could not send verification code.'); return }
           setOtpChannel(r.channel)
           setOtpSent(true)
@@ -444,7 +419,7 @@ export default function EventPage({ event, rsvpCount, spotsLeft, creator, review
     if (!isAuthenticated && !otpVerified) {
       if (!otpSent) {
         startTransition(async () => {
-          const r = await sendRsvpGuestOtp(phone)
+          const r = await sendRsvpGuestOtp(phone, isIndia ? 'sms' : 'whatsapp')
           if (!r.success) { setStep1Error(r.error ?? 'Could not send verification code.'); return }
           setOtpChannel(r.channel)
           setOtpSent(true)
@@ -1415,19 +1390,14 @@ export default function EventPage({ event, rsvpCount, spotsLeft, creator, review
                       {isIndia ? 'WhatsApp Number' : 'Phone Number'}
                     </label>
                     <div className="flex gap-2">
-                      <select
+                      <CountryCodeSelect
                         value={countryIso}
-                        onChange={(e) => {
-                          setCountryIso(e.target.value as CountryCode)
+                        onChange={(iso) => {
+                          setCountryIso(iso)
                           setPhoneDigits('')
                           if (!isAuthenticated) { setOtpSent(false); setOtpVerified(false); setOtpCode(''); setOtpChannel('whatsapp') }
                         }}
-                        className="bg-surface-container-low border-none rounded-xl px-3 py-4 text-on-surface font-semibold shrink-0 focus:outline-none focus:ring-2 focus:ring-outline"
-                      >
-                        {DIAL_COUNTRIES.map((c) => (
-                          <option key={c.iso} value={c.iso}>{c.flag} +{c.dialCode}</option>
-                        ))}
-                      </select>
+                      />
                       <input
                         type="tel"
                         value={phoneDigits}
@@ -1448,8 +1418,8 @@ export default function EventPage({ event, rsvpCount, spotsLeft, creator, review
                         <span className="block font-headline font-bold text-on-surface text-sm">Verify your number</span>
                         <span className="text-xs text-on-surface-variant">
                           {isIndia
-                            ? <>Enter the 6-digit code sent to +91 {phoneDigits}</>
-                            : <>Enter the 6-digit code sent via {otpChannel === 'whatsapp' ? 'WhatsApp' : 'SMS'} to +{dialCode} {phoneDigits}</>}
+                            ? <>Enter the 6-digit code sent via {otpChannel === 'whatsapp' ? 'WhatsApp' : 'SMS'} to +91 {phoneDigits}</>
+                            : <>Enter the 6-digit code sent via WhatsApp to +{dialCode} {phoneDigits}</>}
                         </span>
                       </div>
                       <input
@@ -1477,7 +1447,7 @@ export default function EventPage({ event, rsvpCount, spotsLeft, creator, review
                         >
                           Resend code
                         </button>
-                        {!isIndia && otpChannel === 'whatsapp' && smsFallbackReady && (
+                        {isIndia && otpChannel === 'sms' && whatsappFallbackReady && (
                           <button
                             type="button"
                             disabled={isPending}
@@ -1485,14 +1455,14 @@ export default function EventPage({ event, rsvpCount, spotsLeft, creator, review
                               setStep1Error(null)
                               setOtpCode('')
                               startTransition(async () => {
-                                const r = await sendRsvpGuestOtp(phone, 'sms')
-                                if (!r.success) { setStep1Error(r.error ?? 'Could not send SMS code.'); return }
+                                const r = await sendRsvpGuestOtp(phone, 'whatsapp')
+                                if (!r.success) { setStep1Error(r.error ?? 'Could not send WhatsApp code.'); return }
                                 setOtpChannel(r.channel)
                               })
                             }}
                             className="self-start text-xs font-mono uppercase tracking-wider text-primary hover:underline disabled:opacity-50"
                           >
-                            Didn&apos;t get it? Try SMS instead
+                            Didn&apos;t get it? Try WhatsApp instead
                           </button>
                         )}
                       </div>
@@ -1679,19 +1649,14 @@ export default function EventPage({ event, rsvpCount, spotsLeft, creator, review
                       {isIndia ? 'WhatsApp Number' : 'Phone Number'}
                     </label>
                     <div className="flex gap-2">
-                      <select
+                      <CountryCodeSelect
                         value={countryIso}
-                        onChange={(e) => {
-                          setCountryIso(e.target.value as CountryCode)
+                        onChange={(iso) => {
+                          setCountryIso(iso)
                           setPhoneDigits('')
                           setOtpSent(false); setOtpVerified(false); setOtpCode(''); setOtpChannel('whatsapp')
                         }}
-                        className="bg-surface-container-low border-none rounded-xl px-3 py-4 text-on-surface font-semibold shrink-0 focus:outline-none focus:ring-2 focus:ring-outline"
-                      >
-                        {DIAL_COUNTRIES.map((c) => (
-                          <option key={c.iso} value={c.iso}>{c.flag} +{c.dialCode}</option>
-                        ))}
-                      </select>
+                      />
                       <input
                         type="tel"
                         value={phoneDigits}
@@ -1712,8 +1677,8 @@ export default function EventPage({ event, rsvpCount, spotsLeft, creator, review
                         <span className="block font-headline font-bold text-on-surface text-sm">Verify your number</span>
                         <span className="text-xs text-on-surface-variant">
                           {isIndia
-                            ? <>Enter the 6-digit code sent to +91 {phoneDigits}</>
-                            : <>Enter the 6-digit code sent via {otpChannel === 'whatsapp' ? 'WhatsApp' : 'SMS'} to +{dialCode} {phoneDigits}</>}
+                            ? <>Enter the 6-digit code sent via {otpChannel === 'whatsapp' ? 'WhatsApp' : 'SMS'} to +91 {phoneDigits}</>
+                            : <>Enter the 6-digit code sent via WhatsApp to +{dialCode} {phoneDigits}</>}
                         </span>
                       </div>
                       <input
@@ -1741,7 +1706,7 @@ export default function EventPage({ event, rsvpCount, spotsLeft, creator, review
                         >
                           Resend code
                         </button>
-                        {!isIndia && otpChannel === 'whatsapp' && smsFallbackReady && (
+                        {isIndia && otpChannel === 'sms' && whatsappFallbackReady && (
                           <button
                             type="button"
                             disabled={guestPending}
@@ -1749,14 +1714,14 @@ export default function EventPage({ event, rsvpCount, spotsLeft, creator, review
                               setCasualGuestError(null)
                               setOtpCode('')
                               startGuestTransition(async () => {
-                                const r = await sendRsvpGuestOtp(phone, 'sms')
-                                if (!r.success) { setCasualGuestError(r.error ?? 'Could not send SMS code.'); return }
+                                const r = await sendRsvpGuestOtp(phone, 'whatsapp')
+                                if (!r.success) { setCasualGuestError(r.error ?? 'Could not send WhatsApp code.'); return }
                                 setOtpChannel(r.channel)
                               })
                             }}
                             className="self-start text-xs font-mono uppercase tracking-wider text-primary hover:underline disabled:opacity-50"
                           >
-                            Didn&apos;t get it? Try SMS instead
+                            Didn&apos;t get it? Try WhatsApp instead
                           </button>
                         )}
                       </div>
