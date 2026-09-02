@@ -411,6 +411,16 @@ export async function completeOnboarding(
     if (profileError) {
       console.error('[completeOnboarding] profile insert', profileError.message)
       if (profileError.code === '23505') {
+        // Phone has its own unique constraint (see 001_initial_schema.sql) —
+        // it fires for phone-less test accounts too, since Supabase Auth
+        // reports a missing phone as '' rather than null, so two such
+        // accounts collide on a shared empty string. Real users always have
+        // a unique OTP-verified phone, so this path is test-account noise,
+        // but the message should still name the actual constraint instead
+        // of defaulting to username.
+        if (profileError.message?.includes('phone')) {
+          return { ...EMPTY, error: 'This account has no verified phone on file, which conflicts with another account in the same state. Sign up with a verified phone number to continue.' }
+        }
         return { ...EMPTY, error: 'That username was just taken. Please choose another.' }
       }
       return { ...EMPTY, error: 'Failed to create your profile. Please try again.' }

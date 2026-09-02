@@ -185,7 +185,14 @@ export function HubClient({ currentUserId, discover, connections }: Props) {
   // ── Render ────────────────────────────────────────────────────────────────
 
   return (
-    <div style={{ background: BG, minHeight: '100vh', color: TEXT }}>
+    // No minHeight here — this only ever renders inside /dashboard's <main>
+    // (flex:1, own paddingBottom reserved for the mobile bottom nav + safe area,
+    // see dashboard/layout.tsx), which already supplies full-height background.
+    // Forcing 100vh on top of that stacked an extra viewport-height's worth of
+    // space above the nav's reserved padding, adding a redundant scroll gap below
+    // the real content — same fix already applied to CreatorProfileHubClient /
+    // ExplorerProfileHubClient / HallClient's inDashboard case.
+    <div style={{ background: BG, color: TEXT }}>
 
       {/* ── Header ────────────────────────────────────────────────────────── */}
       <div style={{ padding: '32px 32px 0' }}>
