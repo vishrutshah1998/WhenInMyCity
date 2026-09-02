@@ -218,7 +218,16 @@ export default function HallClient({ creators, viewerCity, viewerTier, inDashboa
   void card
 
   return (
-    <div style={{ minHeight: '100vh', background: inDashboard ? 'var(--wimc-bg-base)' : '#FBF3E7', color: '#201A12' }}>
+    // minHeight only applies to the standalone public page: the /dashboard shell's own
+    // <main> (flex:1, its own paddingBottom reserved for the mobile bottom nav + safe
+    // area — see dashboard/layout.tsx) already provides full-height background when
+    // inDashboard, matching the no-minHeight pattern CreatorProfileHubClient /
+    // ExplorerProfileHubClient use for the same nested context. Forcing 100vh here too
+    // stacked on top of that reserved space, adding a redundant scroll gap below the
+    // real content on every dashboard-nested visit. 100dvh (not 100vh) for the
+    // standalone case avoids the same mismatch against mobile browsers' dynamic
+    // toolbar, per the dvh convention used elsewhere in the mobile redesign.
+    <div style={{ minHeight: inDashboard ? undefined : '100dvh', background: inDashboard ? 'var(--wimc-bg-base)' : '#FBF3E7', color: '#201A12' }}>
 
       {/* ── Nav — only for the standalone public page; the dashboard shell supplies its own topbar ── */}
       {!inDashboard && (
