@@ -1087,6 +1087,8 @@ export async function updateExplorerProfile(
       preferred_formats:        data.preferred_formats,
       notification_preferences: data.notification_preferences,
       ...(data.avatar_url !== undefined ? { avatar_url: data.avatar_url } : {}),
+      ...(data.explorer_scene !== undefined ? { explorer_scene: data.explorer_scene || null } : {}),
+      ...(data.explorer_creator_intent !== undefined ? { explorer_creator_intent: data.explorer_creator_intent } : {}),
     })
     .eq('auth_user_id', user.id)
 
@@ -1098,15 +1100,12 @@ export async function updateExplorerProfile(
   // user_profiles.avatar_url is kept in sync alongside explorer_profiles.avatar_url:
   // the dashboard/sidebar/topbar reads prefer explorer_profiles with a user_profiles
   // fallback, but the public profile page ([username]/[slug]) reads user_profiles only.
-  if (data.explorer_scene !== undefined || data.explorer_creator_intent !== undefined || data.avatar_url !== undefined) {
-    const upUpdates: Record<string, unknown> = {}
-    if (data.explorer_scene !== undefined) upUpdates.explorer_scene = data.explorer_scene || null
-    if (data.explorer_creator_intent !== undefined) upUpdates.explorer_creator_intent = data.explorer_creator_intent
-    if (data.avatar_url !== undefined) upUpdates.avatar_url = data.avatar_url
-
+  // explorer_scene/explorer_creator_intent moved to explorer_profiles above
+  // (migration 078) — no longer duplicated here.
+  if (data.avatar_url !== undefined) {
     const { error: upError } = await admin
       .from('user_profiles')
-      .update(upUpdates)
+      .update({ avatar_url: data.avatar_url })
       .eq('id', user.id)
 
     if (upError) {

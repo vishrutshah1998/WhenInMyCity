@@ -92,7 +92,7 @@ function B2Content() {
   const [manual,         setManual]         = useState(false)
   const [manualAddress,  setManualAddress]  = useState('')
 
-  const { data: existingData } = useExistingProfileData()
+  const { data: existingData } = useExistingProfileData(addType === 'venue' ? 'venue' : 'brand')
 
   useEffect(() => {
     if (isAddMode && existingData) {

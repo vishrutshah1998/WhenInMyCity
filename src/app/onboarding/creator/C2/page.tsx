@@ -229,7 +229,7 @@ function C2Content() {
   const [creatorCity,  setCreatorCity]  = useState('')
   const [ctaLoading,   setCtaLoading]   = useState(false)
 
-  const { data: existingData } = useExistingProfileData()
+  const { data: existingData } = useExistingProfileData('creator')
 
   // Pre-fill from existing profile in add-mode
   useEffect(() => {

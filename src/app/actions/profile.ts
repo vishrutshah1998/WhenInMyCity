@@ -199,8 +199,6 @@ export async function updateProfile(
       ...(input.show_city_mastery !== undefined ? { show_city_mastery: input.show_city_mastery } : {}),
       contact_email:      input.contact_email?.trim() || null,
       website_url:        input.website_url?.trim() || null,
-      ...(input.explorer_scene !== undefined ? { explorer_scene: input.explorer_scene?.trim() || null } : {}),
-      ...(input.explorer_creator_intent !== undefined ? { explorer_creator_intent: input.explorer_creator_intent } : {}),
       updated_at:         new Date().toISOString(),
     })
     .eq('id', user.id)
@@ -209,6 +207,25 @@ export async function updateProfile(
     console.error('[updateProfile]', error.message)
     if (error.code === '23505') return { error: 'That username is already taken. Please choose another.' }
     return { error: 'Failed to save profile.' }
+  }
+
+  // explorer_scene/explorer_creator_intent moved to explorer_profiles
+  // (migration 078) — this screen edits them for dual-persona accounts that
+  // already have an explorer_profiles row; .update() (not upsert) since this
+  // isn't the place to create one for an account that doesn't have it yet.
+  if (input.explorer_scene !== undefined || input.explorer_creator_intent !== undefined) {
+    const { error: epError } = await supabase
+      .from('explorer_profiles')
+      .update({
+        ...(input.explorer_scene !== undefined ? { explorer_scene: input.explorer_scene?.trim() || null } : {}),
+        ...(input.explorer_creator_intent !== undefined ? { explorer_creator_intent: input.explorer_creator_intent } : {}),
+      })
+      .eq('auth_user_id', user.id)
+
+    if (epError) {
+      console.error('[updateProfile] explorer_profiles', epError.message)
+      return { error: 'Failed to save profile.' }
+    }
   }
 
   revalidatePath('/dashboard')

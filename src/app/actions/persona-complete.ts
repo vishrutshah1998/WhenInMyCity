@@ -44,6 +44,8 @@ export async function completeExplorerOnboarding(payload: ExplorerPayload) {
       preferred_formats:        payload.preferredFormats,
       price_range_max_paise:    payload.priceRangeMaxPaise,
       notification_preferences: payload.notificationPreferences,
+      explorer_scene:           payload.explorerScene,
+      explorer_creator_intent:  payload.explorerCreatorIntent,
       ...(payload.avatarUrl ? { avatar_url: payload.avatarUrl } : {}),
     }, { onConflict: 'auth_user_id' })
 
@@ -69,6 +71,22 @@ export async function completeExplorerOnboarding(payload: ExplorerPayload) {
     }
   }
 
+  // FIX: this upsert previously never added 'explorer' to personas[] at
+  // all — a pre-existing bug independent of the creator/brand table split.
+  const { data: existing } = await admin
+    .from('user_profiles')
+    .select('personas')
+    .eq('id', user.id)
+    .maybeSingle()
+  const existingPersonas = (existing?.personas ?? []) as string[]
+  const mergedPersonas = existingPersonas.includes('explorer')
+    ? existingPersonas
+    : [...existingPersonas, 'explorer']
+
+  // city/creator_type stay here: NOT NULL columns on user_profiles with no
+  // default (creator_type:'exploring' is also the legacy routing/discriminator
+  // value). interest_tags, explorer_scene, and explorer_creator_intent now
+  // live solely in explorer_profiles (upserted above, migration 078).
   const { error: profileError } = await supabase
     .from('user_profiles')
     .upsert({
@@ -77,10 +95,8 @@ export async function completeExplorerOnboarding(payload: ExplorerPayload) {
       display_name: payload.displayName,
       city: payload.city,
       creator_type: 'exploring',             // valid CreatorType value
-      interest_tags: payload.interestTags,
-      explorer_scene: payload.explorerScene,
-      explorer_creator_intent: payload.explorerCreatorIntent,
       user_tier: 'wanderer',                 // explorers stay at wanderer
+      personas: mergedPersonas,
     }, { onConflict: 'id' })
 
   if (profileError) throw new Error(profileError.message)
@@ -180,6 +196,11 @@ export async function completeBusinessOnboarding(payload: BrandPayload): Promise
     ? existingPersonas
     : [...existingPersonas, 'brand']
 
+  // city/creator_type stay here too (NOT NULL columns on user_profiles with
+  // no default, and creator_type is still the legacy routing discriminator
+  // getBrandPublicPage filters on) — bio/business_categories/wimc_goals/
+  // target_audience/contact_*/website_url/instagram_handle/avatar_url now
+  // live solely in brand_profiles, upserted below.
   const { error } = await supabase
     .from('user_profiles')
     .upsert({
@@ -188,7 +209,18 @@ export async function completeBusinessOnboarding(payload: BrandPayload): Promise
       display_name: payload.displayName,
       city: payload.city,
       creator_type: 'business_brand',
+      personas: mergedPersonas,
+    }, { onConflict: 'id' })
+
+  if (error) throw new Error(error.message)
+
+  const { error: brandProfileError } = await admin
+    .from('brand_profiles')
+    .upsert({
+      auth_user_id: user.id,
+      business_name: payload.displayName,
       bio: payload.brandDescription,
+      city: payload.city,
       business_categories: payload.brandCategories,
       wimc_goals: payload.wimcGoals,
       target_audience: payload.targetAudience,
@@ -196,11 +228,10 @@ export async function completeBusinessOnboarding(payload: BrandPayload): Promise
       contact_email: payload.email ?? null,
       website_url: payload.website ?? null,
       instagram_handle: payload.instagram ?? null,
-      personas: mergedPersonas,
       ...(payload.logoUrl ? { avatar_url: payload.logoUrl } : {}),
-    }, { onConflict: 'id' })
+    }, { onConflict: 'auth_user_id' })
 
-  if (error) throw new Error(error.message)
+  if (brandProfileError) throw new Error(brandProfileError.message)
 
   await supabase.auth.updateUser({
     data: { onboarding_complete: true, persona: 'brand' },

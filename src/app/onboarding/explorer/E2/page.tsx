@@ -20,7 +20,7 @@ function E2Content() {
   const isAddMode    = searchParams.get('mode') === 'add'
   const [displayName, setDisplayName] = useState('')
 
-  const { data: existingData } = useExistingProfileData()
+  const { data: existingData } = useExistingProfileData('explorer')
 
   useEffect(() => {
     if (isAddMode && existingData) {
