@@ -174,11 +174,11 @@ export default function PostComposer({ onPostCreated }: Props) {
 
       {/* ── Top row ─────────────────────────────────────────────────────── */}
       <div
-        className="flex items-center justify-between pl-6 pr-4 py-4"
+        className="flex items-center justify-between flex-wrap gap-y-2 pl-6 pr-4 py-4"
         style={{ borderBottom: '2px dashed rgba(26,39,68,0.1)' }}
       >
         <span
-          className="text-[16px] text-[#1A2744] font-bold"
+          className="text-[16px] text-[#1A2744] font-bold whitespace-nowrap"
           style={{ fontFamily: 'var(--font-dm-sans)' }}
         >
           WHAT&apos;S HAPPENING?
