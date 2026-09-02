@@ -68,6 +68,49 @@ export default function CreatorHomeMobile({
         </div>
       </div>
 
+      {/* Expand your presence — shown when user has missing personas.
+          Mirrors dashboard/page.tsx's desktop-only PaperCard "EXPAND YOUR
+          PRESENCE" block (same missing-persona logic, same link targets,
+          same copy) — that block never had a mobile counterpart since this
+          component was extracted from the old md:hidden block, which
+          predated the CTA. Styled to match this file's existing
+          borderLeft-accent card idiom (Earn/Progress snapshots below)
+          rather than the desktop PaperCard component, which isn't
+          exported (page.tsx can't have extra named exports under the App
+          Router's page-file constraints). */}
+      {(() => {
+        const ALL_P = ['creator', 'explorer', 'venue', 'brand'] as const
+        const personas = profile?.personas ?? []
+        const missing = ALL_P.filter(p => !personas.includes(p))
+        if (missing.length === 0) return null
+        const PERSONA_URL: Record<string, string> = {
+          creator: '/onboarding?mode=add&persona=creator', explorer: '/onboarding?mode=add&persona=explorer',
+          venue: '/onboarding?mode=add&persona=venue', brand: '/onboarding?mode=add&persona=brand',
+        }
+        const PERSONA_LABEL: Record<string, string> = {
+          creator: 'Become a Creator', explorer: 'Become an Explorer',
+          venue: 'List an Venue', brand: 'Add a Brand',
+        }
+        return (
+          <div style={{ margin: '0 16px 16px', padding: '14px 16px', background: '#FEFCF8', border: '1px solid rgba(93,217,208,0.25)', borderLeft: '3px solid #5DD9D0' }}>
+            <p style={{ fontSize: 8, color: '#5DD9D0', fontFamily: 'var(--font-jetbrains-mono)', textTransform: 'uppercase', letterSpacing: 1.2, marginBottom: 6 }}>✦ EXPAND YOUR PRESENCE</p>
+            <p style={{ fontFamily: 'var(--font-dm-sans)', fontSize: 13, fontWeight: 700, color: '#1A2744', marginBottom: 10 }}>Add another side to your WIMC profile</p>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+              {missing.map(p => (
+                <Link
+                  key={p}
+                  href={PERSONA_URL[p]}
+                  style={{ padding: '7px 14px', background: '#1A2744', color: '#F2EDE3', textDecoration: 'none', fontSize: 11, fontWeight: 600, fontFamily: 'var(--font-jetbrains-mono)', display: 'inline-flex', alignItems: 'center', gap: 6 }}
+                >
+                  <span className="material-symbols-outlined" style={{ fontSize: 13 }}>add</span>
+                  {PERSONA_LABEL[p]}
+                </Link>
+              ))}
+            </div>
+          </div>
+        )
+      })()}
+
       {/* Earn snapshot — compact card gateway to /dashboard/earn */}
       <a
         href="/dashboard/earn"
