@@ -34,8 +34,6 @@ import { parsePhoneNumberFromString } from 'libphonenumber-js'
 import { checkGuestRsvpOtpRateLimit } from '@/lib/ratelimit'
 import { sendAppOwnedOtp, verifyAppOwnedOtp, isAppOwnedOtpVerified, type OtpChannel } from '@/lib/otp'
 
-export type { OtpChannel }
-
 const PURPOSE = 'guest-rsvp' as const
 
 const PhoneSchema = z
