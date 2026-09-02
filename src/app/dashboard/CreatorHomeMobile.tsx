@@ -94,36 +94,6 @@ export default function CreatorHomeMobile({
         <span className="material-symbols-outlined" style={{ fontSize: 16, color: '#D97706' }}>arrow_forward</span>
       </a>
 
-      {/* Progress/tier snapshot — compact card gateway to /dashboard/progress
-          (Tier Progress + Hall of Lights combined). Progress isn't a primary
-          Business/Home/Community tab at all anymore — it's a card inside
-          Business (CreatorBusinessSlot.tsx's "Recognition" group) — so this
-          tile is a shortcut straight from Home, same as the Earn Hub tile
-          above. */}
-      <a
-        href="/dashboard/progress"
-        style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          margin: '0 16px 16px',
-          padding: '14px 16px',
-          background: '#FEFCF8',
-          border: '1px solid rgba(232,112,90,0.2)',
-          borderLeft: '3px solid #E8705A',
-          textDecoration: 'none',
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <span className="material-symbols-outlined" style={{ fontSize: 20, color: '#E8705A', fontVariationSettings: "'FILL' 1" }}>workspace_premium</span>
-          <div>
-            <p style={{ fontSize: 8, color: 'rgba(26,39,68,0.4)', fontFamily: 'var(--font-jetbrains-mono)', textTransform: 'uppercase', letterSpacing: 1.2, marginBottom: 2 }}>PROGRESS</p>
-            <p style={{ fontFamily: 'var(--font-dm-sans)', fontSize: 14, fontWeight: 700, color: '#1A2744', lineHeight: 1.2 }}>
-              Tier &amp; achievements
-            </p>
-          </div>
-        </div>
-        <span className="material-symbols-outlined" style={{ fontSize: 16, color: '#E8705A' }}>arrow_forward</span>
-      </a>
-
       {/* Confirmed booking banner */}
       <div style={{ padding: '16px 16px 0' }}>
         <BookingConfirmedBanner notifications={confirmedNotifications} theme="light" />
