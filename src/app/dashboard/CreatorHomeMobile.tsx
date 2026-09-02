@@ -6,6 +6,8 @@ import PostComposer from '@/components/dashboard/PostComposer'
 import type { CreatorPost } from '@/app/actions/posts'
 import BookingConfirmedBanner from '@/components/shared/BookingConfirmedBanner'
 import { EventTicket, formatPaiseCompact } from '@/app/dashboard/homeShared'
+import PaperCard from '@/components/ui/PaperCard'
+import IconChip from '@/components/ui/IconChip'
 
 // Extracted verbatim from dashboard/page.tsx's old `md:hidden` mobile block —
 // same JSX, unchanged — so it can be mounted as the Creator carousel's Home
@@ -30,7 +32,7 @@ export default function CreatorHomeMobile({
   availablePaise, mtdEarnedPaise, confirmedNotifications, soldCountMap, onPostCreated,
 }: Props) {
   return (
-    <div className="min-h-screen pb-6" style={{ background: '#F2EDE3' }}>
+    <div className="min-h-screen pb-6" style={{ background: 'var(--wimc-bg-base)' }}>
 
       {/* Greeting — navy strip */}
       <div style={{ background: '#1A2744', padding: '16px' }}>
@@ -48,41 +50,34 @@ export default function CreatorHomeMobile({
             { value: String(profile?.monthly_page_visitors ?? 0), label: 'VIEWS', color: '#E8705A' },
             { value: String(requestsCount), label: 'REQUESTS', color: '#E8705A' },
             { value: formatPaiseCompact(availablePaise), label: 'EARNINGS', color: '#D97706', href: '/dashboard/payouts' },
-          ].map(({ value, label, color, href }) => {
-            const content = (
-              <>
-                <p style={{ fontFamily: 'var(--font-syne)', fontSize: 24, fontWeight: 900, color, lineHeight: 1, margin: 0 }}>{value}</p>
-                <p style={{ fontSize: 9, color: 'rgba(26,39,68,0.4)', textTransform: 'uppercase', fontFamily: 'var(--font-jetbrains-mono)', marginTop: 6, letterSpacing: 1 }}>{label}</p>
-              </>
-            )
-            return href ? (
-              <a key={label} href={href} style={{ background: '#FEFCF8', border: '1px solid rgba(26,39,68,0.12)', borderTop: `2px solid ${color}`, padding: '12px 16px', minWidth: 110, flexShrink: 0, textDecoration: 'none', display: 'block' }}>
-                {content}
-              </a>
-            ) : (
-              <div key={label} style={{ background: '#FEFCF8', border: '1px solid rgba(26,39,68,0.12)', padding: '12px 16px', minWidth: 110, flexShrink: 0 }}>
-                {content}
-              </div>
-            )
-          })}
+          ].map(({ value, label, color, href }) => (
+            <PaperCard
+              key={label}
+              href={href}
+              borderColor="var(--wimc-text-primary)"
+              background="var(--wimc-bg-elevated)"
+              padding="12px 16px"
+              style={{ minWidth: 110, flexShrink: 0 }}
+            >
+              <p style={{ fontFamily: 'var(--font-syne)', fontSize: 24, fontWeight: 900, color, lineHeight: 1, margin: 0 }}>{value}</p>
+              <p style={{ fontSize: 9, color: 'rgba(26,39,68,0.4)', textTransform: 'uppercase', fontFamily: 'var(--font-jetbrains-mono)', marginTop: 6, letterSpacing: 1 }}>{label}</p>
+            </PaperCard>
+          ))}
         </div>
       </div>
 
       {/* Earn snapshot — compact card gateway to /dashboard/earn */}
-      <a
+      <PaperCard
         href="/dashboard/earn"
-        style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          margin: '0 16px 16px',
-          padding: '14px 16px',
-          background: '#FEFCF8',
-          border: '1px solid rgba(217,119,6,0.2)',
-          borderLeft: '3px solid #D97706',
-          textDecoration: 'none',
-        }}
+        borderColor="var(--wimc-text-primary)"
+        background="var(--wimc-bg-elevated)"
+        padding="14px 16px"
+        style={{ margin: '0 16px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <span className="material-symbols-outlined" style={{ fontSize: 20, color: '#D97706', fontVariationSettings: "'FILL' 1" }}>sell</span>
+          <IconChip color="#FFD23F">
+            <span className="material-symbols-outlined" style={{ fontSize: 20, fontVariationSettings: "'FILL' 1" }}>sell</span>
+          </IconChip>
           <div>
             <p style={{ fontSize: 8, color: 'rgba(26,39,68,0.4)', fontFamily: 'var(--font-jetbrains-mono)', textTransform: 'uppercase', letterSpacing: 1.2, marginBottom: 2 }}>EARN HUB</p>
             <p style={{ fontFamily: 'var(--font-dm-sans)', fontSize: 14, fontWeight: 700, color: '#1A2744', lineHeight: 1.2 }}>
@@ -92,37 +87,7 @@ export default function CreatorHomeMobile({
           </div>
         </div>
         <span className="material-symbols-outlined" style={{ fontSize: 16, color: '#D97706' }}>arrow_forward</span>
-      </a>
-
-      {/* Progress/tier snapshot — compact card gateway to /dashboard/progress
-          (Tier Progress + Hall of Lights combined). Progress isn't a primary
-          Business/Home/Community tab at all anymore — it's a card inside
-          Business (CreatorBusinessSlot.tsx's "Recognition" group) — so this
-          tile is a shortcut straight from Home, same as the Earn Hub tile
-          above. */}
-      <a
-        href="/dashboard/progress"
-        style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          margin: '0 16px 16px',
-          padding: '14px 16px',
-          background: '#FEFCF8',
-          border: '1px solid rgba(232,112,90,0.2)',
-          borderLeft: '3px solid #E8705A',
-          textDecoration: 'none',
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <span className="material-symbols-outlined" style={{ fontSize: 20, color: '#E8705A', fontVariationSettings: "'FILL' 1" }}>workspace_premium</span>
-          <div>
-            <p style={{ fontSize: 8, color: 'rgba(26,39,68,0.4)', fontFamily: 'var(--font-jetbrains-mono)', textTransform: 'uppercase', letterSpacing: 1.2, marginBottom: 2 }}>PROGRESS</p>
-            <p style={{ fontFamily: 'var(--font-dm-sans)', fontSize: 14, fontWeight: 700, color: '#1A2744', lineHeight: 1.2 }}>
-              Tier &amp; achievements
-            </p>
-          </div>
-        </div>
-        <span className="material-symbols-outlined" style={{ fontSize: 16, color: '#E8705A' }}>arrow_forward</span>
-      </a>
+      </PaperCard>
 
       {/* Confirmed booking banner */}
       <div style={{ padding: '16px 16px 0' }}>
@@ -143,13 +108,18 @@ export default function CreatorHomeMobile({
           </Link>
         </div>
         {upcomingEvents.length === 0 ? (
-          <div style={{ border: '1px dashed rgba(26,39,68,0.18)', padding: '24px', textAlign: 'center' }}>
+          <div style={{ border: '1px dashed rgba(26,39,68,0.18)', borderRadius: 16, padding: '24px', textAlign: 'center' }}>
             <p style={{ fontSize: 10, color: 'rgba(26,39,68,0.35)', textTransform: 'uppercase', fontFamily: 'var(--font-jetbrains-mono)' }}>No events pinned yet</p>
           </div>
         ) : (
-          <div style={{ border: '1px solid rgba(26,39,68,0.12)', background: '#FEFCF8', overflow: 'hidden' }}>
+          <PaperCard
+            borderColor="var(--wimc-text-primary)"
+            background="var(--wimc-bg-elevated)"
+            padding={0}
+            style={{ overflow: 'hidden' }}
+          >
             {upcomingEvents.slice(0, 3).map(ev => <EventTicket key={ev.id} ev={ev} soldCount={soldCountMap[ev.id] ?? 0} />)}
-          </div>
+          </PaperCard>
         )}
       </div>
 
@@ -161,10 +131,17 @@ export default function CreatorHomeMobile({
           { icon: 'bar_chart',  label: 'ANALYTICS', href: '/dashboard/analytics' },
           { icon: 'sell',       label: 'EARN',      href: '/dashboard/earn' },
         ].map(({ icon, label, href }) => (
-          <a key={label} href={href} style={{ background: '#FEFCF8', border: '1px solid rgba(26,39,68,0.12)', padding: 16, aspectRatio: '1', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10, textDecoration: 'none' }}>
+          <PaperCard
+            key={label}
+            href={href}
+            borderColor="var(--wimc-text-primary)"
+            background="var(--wimc-bg-elevated)"
+            padding={16}
+            style={{ aspectRatio: '1', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10 }}
+          >
             <span className="material-symbols-outlined" style={{ fontSize: 26, color: '#E8705A', fontVariationSettings: "'FILL' 1" }}>{icon}</span>
             <span style={{ fontSize: 9, color: '#1A2744', textTransform: 'uppercase', fontFamily: 'var(--font-jetbrains-mono)', textAlign: 'center', letterSpacing: 1 }}>{label}</span>
-          </a>
+          </PaperCard>
         ))}
       </div>
 
