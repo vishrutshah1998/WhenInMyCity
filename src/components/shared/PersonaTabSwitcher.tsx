@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
-import { animate, useMotionValue } from 'framer-motion'
+import { AnimatePresence, animate, motion, useMotionValue } from 'framer-motion'
 import { NAV_HEIGHT, PersonaNavBar, restingXOf, type PersonaNavPage } from './PersonaNav'
 
 export { NAV_HEIGHT }
@@ -63,6 +63,12 @@ export default function PersonaTabSwitcher({
   // same reasoning as SwipeCarousel's identical width state.
   const [width, setWidth] = useState(0)
   const [pageIndex, setPageIndex] = useState(defaultIndex)
+  // Which physical direction the most recent tap moved — 1 (tapped a tab to
+  // the right) or -1 (tapped a tab to the left). Read by AnimatePresence's
+  // `custom` prop below, which is how framer-motion re-targets an
+  // already-exiting panel's exit animation to the LATEST tap rather than the
+  // tap that originally triggered its removal.
+  const [direction, setDirection] = useState(1)
 
   const trackX = useMotionValue(restingXOf(defaultIndex, width))
 
@@ -86,11 +92,24 @@ export default function PersonaTabSwitcher({
 
   const selectPage = useCallback((idx: number) => {
     if (idx === pageIndex || idx < 0 || idx >= pages.length || width === 0) return
+    setDirection(idx > pageIndex ? 1 : -1)
     setPageIndex(idx)
     animate(trackX, restingXOf(idx, width), PAGE_SPRING)
   }, [pageIndex, width, trackX, pages.length])
 
   const active = pages[pageIndex]
+
+  // Functions (not fixed objects) so AnimatePresence can re-evaluate the
+  // EXIT target using whatever `direction`/`custom` is current at the moment
+  // a panel is removed — not the direction that was in scope when that panel
+  // first mounted. `pointerEvents: 'none'` on exit is a non-interpolated
+  // value; framer-motion applies it immediately when the exit starts, so a
+  // rapid tap can't land on content that's mid-slide-out.
+  const slideVariants = {
+    enter:  (dir: number) => ({ x: dir * width }),
+    center: { x: 0 },
+    exit:   (dir: number) => ({ x: -dir * width, pointerEvents: 'none' as const }),
+  }
 
   return (
     <div
@@ -103,22 +122,33 @@ export default function PersonaTabSwitcher({
       }}
       ref={containerRef}
     >
-      {/* Exactly one tab's content is ever in the tree — switching tabs
-          swaps which key is mounted, so React tears the outgoing one down
-          completely rather than hiding it. */}
-      <div
-        key={active.key}
-        style={{
-          width: '100%',
-          height: '100%',
-          overflowY: active.fullBleed ? 'hidden' : 'auto',
-          overflowX: 'hidden',
-          borderRadius: active.fullBleed ? 0 : 18,
-          background: bgColor,
-        }}
-      >
-        {active.content}
-      </div>
+      {/* Switching tabs swaps which key is mounted — AnimatePresence keeps
+          the outgoing panel around only long enough to spring off-screen,
+          then React tears it down completely (not hidden indefinitely, the
+          way the old always-mounted SwipeCarousel kept every tab alive). */}
+      <AnimatePresence custom={direction} initial={false}>
+        <motion.div
+          key={active.key}
+          custom={direction}
+          variants={slideVariants}
+          initial="enter"
+          animate="center"
+          exit="exit"
+          transition={PAGE_SPRING}
+          style={{
+            position: 'absolute',
+            inset: 0,
+            width: '100%',
+            height: '100%',
+            overflowY: active.fullBleed ? 'hidden' : 'auto',
+            overflowX: 'hidden',
+            borderRadius: active.fullBleed ? 0 : 18,
+            background: bgColor,
+          }}
+        >
+          {active.content}
+        </motion.div>
+      </AnimatePresence>
 
       <PersonaNavBar
         pages={pages} active={pageIndex} onSelect={selectPage}
