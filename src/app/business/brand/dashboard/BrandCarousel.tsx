@@ -1,6 +1,6 @@
 'use client'
 
-import SwipeCarousel from '@/components/shared/SwipeCarousel'
+import PersonaTabSwitcher from '@/components/shared/PersonaTabSwitcher'
 
 interface Props {
   homeSlot:      React.ReactNode
@@ -17,26 +17,22 @@ interface Props {
 // Server Component layout/page can't import — keep the metadata's
 // key/label/icon in sync with the `pages` array below by hand.
 
-// Thin wrapper around the shared SwipeCarousel base (see
-// src/components/shared/SwipeCarousel.tsx, and ExplorerCarousel.tsx /
+// Thin wrapper around the shared PersonaTabSwitcher base (see
+// src/components/shared/PersonaTabSwitcher.tsx, and ExplorerCarousel.tsx /
 // CreatorCarousel.tsx / VenueCarousel.tsx, its other consumers). Fixed 3
 // pages mapped directly onto Brand's real destinations (Home / Enquiries /
 // Creators) — Brand's nav is thin enough (4 destinations total, My Page
 // already reachable from Home) that no card-list hub consolidation is
-// needed, unlike Creator/Venue. No gutterOnly page — Enquiries is a static
-// empty state and Creators' one horizontal-scroll row (filter chips) is
-// already covered by the generic nested-scroll handoff, not a raw gesture
-// surface like Explorer's Leaflet map.
+// needed, unlike Creator/Venue.
 export default function BrandCarousel({ homeSlot, enquiriesSlot, creatorsSlot, defaultIndex = 1 }: Props) {
   return (
-    <SwipeCarousel
+    <PersonaTabSwitcher
       pages={[
         { key: 'enquiries', label: 'Enquiries', icon: 'inbox',     content: enquiriesSlot },
         { key: 'home',      label: 'Home',      icon: 'dashboard', content: homeSlot },
         { key: 'creators',  label: 'Creators',  icon: 'search',    content: creatorsSlot },
       ]}
       defaultIndex={defaultIndex}
-      hintStorageKey="wimc_brand_carousel_hint_v1"
       accentColor="var(--venue-accent)"
       mutedColor="var(--venue-text-secondary)"
       bgColor="var(--venue-bg-base)"

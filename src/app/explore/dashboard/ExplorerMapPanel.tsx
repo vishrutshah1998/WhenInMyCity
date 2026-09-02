@@ -6,7 +6,7 @@ import dynamic from 'next/dynamic'
 import type { CityAttraction } from '@/app/actions/cityGuide'
 import PlaceCard from '@/app/explore/guide/PlaceCard'
 import { CATEGORY_META } from '@/app/explore/guide/categoryMeta'
-import { NAV_HEIGHT } from '@/components/shared/SwipeCarousel'
+import { NAV_HEIGHT } from '@/lib/constants/personaNavPages'
 
 const CityMap = dynamic(() => import('@/app/explore/guide/CityMap'), {
   ssr: false,

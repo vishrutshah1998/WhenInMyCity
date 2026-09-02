@@ -47,21 +47,23 @@ export const BRAND_NAV_PAGES: PersonaNavPage[] = [
   { key: 'creators',  label: 'Creators',  icon: 'search' },
 ]
 
-// Always exactly 4 pages, for every tier — Community used to be gated out
+// Always exactly 3 pages, for every tier — Community used to be gated out
 // below Local (Community and Progress shared a single 3rd slot, swapped by
 // isHubEnabled), but the "Communities" tab inside the Community page has no
 // tier gate anywhere else in the system, so the whole page is no longer
 // tier-gated either. Community's own "Creator Hub" sub-tab keeps its
 // existing Local+ gate internally (CreatorCommunitySlot.tsx renders
-// HubLocked for that one tab, not the whole page). Kept as a function
-// (rather than a static array) for signature stability with existing
-// callers, even though it no longer branches on anything.
+// HubLocked for that one tab, not the whole page). Progress is no longer a
+// tab of its own — it's a card inside Business (CreatorBusinessSlot.tsx,
+// "Recognition" group) linking to /dashboard/progress, same shape as
+// Earn/Payouts/Analytics — see CREATOR_SECTION_ROUTES.business below. Kept
+// as a function (rather than a static array) for signature stability with
+// existing callers, even though it no longer branches on anything.
 export function getCreatorNavPages(): PersonaNavPage[] {
   return [
     { key: 'business',  label: 'Business',  icon: 'storefront' },
     { key: 'home',      label: 'Home',      icon: 'dashboard' },
     { key: 'community', label: 'Community', icon: 'diversity_3' },
-    { key: 'progress',  label: 'Progress',  icon: 'workspace_premium' },
   ]
 }
 
@@ -86,6 +88,7 @@ export const CREATOR_SECTION_ROUTES: Record<string, string[]> = {
   business: [
     '/dashboard/earn', '/dashboard/payouts', '/dashboard/analytics',
     '/dashboard/leads', '/dashboard/bookings', '/dashboard/venues',
+    '/dashboard/progress',
   ],
   community: ['/dashboard/hub', '/dashboard/community'],
 }

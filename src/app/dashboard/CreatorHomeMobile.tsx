@@ -94,15 +94,14 @@ export default function CreatorHomeMobile({
         <span className="material-symbols-outlined" style={{ fontSize: 16, color: '#D97706' }}>arrow_forward</span>
       </a>
 
-      {/* Progress/tier snapshot — compact card gateway to /dashboard/tier.
-          Progress is no longer a primary carousel tab for Local+ (Hub-
-          enabled) creators — Community took its slot to keep the carousel at
-          exactly 3 tabs with Home centered — so it needs a way back in from
-          Home. Below Local+, Progress is still a primary tab (there's no
-          Community tab to swap in), so this link is redundant but harmless
-          there. */}
+      {/* Progress/tier snapshot — compact card gateway to /dashboard/progress
+          (Tier Progress + Hall of Lights combined). Progress isn't a primary
+          Business/Home/Community tab at all anymore — it's a card inside
+          Business (CreatorBusinessSlot.tsx's "Recognition" group) — so this
+          tile is a shortcut straight from Home, same as the Earn Hub tile
+          above. */}
       <a
-        href="/dashboard/tier"
+        href="/dashboard/progress"
         style={{
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           margin: '0 16px 16px',
