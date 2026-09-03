@@ -307,6 +307,8 @@ export async function completeOnboarding(
 
       const { error: updateError } = await admin.from('user_profiles').update({
         display_name: displayName,
+        city,
+        creator_type: creatorType,
         personas: mergedPersonas,
         ...tierUpgrade,
       }).eq('id', user.id)

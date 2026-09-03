@@ -483,7 +483,9 @@ export default function ProfileForm() {
     if (schemeApplying || scheme === colorScheme) return
     setColorScheme(scheme)
     setSchemeApplying(true)
-    await updateColorScheme(scheme)
+    // Same persona split as journeyLabel above — this settings screen is
+    // shared by Explorer, Creator, and Brand-only (business) accounts.
+    await updateColorScheme(scheme, isExplorer ? 'explorer' : isBusiness ? 'brand' : 'creator')
     setSchemeApplying(false)
     router.refresh()
   }

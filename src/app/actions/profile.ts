@@ -44,18 +44,29 @@ const SCHEME_PRESETS: Record<string, ProfileTheme> = {
 
 export async function updateColorScheme(
   schemeId: string,
+  persona: PersonaKind,
 ): Promise<{ error: string | null }> {
   const preset = SCHEME_PRESETS[schemeId]
   if (!preset) return { error: 'Unknown color scheme.' }
-  return updateProfileTheme(preset)
+  return updateProfileTheme(preset, persona)
 }
 
 // ---------------------------------------------------------------------------
 // updateProfileTheme
 // ---------------------------------------------------------------------------
 
+export type PersonaKind = 'creator' | 'brand' | 'venue' | 'explorer'
+
+const PERSONA_PROFILE_TABLE: Record<PersonaKind, 'creator_profiles' | 'brand_profiles' | 'venue_profiles' | 'explorer_profiles'> = {
+  creator:  'creator_profiles',
+  brand:    'brand_profiles',
+  venue:    'venue_profiles',
+  explorer: 'explorer_profiles',
+}
+
 export async function updateProfileTheme(
   theme: ProfileTheme,
+  persona: PersonaKind,
 ): Promise<{ error: string | null }> {
   const parsed = ProfileThemeSchema.safeParse(theme)
   if (!parsed.success) {
@@ -66,6 +77,11 @@ export async function updateProfileTheme(
   const { data: { user }, error: authError } = await supabase.auth.getUser()
   if (authError || !user) return { error: 'Not authenticated.' }
 
+  // Dual-write: every current read site (all 4 Studios and all 4 public
+  // pages) still reads page_theme off user_profiles — none have been cut
+  // over to the per-persona tables yet (that's Phase 2b). The per-persona
+  // write here keeps that column populated ahead of the eventual read-path
+  // migration; it is not yet load-bearing on its own.
   const { error } = await supabase
     .from('user_profiles')
     .update({ page_theme: parsed.data, updated_at: new Date().toISOString() })
@@ -73,6 +89,16 @@ export async function updateProfileTheme(
 
   if (error) {
     console.error('[updateProfileTheme]', error.message)
+    return { error: 'Failed to save theme.' }
+  }
+
+  const { error: personaError } = await supabase
+    .from(PERSONA_PROFILE_TABLE[persona])
+    .update({ page_theme: parsed.data })
+    .eq('auth_user_id', user.id)
+
+  if (personaError) {
+    console.error('[updateProfileTheme] persona table', personaError.message)
     return { error: 'Failed to save theme.' }
   }
 
@@ -226,6 +252,32 @@ export async function updateProfile(
       console.error('[updateProfile] explorer_profiles', epError.message)
       return { error: 'Failed to save profile.' }
     }
+  }
+
+  // bio/city/creator_type/sub_types/offline_activities/interest_tags/
+  // social_links/avatar_url moved to creator_profiles (migration 075) —
+  // this settings screen is shared across personas, so mirror the
+  // explorer_profiles pattern above: .update() (not upsert) targets only
+  // accounts that already have a creator_profiles row from Creator
+  // onboarding, and is a no-op for Explorer-only/Business-only accounts.
+  const { error: cpError } = await supabase
+    .from('creator_profiles')
+    .update({
+      bio:                input.bio.trim() || null,
+      city:               input.city.trim(),
+      ...(input.creator_type ? { creator_type: input.creator_type } : {}),
+      sub_types:          input.sub_types,
+      offline_activities: input.offline_activities,
+      ...(input.interest_tags !== undefined ? { interest_tags: input.interest_tags } : {}),
+      social_links:       socialLinks,
+      instagram_handle:   socialLinks.instagram ?? null,
+      ...(input.avatar_url ? { avatar_url: input.avatar_url } : {}),
+    })
+    .eq('auth_user_id', user.id)
+
+  if (cpError) {
+    console.error('[updateProfile] creator_profiles', cpError.message)
+    return { error: 'Failed to save profile.' }
   }
 
   revalidatePath('/dashboard')
