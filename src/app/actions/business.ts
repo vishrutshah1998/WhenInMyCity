@@ -55,6 +55,30 @@ export async function updateBrandProfile(
     return { error: 'Failed to save changes.' }
   }
 
+  // Same fields, mirrored into brand_profiles (migration 075) — this had
+  // never been added when the table was split, so every settings save left
+  // brand_profiles frozen at whatever completeBusinessOnboarding() last
+  // wrote. .update() (not upsert) since every account reaching this screen
+  // already has a brand_profiles row from onboarding, matching the
+  // Creator/Explorer pattern.
+  const { error: bpError } = await supabase
+    .from('brand_profiles')
+    .update({
+      ...(d.bio              !== undefined ? { bio:              d.bio || null }              : {}),
+      ...(d.contact_email    !== undefined ? { contact_email:   d.contact_email || null }    : {}),
+      ...(d.instagram_handle !== undefined ? { instagram_handle:d.instagram_handle || null } : {}),
+      ...(d.website_url      !== undefined ? { website_url:     d.website_url || null }      : {}),
+      ...(d.wimc_goals       !== undefined ? { wimc_goals:      d.wimc_goals }               : {}),
+      ...(d.target_audience  !== undefined ? { target_audience: d.target_audience }          : {}),
+      ...(d.avatar_url       !== undefined ? { avatar_url:      d.avatar_url || null }       : {}),
+    })
+    .eq('auth_user_id', user.id)
+
+  if (bpError) {
+    console.error('[updateBrandProfile] brand_profiles', bpError.message)
+    return { error: 'Failed to save changes.' }
+  }
+
   // Revalidate the public brand page so the iframe preview reflects changes
   const { data: updated } = await supabase
     .from('user_profiles')

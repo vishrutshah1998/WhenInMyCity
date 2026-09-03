@@ -1097,21 +1097,27 @@ export async function updateExplorerProfile(
     return { error: 'Failed to save your settings. Please try again.' }
   }
 
-  // user_profiles.avatar_url is kept in sync alongside explorer_profiles.avatar_url:
-  // the dashboard/sidebar/topbar reads prefer explorer_profiles with a user_profiles
-  // fallback, but the public profile page ([username]/[slug]) reads user_profiles only.
+  // user_profiles.display_name is kept in sync — it's the account-wide
+  // shared field (same convention as Creator's updateProfile()), not a
+  // per-persona one. avatar_url is kept in sync too: the dashboard/sidebar/
+  // topbar reads prefer explorer_profiles with a user_profiles fallback.
+  // city is intentionally NOT duplicated here — the public profile page
+  // ([username]/[slug]) now reads explorer_profiles.city directly with a
+  // user_profiles fallback (Phase 2b-i), and no other read site depends on
+  // user_profiles.city for an Explorer's own identity (confirmed by grep).
   // explorer_scene/explorer_creator_intent moved to explorer_profiles above
   // (migration 078) — no longer duplicated here.
-  if (data.avatar_url !== undefined) {
-    const { error: upError } = await admin
-      .from('user_profiles')
-      .update({ avatar_url: data.avatar_url })
-      .eq('id', user.id)
+  const { error: upError } = await admin
+    .from('user_profiles')
+    .update({
+      display_name: data.display_name.trim(),
+      ...(data.avatar_url !== undefined ? { avatar_url: data.avatar_url } : {}),
+    })
+    .eq('id', user.id)
 
-    if (upError) {
-      console.error('[updateExplorerProfile] user_profiles', upError.message)
-      return { error: 'Failed to save your settings. Please try again.' }
-    }
+  if (upError) {
+    console.error('[updateExplorerProfile] user_profiles', upError.message)
+    return { error: 'Failed to save your settings. Please try again.' }
   }
 
   return { error: null }
