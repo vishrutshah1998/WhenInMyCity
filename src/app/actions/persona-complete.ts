@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
+import { getPersonaProfile } from '@/app/actions/profile'
 
 // ---------------------------------------------------------------------------
 // completeExplorerOnboarding
@@ -291,9 +292,35 @@ export async function getBrandPublicPage(
   if (error) return { error: 'Failed to load brand page.' }
   if (!data) return { error: 'Brand not found.' }
 
+  // Fetched before the city-match gate below, so that gate (this route's
+  // equivalent of the canonical-city redirect fixed for Creator in 2b-i)
+  // uses the fresher value — brand_profiles is what onboarding + settings
+  // actually keep current (Phase 2b-ii). Explicit field overrides only —
+  // brand_profiles has its own PK `id`, same collision risk 2b-i avoided
+  // for creator_profiles. business_name falls back to display_name per
+  // migration 075's own column comment; every current render site reads
+  // `display_name` for the shown name (none reference business_name), so
+  // folding the fallback in here means those sites need no changes.
+  const brandProfile = await getPersonaProfile(data.id, 'brand')
+  const merged: UserProfile = brandProfile ? {
+    ...data,
+    display_name:        brandProfile.business_name ?? data.display_name,
+    bio:                 brandProfile.bio ?? data.bio,
+    avatar_url:          brandProfile.avatar_url ?? data.avatar_url,
+    city:                brandProfile.city ?? data.city,
+    business_categories: brandProfile.business_categories ?? data.business_categories,
+    wimc_goals:          brandProfile.wimc_goals ?? data.wimc_goals,
+    target_audience:     brandProfile.target_audience ?? data.target_audience,
+    contact_whatsapp:    brandProfile.contact_whatsapp ?? data.contact_whatsapp,
+    contact_email:       brandProfile.contact_email ?? data.contact_email,
+    website_url:         brandProfile.website_url ?? data.website_url,
+    instagram_handle:    brandProfile.instagram_handle ?? data.instagram_handle,
+    page_theme:          brandProfile.page_theme ?? data.page_theme,
+  } : (data as unknown as UserProfile)
+
   // Case-insensitive city match
   const normalize = (s: string) => s.toLowerCase().replace(/-/g, ' ').trim()
-  if (normalize(data.city) !== normalize(city)) return { error: 'Brand not found.' }
+  if (normalize(merged.city) !== normalize(city)) return { error: 'Brand not found.' }
 
-  return { brand: data as unknown as UserProfile }
+  return { brand: merged }
 }
