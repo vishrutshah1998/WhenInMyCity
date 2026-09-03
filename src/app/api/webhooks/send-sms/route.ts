@@ -5,9 +5,15 @@
 // whenever it needs to deliver a phone-auth OTP (signInWithOtp / verifyOtp
 // call sites are untouched — see src/app/actions/auth.ts). This swaps the
 // delivery leg from Twilio (unreliable for Indian numbers) to AmazeSMS
-// (originally MSG91, whose Flow OTP template was never actually approved),
-// without changing anything else about the phone-auth flow. This hook is
-// +91-only — see CLAUDE.md's Known Debt on international sign-in.
+// (originally MSG91, whose Flow OTP template was never actually approved)
+// or, when the caller asked for it, Meta WhatsApp — without changing
+// anything else about the phone-auth flow. The channel choice is read from
+// a short-lived Redis side-channel (src/lib/signup-otp-channel.ts) that
+// sendPhoneOTP writes just before calling signInWithOtp, since Supabase's
+// hook payload carries no channel concept of its own; missing/expired
+// defaults to SMS. Signin itself is still +91-only for now (see CLAUDE.md's
+// Known Debt on international sign-in) — this hook doesn't need to handle
+// other countries until that changes.
 //
 // CRITICAL RULES for this hook specifically (per Supabase's Send SMS Hook
 // contract — https://supabase.com/docs/guides/auth/auth-hooks/send-sms-hook):
@@ -27,6 +33,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { Webhook } from 'standardwebhooks'
 import { sendOtpSms } from '@/lib/amazesms'
+import { sendOtpWhatsApp } from '@/lib/whatsapp-otp'
+import { takeSignupOtpChannel } from '@/lib/signup-otp-channel'
 
 interface SendSmsHookPayload {
   user: {
@@ -71,7 +79,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     return hookError(401, `Signature verification failed: ${(err as Error).message}`)
   }
 
-  // ── 3. Extract phone + otp and deliver via MSG91 ─────────────────────────
+  // ── 3. Extract phone + otp and deliver via the requested channel ─────────
   const phone = payload.user?.phone
   const otp = payload.sms?.otp
 
@@ -79,10 +87,17 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     return hookError(400, 'Payload missing user.phone or sms.otp')
   }
 
+  const channel = await takeSignupOtpChannel(phone)
+
   try {
-    await sendOtpSms(phone, otp)
+    if (channel === 'whatsapp') {
+      await sendOtpWhatsApp(phone, otp)
+    } else {
+      await sendOtpSms(phone, otp)
+    }
   } catch (err) {
-    return hookError(500, `Failed to send sms: ${(err as Error).message}`)
+    const label = channel === 'whatsapp' ? 'WhatsApp message' : 'sms'
+    return hookError(500, `Failed to send ${label}: ${(err as Error).message}`)
   }
 
   // ── 4. Success — empty 200 body, per hook contract ───────────────────────

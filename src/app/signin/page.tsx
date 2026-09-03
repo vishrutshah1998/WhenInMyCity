@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useTransition, useRef, Suspense } from 'react'
+import { useState, useTransition, useRef, useEffect, Suspense } from 'react'
 import type { ReactNode } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { sendPhoneOTP, verifyPhoneOTP, signInWithGoogle } from '@/app/actions/auth'
@@ -20,21 +20,37 @@ function SignInForm() {
   const [error, setError]            = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
 
+  // SMS is the default channel; a "Try WhatsApp instead" fallback appears
+  // 20s after a code is sent, mirroring the guest-RSVP OTP flow in
+  // event-page.tsx. Domestic-only for now — see CLAUDE.md Known Debt.
+  const [otpChannel, setOtpChannel] = useState<'sms' | 'whatsapp'>('sms')
+  const [whatsappFallbackReady, setWhatsappFallbackReady] = useState(false)
+
   const otpInputRefs = useRef<(HTMLInputElement | null)[]>([])
   const otp = otpDigits.join('')
 
-  function submitSendOTP() {
+  useEffect(() => {
+    if (view !== 'otp' || otpChannel !== 'sms') {
+      setWhatsappFallbackReady(false)
+      return
+    }
+    setWhatsappFallbackReady(false)
+    const t = setTimeout(() => setWhatsappFallbackReady(true), 20000)
+    return () => clearTimeout(t)
+  }, [view, otpChannel])
+
+  function submitSendOTP(channel: 'sms' | 'whatsapp') {
     setError(null)
     startTransition(async () => {
-      const result = await sendPhoneOTP(phone)
+      const result = await sendPhoneOTP(phone, channel)
       if (result.error) { setError(result.error) }
-      else { setView('otp') }
+      else { setOtpChannel(channel); setView('otp') }
     })
   }
 
   function handleSendOTP(e: React.FormEvent) {
     e.preventDefault()
-    submitSendOTP()
+    submitSendOTP('sms')
   }
 
   function runVerifyOTP(code: string) {
@@ -92,6 +108,7 @@ function SignInForm() {
     setView('phone')
     setOtpDigits(['', '', '', '', '', ''])
     setError(null)
+    setOtpChannel('sms')
   }
 
   return (
@@ -294,7 +311,7 @@ function SignInForm() {
                     Check your<br />messages.
                   </h1>
                   <p style={{ fontSize: 15, color: '#353438', lineHeight: 1.6, margin: 0 }}>
-                    We sent a 6-digit code to{' '}
+                    We sent a 6-digit code via {otpChannel === 'whatsapp' ? 'WhatsApp' : 'SMS'} to{' '}
                     <strong>+91 {phone.replace(/(\d{5})(\d{5})/, '$1 $2')}</strong>.
                     {' '}It&apos;s valid for 10 minutes.
                   </p>
@@ -367,10 +384,10 @@ function SignInForm() {
                       {!isPending && <span className="material-symbols-outlined group-hover:translate-x-1 transition-transform duration-200" style={{ fontSize: 24 }}>arrow_forward</span>}
                     </button>
 
-                    <div style={{ display: 'flex', justifyContent: 'center', marginTop: 8 }}>
+                    <div style={{ display: 'flex', justifyContent: 'center', gap: 24, marginTop: 8 }}>
                       <button
                         type="button"
-                        onClick={submitSendOTP}
+                        onClick={() => submitSendOTP(otpChannel)}
                         disabled={isPending}
                         style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 13, color: '#57423e', background: 'none', border: 'none', borderBottom: '1px solid transparent', cursor: 'pointer', paddingBottom: 2 }}
                         onMouseEnter={e => {
@@ -384,6 +401,24 @@ function SignInForm() {
                       >
                         Didn&apos;t get it? Resend
                       </button>
+                      {otpChannel === 'sms' && whatsappFallbackReady && (
+                        <button
+                          type="button"
+                          onClick={() => submitSendOTP('whatsapp')}
+                          disabled={isPending}
+                          style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 13, color: '#57423e', background: 'none', border: 'none', borderBottom: '1px solid transparent', cursor: 'pointer', paddingBottom: 2 }}
+                          onMouseEnter={e => {
+                            e.currentTarget.style.color = '#131317'
+                            e.currentTarget.style.borderBottomColor = '#131317'
+                          }}
+                          onMouseLeave={e => {
+                            e.currentTarget.style.color = '#57423e'
+                            e.currentTarget.style.borderBottomColor = 'transparent'
+                          }}
+                        >
+                          Try WhatsApp instead
+                        </button>
+                      )}
                     </div>
                   </div>
                 </form>

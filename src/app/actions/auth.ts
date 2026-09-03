@@ -3,6 +3,7 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { checkOTPRateLimit } from '@/lib/ratelimit'
+import { setSignupOtpChannel, type SignupOtpChannel } from '@/lib/signup-otp-channel'
 
 // ---------------------------------------------------------------------------
 // Validation helpers
@@ -45,21 +46,28 @@ function normaliseIndianPhone(raw: string): string | null {
 // ---------------------------------------------------------------------------
 
 /**
- * Sends a 6-digit OTP SMS to the supplied Indian phone number.
+ * Sends a 6-digit OTP to the supplied Indian phone number, via SMS or
+ * WhatsApp.
  *
- * The OTP is dispatched via Supabase Auth which forwards to the configured
- * SMS provider (MSG91). Expiry is controlled by the `OTP_EXP` setting in
- * the Supabase project (set to 600 seconds / 10 minutes).
+ * The OTP itself is generated and dispatched by Supabase Auth's Send SMS
+ * Hook (src/app/api/webhooks/send-sms/route.ts), which forwards to AmazeSMS
+ * or Meta WhatsApp depending on the `channel` passed here — recorded in a
+ * short-lived Redis side-channel (src/lib/signup-otp-channel.ts) since
+ * Supabase's hook payload carries no channel concept of its own. Expiry is
+ * controlled by the `OTP_EXP` setting in the Supabase project (set to 600
+ * seconds / 10 minutes).
  *
  * @param phone - Raw phone number string (any common Indian format accepted).
+ * @param channel - 'sms' (default) or 'whatsapp'.
  * @returns `{ error: string | null }` — null on success, a human-readable
  *   message on failure.
  *
  * @example
- * const { error } = await sendPhoneOTP('9876543210')
+ * const { error } = await sendPhoneOTP('9876543210', 'whatsapp')
  */
 export async function sendPhoneOTP(
   phone: string,
+  channel: SignupOtpChannel = 'sms',
 ): Promise<{ error: string | null }> {
   const rl = await checkOTPRateLimit()
   if (!rl.success) return { error: rl.error! }
@@ -72,6 +80,8 @@ export async function sendPhoneOTP(
         'Please enter a valid 10-digit Indian mobile number (e.g. 98765 43210).',
     }
   }
+
+  await setSignupOtpChannel(e164, channel)
 
   const supabase = await createClient()
 
