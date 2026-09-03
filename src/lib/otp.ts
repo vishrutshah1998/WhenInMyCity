@@ -31,7 +31,7 @@ export type OtpChannel = 'sms' | 'whatsapp'
  * if ever migrated onto app-owned delivery) can't collide with guest-RSVP's. */
 export type OtpPurpose = 'guest-rsvp'
 
-const OTP_TTL_SECONDS = 5 * 60
+const OTP_TTL_SECONDS = 10 * 60
 const VERIFIED_TTL_SECONDS = 15 * 60
 
 function otpKey(purpose: OtpPurpose, phone: string): string {
