@@ -42,6 +42,12 @@ const GROUPS: { title: string; cards: CardDef[] }[] = [
       { href: '/dashboard/venues',   icon: 'apartment',      label: 'Venues',   desc: 'Venues you’ve worked with' },
     ],
   },
+  {
+    title: 'Recognition',
+    cards: [
+      { href: '/dashboard/progress', icon: 'workspace_premium', label: 'Progress', desc: 'Your tier progress & Hall of Lights' },
+    ],
+  },
 ]
 
 interface Props {
