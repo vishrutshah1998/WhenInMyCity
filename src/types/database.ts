@@ -1098,6 +1098,8 @@ export interface Database {
           google_calendar_refresh_token: string | null
           buffer_before_minutes: number
           buffer_after_minutes: number
+          // Persona/Brand profile split (migration 075)
+          page_theme: Json
           created_at: string
           updated_at: string
         }
@@ -1144,6 +1146,7 @@ export interface Database {
           google_calendar_refresh_token?: string | null
           buffer_before_minutes?: number
           buffer_after_minutes?: number
+          page_theme?: Json
           created_at?: string
           updated_at?: string
         }
@@ -1190,6 +1193,7 @@ export interface Database {
           google_calendar_refresh_token?: string | null
           buffer_before_minutes?: number
           buffer_after_minutes?: number
+          page_theme?: Json
           created_at?: string
           updated_at?: string
         }
@@ -1220,6 +1224,11 @@ export interface Database {
           followed_maker_ids: string[]
           saved_event_ids: string[]
           notification_preferences: Json
+          // Persona/Brand profile split (migration 075)
+          page_theme: Json
+          // Moved from user_profiles (migration 078)
+          explorer_scene: string | null
+          explorer_creator_intent: string[]
           created_at: string
           updated_at: string
         }
@@ -1238,6 +1247,9 @@ export interface Database {
           followed_maker_ids?: string[]
           saved_event_ids?: string[]
           notification_preferences?: Json
+          page_theme?: Json
+          explorer_scene?: string | null
+          explorer_creator_intent?: string[]
           created_at?: string
           updated_at?: string
         }
@@ -1256,12 +1268,148 @@ export interface Database {
           followed_maker_ids?: string[]
           saved_event_ids?: string[]
           notification_preferences?: Json
+          page_theme?: Json
+          explorer_scene?: string | null
+          explorer_creator_intent?: string[]
           created_at?: string
           updated_at?: string
         }
         Relationships: [
           {
             foreignKeyName: 'explorer_profiles_auth_user_id_fkey'
+            columns: ['auth_user_id']
+            isOneToOne: true
+            referencedRelation: 'users'
+            referencedColumns: ['id']
+          }
+        ]
+      }
+
+      // Creator/Brand profile split (migration 075)
+      creator_profiles: {
+        Row: {
+          id: string
+          auth_user_id: string
+          bio: string | null
+          avatar_url: string | null
+          city: string
+          neighbourhood: string | null
+          creator_type: CreatorType
+          sub_types: string[]
+          offline_activities: string[]
+          interest_tags: string[]
+          social_links: Json
+          instagram_handle: string | null
+          page_theme: Json
+          show_city_mastery: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          auth_user_id: string
+          bio?: string | null
+          avatar_url?: string | null
+          city: string
+          neighbourhood?: string | null
+          creator_type: CreatorType
+          sub_types?: string[]
+          offline_activities?: string[]
+          interest_tags?: string[]
+          social_links?: Json
+          instagram_handle?: string | null
+          page_theme?: Json
+          show_city_mastery?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          auth_user_id?: string
+          bio?: string | null
+          avatar_url?: string | null
+          city?: string
+          neighbourhood?: string | null
+          creator_type?: CreatorType
+          sub_types?: string[]
+          offline_activities?: string[]
+          interest_tags?: string[]
+          social_links?: Json
+          instagram_handle?: string | null
+          page_theme?: Json
+          show_city_mastery?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'creator_profiles_auth_user_id_fkey'
+            columns: ['auth_user_id']
+            isOneToOne: true
+            referencedRelation: 'users'
+            referencedColumns: ['id']
+          }
+        ]
+      }
+
+      brand_profiles: {
+        Row: {
+          id: string
+          auth_user_id: string
+          business_name: string | null
+          bio: string | null
+          avatar_url: string | null
+          city: string
+          business_categories: string[]
+          wimc_goals: string[]
+          target_audience: string[]
+          contact_whatsapp: string | null
+          contact_email: string | null
+          website_url: string | null
+          instagram_handle: string | null
+          page_theme: Json
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          auth_user_id: string
+          business_name?: string | null
+          bio?: string | null
+          avatar_url?: string | null
+          city: string
+          business_categories?: string[]
+          wimc_goals?: string[]
+          target_audience?: string[]
+          contact_whatsapp?: string | null
+          contact_email?: string | null
+          website_url?: string | null
+          instagram_handle?: string | null
+          page_theme?: Json
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          auth_user_id?: string
+          business_name?: string | null
+          bio?: string | null
+          avatar_url?: string | null
+          city?: string
+          business_categories?: string[]
+          wimc_goals?: string[]
+          target_audience?: string[]
+          contact_whatsapp?: string | null
+          contact_email?: string | null
+          website_url?: string | null
+          instagram_handle?: string | null
+          page_theme?: Json
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'brand_profiles_auth_user_id_fkey'
             columns: ['auth_user_id']
             isOneToOne: true
             referencedRelation: 'users'

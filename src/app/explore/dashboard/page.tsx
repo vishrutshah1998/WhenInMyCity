@@ -118,12 +118,16 @@ export default async function ExplorerDashboardIndexPage({
   let subscribedPosts: SubscribedPost[] = []
   let followedCreatorIds: string[]      = []
   let viewerUserId: string | null       = null
+  let personas: string[]                = []
 
   try {
     const { data: { user } } = await userClient.auth.getUser()
     viewerUserId = user?.id ?? null
 
     if (user) {
+      const { data: userProfile } = await admin.from('user_profiles').select('personas').eq('id', user.id).maybeSingle()
+      personas = (userProfile?.personas ?? []) as string[]
+
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const db = userClient as any
       const { data: followsRaw } = await db.from('follows').select('creator_id').eq('follower_id', user.id)
@@ -156,6 +160,7 @@ export default async function ExplorerDashboardIndexPage({
       subscribedPosts={subscribedPosts}
       followedCreatorIds={followedCreatorIds}
       viewerUserId={viewerUserId}
+      personas={personas}
       inDashboard
       basePath="/explore/dashboard/browse"
     />

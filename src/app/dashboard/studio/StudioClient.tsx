@@ -187,7 +187,7 @@ export default function StudioClient({
 
   async function handleThemeSave() {
     setThemeSaving(true)
-    const result = await updateProfileTheme(theme)
+    const result = await updateProfileTheme(theme, 'creator')
     setThemeSaving(false)
     if (result.error) {
       setThemeStatus('error')

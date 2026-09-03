@@ -366,7 +366,7 @@ export default function C8CombinedPage() {
         website_url:      websiteUrl,
         contact_email:    contactEmail,
       }),
-      updateProfileTheme(theme),
+      updateProfileTheme(theme, 'creator'),
       persistSocialLinksBlock(),
     ]
 

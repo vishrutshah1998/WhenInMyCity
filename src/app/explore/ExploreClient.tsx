@@ -100,6 +100,13 @@ interface Props {
   viewerProfile?:     { avatarUrl: string | null; initials: string; displayName: string } | null
   inDashboard?:       boolean
   basePath?:          string
+  // Only populated by /explore/dashboard/page.tsx (Explorer's own carousel
+  // Home slot) — left undefined by every other ExploreClient caller (public
+  // /explore, Creator's /dashboard/explore, Venue's /business/venue/explore,
+  // /explore/dashboard/browse) so the missing-persona CTA below only ever
+  // renders on Explorer's actual home, never leaking into a shared discovery
+  // feed viewed by a different persona.
+  personas?:          string[]
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -736,6 +743,7 @@ function SubscribedPostsSection({ posts }: { posts: SubscribedPost[] }) {
 function AllTabContent({
   events, creators, venues, subscribedPosts = [], city = '', inDashboard = false,
   when = 'all', eventCounts = { tonight: 0, weekend: 0, week: 0, all: 0 }, tab = 'all', basePath = '/explore',
+  personas,
 }: {
   events:          ExploreEvent[]
   creators:        ExploreCreator[]
@@ -747,6 +755,7 @@ function AllTabContent({
   eventCounts?:    EventCounts
   tab?:            string
   basePath?:       string
+  personas?:       string[]
 }) {
   const featuredEvent = events[0]
 
@@ -799,6 +808,53 @@ function AllTabContent({
             </div>
           </Link>
         </div>
+
+        {/* ── Expand your presence — shown when the viewer has missing
+            personas. `personas` is only ever populated by Explorer's own
+            /explore/dashboard route (see the Props comment above), so this
+            never appears on the public feed or when Creator/Venue browse
+            explore through this same shared component. Same ALL_P/missing
+            filter, link targets and copy as Creator's dashboard/page.tsx
+            PaperCard version; styled with this file's own lavender/PANEL
+            card idiom (matches the Hall of Lights / Map of Legends cards
+            above). ── */}
+        {personas !== undefined && (() => {
+          const ALL_P = ['creator', 'explorer', 'venue', 'brand'] as const
+          const missing = ALL_P.filter(p => !personas.includes(p))
+          if (missing.length === 0) return null
+          const PERSONA_URL: Record<string, string> = {
+            creator: '/onboarding?mode=add&persona=creator', explorer: '/onboarding?mode=add&persona=explorer',
+            venue: '/onboarding?mode=add&persona=venue', brand: '/onboarding?mode=add&persona=brand',
+          }
+          const PERSONA_LABEL: Record<string, string> = {
+            creator: 'Become a Creator', explorer: 'Become an Explorer',
+            venue: 'List an Venue', brand: 'Add a Brand',
+          }
+          return (
+            <div style={{
+              background: PANEL,
+              border: '1px solid rgba(155,143,255,0.22)',
+              borderLeft: `3px solid ${LAVENDER}`,
+              padding: '20px 24px',
+              marginTop: 12,
+            }}>
+              <p style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.2em', color: LAVENDER, fontFamily: 'var(--font-jetbrains-mono), JetBrains Mono, monospace', marginBottom: 4 }}>✦ EXPAND YOUR PRESENCE</p>
+              <h2 style={{ fontFamily: 'var(--font-dm-sans), DM Sans, sans-serif', fontSize: 16, fontWeight: 700, color: TEXT, marginBottom: 12 }}>Add another side to your WIMC profile</h2>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                {missing.map(p => (
+                  <Link
+                    key={p}
+                    href={PERSONA_URL[p]}
+                    style={{ padding: '8px 16px', borderRadius: 9999, background: LAVENDER, color: '#1A2744', textDecoration: 'none', fontSize: 13, fontWeight: 700, fontFamily: 'var(--font-jetbrains-mono), JetBrains Mono, monospace', display: 'inline-flex', alignItems: 'center', gap: 6 }}
+                  >
+                    <span className="material-symbols-outlined" style={{ fontSize: 15 }}>add</span>
+                    {PERSONA_LABEL[p]}
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )
+        })()}
       </div>
 
       {/* ── DESKTOP ─────────────────────────────────────────────────── */}
@@ -1940,6 +1996,7 @@ export default function ExploreClient({
   viewerProfile      = null,
   inDashboard        = false,
   basePath:          basePathProp,
+  personas,
 }: Props) {
   const router = useRouter()
   const [subscribedPosts, setSubscribedPosts] = useState<SubscribedPost[]>(initialSubscribedPosts)
@@ -2004,7 +2061,7 @@ export default function ExploreClient({
           <TabBar activeTab={tab} city={city} basePath={basePath} stickyTop="top-0" inDashboard count={eventCounts.all} />
 
           <div className="pb-12">
-            {tab === 'all'      && <AllTabContent      events={events} creators={creators} venues={venues} subscribedPosts={subscribedPosts} city={city} inDashboard when={when} eventCounts={eventCounts} tab={tab} basePath={basePath} />}
+            {tab === 'all'      && <AllTabContent      events={events} creators={creators} venues={venues} subscribedPosts={subscribedPosts} city={city} inDashboard when={when} eventCounts={eventCounts} tab={tab} basePath={basePath} personas={personas} />}
             {tab === 'events'   && <EventsTabContent   events={events} when={when} tab={tab} city={city} basePath={basePath} />}
             {tab === 'creators' && <CreatorsTabContent creators={creators} />}
             {tab === 'venues'   && <VenuesTabContent venues={venues} city={city} />}

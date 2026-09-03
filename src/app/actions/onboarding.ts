@@ -266,6 +266,22 @@ export async function completeOnboarding(
       }
     }
 
+    // creator_profiles payload — the persona-specific fields split out of
+    // user_profiles in migration 075. instagram_handle is derived from
+    // social_links here since Creator onboarding never collects it as its
+    // own field (see migration 075 investigation).
+    const creatorProfilePayload = {
+      bio: bio ?? null,
+      city,
+      creator_type: creatorType,
+      sub_types: subTypes,
+      offline_activities: offlineActivities,
+      interest_tags: interestTags,
+      social_links: socialLinksRecord,
+      instagram_handle: socialLinksRecord.instagram ?? null,
+      page_theme: pageTheme,
+    }
+
     // Check if profile already exists (e.g. re-running onboarding)
     const { data: existingProfile } = await admin
       .from('user_profiles')
@@ -291,14 +307,8 @@ export async function completeOnboarding(
 
       const { error: updateError } = await admin.from('user_profiles').update({
         display_name: displayName,
-        bio: bio ?? null,
         city,
         creator_type: creatorType,
-        interest_tags: interestTags,
-        sub_types: subTypes,
-        offline_activities: offlineActivities,
-        social_links: socialLinksRecord,
-        page_theme: pageTheme,
         personas: mergedPersonas,
         ...tierUpgrade,
       }).eq('id', user.id)
@@ -308,12 +318,14 @@ export async function completeOnboarding(
         return { ...EMPTY, error: 'Failed to update your profile. Please try again.' }
       }
 
-      // Sync city + interests to explorer_profiles if one exists
-      await admin.from('explorer_profiles').update({
-        display_name: displayName,
-        city,
-        interest_tags: interestTags,
-      }).eq('auth_user_id', user.id)
+      const { error: creatorProfileError } = await admin
+        .from('creator_profiles')
+        .upsert({ auth_user_id: user.id, ...creatorProfilePayload }, { onConflict: 'auth_user_id' })
+
+      if (creatorProfileError) {
+        console.error('[completeOnboarding] creator_profiles upsert', creatorProfileError.message)
+        return { ...EMPTY, error: 'Failed to update your profile. Please try again.' }
+      }
 
       // Seed blocks when explicitly requested and the profile has none yet
       // (handles the case where doReveal() created the profile with selectedBlocks=[]
@@ -389,22 +401,20 @@ export async function completeOnboarding(
       return { ...EMPTY, error: 'That username was just taken. Please choose another.' }
     }
 
-    // Insert new profile
+    // Insert new profile. city/creator_type stay here too (NOT NULL columns
+    // on user_profiles with no default, and still used for legacy routing/
+    // discriminator purposes) — bio/interest_tags/sub_types/
+    // offline_activities/social_links/page_theme now live solely in
+    // creator_profiles, inserted below.
     const { error: profileError } = await admin.from('user_profiles').insert({
       id: user.id,
       username,
       display_name: displayName,
-      bio: bio ?? null,
       avatar_url: null,
       city,
       creator_type: creatorType,
       user_tier: 'local',                    // creators start at local tier
-      interest_tags: interestTags,
-      sub_types: subTypes,
-      offline_activities: offlineActivities,
-      social_links: socialLinksRecord,
       phone: user.phone ?? null,
-      page_theme: pageTheme,
       personas: ['creator'],
     })
 
@@ -423,6 +433,15 @@ export async function completeOnboarding(
         }
         return { ...EMPTY, error: 'That username was just taken. Please choose another.' }
       }
+      return { ...EMPTY, error: 'Failed to create your profile. Please try again.' }
+    }
+
+    const { error: creatorProfileError } = await admin
+      .from('creator_profiles')
+      .insert({ auth_user_id: user.id, ...creatorProfilePayload })
+
+    if (creatorProfileError) {
+      console.error('[completeOnboarding] creator_profiles insert', creatorProfileError.message)
       return { ...EMPTY, error: 'Failed to create your profile. Please try again.' }
     }
 
