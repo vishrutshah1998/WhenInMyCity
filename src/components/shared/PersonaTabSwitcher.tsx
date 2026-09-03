@@ -115,8 +115,14 @@ export default function PersonaTabSwitcher({
     <div
       className="fixed lg:hidden left-0 right-0 md:left-[var(--wimc-sidebar-w)] z-20"
       style={{
+        // top+bottom (no computed height) — same fix already validated on
+        // PersonaNavStandalone (see PersonaNav.tsx): a calc(100dvh - topOffset)
+        // height was leaving a gap between the nav and the real screen edge
+        // on iOS Safari, where 100dvh doesn't always recompute promptly as
+        // the dynamic toolbar animates. Anchoring both edges directly lets
+        // the container track the real visual viewport instead.
         top: topOffset,
-        height: `calc(100dvh - ${topOffset}px)`,
+        bottom: 0,
         overflow: 'hidden',
         background: bgColor,
       }}
