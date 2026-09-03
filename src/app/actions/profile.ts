@@ -6,7 +6,12 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { ProfileThemeSchema } from '@/types/theme'
 import type { ProfileTheme } from '@/types/theme'
-import type { CreatorType, Json } from '@/types/database'
+import type { CreatorType, Json, Database } from '@/types/database'
+
+export type CreatorProfileRow  = Database['public']['Tables']['creator_profiles']['Row']
+export type BrandProfileRow    = Database['public']['Tables']['brand_profiles']['Row']
+export type VenueProfileRow    = Database['public']['Tables']['venue_profiles']['Row']
+export type ExplorerProfileRow = Database['public']['Tables']['explorer_profiles']['Row']
 import { UsernameSchema } from '@/types/onboarding'
 
 // ---------------------------------------------------------------------------
@@ -104,6 +109,30 @@ export async function updateProfileTheme(
 
   revalidatePath('/dashboard')
   return { error: null }
+}
+
+// ---------------------------------------------------------------------------
+// getPersonaProfile — reads a persona's own table (migration 075/078 split).
+// Always uses the admin client: creator_profiles/brand_profiles/venue_profiles
+// are publicly selectable anyway (SELECT USING (true)), but explorer_profiles
+// restricts SELECT to the owning row (explorer_profiles_select_own) — this
+// helper is for public-page reads of someone ELSE's persona data, the same
+// reason [username]/[slug]/page.tsx's explorer branch already reaches for
+// the admin client to read this table today.
+// ---------------------------------------------------------------------------
+
+export async function getPersonaProfile(userId: string, persona: 'creator'): Promise<CreatorProfileRow | null>
+export async function getPersonaProfile(userId: string, persona: 'brand'): Promise<BrandProfileRow | null>
+export async function getPersonaProfile(userId: string, persona: 'venue'): Promise<VenueProfileRow | null>
+export async function getPersonaProfile(userId: string, persona: 'explorer'): Promise<ExplorerProfileRow | null>
+export async function getPersonaProfile(userId: string, persona: PersonaKind) {
+  const admin = createAdminClient()
+  const { data } = await admin
+    .from(PERSONA_PROFILE_TABLE[persona])
+    .select('*')
+    .eq('auth_user_id', userId)
+    .maybeSingle()
+  return data
 }
 
 // ---------------------------------------------------------------------------
