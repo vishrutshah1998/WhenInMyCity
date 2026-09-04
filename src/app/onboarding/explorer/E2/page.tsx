@@ -7,6 +7,7 @@ import { ExplorerPass } from '@/components/onboarding/BoardingPassArtifact'
 import { useExistingProfileData } from '@/hooks/useExistingProfileData'
 import { prefillExplorerKeys } from '@/lib/onboarding/prefill'
 import { ONBOARDING_CTA } from '@/lib/constants/onboarding-cta-copy'
+import { OnboardingFooter } from '@/components/onboarding/OnboardingFooter'
 
 const ACCENT = '#9B8FFF'
 
@@ -48,7 +49,7 @@ function E2Content() {
       sessionStorage.setItem(SK.e_name,     displayName.trim())
       sessionStorage.setItem(SK.e_username, slugify(displayName.trim()).substring(0, 20))
     } catch {}
-    router.push('/onboarding/explorer/E3')
+    router.push('/onboarding/explorer/E4')
   }
 
   return (
@@ -102,33 +103,13 @@ function E2Content() {
         )}
       </div>
 
-      <footer style={{
-        position: 'fixed', bottom: 0, left: 0, right: 0, height: 72, zIndex: 50,
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 24px',
-        background: 'linear-gradient(to top, var(--ob-panel-bg, #1A2744) 60%, transparent 100%)',
-      }}>
-        <button type="button" onClick={() => router.push('/onboarding')}
-          style={{ background: 'none', border: 'none', fontFamily: "'DM Sans', sans-serif", fontSize: 15, color: 'rgba(255,255,255,0.25)', cursor: 'pointer', padding: 0 }}>
-          ← Back
-        </button>
-        <button type="button" onClick={handleContinue} disabled={!canProceed}
-          style={{
-            background:    canProceed ? ACCENT : 'rgba(255,255,255,0.08)',
-            color:         canProceed ? '#1A2744' : 'rgba(255,255,255,0.22)',
-            fontFamily:    "var(--font-barlow), 'Barlow Condensed', sans-serif",
-            fontWeight:    700,
-            fontSize:      15,
-            letterSpacing: '0.08em',
-            textTransform: 'uppercase',
-            padding:       '12px 32px',
-            border:        'none',
-            boxShadow:     canProceed ? '8px 8px 0px 0px #000000' : 'none',
-            cursor:        canProceed ? 'pointer' : 'not-allowed',
-            transition:    'background 200ms',
-          }}>
-          {ONBOARDING_CTA.E2}
-        </button>
-      </footer>
+      <OnboardingFooter
+        onBack={() => router.push('/onboarding')}
+        cta={ONBOARDING_CTA.E2}
+        onContinue={handleContinue}
+        ctaDisabled={!canProceed}
+        ctaAccent={ACCENT}
+      />
     </>
   )
 }

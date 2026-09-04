@@ -7,6 +7,7 @@ import { CITIES, type City } from '@/lib/constants/interests'
 import { CreatorEventTicket } from '@/components/onboarding/BoardingPassArtifact'
 import { getCategoryColour } from '@/lib/onboarding/design-tokens'
 import { ONBOARDING_CTA } from '@/lib/constants/onboarding-cta-copy'
+import { OnboardingFooter } from '@/components/onboarding/OnboardingFooter'
 
 const DEFAULT_TOP = ['Ahmedabad', 'Gandhinagar']
 
@@ -171,33 +172,13 @@ export default function C4Page() {
         </div>
       </div>
 
-      <footer style={{
-        position: 'fixed', bottom: 0, left: 0, right: 0, height: 72, zIndex: 50,
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 24px',
-        background: 'linear-gradient(to top, var(--ob-panel-bg, #1A2744) 60%, transparent 100%)',
-      }}>
-        <button type="button" onClick={() => router.push('/onboarding/creator/C3')}
-          style={{ background: 'none', border: 'none', fontFamily: "'DM Sans', sans-serif", fontSize: 15, color: 'rgba(255,255,255,0.25)', cursor: 'pointer', padding: 0 }}>
-          ← Back
-        </button>
-        <button type="button" onClick={handleContinue} disabled={!canProceed}
-          style={{
-            background:   canProceed ? accent : 'rgba(255,255,255,0.08)',
-            color:        canProceed ? '#1A2744' : 'rgba(255,255,255,0.22)',
-            fontFamily:   "var(--font-barlow), 'Barlow Condensed', sans-serif",
-            fontWeight:   700,
-            fontSize:     15,
-            letterSpacing: '0.08em',
-            textTransform: 'uppercase',
-            padding:      '12px 32px',
-            border:       'none',
-            boxShadow:    canProceed ? '8px 8px 0px 0px #000000' : 'none',
-            cursor:       canProceed ? 'pointer' : 'not-allowed',
-            transition:   'background 200ms',
-          }}>
-          {ONBOARDING_CTA.C4}
-        </button>
-      </footer>
+      <OnboardingFooter
+        onBack={() => router.push('/onboarding/creator/C3')}
+        cta={ONBOARDING_CTA.C4}
+        onContinue={handleContinue}
+        ctaDisabled={!canProceed}
+        ctaAccent={accent}
+      />
     </>
   )
 }

@@ -7,6 +7,7 @@ import { CREATOR_CATEGORIES } from '@/lib/constants/categories'
 import { CreatorEventTicket } from '@/components/onboarding/BoardingPassArtifact'
 import { getCategoryColour } from '@/lib/onboarding/design-tokens'
 import { ONBOARDING_CTA } from '@/lib/constants/onboarding-cta-copy'
+import { OnboardingFooter } from '@/components/onboarding/OnboardingFooter'
 
 const NAVY = '#1A2744'
 
@@ -122,35 +123,18 @@ export default function C3Page() {
         </p>
       </div>
 
-      <footer style={{
-        position: 'fixed', bottom: 0, left: 0, right: 0, height: 72, zIndex: 50,
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 24px',
-        background: 'linear-gradient(to top, var(--ob-panel-bg, #1A2744) 60%, transparent 100%)',
-      }}>
-        <button type="button" onClick={() => router.push('/onboarding/creator/C2')}
-          style={{ background: 'none', border: 'none', fontFamily: "'DM Sans', sans-serif", fontSize: 15, color: 'rgba(255,255,255,0.25)', cursor: 'pointer', padding: 0 }}>
-          ← Back
-        </button>
-        <button
-          type="button"
-          onClick={handleContinue}
-          disabled={!selected}
-          style={{
-            background:    selected ? (CREATOR_CATEGORIES.find(c => c.id === selected)?.primaryColor ?? '#E8705A') : 'rgba(255,255,255,0.08)',
-            color:         selected ? '#ffffff' : 'rgba(255,255,255,0.22)',
-            fontFamily:    "'DM Sans', sans-serif",
-            fontWeight:    700, fontSize: 15,
-            letterSpacing: '0.08em',
-            padding:       '12px 32px',
-            border:        'none',
-            boxShadow:     selected ? '4px 4px 0px #000000' : 'none',
-            cursor:        selected ? 'pointer' : 'not-allowed',
-            transition:    'all 150ms',
-          }}
-        >
-          {ONBOARDING_CTA.C3}
-        </button>
-      </footer>
+      <OnboardingFooter
+        onBack={() => router.push('/onboarding/creator/C2')}
+        cta={ONBOARDING_CTA.C3}
+        onContinue={handleContinue}
+        ctaDisabled={!selected}
+        ctaAccent={CREATOR_CATEGORIES.find(c => c.id === selected)?.primaryColor ?? '#E8705A'}
+        ctaTextColor="#ffffff"
+        ctaFontFamily="'DM Sans', sans-serif"
+        ctaLetterSpacing="0.08em"
+        ctaTextTransform="none"
+        ctaShadow="4px 4px 0px #000000"
+      />
     </>
   )
 }
