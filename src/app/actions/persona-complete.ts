@@ -14,7 +14,6 @@ interface ExplorerPayload {
   username: string
   city: string
   neighbourhood: string | null
-  explorerScene: string
   interestTags: string[]
   preferredFormats: string[]
   priceRangeMaxPaise: number
@@ -45,7 +44,6 @@ export async function completeExplorerOnboarding(payload: ExplorerPayload) {
       preferred_formats:        payload.preferredFormats,
       price_range_max_paise:    payload.priceRangeMaxPaise,
       notification_preferences: payload.notificationPreferences,
-      explorer_scene:           payload.explorerScene,
       explorer_creator_intent:  payload.explorerCreatorIntent,
       ...(payload.avatarUrl ? { avatar_url: payload.avatarUrl } : {}),
     }, { onConflict: 'auth_user_id' })

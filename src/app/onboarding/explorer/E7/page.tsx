@@ -78,7 +78,6 @@ export default function E7Page() {
           username:              sessionStorage.getItem(SK.e_username)      || '',
           city:                  sessionStorage.getItem(SK.e_city)         || '',
           neighbourhood:         sessionStorage.getItem(SK.e_neighbourhood) || null,
-          explorerScene:         sessionStorage.getItem(SK.e_scene)        || '',
           interestTags:          interestIds,
           preferredFormats:      JSON.parse(sessionStorage.getItem(SK.e_formats)   || '[]') as string[],
           priceRangeMaxPaise:    Number(sessionStorage.getItem(SK.e_price_max) ?? '1000') * 100,

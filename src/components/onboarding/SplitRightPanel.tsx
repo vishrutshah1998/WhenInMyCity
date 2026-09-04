@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { readSnapshot, Snap } from './SplitRightPanel.shared'
 import { C3RightPanel, C4RightPanel, C5RightPanel, C6RightPanel, C7RightPanel, C8RightPanel } from './SplitRightPanel.Creators'
-import { E3RightPanel, E4RightPanel, E5RightPanel, E6RightPanel } from './SplitRightPanel.Explorers'
+import { E4RightPanel, E5RightPanel, E6RightPanel } from './SplitRightPanel.Explorers'
 import { B2RightPanel, B3RightPanel, V4RightPanel, V5RightPanel, V6RightPanel, VCRightPanel, V7RightPanel, V8RightPanel } from './SplitRightPanel.Venues'
 import { R1RightPanel, R2RightPanel, R3RightPanel, R4RightPanel, R5RightPanel } from './SplitRightPanel.Brands'
 
@@ -61,7 +61,6 @@ export default function SplitRightPanel({ pathname }: { pathname: string }) {
     case 'C6':  return <C6RightPanel snap={snap} />
     case 'C7':  return <C7RightPanel snap={snap} />
     case 'C8':  return <C8RightPanel snap={snap} />
-    case 'E3':  return <E3RightPanel snap={snap} />
     case 'E4':  return <E4RightPanel snap={snap} />
     case 'E5':  return <E5RightPanel snap={snap} />
     case 'E6':  return <E6RightPanel />
