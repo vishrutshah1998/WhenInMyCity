@@ -68,12 +68,32 @@ const PERSONAS = [
   },
 ] as const
 
+// Deep-link persona map — hoisted so both the initial-render selection below
+// and the mount effect share one source of truth.
+const PERSONA_MAP: Record<string, { skValue: string; selectedId: string; freshNext: string; addNext: string }> = {
+  creator:  { skValue: 'creator',  selectedId: 'creator',  freshNext: '/onboarding/creator/C2',       addNext: '/onboarding/creator/C2?mode=add' },
+  explorer: { skValue: 'explorer', selectedId: 'explorer', freshNext: '/onboarding/explorer/E2',      addNext: '/onboarding/explorer/E2?mode=add' },
+  venue:    { skValue: 'business', selectedId: 'business', freshNext: '/onboarding/business/B3',      addNext: '/onboarding/business/B2?mode=add&type=venue' },
+  brand:    { skValue: 'business', selectedId: 'business', freshNext: '/onboarding/business/B3',      addNext: '/onboarding/business/B2?mode=add&type=brand' },
+}
+
+// Add-mode (?mode=add&persona=X) pre-selects a persona before the S1 screen
+// ever paints, so the first frame already shows it selected instead of
+// flashing the neutral "Who are you?" state and correcting after mount.
+function getInitialAddSelection(searchParams: URLSearchParams): typeof PERSONAS[number]['id'] | null {
+  if (searchParams.get('mode') !== 'add') return null
+  const p = searchParams.get('persona')
+  if (!p) return null
+  const entry = PERSONA_MAP[p]
+  return entry ? (entry.selectedId as typeof PERSONAS[number]['id']) : null
+}
+
 function S1Inner() {
   const router       = useRouter()
   const searchParams = useSearchParams()
-  const [selected,  setSelected]  = useState<string | null>(null)
+  const [selected,  setSelected]  = useState<string | null>(() => getInitialAddSelection(searchParams))
   const [hovered,   setHovered]   = useState<string | null>(null)
-  const [advancing, setAdvancing] = useState(false)
+  const [advancing, setAdvancing] = useState<boolean>(() => getInitialAddSelection(searchParams) !== null)
   const [cityNode,  setCityNode]  = useState('NODE_IN_01')
 
   useEffect(() => {
@@ -90,18 +110,14 @@ function S1Inner() {
   // Deep-link: ?persona=creator/venue/explorer/brand
   // Fresh onboarding (?persona only): skip S1 entirely.
   // Add-persona (?mode=add&persona): pre-select and auto-advance so the user
-  // briefly sees which persona was chosen before moving on.
+  // briefly sees which persona was chosen before moving on. selected/advancing
+  // are already correct on the very first render (see getInitialAddSelection
+  // above) — this effect just re-asserts them (covers searchParams changing
+  // without a remount) and owns the sessionStorage write + delayed navigate.
   useEffect(() => {
     const p     = searchParams.get('persona')
     const isAdd = searchParams.get('mode') === 'add'
     if (!p) return
-
-    const PERSONA_MAP: Record<string, { skValue: string; selectedId: string; freshNext: string; addNext: string }> = {
-      creator:  { skValue: 'creator',  selectedId: 'creator',  freshNext: '/onboarding/creator/C2',       addNext: '/onboarding/creator/C2?mode=add' },
-      explorer: { skValue: 'explorer', selectedId: 'explorer', freshNext: '/onboarding/explorer/E2',      addNext: '/onboarding/explorer/E2?mode=add' },
-      venue:    { skValue: 'business', selectedId: 'business', freshNext: '/onboarding/business/B3',      addNext: '/onboarding/business/B2?mode=add&type=venue' },
-      brand:    { skValue: 'business', selectedId: 'business', freshNext: '/onboarding/business/B3',      addNext: '/onboarding/business/B2?mode=add&type=brand' },
-    }
 
     const entry = PERSONA_MAP[p]
     if (!entry) return
