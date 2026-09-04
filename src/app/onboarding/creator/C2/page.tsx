@@ -286,7 +286,7 @@ function C2Content() {
   const slugDisplay = slug || (displayName.trim() ? '…' : 'yourname')
 
   return (
-    <div style={{ height: '100dvh', display: 'flex', overflow: 'hidden' }}>
+    <div style={{ minHeight: 'max(884px, 100dvh)', display: 'flex', overflow: 'hidden' }}>
 
       {/* ── LEFT PANEL ───────────────────────────────── */}
       <div className="ob-c2-left" style={{

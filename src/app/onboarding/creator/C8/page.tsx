@@ -782,7 +782,7 @@ export default function C8CombinedPage() {
       accentColor={accent}
       panelBg="#243156"
     >
-      <div style={{ height: '100dvh', background: NAVY, display: 'flex', flexDirection: 'column' }}>
+      <div style={{ minHeight: 'max(884px, 100dvh)', background: NAVY, display: 'flex', flexDirection: 'column' }}>
         {/* Header */}
         <div style={{ padding: '32px 24px 0', flexShrink: 0 }}>
           <h1 style={{ fontFamily: "var(--font-abril), 'Abril Fatface', serif", fontSize: 'clamp(26px, 6vw, 38px)', color: '#F0EFF8', lineHeight: 1.05, margin: '0 0 8px' }}>

@@ -59,7 +59,7 @@ export default function OnboardingLayout({ children }: { children: React.ReactNo
   // S1 and C2 self-manage their split
   if (FULL_BLEED.has(pathname)) {
     return (
-      <div style={{ height: '100dvh', overflow: 'hidden', background: '#1A2744' }}>
+      <div style={{ minHeight: 'max(884px, 100dvh)', overflow: 'hidden', background: '#1A2744' }}>
         {children}
         <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" />
         <style>{`.material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }`}</style>
@@ -70,7 +70,7 @@ export default function OnboardingLayout({ children }: { children: React.ReactNo
   const { total, current } = STEP_MAP[pathname] ?? { total: 0, current: 0 }
 
   return (
-    <div style={{ height: '100dvh', overflow: 'hidden', display: 'flex', background: RIGHT_BG }}>
+    <div style={{ minHeight: 'max(884px, 100dvh)', overflow: 'hidden', display: 'flex', background: RIGHT_BG }}>
 
       {/* ── LEFT PANEL — always dark navy ──────────────────────────────────── */}
       {/*
