@@ -324,6 +324,7 @@ export default function V6Page() {
       <footer style={{
         position:   'fixed', bottom: 0, left: 0, right: 0, zIndex: 50,
         background: 'linear-gradient(to top, var(--ob-panel-bg, #1A2744) 60%, transparent 100%)',
+        paddingBottom: 'env(safe-area-inset-bottom, 0px)',
       }}>
         <p style={{
           fontFamily:  MONO, fontSize: 9, letterSpacing: '0.06em',

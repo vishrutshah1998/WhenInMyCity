@@ -9,6 +9,7 @@ import { useExistingProfileData } from '@/hooks/useExistingProfileData'
 import { prefillVenueKeys, prefillBrandKeys } from '@/lib/onboarding/prefill'
 import { prefetchGooglePhotos } from '@/app/actions/google-photos'
 import { ONBOARDING_CTA } from '@/lib/constants/onboarding-cta-copy'
+import { OnboardingFooter } from '@/components/onboarding/OnboardingFooter'
 
 const ACCENT = '#5DD9D0'
 const MONO   = "var(--font-jetbrains-mono), 'JetBrains Mono', monospace"
@@ -569,36 +570,13 @@ function B2Content() {
       </div>
 
       {/* ── Footer ───────────────────────────────────────────── */}
-      <footer style={{
-        position: 'fixed', bottom: 0, left: 0, right: 0, height: 72, zIndex: 50,
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 24px',
-        background: 'linear-gradient(to top, var(--ob-panel-bg, #1A2744) 60%, transparent 100%)',
-      }}>
-        <button
-          type="button"
-          onClick={() => isAddMode ? router.back() : router.push('/onboarding/business/B3')}
-          style={{ background: 'none', border: 'none', fontFamily: DM, fontSize: 15, color: 'rgba(255,255,255,0.25)', cursor: 'pointer', padding: 0 }}
-        >
-          ← Back
-        </button>
-        <button
-          type="button"
-          onClick={handleNext}
-          disabled={!canProceed}
-          style={{
-            background:    canProceed ? ACCENT : 'rgba(255,255,255,0.08)',
-            color:         canProceed ? '#1A2744' : 'rgba(255,255,255,0.22)',
-            fontFamily:    BARLOW, fontWeight: 700, fontSize: 15,
-            letterSpacing: '0.08em', textTransform: 'uppercase' as const,
-            padding:       '12px 32px', border: 'none',
-            boxShadow:     canProceed ? '8px 8px 0px 0px #000000' : 'none',
-            cursor:        canProceed ? 'pointer' : 'not-allowed',
-            transition:    'all 150ms',
-          }}
-        >
-          {isPrefetching ? 'Importing…' : isAdvancing ? 'Loading…' : ONBOARDING_CTA.B2}
-        </button>
-      </footer>
+      <OnboardingFooter
+        onBack={() => isAddMode ? router.back() : router.push('/onboarding/business/B3')}
+        cta={isPrefetching ? 'Importing…' : isAdvancing ? 'Loading…' : ONBOARDING_CTA.B2}
+        onContinue={handleNext}
+        ctaDisabled={!canProceed}
+        ctaAccent={ACCENT}
+      />
     </>
   )
 }

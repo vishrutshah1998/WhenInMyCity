@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { SK } from '@/lib/onboarding/session-keys'
 import { BrandNoticeAd } from '@/components/onboarding/BoardingPassArtifact'
 import { ONBOARDING_CTA } from '@/lib/constants/onboarding-cta-copy'
+import { OnboardingFooter } from '@/components/onboarding/OnboardingFooter'
 
 const ACCENT = '#F5A800'
 const NAVY   = '#1A2744'
@@ -220,16 +221,19 @@ export default function R3Page() {
         )}
       </div>
 
-      <footer style={{
-        position:   'fixed', bottom: 0, left: 0, right: 0, zIndex: 50, height: 72,
-        display:    'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 24px',
-        background: `linear-gradient(to top, ${NAVY} 60%, transparent 100%)`,
-      }}>
-        <button type="button" onClick={() => router.push('/onboarding/business/R1')}
-          style={{ background: 'none', border: 'none', fontFamily: DM, fontSize: 15, color: 'rgba(255,255,255,0.25)', cursor: 'pointer', padding: 0 }}>
-          ← Back
-        </button>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+      <OnboardingFooter
+        onBack={() => router.push('/onboarding/business/R1')}
+        cta={ONBOARDING_CTA.R3}
+        onContinue={handleNext}
+        ctaDisabled={!canProceed}
+        ctaAccent={ACCENT}
+        ctaTextColor={NAVY}
+        ctaFontFamily={ABRIL}
+        ctaFontWeight={undefined}
+        ctaLetterSpacing={undefined}
+        ctaPadding="12px 28px"
+        ctaShadow="8px 8px 0px 0px rgba(0,0,0,0.9)"
+        sideInfo={
           <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
             <span style={{ fontFamily: BARLOW, fontWeight: 600, fontSize: 10, color: 'rgba(255,255,255,0.30)', letterSpacing: '0.10em', textTransform: 'uppercase' }}>
               NODE_ID: R003-BRAND
@@ -238,20 +242,8 @@ export default function R3Page() {
               STATUS: {canProceed ? 'AESTHETIC_SET' : 'AWAITING_VIBE'}
             </span>
           </div>
-          <button type="button" onClick={handleNext} disabled={!canProceed}
-            style={{
-              background:    canProceed ? ACCENT : 'rgba(255,255,255,0.08)',
-              color:         canProceed ? NAVY : 'rgba(255,255,255,0.22)',
-              fontFamily:    ABRIL, fontSize: 15, textTransform: 'uppercase',
-              padding:       '12px 28px', border: 'none',
-              boxShadow:     canProceed ? '8px 8px 0px 0px rgba(0,0,0,0.9)' : 'none',
-              cursor:        canProceed ? 'pointer' : 'not-allowed',
-              transition:    'all 150ms',
-            }}>
-            {ONBOARDING_CTA.R3}
-          </button>
-        </div>
-      </footer>
+        }
+      />
     </>
   )
 }

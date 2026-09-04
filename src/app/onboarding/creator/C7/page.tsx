@@ -7,6 +7,7 @@ import { INTEREST_TAGS, INTEREST_CATEGORY_COLORS, INTEREST_CATEGORY_ORDER, type 
 import { getCategoryColour } from '@/lib/onboarding/design-tokens'
 import { ONBOARDING_CTA } from '@/lib/constants/onboarding-cta-copy'
 import InterestTagPicker from '@/components/shared/InterestTagPicker'
+import { OnboardingFooter } from '@/components/onboarding/OnboardingFooter'
 
 const MIN_TAGS = 3
 const SCENE_BLUE = '#5EC8F2'
@@ -251,39 +252,14 @@ export default function C7Page() {
         />
       </div>
 
-      <footer style={{
-        position: 'fixed', bottom: 0, left: 0, right: 0, height: 72, zIndex: 50,
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 24px',
-        background: 'linear-gradient(to top, var(--ob-panel-bg, #1A2744) 60%, transparent 100%)',
-      }}>
-        <button type="button" onClick={() => router.push('/onboarding/creator/C6')}
-          style={{ background: 'none', border: 'none', fontFamily: "'DM Sans', sans-serif", fontSize: 15, color: 'rgba(255,255,255,0.25)', cursor: 'pointer', padding: 0 }}>
-          ← Back
-        </button>
-        <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-          <button type="button" onClick={handleSkip} disabled={isAdvancing}
-            style={{ background: 'none', border: 'none', fontFamily: "'DM Sans', sans-serif", fontSize: 14, color: 'rgba(255,255,255,0.25)', cursor: 'pointer', padding: 0, textDecoration: 'underline', textDecorationStyle: 'dashed', textUnderlineOffset: 3 }}>
-            Skip
-          </button>
-          <button type="button" onClick={handleContinue} disabled={!canProceed || isAdvancing}
-            style={{
-              background:    canProceed ? accent : 'rgba(255,255,255,0.08)',
-              color:         canProceed ? '#1A2744' : 'rgba(255,255,255,0.22)',
-              fontFamily:    "var(--font-barlow), 'Barlow Condensed', sans-serif",
-              fontWeight:    700,
-              fontSize:      15,
-              letterSpacing: '0.08em',
-              textTransform: 'uppercase',
-              padding:       '12px 32px',
-              border:        'none',
-              boxShadow:     canProceed ? '8px 8px 0px 0px #000000' : 'none',
-              cursor:        canProceed ? 'pointer' : 'not-allowed',
-              transition:    'all 150ms',
-            }}>
-            {canProceed ? ONBOARDING_CTA.C7.withCount(selected.length) : `Pick ${MIN_TAGS - selected.length} more`}
-          </button>
-        </div>
-      </footer>
+      <OnboardingFooter
+        onBack={() => router.push('/onboarding/creator/C6')}
+        cta={canProceed ? ONBOARDING_CTA.C7.withCount(selected.length) : `Pick ${MIN_TAGS - selected.length} more`}
+        onContinue={handleContinue}
+        ctaDisabled={!canProceed || isAdvancing}
+        ctaAccent={accent}
+        secondaryAction={{ label: 'Skip', onClick: handleSkip, disabled: isAdvancing }}
+      />
     </>
   )
 }

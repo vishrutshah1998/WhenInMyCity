@@ -736,6 +736,7 @@ const name    = sessionStorage.getItem(SK.b_name) ?? ''
         position:   'fixed', bottom: 0, left: 0, right: 0, zIndex: 50, height: 72,
         display:    'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 24px',
         background: `linear-gradient(to top, ${NAVY} 60%, transparent 100%)`,
+        paddingBottom: 'env(safe-area-inset-bottom, 0px)',
       }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
           <span style={{ fontFamily: MONO, fontSize: 10, color: `${ACCENT}99`, letterSpacing: '0.15em', textTransform: 'uppercase' as const }}>

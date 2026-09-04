@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { SK } from '@/lib/onboarding/session-keys'
 import { ONBOARDING_CTA } from '@/lib/constants/onboarding-cta-copy'
+import { OnboardingFooter } from '@/components/onboarding/OnboardingFooter'
 const ACCENT = '#9B8FFF'
 
 interface City { name: string; state: string }
@@ -21,17 +22,14 @@ export default function E4Page() {
   const [showDropdown,   setShowDropdown]   = useState(true)
   const [isAdvancing,    setIsAdvancing]    = useState(false)
   const [eName,          setEName]          = useState('')
-  const [eScene,         setEScene]         = useState('')
   const [neighbourhood,  setNeighbourhood]  = useState('')
 
   useEffect(() => {
     if (typeof window === 'undefined') return
     if (sessionStorage.getItem(SK.persona) !== 'explorer') { router.replace('/onboarding'); return }
-    const scene = sessionStorage.getItem(SK.e_scene)
-    if (!scene) { router.replace('/onboarding/explorer/E3'); return }
-    setEScene(scene)
-    const n = sessionStorage.getItem(SK.e_name)
-    if (n) setEName(n)
+    const name = sessionStorage.getItem(SK.e_name)
+    if (!name) { router.replace('/onboarding/explorer/E2'); return }
+    setEName(name)
     const saved = sessionStorage.getItem(SK.e_city)
     if (saved) {
       const city = CITIES.find(c => c.name === saved)
@@ -226,32 +224,13 @@ export default function E4Page() {
         )}
       </div>
 
-      <footer style={{
-        position: 'fixed', bottom: 0, left: 0, right: 0, height: 72, zIndex: 50,
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 24px',
-        background: 'linear-gradient(to top, var(--ob-panel-bg, #1A2744) 60%, transparent 100%)',
-      }}>
-        <button type="button" onClick={() => router.push('/onboarding/explorer/E3')}
-          style={{ background: 'none', border: 'none', fontFamily: "'DM Sans', sans-serif", fontSize: 15, color: 'rgba(255,255,255,0.25)', cursor: 'pointer', padding: 0 }}>
-          ← Back
-        </button>
-        <button type="button" onClick={handleContinue} disabled={!canProceed}
-          style={{
-            background:    canProceed ? ACCENT : 'rgba(255,255,255,0.08)',
-            color:         canProceed ? '#1A2744' : 'rgba(255,255,255,0.22)',
-            fontFamily:    "var(--font-barlow), 'Barlow Condensed', sans-serif",
-            fontWeight:    700,
-            fontSize:      15,
-            letterSpacing: '0.08em',
-            textTransform: 'uppercase',
-            padding:       '12px 32px',
-            border:        'none',
-            boxShadow:     canProceed ? '8px 8px 0px 0px #000000' : 'none',
-            cursor:        canProceed ? 'pointer' : 'not-allowed',
-          }}>
-          {ONBOARDING_CTA.E4}
-        </button>
-      </footer>
+      <OnboardingFooter
+        onBack={() => router.push('/onboarding/explorer/E2')}
+        cta={ONBOARDING_CTA.E4}
+        onContinue={handleContinue}
+        ctaDisabled={!canProceed}
+        ctaAccent={ACCENT}
+      />
     </>
   )
 }

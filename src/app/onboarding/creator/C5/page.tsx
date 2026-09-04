@@ -9,6 +9,7 @@ import { getSubtypePopularity } from '@/app/actions/onboarding'
 import type { CreatorType } from '@/types/database'
 import { CreatorEventTicket } from '@/components/onboarding/BoardingPassArtifact'
 import { ONBOARDING_CTA } from '@/lib/constants/onboarding-cta-copy'
+import { OnboardingFooter } from '@/components/onboarding/OnboardingFooter'
 
 const NOT_YET = 'not_yet'
 
@@ -153,39 +154,14 @@ export default function C5Page() {
         </div>
       </div>
 
-      <footer style={{
-        position: 'fixed', bottom: 0, left: 0, right: 0, height: 72, zIndex: 50,
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 24px',
-        background: 'linear-gradient(to top, var(--ob-panel-bg, #1A2744) 60%, transparent 100%)',
-      }}>
-        <button type="button" onClick={() => router.push('/onboarding/creator/C4')}
-          style={{ background: 'none', border: 'none', fontFamily: "'DM Sans', sans-serif", fontSize: 15, color: 'rgba(255,255,255,0.25)', cursor: 'pointer', padding: 0 }}>
-          ← Back
-        </button>
-        <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-          <button type="button" onClick={handleSkip}
-            style={{ background: 'none', border: 'none', fontFamily: "'DM Sans', sans-serif", fontSize: 14, color: 'rgba(255,255,255,0.25)', cursor: 'pointer', padding: 0, textDecoration: 'underline', textDecorationStyle: 'dashed', textUnderlineOffset: 3 }}>
-            Skip
-          </button>
-          <button type="button" onClick={handleContinue} disabled={!canProceed || advancing}
-            style={{
-              background:    canProceed ? accent : 'rgba(255,255,255,0.08)',
-              color:         canProceed ? '#1A2744' : 'rgba(255,255,255,0.22)',
-              fontFamily:    "var(--font-barlow), 'Barlow Condensed', sans-serif",
-              fontWeight:    700,
-              fontSize:      15,
-              letterSpacing: '0.08em',
-              textTransform: 'uppercase',
-              padding:       '12px 32px',
-              border:        'none',
-              boxShadow:     canProceed ? '8px 8px 0px 0px #000000' : 'none',
-              cursor:        canProceed ? 'pointer' : 'not-allowed',
-              transition:    'background 200ms',
-            }}>
-            {canProceed ? ONBOARDING_CTA.C5.withCount(selected.length) : ONBOARDING_CTA.C5.base}
-          </button>
-        </div>
-      </footer>
+      <OnboardingFooter
+        onBack={() => router.push('/onboarding/creator/C4')}
+        cta={canProceed ? ONBOARDING_CTA.C5.withCount(selected.length) : ONBOARDING_CTA.C5.base}
+        onContinue={handleContinue}
+        ctaDisabled={!canProceed || advancing}
+        ctaAccent={accent}
+        secondaryAction={{ label: 'Skip', onClick: handleSkip }}
+      />
     </>
   )
 }
