@@ -141,7 +141,7 @@ function S1Inner() {
   const activeId = hovered || selected
 
   return (
-    <div style={{ height: '100dvh', display: 'flex', overflow: 'hidden' }}>
+    <div style={{ minHeight: 'max(884px, 100dvh)', display: 'flex', overflow: 'hidden' }}>
 
       {/* ── LEFT PANEL ─────────────────────────────── */}
       <div className="ob-s1-left" style={{
