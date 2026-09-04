@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { readSnapshot, Snap } from './SplitRightPanel.shared'
 import { C3RightPanel, C4RightPanel, C5RightPanel, C6RightPanel, C7RightPanel, C8RightPanel } from './SplitRightPanel.Creators'
 import { E4RightPanel, E5RightPanel, E6RightPanel } from './SplitRightPanel.Explorers'
-import { B2RightPanel, B3RightPanel, V4RightPanel, V5RightPanel, V6RightPanel, VCRightPanel, V7RightPanel, V8RightPanel } from './SplitRightPanel.Venues'
+import { B2RightPanel, B3RightPanel, V4RightPanel, V5RightPanel, V6RightPanel, V7RightPanel, V8RightPanel } from './SplitRightPanel.Venues'
 import { R1RightPanel, R2RightPanel, R3RightPanel, R4RightPanel, R5RightPanel } from './SplitRightPanel.Brands'
 
 function DefaultRightPanel({ screen }: { screen: string }) {
@@ -68,7 +68,6 @@ export default function SplitRightPanel({ pathname }: { pathname: string }) {
     case 'B3':  return <B3RightPanel snap={snap} />
     case 'V4':  return <V4RightPanel snap={snap} />
     case 'V5':  return <V5RightPanel snap={snap} />
-    case 'VC':  return <VCRightPanel snap={snap} />
     case 'V6':  return <V6RightPanel snap={snap} />
     case 'V7':  return <V7RightPanel snap={snap} />
     case 'V8':  return <V8RightPanel snap={snap} />

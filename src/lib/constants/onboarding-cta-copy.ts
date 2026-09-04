@@ -19,6 +19,5 @@ export const ONBOARDING_CTA = {
   R3: 'Almost there →',
   R4: 'One more thing →',
   V4: { base: 'Good picks →', withCount: (n: number) => `Good picks (${n}) →` },
-  VC: 'Sounds right →',
   V7: 'Almost done →',
 } as const
