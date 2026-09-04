@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect } from 'react'
 import { usePathname } from 'next/navigation'
 import { ONBOARDING, PAPER } from '@/lib/onboarding/design-tokens'
 import SplitRightPanel from '@/components/onboarding/SplitRightPanel'
@@ -56,10 +57,27 @@ const RIGHT_BG = PAPER.bg
 export default function OnboardingLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
 
+  // Onboarding's header/footer are position:fixed and must track the real,
+  // visible viewport (100dvh) so the CTA is always reachable without a
+  // scroll — see the fixed-below-the-fold bug this replaces. But body itself
+  // enforces min-height: max(884px, 100dvh) (globals.css) for the rest of the
+  // app; on any device shorter than 884px that leaves body taller than our
+  // 100dvh box, which the user could otherwise scroll into, exposing body's
+  // near-black background below (the bug 25c77e4 fixed by inflating this box
+  // to match — which is what broke the CTA). Locking body scroll for the
+  // lifetime of the onboarding flow removes that scroll path entirely, so
+  // the gap can never be revealed, without needing this box to be any taller
+  // than the real viewport. Same pattern as page.tsx's landing-page lock.
+  useEffect(() => {
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => { document.body.style.overflow = prev }
+  }, [])
+
   // S1 and C2 self-manage their split
   if (FULL_BLEED.has(pathname)) {
     return (
-      <div style={{ minHeight: 'max(884px, 100dvh)', overflow: 'hidden', background: '#1A2744' }}>
+      <div style={{ height: '100dvh', overflow: 'hidden', background: '#1A2744' }}>
         {children}
         <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" />
         <style>{`.material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }`}</style>
@@ -70,7 +88,7 @@ export default function OnboardingLayout({ children }: { children: React.ReactNo
   const { total, current } = STEP_MAP[pathname] ?? { total: 0, current: 0 }
 
   return (
-    <div style={{ minHeight: 'max(884px, 100dvh)', overflow: 'hidden', display: 'flex', background: RIGHT_BG }}>
+    <div style={{ height: '100dvh', overflow: 'hidden', display: 'flex', background: RIGHT_BG }}>
 
       {/* ── LEFT PANEL — always dark navy ──────────────────────────────────── */}
       {/*
