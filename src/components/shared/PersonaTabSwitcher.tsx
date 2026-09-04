@@ -112,56 +112,83 @@ export default function PersonaTabSwitcher({
   }
 
   return (
-    <div
-      className="fixed lg:hidden left-0 right-0 md:left-[var(--wimc-sidebar-w)] z-20"
-      style={{
-        // top+bottom (no computed height) — same fix already validated on
-        // PersonaNavStandalone (see PersonaNav.tsx): a calc(100dvh - topOffset)
-        // height was leaving a gap between the nav and the real screen edge
-        // on iOS Safari, where 100dvh doesn't always recompute promptly as
-        // the dynamic toolbar animates. Anchoring both edges directly lets
-        // the container track the real visual viewport instead.
-        top: topOffset,
-        bottom: 0,
-        overflow: 'hidden',
-        background: bgColor,
-      }}
-      ref={containerRef}
-    >
-      {/* Switching tabs swaps which key is mounted — AnimatePresence keeps
-          the outgoing panel around only long enough to spring off-screen,
-          then React tears it down completely (not hidden indefinitely, the
-          way the old always-mounted SwipeCarousel kept every tab alive). */}
-      <AnimatePresence custom={direction} initial={false}>
-        <motion.div
-          key={active.key}
-          custom={direction}
-          variants={slideVariants}
-          initial="enter"
-          animate="center"
-          exit="exit"
-          transition={PAGE_SPRING}
-          style={{
-            position: 'absolute',
-            inset: 0,
-            width: '100%',
-            height: '100%',
-            overflowY: active.fullBleed ? 'hidden' : 'auto',
-            overflowX: 'hidden',
-            borderRadius: active.fullBleed ? 0 : 18,
-            background: bgColor,
-          }}
-        >
-          {active.content}
-        </motion.div>
-      </AnimatePresence>
+    <>
+      <div
+        className="fixed lg:hidden left-0 right-0 md:left-[var(--wimc-sidebar-w)] z-20"
+        style={{
+          // top+bottom (no computed height) — same fix already validated on
+          // PersonaNavStandalone (see PersonaNav.tsx): a calc(100dvh - topOffset)
+          // height was leaving a gap between the nav and the real screen edge
+          // on iOS Safari, where 100dvh doesn't always recompute promptly as
+          // the dynamic toolbar animates. Anchoring both edges directly lets
+          // the container track the real visual viewport instead.
+          top: topOffset,
+          bottom: 0,
+          overflow: 'hidden',
+          background: bgColor,
+        }}
+        ref={containerRef}
+      >
+        {/* Switching tabs swaps which key is mounted — AnimatePresence keeps
+            the outgoing panel around only long enough to spring off-screen,
+            then React tears it down completely (not hidden indefinitely, the
+            way the old always-mounted SwipeCarousel kept every tab alive). */}
+        <AnimatePresence custom={direction} initial={false}>
+          <motion.div
+            key={active.key}
+            custom={direction}
+            variants={slideVariants}
+            initial="enter"
+            animate="center"
+            exit="exit"
+            transition={PAGE_SPRING}
+            style={{
+              position: 'absolute',
+              inset: 0,
+              width: '100%',
+              height: '100%',
+              overflowY: active.fullBleed ? 'hidden' : 'auto',
+              overflowX: 'hidden',
+              borderRadius: active.fullBleed ? 0 : 18,
+              background: bgColor,
+              // fullBleed tabs (e.g. Explorer's map) intentionally render
+              // edge-to-edge under the nav and self-manage their own
+              // NAV_HEIGHT reservation — see the `fullBleed` doc comment
+              // above. Everything else needs bottom padding now that the
+              // nav below is a separately-fixed element painted on top,
+              // not part of this scroll container's own layout flow.
+              paddingBottom: active.fullBleed
+                ? undefined
+                : `calc(${NAV_HEIGHT}px + env(safe-area-inset-bottom, 0px))`,
+            }}
+          >
+            {active.content}
+          </motion.div>
+        </AnimatePresence>
+      </div>
 
-      <PersonaNavBar
-        pages={pages} active={pageIndex} onSelect={selectPage}
-        trackX={trackX} width={width}
-        accentColor={accentColor} mutedColor={mutedColor}
-        elevatedBgColor={elevatedBgColor} borderColor={borderColor}
-      />
-    </div>
+      {/* The nav is its own independently-fixed element — a sibling of the
+          content container above, NOT nested inside it. iOS doesn't
+          reliably track the dynamic toolbar for `bottom: 0` on a TALL fixed
+          element sized via top+bottom (the container above): when the
+          toolbar is showing, that container's bottom edge can sit below
+          the real visible screen edge, pushing an absolutely-positioned-
+          within-it nav off-screen too. Anchoring the nav directly to the
+          real screen bottom — the same small-intrinsic-height `fixed;
+          bottom: 0` pattern already proven on PersonaNavStandalone above —
+          sidesteps that regardless of what the content container's own
+          bottom edge is doing. */}
+      <div
+        className="fixed lg:hidden left-0 right-0 md:left-[var(--wimc-sidebar-w)]"
+        style={{ bottom: 0, overflow: 'visible' }}
+      >
+        <PersonaNavBar
+          pages={pages} active={pageIndex} onSelect={selectPage}
+          trackX={trackX} width={width}
+          accentColor={accentColor} mutedColor={mutedColor}
+          elevatedBgColor={elevatedBgColor} borderColor={borderColor}
+        />
+      </div>
+    </>
   )
 }
