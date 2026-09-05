@@ -1,6 +1,7 @@
 'use server'
 
 import { redirect } from 'next/navigation'
+import { parsePhoneNumberFromString } from 'libphonenumber-js'
 import { createClient } from '@/lib/supabase/server'
 import { checkOTPRateLimit } from '@/lib/ratelimit'
 import { setSignupOtpChannel, type SignupOtpChannel } from '@/lib/signup-otp-channel'
@@ -10,35 +11,36 @@ import { setSignupOtpChannel, type SignupOtpChannel } from '@/lib/signup-otp-cha
 // ---------------------------------------------------------------------------
 
 /**
- * Normalises an Indian mobile number to E.164 format (+91XXXXXXXXXX).
+ * Normalises a phone number to E.164.
  *
- * Accepts:
- *   - `+91XXXXXXXXXX`   — already E.164
- *   - `91XXXXXXXXXX`    — without leading +
- *   - `XXXXXXXXXX`      — bare 10-digit number
- *
- * Returns `null` when the number doesn't match a valid Indian mobile pattern
- * (starts with 6–9, exactly 10 digits after the country code).
+ * Domestic (+91) keeps the original strict pattern unchanged — accepts
+ * `+91XXXXXXXXXX`, `91XXXXXXXXXX`, or a bare 10-digit number starting 6–9.
+ * Anything else defers to libphonenumber-js, mirroring
+ * src/app/actions/guest-otp.ts's PhoneSchema so both flows agree on what
+ * counts as a valid international number. Returns `null` when invalid.
  */
-function normaliseIndianPhone(raw: string): string | null {
+function normalisePhone(raw: string): string | null {
   const stripped = raw.trim().replace(/\s+/g, '')
 
-  let digits: string
-
+  let indiaDigits: string | null = null
   if (stripped.startsWith('+91')) {
-    digits = stripped.slice(3)
+    indiaDigits = stripped.slice(3)
   } else if (stripped.startsWith('91') && stripped.length === 12) {
-    digits = stripped.slice(2)
-  } else {
-    digits = stripped
+    indiaDigits = stripped.slice(2)
+  } else if (/^\d{10}$/.test(stripped)) {
+    indiaDigits = stripped
   }
 
-  // Indian mobile: 10 digits, starts with 6, 7, 8, or 9
-  if (!/^[6-9]\d{9}$/.test(digits)) {
-    return null
+  if (indiaDigits !== null) {
+    return /^[6-9]\d{9}$/.test(indiaDigits) ? `+91${indiaDigits}` : null
   }
 
-  return `+91${digits}`
+  const parsed = parsePhoneNumberFromString(stripped)
+  return parsed && parsed.isValid() && parsed.country !== 'IN' ? parsed.number : null
+}
+
+function isDomestic(phone: string): boolean {
+  return phone.startsWith('+91')
 }
 
 // ---------------------------------------------------------------------------
@@ -46,8 +48,7 @@ function normaliseIndianPhone(raw: string): string | null {
 // ---------------------------------------------------------------------------
 
 /**
- * Sends a 6-digit OTP to the supplied Indian phone number, via SMS or
- * WhatsApp.
+ * Sends a 6-digit OTP to the supplied phone number, via SMS or WhatsApp.
  *
  * The OTP itself is generated and dispatched by Supabase Auth's Send SMS
  * Hook (src/app/api/webhooks/send-sms/route.ts), which forwards to AmazeSMS
@@ -57,7 +58,12 @@ function normaliseIndianPhone(raw: string): string | null {
  * controlled by the `OTP_EXP` setting in the Supabase project (set to 600
  * seconds / 10 minutes).
  *
- * @param phone - Raw phone number string (any common Indian format accepted).
+ * AmazeSMS is a DLT-gated domestic-only transport, so international (+91)
+ * numbers always use WhatsApp regardless of the requested channel — same
+ * policy as src/app/actions/guest-otp.ts.
+ *
+ * @param phone - Raw phone number string (any common Indian format, or a
+ *   full E.164 international number).
  * @param channel - 'sms' (default) or 'whatsapp'.
  * @returns `{ error: string | null }` — null on success, a human-readable
  *   message on failure.
@@ -72,16 +78,15 @@ export async function sendPhoneOTP(
   const rl = await checkOTPRateLimit()
   if (!rl.success) return { error: rl.error! }
 
-  const e164 = normaliseIndianPhone(phone)
+  const e164 = normalisePhone(phone)
 
   if (!e164) {
-    return {
-      error:
-        'Please enter a valid 10-digit Indian mobile number (e.g. 98765 43210).',
-    }
+    return { error: 'Please enter a valid phone number.' }
   }
 
-  await setSignupOtpChannel(e164, channel)
+  const effectiveChannel: SignupOtpChannel = isDomestic(e164) ? channel : 'whatsapp'
+
+  await setSignupOtpChannel(e164, effectiveChannel)
 
   const supabase = await createClient()
 
@@ -133,7 +138,7 @@ export async function verifyPhoneOTP(
   phone: string,
   token: string,
 ): Promise<{ error: string | null; isNewUser: boolean }> {
-  const e164 = normaliseIndianPhone(phone)
+  const e164 = normalisePhone(phone)
 
   if (!e164) {
     return {
