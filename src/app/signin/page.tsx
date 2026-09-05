@@ -3,11 +3,37 @@
 import { useState, useTransition, useRef, useEffect, Suspense } from 'react'
 import type { ReactNode } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
+import { AsYouType, isValidPhoneNumber, getCountryCallingCode, type CountryCode } from 'libphonenumber-js'
 import { sendPhoneOTP, verifyPhoneOTP, signInWithGoogle } from '@/app/actions/auth'
 import { motion, AnimatePresence } from 'framer-motion'
 import { WimcWordmark } from '@/components/WimcWordmark'
+import { CountryCodeSelect, DIAL_COUNTRIES } from '@/components/CountryCodeSelect'
 
 const E = [0.22, 1, 0.36, 1] as const
+
+// WhatsApp brand mark — same path/green used by src/components/profile/WhatsAppCommunityBlock.tsx
+const WA_GREEN = '#25D366'
+const WA_PATH =
+  'M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z'
+
+function WhatsAppGlyph({ size = 14, color = WA_GREEN }: { size?: number; color?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" width={size} height={size} fill={color} aria-hidden>
+      <path d={WA_PATH} />
+    </svg>
+  )
+}
+
+/** Domestic (+91) keeps its exact original validation; everything else defers to libphonenumber-js. */
+function isPhoneValid(digits: string, iso: CountryCode): boolean {
+  if (iso === 'IN') return /^[6-9]\d{9}$/.test(digits)
+  if (!digits) return false
+  return isValidPhoneNumber(`+${getCountryCallingCode(iso)}${digits}`, iso)
+}
+
+function formatPhoneDisplay(digits: string, iso: CountryCode): string {
+  return digits ? new AsYouType(iso).input(digits) : ''
+}
 
 function SignInForm() {
   const router = useRouter()
@@ -15,19 +41,36 @@ function SignInForm() {
   const next = searchParams.get('next') || '/dashboard'
 
   const [view, setView]              = useState<'phone' | 'otp'>('phone')
-  const [phone, setPhone]            = useState('')
+  const [countryIso, setCountryIso]  = useState<CountryCode>('IN')
+  const [phoneDigits, setPhoneDigits] = useState('')
   const [otpDigits, setOtpDigits]    = useState(['', '', '', '', '', ''])
   const [error, setError]            = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
 
-  // SMS is the default channel; a "Try WhatsApp instead" fallback appears
-  // 20s after a code is sent, mirroring the guest-RSVP OTP flow in
-  // event-page.tsx. Domestic-only for now — see CLAUDE.md Known Debt.
+  // SMS is the default channel for +91; every other country is WhatsApp-only
+  // (AmazeSMS is DLT-gated domestic-only) — same policy as the guest-RSVP OTP
+  // flow in event-page.tsx. A "Try WhatsApp instead" fallback appears 20s
+  // after an SMS code is sent.
   const [otpChannel, setOtpChannel] = useState<'sms' | 'whatsapp'>('sms')
   const [whatsappFallbackReady, setWhatsappFallbackReady] = useState(false)
 
   const otpInputRefs = useRef<(HTMLInputElement | null)[]>([])
   const otp = otpDigits.join('')
+
+  const isIndia   = countryIso === 'IN'
+  const dialCode  = getCountryCallingCode(countryIso)
+  const e164Phone = phoneDigits ? `+${dialCode}${phoneDigits}` : ''
+  const phoneValid = isPhoneValid(phoneDigits, countryIso)
+
+  // Default the country chip from device locale, falling back to India.
+  useEffect(() => {
+    try {
+      const region = new Intl.Locale(navigator.language).region
+      if (region && DIAL_COUNTRIES.some((c) => c.iso === region)) {
+        setCountryIso(region as CountryCode)
+      }
+    } catch {}
+  }, [])
 
   useEffect(() => {
     if (view !== 'otp' || otpChannel !== 'sms') {
@@ -42,7 +85,7 @@ function SignInForm() {
   function submitSendOTP(channel: 'sms' | 'whatsapp') {
     setError(null)
     startTransition(async () => {
-      const result = await sendPhoneOTP(phone, channel)
+      const result = await sendPhoneOTP(e164Phone, channel)
       if (result.error) { setError(result.error) }
       else { setOtpChannel(channel); setView('otp') }
     })
@@ -50,13 +93,13 @@ function SignInForm() {
 
   function handleSendOTP(e: React.FormEvent) {
     e.preventDefault()
-    submitSendOTP('sms')
+    submitSendOTP(isIndia ? 'sms' : 'whatsapp')
   }
 
   function runVerifyOTP(code: string) {
     setError(null)
     startTransition(async () => {
-      const result = await verifyPhoneOTP(phone, code)
+      const result = await verifyPhoneOTP(e164Phone, code)
       if (result.error) { setError(result.error) }
       else if (result.isNewUser) {
         const onboardingDest = next.startsWith('/onboarding')
@@ -109,6 +152,10 @@ function SignInForm() {
     setOtpDigits(['', '', '', '', '', ''])
     setError(null)
     setOtpChannel('sms')
+  }
+
+  function handlePhoneDigitsChange(raw: string) {
+    setPhoneDigits(raw.replace(/\D/g, '').slice(0, 15))
   }
 
   return (
@@ -194,26 +241,27 @@ function SignInForm() {
                     onBlurCapture={e => (e.currentTarget.style.borderBottomColor = '#57423e')}
                   >
                     <label className="sr-only" htmlFor="mobile_number">Mobile Number</label>
-                    <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 13, color: '#dec0ba', padding: '16px 8px 16px 0', userSelect: 'none', flexShrink: 0 }}>
-                      +91
-                    </span>
+                    <CountryCodeSelect
+                      variant="sheet"
+                      value={countryIso}
+                      onChange={setCountryIso}
+                      className="flex items-center gap-1 shrink-0 bg-transparent border-none cursor-pointer select-none py-4 pr-1 font-mono text-[13px] text-[#dec0ba]"
+                    />
                     <input
                       id="mobile_number"
                       name="mobile_number"
                       type="tel"
                       inputMode="numeric"
-                      pattern="[0-9]{10}"
-                      placeholder="00000 00000"
+                      placeholder={isIndia ? '00000 00000' : 'Phone number'}
                       required
-                      maxLength={10}
-                      value={phone}
-                      onChange={e => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                      value={formatPhoneDisplay(phoneDigits, countryIso)}
+                      onChange={e => handlePhoneDigitsChange(e.target.value)}
                       autoFocus
                       style={{
                         flex: 1, background: 'transparent', border: 'none', outline: 'none',
                         fontFamily: 'JetBrains Mono, monospace', fontSize: 20, fontWeight: 600,
                         color: '#e5e1e6', caretColor: '#ffb4a6',
-                        padding: '16px 0', letterSpacing: '0.04em',
+                        padding: '16px 0 16px 8px', letterSpacing: '0.04em',
                       }}
                       className="placeholder-[#57423e]"
                     />
@@ -228,17 +276,39 @@ function SignInForm() {
                     </motion.p>
                   )}
 
-                  <button
-                    type="submit"
-                    disabled={isPending || phone.length < 10}
-                    className="w-full flex items-center justify-between transition-colors duration-200 active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed group"
-                    style={{ background: '#ffb4a6', color: '#630e03', fontFamily: 'DM Sans, sans-serif', fontSize: 20, fontWeight: 600, padding: '16px 24px', border: 'none', cursor: 'pointer' }}
-                    onMouseEnter={e => { if (!isPending && phone.length >= 10) e.currentTarget.style.background = '#ffdad3' }}
-                    onMouseLeave={e => (e.currentTarget.style.background = '#ffb4a6')}
-                  >
-                    <span>{isPending ? 'Sending…' : 'Send OTP'}</span>
-                    {!isPending && <span className="material-symbols-outlined group-hover:translate-x-1 transition-transform duration-200" style={{ fontSize: 24 }}>arrow_forward</span>}
-                  </button>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                    <button
+                      type="submit"
+                      disabled={isPending || !phoneValid}
+                      className="w-full flex items-center justify-between transition-colors duration-200 active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed group"
+                      style={{ background: '#ffb4a6', color: '#630e03', fontFamily: 'DM Sans, sans-serif', fontSize: 20, fontWeight: 600, padding: '16px 24px', border: 'none', cursor: 'pointer' }}
+                      onMouseEnter={e => { if (!isPending && phoneValid) e.currentTarget.style.background = '#ffdad3' }}
+                      onMouseLeave={e => (e.currentTarget.style.background = '#ffb4a6')}
+                    >
+                      <span style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        {!isIndia && !isPending && <WhatsAppGlyph size={20} color="#630e03" />}
+                        {isPending ? 'Sending…' : isIndia ? 'Send OTP' : 'Send code on WhatsApp'}
+                      </span>
+                      {!isPending && <span className="material-symbols-outlined group-hover:translate-x-1 transition-transform duration-200" style={{ fontSize: 24 }}>arrow_forward</span>}
+                    </button>
+
+                    {isIndia ? (
+                      <button
+                        type="button"
+                        onClick={() => submitSendOTP('whatsapp')}
+                        disabled={isPending || !phoneValid}
+                        className="w-fit mx-auto flex items-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed"
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'JetBrains Mono, monospace', fontSize: 12, color: WA_GREEN, padding: '4px 0' }}
+                      >
+                        <WhatsAppGlyph />
+                        Get the code on WhatsApp instead
+                      </button>
+                    ) : (
+                      <p style={{ textAlign: 'center', fontSize: 12, color: '#dec0ba', margin: 0 }}>
+                        We&apos;ll send your verification code via WhatsApp.
+                      </p>
+                    )}
+                  </div>
                 </form>
 
                 {/* Divider */}
@@ -312,7 +382,7 @@ function SignInForm() {
                   </h1>
                   <p style={{ fontSize: 15, color: '#353438', lineHeight: 1.6, margin: 0 }}>
                     We sent a 6-digit code via {otpChannel === 'whatsapp' ? 'WhatsApp' : 'SMS'} to{' '}
-                    <strong>+91 {phone.replace(/(\d{5})(\d{5})/, '$1 $2')}</strong>.
+                    <strong>+{dialCode} {formatPhoneDisplay(phoneDigits, countryIso)}</strong>.
                     {' '}It&apos;s valid for 10 minutes.
                   </p>
                 </div>
@@ -401,22 +471,18 @@ function SignInForm() {
                       >
                         Didn&apos;t get it? Resend
                       </button>
-                      {otpChannel === 'sms' && whatsappFallbackReady && (
+                      {isIndia && otpChannel === 'sms' && whatsappFallbackReady && (
                         <button
                           type="button"
                           onClick={() => submitSendOTP('whatsapp')}
                           disabled={isPending}
-                          style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 13, color: '#57423e', background: 'none', border: 'none', borderBottom: '1px solid transparent', cursor: 'pointer', paddingBottom: 2 }}
-                          onMouseEnter={e => {
-                            e.currentTarget.style.color = '#131317'
-                            e.currentTarget.style.borderBottomColor = '#131317'
-                          }}
-                          onMouseLeave={e => {
-                            e.currentTarget.style.color = '#57423e'
-                            e.currentTarget.style.borderBottomColor = 'transparent'
-                          }}
+                          className="flex items-center gap-1.5"
+                          style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 13, color: WA_GREEN, background: 'none', border: 'none', borderBottom: '1px solid transparent', cursor: 'pointer', paddingBottom: 2 }}
+                          onMouseEnter={e => (e.currentTarget.style.borderBottomColor = WA_GREEN)}
+                          onMouseLeave={e => (e.currentTarget.style.borderBottomColor = 'transparent')}
                         >
-                          Try WhatsApp instead
+                          <WhatsAppGlyph />
+                          Switch to WhatsApp
                         </button>
                       )}
                     </div>
