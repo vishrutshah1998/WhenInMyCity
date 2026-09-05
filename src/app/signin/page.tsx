@@ -381,7 +381,7 @@ function SignInForm() {
                     Check your<br />messages.
                   </h1>
                   <p style={{ fontSize: 15, color: '#353438', lineHeight: 1.6, margin: 0 }}>
-                    We sent a 6-digit code via {otpChannel === 'whatsapp' ? 'WhatsApp' : 'SMS'} to{' '}
+                    Check your messages for the 6-digit code we sent to{' '}
                     <strong>+{dialCode} {formatPhoneDisplay(phoneDigits, countryIso)}</strong>.
                     {' '}It&apos;s valid for 10 minutes.
                   </p>
