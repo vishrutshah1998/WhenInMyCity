@@ -34,7 +34,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { Webhook } from 'standardwebhooks'
 import { sendOtpSms } from '@/lib/amazesms'
 import { sendOtpWhatsApp } from '@/lib/whatsapp-otp'
-import { takeSignupOtpChannel } from '@/lib/signup-otp-channel'
+import { peekSignupOtpChannel, clearSignupOtpChannel } from '@/lib/signup-otp-channel'
 
 interface SendSmsHookPayload {
   user: {
@@ -55,6 +55,17 @@ function hookError(httpCode: number, message: string): NextResponse {
 }
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
+  // TEMPORARY — live-verification logging for the WhatsApp-requested/
+  // SMS-delivered incident. Remove (or demote to trace-level) once we've
+  // confirmed via a real test whether this hook is ever invoked more than
+  // once for a single OTP request. Standard Webhooks' `webhook-id` header is
+  // stable across Supabase's own retries of the same delivery, so two log
+  // lines sharing a webhook-id is the signal to look for.
+  console.log('[send-sms-hook][debug] invocation', {
+    webhookId: request.headers.get('webhook-id'),
+    at: new Date().toISOString(),
+  })
+
   // ── 1. Read raw body (MUST happen before any parsing) ───────────────────
   const rawBody = await request.text()
 
@@ -87,7 +98,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     return hookError(400, 'Payload missing user.phone or sms.otp')
   }
 
-  const channel = await takeSignupOtpChannel(phone)
+  const channel = await peekSignupOtpChannel(phone)
 
   try {
     if (channel === 'whatsapp') {
@@ -98,6 +109,12 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   } catch (err) {
     const label = channel === 'whatsapp' ? 'WhatsApp message' : 'sms'
     return hookError(500, `Failed to send ${label}: ${(err as Error).message}`)
+  } finally {
+    // Cleared only after the send attempt resolves (success or failure) —
+    // NOT before it's attempted — so a retried invocation of this same hook
+    // (see file header) still sees the original channel choice instead of
+    // silently defaulting to SMS.
+    await clearSignupOtpChannel(phone, channel)
   }
 
   // ── 4. Success — empty 200 body, per hook contract ───────────────────────
