@@ -10,8 +10,9 @@ import { isInAppBrowser } from '@/lib/instagram/in-app-browser'
 import { signOut } from '@/app/actions/auth'
 import type { CreatorType } from '@/types/database'
 import { createClient } from '@/lib/supabase/client'
-import { CITIES } from '@/lib/constants/interests'
+import type { City } from '@/lib/constants/interests'
 import InterestTagPicker from '@/components/shared/InterestTagPicker'
+import { CitySelect } from '@/components/shared/CitySelect'
 import {
   CREATOR_CATEGORIES,
   EXPLORING_OPTION,
@@ -106,7 +107,6 @@ export default function ProfileForm() {
 
   // City + neighbourhood
   const [city, setCity]               = useState('')
-  const [citySearch, setCitySearch]   = useState('')
   const [neighbourhood, setNeighbourhood] = useState('')
 
   // Offline activities / vibes
@@ -197,15 +197,6 @@ export default function ProfileForm() {
     return [...suggested, ...extras]
   }, [categoryConfig, socialInputs]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // City search results — only show when there's a query
-  const filteredCities = useMemo(() => {
-    const q = citySearch.trim().toLowerCase()
-    if (!q || city === citySearch) return []
-    return CITIES.filter(
-      (c) => c.name.toLowerCase().includes(q) || c.state.toLowerCase().includes(q),
-    ).slice(0, 12)
-  }, [citySearch, city])
-
   // ── Fetch profile on mount ────────────────────────────────────────────────
   useEffect(() => {
     const supabase = createClient()
@@ -234,7 +225,6 @@ export default function ProfileForm() {
 
           // City + neighbourhood
           setCity(data.city ?? '')
-          setCitySearch(data.city ?? '')
           setNeighbourhood((data as { neighbourhood?: string | null }).neighbourhood ?? '')
 
           // v2 profile fields
@@ -358,9 +348,8 @@ export default function ProfileForm() {
   }
 
   // ── City handlers ──────────────────────────────────────────────────────────
-  function handleCitySelect(name: string) {
-    setCity(name)
-    setCitySearch(name)
+  function handleCityChange(c: City | null) {
+    setCity(c?.name ?? '')
   }
 
   // ── Username handlers ─────────────────────────────────────────────────────
@@ -917,7 +906,7 @@ export default function ProfileForm() {
             <span style={{ color: 'var(--wimc-text-primary)', fontFamily: 'var(--font-dm-sans)' }}>{city}</span>
             <button
               type="button"
-              onClick={() => { setCity(''); setCitySearch('') }}
+              onClick={() => setCity('')}
               className="ml-auto transition-colors"
               style={{ color: 'var(--wimc-text-muted)' }}
               onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.color = 'var(--wimc-text-primary)' }}
@@ -930,34 +919,23 @@ export default function ProfileForm() {
         {/* Search input */}
         <div className="relative">
           <span className="absolute left-4 top-1/2 -translate-y-1/2 material-symbols-outlined text-xl pointer-events-none" style={{ color: 'var(--wimc-text-muted)' }}>location_on</span>
-          <input
-            type="text"
+          <CitySelect
+            value={city}
+            onChange={handleCityChange}
             placeholder="Search city…"
-            value={citySearch}
-            onChange={(e) => { setCitySearch(e.target.value); setCity('') }}
-            className={`${inputCls} pl-11`}
+            inputClassName={`${inputCls} pl-11`}
+            theme={{
+              accent: colors.primary,
+              accentText: 'var(--wimc-text-primary)',
+              text: 'var(--wimc-text-primary)',
+              muted: 'var(--wimc-text-muted)',
+              hoverBg: 'var(--wimc-bg-hover)',
+              borderColor: 'var(--wimc-border-subtle)',
+            }}
+            panelClassName="overflow-hidden max-h-48 overflow-y-auto -mt-2"
+            panelStyle={{ background: 'var(--wimc-bg-overlay)', border: '1px solid var(--wimc-border-default)' }}
           />
         </div>
-        {/* Dropdown results */}
-        {filteredCities.length > 0 && (
-          <div className="overflow-hidden max-h-48 overflow-y-auto -mt-2" style={{ background: 'var(--wimc-bg-overlay)', border: '1px solid var(--wimc-border-default)' }}>
-            {filteredCities.map((c) => (
-              <button
-                key={c.id}
-                type="button"
-                onClick={() => handleCitySelect(c.name)}
-                className="w-full flex items-center gap-3 px-4 py-3 text-left text-sm transition-colors"
-                style={{ borderBottom: '1px solid var(--wimc-border-subtle)', color: 'var(--wimc-text-primary)', fontFamily: 'var(--font-dm-sans)' }}
-                onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = 'var(--wimc-bg-hover)' }}
-                onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'transparent' }}
-              >
-                <span className="text-base">{c.emoji}</span>
-                <span className="font-medium" style={{ color: 'var(--wimc-text-primary)' }}>{c.name}</span>
-                <span className="text-xs ml-auto" style={{ color: 'var(--wimc-text-muted)', fontFamily: 'var(--font-jetbrains-mono)' }}>{c.state}</span>
-              </button>
-            ))}
-          </div>
-        )}
 
         {/* Neighbourhood — shown once city is confirmed */}
         {city && (

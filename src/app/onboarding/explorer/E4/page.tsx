@@ -1,25 +1,17 @@
 'use client'
 
-import { useState, useEffect, useMemo, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { SK } from '@/lib/onboarding/session-keys'
 import { ONBOARDING_CTA } from '@/lib/constants/onboarding-cta-copy'
 import { OnboardingFooter } from '@/components/onboarding/OnboardingFooter'
+import { CitySelect } from '@/components/shared/CitySelect'
+import { CITIES, type City } from '@/lib/constants/interests'
 const ACCENT = '#9B8FFF'
-
-interface City { name: string; state: string }
-
-const CITIES: City[] = [
-  { name: 'Ahmedabad',   state: 'GJ' }, { name: 'Gandhinagar', state: 'GJ' },
-]
-
-const DEFAULT_TOP = ['Ahmedabad', 'Gandhinagar']
 
 export default function E4Page() {
   const router = useRouter()
   const [selectedCity,   setSelectedCity]   = useState<City | null>(null)
-  const [searchQuery,    setSearchQuery]    = useState('')
-  const [showDropdown,   setShowDropdown]   = useState(true)
   const [isAdvancing,    setIsAdvancing]    = useState(false)
   const [eName,          setEName]          = useState('')
   const [neighbourhood,  setNeighbourhood]  = useState('')
@@ -33,30 +25,18 @@ export default function E4Page() {
     const saved = sessionStorage.getItem(SK.e_city)
     if (saved) {
       const city = CITIES.find(c => c.name === saved)
-      if (city) { setSelectedCity(city); setSearchQuery(city.name); setShowDropdown(false) }
+      if (city) setSelectedCity(city)
     }
     const savedNeighbourhood = sessionStorage.getItem(SK.e_neighbourhood)
     if (savedNeighbourhood) setNeighbourhood(savedNeighbourhood)
   }, [router])
 
-  const filteredCities = useMemo<City[]>(() => {
-    const q = searchQuery.trim().toLowerCase()
-    if (!q) return CITIES.filter(c => DEFAULT_TOP.includes(c.name))
-    return CITIES.filter(c => c.name.toLowerCase().includes(q)).slice(0, 6)
-  }, [searchQuery])
-
-  function handleCitySelect(city: City) {
+  function handleCityChange(city: City | null) {
     setSelectedCity(city)
-    setSearchQuery(city.name)
-    setShowDropdown(false)
-    try { sessionStorage.setItem(SK.e_city, city.name) } catch {}
-    window.dispatchEvent(new Event('ob-snap-update'))
-  }
-
-  function handleSearchChange(val: string) {
-    setSearchQuery(val)
-    setShowDropdown(true)
-    if (selectedCity && val !== selectedCity.name) setSelectedCity(null)
+    if (city) {
+      try { sessionStorage.setItem(SK.e_city, city.name) } catch {}
+      window.dispatchEvent(new Event('ob-snap-update'))
+    }
   }
 
   function handleContinue() {
@@ -133,14 +113,13 @@ export default function E4Page() {
         </p>
 
         <div style={{ maxWidth: 480 }}>
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={e => handleSearchChange(e.target.value)}
-            onFocus={() => setShowDropdown(true)}
+          <CitySelect
+            value={selectedCity?.name ?? ''}
+            onChange={handleCityChange}
+            dropdownWhenEmpty
+            theme={{ accent: ACCENT }}
             placeholder="Search your city..."
-            autoComplete="off"
-            style={{
+            inputStyle={{
               width:         '100%',
               background:    'transparent',
               border:        'none',
@@ -155,39 +134,6 @@ export default function E4Page() {
               transition:    'border-color 200ms',
             }}
           />
-
-          {showDropdown && filteredCities.length > 0 && (
-            <div style={{ marginTop: 4, background: '#09090E', border: '1px solid rgba(255,255,255,0.10)', boxShadow: '0 4px 16px rgba(0,0,0,0.50)', overflow: 'hidden' }}>
-              {filteredCities.map(city => {
-                const isSel = selectedCity?.name === city.name
-                return (
-                  <div
-                    key={city.name}
-                    onClick={() => handleCitySelect(city)}
-                    style={{
-                      padding:        '12px 16px',
-                      background:     isSel ? ACCENT : 'transparent',
-                      borderBottom:   '1px solid rgba(255,255,255,0.07)',
-                      display:        'flex',
-                      justifyContent: 'space-between',
-                      alignItems:     'center',
-                      cursor:         'pointer',
-                    }}
-                  >
-                    <div style={{ display: 'flex', gap: 8, alignItems: 'baseline' }}>
-                      <span style={{ fontFamily: "var(--font-barlow), 'Barlow Condensed', sans-serif", fontWeight: 700, fontSize: 16, color: isSel ? '#1A2744' : '#F0EFF8' }}>
-                        {city.name}
-                      </span>
-                      <span style={{ fontFamily: "var(--font-jetbrains-mono), monospace", fontSize: 11, color: isSel ? 'rgba(26,39,68,0.50)' : 'rgba(240,239,248,0.30)' }}>
-                        {city.state}
-                      </span>
-                    </div>
-                    {isSel && <span className="material-symbols-outlined" style={{ fontSize: 18, color: '#1A2744' }}>check</span>}
-                  </div>
-                )
-              })}
-            </div>
-          )}
         </div>
 
         {/* Neighbourhood — optional */}
