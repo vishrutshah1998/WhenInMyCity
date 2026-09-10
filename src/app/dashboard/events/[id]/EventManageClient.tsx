@@ -115,6 +115,21 @@ export default function EventManageClient({ event: initial, rsvpCount, maybeCoun
   const [venueName, setVenueName]       = useState(event.venue_name)
   const [venueAddress, setVenueAddress] = useState(event.venue_address)
   const [whatsapp, setWhatsapp]         = useState(event.whatsapp_group_url ?? '')
+  // Application approval — two mutually-exclusive gated paths:
+  //   - free casual (Phase A): routes through rsvps.application_status.
+  //     A free 'ticketed'-style event books through initiateRSVP, which
+  //     never reads/writes application_status, so this toggle would be a
+  //     silent no-op there — gate strictly, not just on price.
+  //   - paid ticketed (Phase B, migration 080): routes through the
+  //     event_applications table via applyToEvent/decidePaidApplication.
+  // requiresApproval is shared state — safe because the two blocks below
+  // never render simultaneously for a given event.
+  const isFreeCasualEvent    = event.ticket_price === 0 && event.rsvp_style === 'casual'
+  const isPaidTicketedEvent  = event.ticket_price > 0 && event.rsvp_style === 'ticketed'
+  const [requiresApproval, setRequiresApproval]   = useState(event.requires_approval)
+  const [applicationQuestion, setApplicationQuestion] = useState(event.application_question ?? '')
+  // Default 1440 (24h) is a UI-only default — the DB column has none (migration 080).
+  const [paymentWindowMinutes, setPaymentWindowMinutes] = useState(event.application_payment_window_minutes ?? 1440)
 
   const [editError, setEditError]     = useState<string | null>(null)
   const [editSuccess, setEditSuccess] = useState(false)
@@ -214,6 +229,19 @@ export default function EventManageClient({ event: initial, rsvpCount, maybeCoun
         patch.venue_address = venueAddress
         patch.whatsapp_group_url = whatsapp || null
       }
+      if (isFreeCasualEvent) {
+        patch.requires_approval    = requiresApproval
+        patch.application_question = requiresApproval ? (applicationQuestion.trim() || null) : null
+      }
+      if (isPaidTicketedEvent) {
+        patch.requires_approval = requiresApproval
+        // Clamp defensively so a stray out-of-range value never round-trips
+        // to the DB CHECK as a raw, unhelpful Postgres error — the bounds
+        // are still enforced authoritatively at the DB level (migration 080).
+        patch.application_payment_window_minutes = requiresApproval
+          ? Math.min(10080, Math.max(60, Math.round(paymentWindowMinutes) || 1440))
+          : null
+      }
       const { event: updated, error } = await updateEvent(event.id, patch)
       if (error || !updated) {
         setEditError(error ?? 'Update failed')
@@ -304,6 +332,21 @@ export default function EventManageClient({ event: initial, rsvpCount, maybeCoun
             {rsvpCount} confirmed
             {maybeCount > 0 && <span style={{ opacity: 0.7 }}>&nbsp;· {maybeCount} maybe</span>}
           </div>
+          {isPublished && event.requires_approval && (
+            <button
+              onClick={() => router.push(`/dashboard/events/${event.id}/applications`)}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 6,
+                background: 'transparent', color: 'var(--wimc-text-primary)',
+                border: '1px solid var(--wimc-border-default)',
+                borderRadius: 8, padding: '7px 14px', fontSize: 13, fontWeight: 700,
+                cursor: 'pointer',
+              }}
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: 16 }}>fact_check</span>
+              Applications
+            </button>
+          )}
           {isPublished && (
             <button
               onClick={() => router.push(`/dashboard/events/${event.id}/checkin`)}
@@ -376,6 +419,95 @@ export default function EventManageClient({ event: initial, rsvpCount, maybeCoun
                     <input type="url" value={whatsapp} onChange={(e) => setWhatsapp(e.target.value)} placeholder="https://chat.whatsapp.com/..." style={inputStyle} />
                   </div>
                 </>
+              )}
+              {isFreeCasualEvent && (
+                <div style={{ borderTop: '1px solid var(--wimc-border-default)', paddingTop: 14 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div>
+                      <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--wimc-text-primary)' }}>Require approval to attend</div>
+                      <div style={{ fontSize: 12.5, color: 'var(--wimc-text-secondary)', marginTop: 2, maxWidth: 460 }}>
+                        Guests who RSVP "Going" are held for your review instead of being confirmed immediately.
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setRequiresApproval(v => !v)}
+                      style={{
+                        width: 44, height: 24, borderRadius: 12, border: 'none', cursor: 'pointer', flexShrink: 0,
+                        background: requiresApproval ? 'var(--wimc-coral)' : 'var(--wimc-border-default)',
+                        position: 'relative', transition: 'background 200ms',
+                      }}
+                    >
+                      <span style={{
+                        position: 'absolute', top: 2, left: requiresApproval ? 22 : 2, width: 20, height: 20,
+                        borderRadius: '50%', background: '#fff', transition: 'left 200ms',
+                      }} />
+                    </button>
+                  </div>
+
+                  {requiresApproval && (
+                    <div style={{ marginTop: 14 }}>
+                      <label style={{ fontSize: 13, color: 'var(--wimc-text-secondary)', display: 'block', marginBottom: 6 }}>
+                        Application question (optional)
+                      </label>
+                      <textarea
+                        value={applicationQuestion}
+                        onChange={(e) => setApplicationQuestion(e.target.value.slice(0, 200))}
+                        rows={2}
+                        placeholder="e.g. Why do you want to join this event?"
+                        style={{ ...inputStyle, resize: 'vertical', lineHeight: 1.6 }}
+                      />
+                      <div style={{ fontSize: 11, color: 'var(--wimc-text-muted)', marginTop: 4, textAlign: 'right' }}>
+                        {applicationQuestion.length}/200
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+              {isPaidTicketedEvent && (
+                <div style={{ borderTop: '1px solid var(--wimc-border-default)', paddingTop: 14 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div>
+                      <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--wimc-text-primary)' }}>Require approval before payment</div>
+                      <div style={{ fontSize: 12.5, color: 'var(--wimc-text-secondary)', marginTop: 2, maxWidth: 460 }}>
+                        Applicants are held for your review before they can pay for a ticket. Approved applicants get a limited window to complete payment.
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setRequiresApproval(v => !v)}
+                      style={{
+                        width: 44, height: 24, borderRadius: 12, border: 'none', cursor: 'pointer', flexShrink: 0,
+                        background: requiresApproval ? 'var(--wimc-coral)' : 'var(--wimc-border-default)',
+                        position: 'relative', transition: 'background 200ms',
+                      }}
+                    >
+                      <span style={{
+                        position: 'absolute', top: 2, left: requiresApproval ? 22 : 2, width: 20, height: 20,
+                        borderRadius: '50%', background: '#fff', transition: 'left 200ms',
+                      }} />
+                    </button>
+                  </div>
+
+                  {requiresApproval && (
+                    <div style={{ marginTop: 14 }}>
+                      <label style={{ fontSize: 13, color: 'var(--wimc-text-secondary)', display: 'block', marginBottom: 6 }}>
+                        Payment window (minutes)
+                      </label>
+                      <input
+                        type="number"
+                        min={60}
+                        max={10080}
+                        value={paymentWindowMinutes}
+                        onChange={(e) => setPaymentWindowMinutes(Number(e.target.value))}
+                        style={inputStyle}
+                      />
+                      <div style={{ fontSize: 11, color: 'var(--wimc-text-muted)', marginTop: 4 }}>
+                        ≈ {(paymentWindowMinutes / 60).toFixed(1)}h — must be between 60 (1 hour) and 10,080 (7 days) minutes. Default is 1440 (24 hours).
+                      </div>
+                    </div>
+                  )}
+                </div>
               )}
               {editError && (
                 <div style={{ fontSize: 13, color: '#EF4444', background: 'rgba(239,68,68,0.08)', borderRadius: 8, padding: '8px 12px' }}>{editError}</div>
