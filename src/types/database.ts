@@ -122,6 +122,12 @@ export type EventStatus = 'draft' | 'published' | 'cancelled' | 'completed'
 
 export type PaymentStatus = 'pending' | 'captured' | 'failed' | 'refunded' | 'refund_failed'
 
+/** Gate on a casual (free) 'going' RSVP when events.requires_approval is true. NULL = not gated. Added in migration 079. */
+export type ApplicationStatus = 'pending' | 'approved' | 'declined' | 'waitlisted'
+
+/** event_applications.status — same vocabulary as ApplicationStatus plus 'expired' (paid-gated events only). Added in migration 080. */
+export type EventApplicationStatus = ApplicationStatus | 'expired'
+
 // ---------------------------------------------------------------------------
 // Page-theme shape (stored as jsonb in user_profiles.page_theme)
 // ---------------------------------------------------------------------------
@@ -629,6 +635,14 @@ export interface Database {
           early_access_at: string | null
           /** Patreon-style ticket tiers. NULL = flat ticket_price. Added in migration 022. */
           ticket_tiers: Json | null
+          /** 'ticketed' (default) or 'casual' (Going/Maybe/Not Going, free events only). Added in migration 034 — was missing from this hand-maintained file until migration 079. */
+          rsvp_style: 'ticketed' | 'casual'
+          /** If true, a casual "going" RSVP is held pending host approval. Only meaningful when rsvp_style = 'casual'. Added in migration 079. */
+          requires_approval: boolean
+          /** Optional single custom question shown to applicants. Max 200 chars. Added in migration 079. */
+          application_question: string | null
+          /** Minutes an approved paid-gated applicant has to pay (60-10080). NULL = not a paid-gated event, or unset. Added in migration 080. */
+          application_payment_window_minutes: number | null
           created_at: string
           updated_at: string
         }
@@ -656,6 +670,10 @@ export interface Database {
           rating_count?: number
           early_access_at?: string | null
           ticket_tiers?: Json | null
+          rsvp_style?: 'ticketed' | 'casual'
+          requires_approval?: boolean
+          application_question?: string | null
+          application_payment_window_minutes?: number | null
           created_at?: string
           updated_at?: string
         }
@@ -683,6 +701,10 @@ export interface Database {
           rating_count?: number
           early_access_at?: string | null
           ticket_tiers?: Json | null
+          rsvp_style?: 'ticketed' | 'casual'
+          requires_approval?: boolean
+          application_question?: string | null
+          application_payment_window_minutes?: number | null
           created_at?: string
           updated_at?: string
         }
@@ -729,6 +751,12 @@ export interface Database {
           discovery_source: 'creator_link' | 'platform_discovery' | 'direct'
           /** Going/Maybe/Can't-go signal for casual (free) RSVPs. NULL for ticketed/paid bookings. See migration 074. */
           casual_intent: 'going' | 'maybe' | 'not_going' | null
+          /** Gate on a casual "going" RSVP when events.requires_approval is true. NULL = not gated. See migration 079. */
+          application_status: ApplicationStatus | null
+          /** Applicant's answer to events.application_question, if one was set. See migration 079. */
+          application_answer: string | null
+          application_decided_at: string | null
+          application_decided_by: string | null
           created_at: string
         }
         Insert: {
@@ -752,6 +780,10 @@ export interface Database {
           ticket_tier_name?: string | null
           discovery_source?: 'creator_link' | 'platform_discovery' | 'direct'
           casual_intent?: 'going' | 'maybe' | 'not_going' | null
+          application_status?: ApplicationStatus | null
+          application_answer?: string | null
+          application_decided_at?: string | null
+          application_decided_by?: string | null
           created_at?: string
         }
         Update: {
@@ -775,6 +807,10 @@ export interface Database {
           ticket_tier_name?: string | null
           discovery_source?: 'creator_link' | 'platform_discovery' | 'direct'
           casual_intent?: 'going' | 'maybe' | 'not_going' | null
+          application_status?: ApplicationStatus | null
+          application_answer?: string | null
+          application_decided_at?: string | null
+          application_decided_by?: string | null
           created_at?: string
         }
         Relationships: [
@@ -790,6 +826,100 @@ export interface Database {
             columns: ['attendee_user_id']
             isOneToOne: false
             referencedRelation: 'user_profiles'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'rsvps_application_decided_by_fkey'
+            columns: ['application_decided_by']
+            isOneToOne: false
+            referencedRelation: 'user_profiles'
+            referencedColumns: ['id']
+          }
+        ]
+      }
+
+      event_applications: {
+        Row: {
+          id: string
+          event_id: string
+          /** NULL = guest applicant, mirrors rsvps.attendee_user_id. */
+          applicant_user_id: string | null
+          applicant_name: string
+          applicant_phone: string
+          answer: string | null
+          /** Selected tier id (events.ticket_tiers[].id), required when the event has tiers configured. */
+          ticket_tier_id: string | null
+          status: EventApplicationStatus
+          /** Timestamp of the host's decision; doubles as the approval timestamp and survives the 'expired' transition. */
+          decided_at: string | null
+          decided_by: string | null
+          /** decided_at + events.application_payment_window_minutes, computed once at approval. */
+          payment_deadline: string | null
+          /** Set only by the expiry sweep cron (not yet built). */
+          expired_at: string | null
+          /** The rsvps row created once payment succeeds via initiateRSVP. */
+          rsvp_id: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          event_id: string
+          applicant_user_id?: string | null
+          applicant_name: string
+          applicant_phone: string
+          answer?: string | null
+          ticket_tier_id?: string | null
+          status?: EventApplicationStatus
+          decided_at?: string | null
+          decided_by?: string | null
+          payment_deadline?: string | null
+          expired_at?: string | null
+          rsvp_id?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          event_id?: string
+          applicant_user_id?: string | null
+          applicant_name?: string
+          applicant_phone?: string
+          answer?: string | null
+          ticket_tier_id?: string | null
+          status?: EventApplicationStatus
+          decided_at?: string | null
+          decided_by?: string | null
+          payment_deadline?: string | null
+          expired_at?: string | null
+          rsvp_id?: string | null
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'event_applications_event_id_fkey'
+            columns: ['event_id']
+            isOneToOne: false
+            referencedRelation: 'events'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'event_applications_applicant_user_id_fkey'
+            columns: ['applicant_user_id']
+            isOneToOne: false
+            referencedRelation: 'user_profiles'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'event_applications_decided_by_fkey'
+            columns: ['decided_by']
+            isOneToOne: false
+            referencedRelation: 'user_profiles'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'event_applications_rsvp_id_fkey'
+            columns: ['rsvp_id']
+            isOneToOne: false
+            referencedRelation: 'rsvps'
             referencedColumns: ['id']
           }
         ]
@@ -2125,6 +2255,7 @@ export type UserProfile        = Tables<'user_profiles'>
 export type PageBlock          = Tables<'page_blocks'>
 export type Event              = Tables<'events'>
 export type Rsvp               = Tables<'rsvps'>
+export type EventApplication   = Tables<'event_applications'>
 export type LinkClick          = Tables<'link_clicks'>
 export type VenueDirectory     = Tables<'venue_directory'>
 export type VenueProfile         = Tables<'venue_profiles'>

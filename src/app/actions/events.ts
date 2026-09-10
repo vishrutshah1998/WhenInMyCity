@@ -105,6 +105,9 @@ export async function createEvent(
     early_access_at,
     ticket_tiers,
     rsvp_style,
+    requires_approval,
+    application_question,
+    application_payment_window_minutes,
   } = parsed.data
 
   // When fan tiers are set, derive a representative flat price for Razorpay
@@ -112,6 +115,17 @@ export async function createEvent(
   const effectiveTicketPrice = ticket_tiers?.length
     ? (ticket_tiers.filter((t) => t.price_paise > 0).map((t) => t.price_paise).sort((a, b) => a - b)[0] ?? 0)
     : ticket_price
+
+  // An event can be gated (held for host review) two ways:
+  //   - rsvp_style === 'casual' (free) — routes through rsvps.application_status,
+  //     written by casualRSVP/casualRSVPGuest (migration 079, Phase A).
+  //   - rsvp_style === 'ticketed' with a price > 0 (paid) — routes through the
+  //     event_applications table, written by applyToEvent (migration 080,
+  //     Phase B). A free ticketed event has no gating mechanism at all — a
+  //     plain initiateRSVP booking never reads/writes either.
+  // This used to be hardcoded to 'casual' only, which predates
+  // event_applications existing — see migration 080.
+  const isGatableEvent = rsvp_style === 'casual' || (rsvp_style === 'ticketed' && effectiveTicketPrice > 0)
 
   // Guard: event must be in the future
   if (new Date(starts_at) <= new Date()) {
@@ -151,6 +165,14 @@ export async function createEvent(
       early_access_at: early_access_at ?? null,
       ticket_tiers: ticket_tiers?.length ? (ticket_tiers as unknown as import('@/types/database').Json) : null,
       rsvp_style: rsvp_style ?? 'ticketed',
+      requires_approval: isGatableEvent ? (requires_approval ?? false) : false,
+      application_question: isGatableEvent ? (application_question || null) : null,
+      // Only meaningful for the paid-gated (ticketed) path — the free-casual
+      // path (Phase A) has no payment step to time-box. No DB default (see
+      // migration 080); the 24h/1440-minute default is the create-event
+      // form's concern, not this action's.
+      application_payment_window_minutes:
+        isGatableEvent && rsvp_style === 'ticketed' ? (application_payment_window_minutes ?? null) : null,
       slug,
     })
     .select()
@@ -476,6 +498,9 @@ export async function updateEvent(
     capacity?: number | null
     whatsapp_group_url?: string | null
     ticket_tiers?: import('@/types/database').Json | null
+    requires_approval?: boolean
+    application_question?: string | null
+    application_payment_window_minutes?: number | null
   },
 ): Promise<{ event: Event | null; error: string | null }> {
   const { user } = await requireAuth()

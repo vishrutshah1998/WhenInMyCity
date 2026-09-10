@@ -83,14 +83,17 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
     // Excludes casual "Can't go" responses — a decline shouldn't get a "see you
     // there tomorrow" reminder. "Maybe" guests still get one, as a nudge; ticketed
-    // bookings (casual_intent = null) are unaffected. Same filter as
-    // getEventAttendees (src/app/actions/rsvp.ts).
+    // bookings (casual_intent = null) are unaffected. Also excludes a still-
+    // pending/declined/waitlisted application (migration 079) — not a
+    // confirmed attendee yet. Same filters as getEventAttendees
+    // (src/app/actions/rsvp.ts).
     const { data: rsvps } = await admin
       .from('rsvps')
       .select('attendee_user_id, attendee_name, attendee_phone, qr_code_token')
       .eq('event_id', event.id)
       .eq('payment_status', 'captured')
       .or('casual_intent.is.null,casual_intent.neq.not_going')
+      .or('application_status.is.null,application_status.eq.approved')
 
     for (const rsvp of rsvps ?? []) {
       try {
@@ -152,6 +155,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
         .select('id', { count: 'exact', head: true })
         .eq('event_id', event.id)
         .eq('payment_status', 'captured')
+        .or('application_status.is.null,application_status.eq.approved')
 
       const sold       = ticketCount ?? 0
       const capacity   = event.capacity ?? 0
