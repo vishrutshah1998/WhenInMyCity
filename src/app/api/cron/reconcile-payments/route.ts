@@ -20,6 +20,20 @@
 // by arbitrary external requests. The Netlify Scheduled Function that calls
 // this route sends `Authorization: Bearer <CRON_SECRET>` — for other
 // platforms/local testing, send the header manually.
+//
+// Cursor pagination (stale-RSVP step only): pass ?cursor=<last_processed_id>
+// to resume from a prior page. Each invocation fetches PAGE_SIZE stale RSVPs,
+// ordered by id, past whatever id was passed as cursor. When nextCursor is
+// non-null, more stale rows remain beyond this page. Same PAGE_SIZE/cursor/
+// nextCursor/done contract as evaluate-tiers and evaluate-venue-tiers, chained
+// by the Netlify function within the same 25s time budget — see
+// netlify/functions/reconcile-payments.mts.
+//
+// The rating-prompt / no-show step and the failed-refund-retry step below are
+// NOT paginated — they're small, date-windowed, and were already designed to
+// run exactly once per 15-minute tick. They're gated to the first page only
+// (cursor === '') so chaining multiple stale-RSVP pages within one tick can't
+// re-run them.
 // =============================================================================
 
 import { NextRequest, NextResponse } from 'next/server'
@@ -54,6 +68,17 @@ function isAuthorized(request: NextRequest): boolean {
 }
 
 // ---------------------------------------------------------------------------
+// Pagination constants
+// ---------------------------------------------------------------------------
+
+// Unchanged from the original flat .limit(100) — this cap was already tuned
+// for this specific endpoint (each row can trigger a Razorpay API call, only
+// BATCH_SIZE=5 of which run concurrently), not the 500 used by the
+// DB-only evaluate-tiers/evaluate-venue-tiers crons. Pagination adds chaining
+// on top of this existing per-page size rather than changing it.
+const PAGE_SIZE = 100
+
+// ---------------------------------------------------------------------------
 // GET /api/cron/reconcile-payments
 // ---------------------------------------------------------------------------
 
@@ -64,20 +89,28 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
   const admin = createAdminClient()
 
+  const { searchParams } = new URL(request.url)
+  const cursor = searchParams.get('cursor') ?? ''  // '' means start from beginning of this tick
+
   // ── 1. Find stale pending RSVPs ──────────────────────────────────────────
   // An RSVP is "stale" if it has been pending for > 15 minutes.
   // We use 15 min here (vs the 10-min window in capacity checks) to give the
   // webhook extra time to arrive before we start reconciling.
   const cutoff = new Date(Date.now() - 15 * 60 * 1000).toISOString()
 
-  const { data: staleRsvps, error: fetchError } = await admin
+  let staleQuery = admin
     .from('rsvps')
     .select('id, razorpay_order_id, razorpay_payment_id, event_id')
     .eq('payment_status', 'pending')
     .lt('created_at', cutoff)
-    // Limit per run to avoid long-running requests that might time out.
-    // Any remaining stale RSVPs will be caught on the next cron run.
-    .limit(100)
+    .order('id', { ascending: true })
+    .limit(PAGE_SIZE)
+
+  if (cursor) {
+    staleQuery = staleQuery.gt('id', cursor)
+  }
+
+  const { data: staleRsvps, error: fetchError } = await staleQuery
 
   if (fetchError) {
     console.error('[reconcile] failed to fetch stale RSVPs', fetchError.message)
@@ -88,10 +121,13 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   }
 
   if (!staleRsvps?.length) {
-    return NextResponse.json({ fixed: 0, still_pending: 0, checked: 0 })
+    if (!cursor) {
+      await runOncePerTickSteps(admin)
+    }
+    return NextResponse.json({ fixed: 0, still_pending: 0, checked: 0, nextCursor: null, done: true })
   }
 
-  console.info(`[reconcile] found ${staleRsvps.length} stale pending RSVPs`)
+  console.info(`[reconcile] found ${staleRsvps.length} stale pending RSVPs, cursor: ${cursor || 'start'}`)
 
   // ── 2. Resolve each stale RSVP ───────────────────────────────────────────
   // We need the Razorpay payment ID to call fetchPaymentStatus.
@@ -222,15 +258,38 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     )
   }
 
+  const nextCursor = staleRsvps.length === PAGE_SIZE ? staleRsvps[staleRsvps.length - 1].id : null
+
   const result = {
     checked: staleRsvps.length,
     fixed,
     still_pending: stillPending,
+    nextCursor,
+    done: nextCursor === null,
     ...(errors.length ? { errors } : {}),
   }
 
-  console.info('[reconcile] run complete', result)
+  console.info('[reconcile] page complete', { ...result, cursor: cursor || 'start' })
 
+  // Rating prompts / no-shows and failed-refund retries are date-windowed,
+  // once-per-tick steps unrelated to stale-RSVP pagination — only run them
+  // off the first page of a tick so chaining multiple stale-RSVP pages can't
+  // re-trigger them (see header comment).
+  if (!cursor) {
+    await runOncePerTickSteps(admin)
+  }
+
+  return NextResponse.json(result)
+}
+
+// ---------------------------------------------------------------------------
+// Once-per-tick steps: post-event rating prompts / no-shows, and failed-
+// refund retries. Unrelated to the stale-RSVP reconciliation above and its
+// pagination — see the call site's comment for why these are gated to the
+// first page of a tick.
+// ---------------------------------------------------------------------------
+
+async function runOncePerTickSteps(admin: ReturnType<typeof createAdminClient>): Promise<void> {
   // ── 3. Trigger post-event rating prompts for events that ended ~24h ago ──
   // We look for events whose ends_at is between 24h and 25h ago so that each
   // 15-minute cron run only processes the window once (avoiding duplicates).
@@ -298,7 +357,6 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
   if (failedRefunds?.length) {
     console.info(`[reconcile] retrying ${failedRefunds.length} failed refund(s)`)
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://www.wheninmycity.com'
 
     await Promise.all(
       failedRefunds.map(async (rsvp) => {
@@ -338,6 +396,4 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       }),
     )
   }
-
-  return NextResponse.json(result)
 }
