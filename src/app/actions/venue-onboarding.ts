@@ -2,8 +2,11 @@
 
 // =============================================================================
 // WIMC — Venue onboarding server actions
-// Mirrors the Maker onboarding pattern: step data is persisted in Supabase
-// auth user_metadata until completeVenueOnboarding commits everything atomically.
+// In-progress step data lives client-side (sessionStorage) plus the
+// onboarding_drafts table for cross-tab-close resume (see
+// src/app/actions/onboarding-draft.ts) — nothing here persists per-step
+// state server-side anymore. completeVenueOnboarding commits everything
+// atomically at the end.
 // =============================================================================
 
 import { z } from 'zod'
@@ -13,49 +16,13 @@ import type { PricingModel } from '@/types/database'
 import { deleteOnboardingDraftByUserId } from '@/app/actions/onboarding-draft'
 
 // ---------------------------------------------------------------------------
-// Step-data shapes
+// Shared value sets (also used by CompleteVenueSchema below)
 // ---------------------------------------------------------------------------
-
-const Step1Schema = z.object({
-  name:              z.string().min(2, 'Name must be at least 2 characters').max(100),
-  description:       z.string().max(1000).optional(),
-  city:              z.string().min(1, 'City is required'),
-  neighbourhood:     z.string().max(100).optional(),
-  address:           z.string().min(5, 'Address is required').max(500),
-  lat:               z.number().min(-90).max(90).optional(),
-  lng:               z.number().min(-180).max(180).optional(),
-  google_place_id:   z.string().optional(),
-  google_name:       z.string().optional(),
-  phone:             z.string().optional(),
-  website:           z.string().url().optional().or(z.literal('')),
-  google_rating:     z.number().min(1).max(5).optional(),
-  google_reviews:    z.array(z.object({
-    author_name: z.string(),
-    rating:      z.number(),
-    text:        z.string(),
-    time:        z.number(),
-  })).optional(),
-  google_photo_urls: z.array(z.string().url()).max(5).optional(),
-})
 
 const VALID_VENUE_TYPES = [
   'cafe', 'coworking', 'gallery', 'community_hall',
   'rooftop', 'garden', 'studio', 'library', 'restaurant',
 ] as const
-
-const Step2Schema = z.object({
-  venue_type: z
-    .array(z.enum(VALID_VENUE_TYPES))
-    .min(1, 'Select at least one venue type'),
-  capacity_min: z.number().int().min(1).optional(),
-  capacity_max: z.number().int().min(1).optional(),
-  capacity_configurations: z
-    .array(z.object({ type: z.string(), capacity: z.number().int().positive() }))
-    .default([]),
-}).refine(
-  (d) => d.capacity_min == null || d.capacity_max == null || d.capacity_max >= d.capacity_min,
-  { message: 'Maximum capacity must be ≥ minimum capacity', path: ['capacity_max'] },
-)
 
 const VALID_AMENITIES = [
   // Connectivity & Tech
@@ -73,41 +40,6 @@ const VALID_AMENITIES = [
 const VALID_DAYS = [
   'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday',
 ] as const
-
-const Step3Schema = z.object({
-  amenities:      z.array(z.enum(VALID_AMENITIES)).default([]),
-  pricing_model:  z.enum(['fixed_rental', 'door_split', 'hybrid', 'f_and_b_minimum']),
-  pricing_config: z.object({
-    fixed_rental_paise:   z.number().int().positive().optional(),
-    door_split_percent:   z.number().min(0).max(100).optional(),
-    hybrid_rental_paise:  z.number().int().positive().optional(),
-    hybrid_split_percent: z.number().min(0).max(100).optional(),
-    f_and_b_minimum_paise: z.number().int().positive().optional(),
-  }).default({}),
-  available_days: z.array(z.enum(VALID_DAYS)).default([]),
-})
-
-const Step4Schema = z.object({
-  contact_whatsapp:  z
-    .string()
-    .regex(/^\+?[0-9]{10,15}$/, 'Invalid WhatsApp number')
-    .optional()
-    .or(z.literal('')),
-  contact_email:     z.string().email().optional().or(z.literal('')),
-  instagram_handle:  z
-    .string()
-    .regex(/^[a-zA-Z0-9_.]*$/, 'Invalid Instagram handle')
-    .max(30)
-    .optional()
-    .or(z.literal('')),
-})
-
-/** Union of step payloads accepted by `saveVenueOnboardingStep`. */
-export type VenueOnboardingStepData =
-  | ({ step: 1 } & z.infer<typeof Step1Schema>)
-  | ({ step: 2 } & z.infer<typeof Step2Schema>)
-  | ({ step: 3 } & z.infer<typeof Step3Schema>)
-  | ({ step: 4 } & z.infer<typeof Step4Schema>)
 
 // ---------------------------------------------------------------------------
 // Complete onboarding schema (validated in completeVenueOnboarding)
@@ -167,68 +99,6 @@ const CompleteVenueSchema = z.object({
 )
 
 export type CompleteVenueInput = z.infer<typeof CompleteVenueSchema>
-
-// ---------------------------------------------------------------------------
-// saveVenueOnboardingStep
-// ---------------------------------------------------------------------------
-
-/**
- * Persists one step's worth of Venue onboarding data to the authenticated
- * user's Supabase auth `user_metadata` under the key `venue_onboarding`.
- *
- * Each call merges (not replaces) the existing metadata so partial progress
- * from earlier steps is preserved.
- *
- * Steps:
- *  1. basicInfo  — name, description, city, neighbourhood, address, lat/lng
- *  2. venueType  — venue_type, capacity_min/max, capacity_configurations
- *  3. amenities  — amenities, pricing_model, pricing_config, available_days
- *  4. contact    — contact_whatsapp, contact_email, instagram_handle
- *
- * @param step  Step number (1–4).
- * @param data  The step payload (validated with the appropriate Zod schema).
- * @returns `{ error: string | null }`
- */
-export async function saveVenueOnboardingStep(
-  step: number,
-  data: VenueOnboardingStepData,
-): Promise<{ error: string | null }> {
-  const { user } = await requireAuth('/onboarding/venue')
-
-  let parsed: z.SafeParseReturnType<unknown, unknown>
-
-  switch (step) {
-    case 1: parsed = Step1Schema.safeParse(data); break
-    case 2: parsed = Step2Schema.safeParse(data); break
-    case 3: parsed = Step3Schema.safeParse(data); break
-    case 4: parsed = Step4Schema.safeParse(data); break
-    default: return { error: `Invalid step number: ${step}` }
-  }
-
-  if (!parsed.success) {
-    return { error: (parsed as z.SafeParseError<unknown>).error.errors[0].message }
-  }
-
-  const admin = createAdminClient()
-
-  // Merge with existing venue_onboarding metadata
-  const { data: existing } = await admin.auth.admin.getUserById(user.id)
-  const current = (existing?.user?.user_metadata?.venue_onboarding ?? {}) as Record<string, unknown>
-
-  const { error } = await admin.auth.admin.updateUserById(user.id, {
-    user_metadata: {
-      ...existing?.user?.user_metadata,
-      venue_onboarding: { ...current, ...(parsed.data as Record<string, unknown>), last_step: step },
-    },
-  })
-
-  if (error) {
-    console.error('[saveVenueOnboardingStep]', error.message)
-    return { error: 'Failed to save your progress. Please try again.' }
-  }
-
-  return { error: null }
-}
 
 // ---------------------------------------------------------------------------
 // completeVenueOnboarding
