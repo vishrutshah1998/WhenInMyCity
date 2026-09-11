@@ -93,6 +93,7 @@ function B2Content() {
   const [neighbourhood,  setNeighbourhood]  = useState('')
   const [manual,         setManual]         = useState(false)
   const [manualAddress,  setManualAddress]  = useState('')
+  const [manualCity,     setManualCity]     = useState('')
 
   const { data: existingData } = useExistingProfileData(addType === 'venue' ? 'venue' : 'brand')
 
@@ -227,7 +228,7 @@ function B2Content() {
   const nameChromeShadow = (nameFocused || businessName)
     ? '4px 4px 0px 0px rgba(0,0,0,0.50)'
     : '4px 4px 0px 0px rgba(0,0,0,0.30)'
-  const addressConfirmed = isConfirming || (manual && manualAddress.trim().length >= 5)
+  const addressConfirmed = isConfirming || (manual && manualAddress.trim().length >= 5 && manualCity.trim().length > 0)
   const canProceed       = businessName.trim().length >= 3 && addressConfirmed && !isAdvancing
 
   async function handleNext() {
@@ -287,9 +288,13 @@ function B2Content() {
       try {
         sessionStorage.setItem(SK.v_address,       manualAddress)
         sessionStorage.setItem(SK.v_neighbourhood, neighbourhood)
+        sessionStorage.setItem(SK.b_city,          manualCity.trim())
+        sessionStorage.setItem(SK.v_city,          manualCity.trim())
       } catch {}
       queueDraftPatch('business', SK.v_address,       manualAddress)
       queueDraftPatch('business', SK.v_neighbourhood, neighbourhood)
+      queueDraftPatch('business', SK.b_city,          manualCity.trim())
+      queueDraftPatch('business', SK.v_city,          manualCity.trim())
     }
 
     await flushDraftPatch('business')
@@ -304,7 +309,7 @@ function B2Content() {
         {/* ── Business card artifact ───────────────────────────── */}
         <BusinessCardArtifact
           name={businessName || undefined}
-          city={details?.city || undefined}
+          city={details?.city || manualCity || undefined}
           accent={ACCENT}
         />
 
@@ -482,8 +487,30 @@ function B2Content() {
                 <input
                   value={manualAddress}
                   onChange={e => setManualAddress(e.target.value)}
-                  placeholder="Street name, area, city..."
+                  placeholder="Street name, area..."
                   autoFocus
+                  style={{ flex: 1, background: 'transparent', border: 'none', outline: 'none', fontFamily: OUTFIT, fontWeight: 900, fontSize: 18, color: '#1A2744', caretColor: ACCENT }}
+                />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── Manual city input — required; nothing else derives a city
+            once the Google Places lookup is bypassed, and completeVenueOnboarding
+            rejects an empty one ── */}
+        {manual && (
+          <div style={{ marginBottom: 12 }}>
+            <div style={{ background: '#FAF7F0', borderLeft: `4px solid ${ACCENT}`, boxShadow: '4px 4px 0px 0px rgba(0,0,0,0.30)', overflow: 'hidden' }}>
+              <div style={CHROME_HEADER}>
+                <span style={CHROME_LABEL}>CITY</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', padding: '11px 14px', gap: 8 }}>
+                <span className="material-symbols-outlined" style={{ fontSize: 20, color: ACCENT, flexShrink: 0 }}>location_city</span>
+                <input
+                  value={manualCity}
+                  onChange={e => setManualCity(e.target.value)}
+                  placeholder="Ahmedabad, Jaipur, Indore..."
                   style={{ flex: 1, background: 'transparent', border: 'none', outline: 'none', fontFamily: OUTFIT, fontWeight: 900, fontSize: 18, color: '#1A2744', caretColor: ACCENT }}
                 />
               </div>
