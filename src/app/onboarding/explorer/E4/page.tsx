@@ -7,6 +7,7 @@ import { ONBOARDING_CTA } from '@/lib/constants/onboarding-cta-copy'
 import { OnboardingFooter } from '@/components/onboarding/OnboardingFooter'
 import { CitySelect } from '@/components/shared/CitySelect'
 import { CITIES, type City } from '@/lib/constants/interests'
+import { queueDraftPatch, flushDraftPatch } from '@/lib/onboarding/draft-sync'
 const ACCENT = '#9B8FFF'
 
 export default function E4Page() {
@@ -35,17 +36,21 @@ export default function E4Page() {
     setSelectedCity(city)
     if (city) {
       try { sessionStorage.setItem(SK.e_city, city.name) } catch {}
+      queueDraftPatch('explorer', SK.e_city, city.name, { immediate: true })
       window.dispatchEvent(new Event('ob-snap-update'))
     }
   }
 
-  function handleContinue() {
+  async function handleContinue() {
     if (!selectedCity || isAdvancing) return
     setIsAdvancing(true)
     try {
       sessionStorage.setItem(SK.e_city, selectedCity.name)
       sessionStorage.setItem(SK.e_neighbourhood, neighbourhood.trim())
     } catch {}
+    queueDraftPatch('explorer', SK.e_city,          selectedCity.name)
+    queueDraftPatch('explorer', SK.e_neighbourhood, neighbourhood.trim())
+    await flushDraftPatch('explorer')
     router.push('/onboarding/explorer/E5')
   }
 

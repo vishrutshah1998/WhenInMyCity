@@ -241,6 +241,41 @@ export default function C8CombinedPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router])
 
+  // ── Debounced Content/Theme/Blocks autosave ──────────────────────────────
+  // Previously these tabs were pure React state with no persistence until
+  // "Claim my page" (handleClaim below) — closing the tab, or navigating
+  // back and never returning, lost bio/theme/block edits entirely. Unlike
+  // C2-C7 (where the account doesn't exist yet, so that draft state lives in
+  // onboarding_drafts), the real profile already exists by this point —
+  // doBootstrap above calls completeOnboarding() at mount — so autosave
+  // writes straight to the real creator_profiles/page_blocks rows via the
+  // same actions handleClaim uses at the end, not into onboarding_drafts.
+  const autosaveTimer      = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const skipFirstAutosave  = useRef(true)
+
+  useEffect(() => {
+    if (phase !== 'editing') return
+    if (skipFirstAutosave.current) { skipFirstAutosave.current = false; return }
+    if (autosaveTimer.current) clearTimeout(autosaveTimer.current)
+    autosaveTimer.current = setTimeout(() => {
+      void updateCreatorStudioContent({
+        bio,
+        instagram_handle: instagramHandle,
+        website_url:      websiteUrl,
+        contact_email:    contactEmail,
+      })
+      if (theme) void updateProfileTheme(theme, 'creator')
+      if (blocksDirty) {
+        const orderedIds = blocks.map(b => b.id)
+        void reorderBlocks(orderedIds).then(() =>
+          Promise.all(blocks.map(b => toggleBlockVisibility(b.id, b.is_visible)))
+        )
+      }
+    }, 800)
+    return () => { if (autosaveTimer.current) clearTimeout(autosaveTimer.current) }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase, bio, contactEmail, websiteUrl, instagramHandle, theme, blocksDirty])
+
   // ── Content handlers ─────────────────────────────────────────────────────
 
   function writeBioDraft(v: string) {
@@ -256,13 +291,18 @@ export default function C8CombinedPage() {
     setAvatarError(null)
     const fd = new FormData()
     fd.append('file', file)
-    const result = await uploadOnboardingAvatar(fd)
-    setAvatarUploading(false)
-    if (result.error) {
-      setAvatarError(result.error)
-    } else if (result.url) {
-      setAvatarPreviewUrl(result.url)
-      setProfile(prev => prev ? { ...prev, avatar_url: result.url } : prev)
+    try {
+      const result = await uploadOnboardingAvatar(fd)
+      if (result.error) {
+        setAvatarError(result.error)
+      } else if (result.url) {
+        setAvatarPreviewUrl(result.url)
+        setProfile(prev => prev ? { ...prev, avatar_url: result.url } : prev)
+      }
+    } catch {
+      setAvatarError('Upload failed. Please try again.')
+    } finally {
+      setAvatarUploading(false)
     }
   }
 

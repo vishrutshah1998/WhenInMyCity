@@ -8,6 +8,7 @@ import { CreatorEventTicket } from '@/components/onboarding/BoardingPassArtifact
 import { getCategoryColour } from '@/lib/onboarding/design-tokens'
 import { ONBOARDING_CTA } from '@/lib/constants/onboarding-cta-copy'
 import { OnboardingFooter } from '@/components/onboarding/OnboardingFooter'
+import { queueDraftPatch, flushDraftPatch } from '@/lib/onboarding/draft-sync'
 
 // Local icon filenames in /public/platform-icons/
 const ICON_FILE: Record<string, string> = {
@@ -55,19 +56,23 @@ export default function C6Page() {
     const next = selected.includes(id) ? selected.filter(s => s !== id) : [...selected, id]
     setSelected(next)
     try { sessionStorage.setItem(SK.c_platforms, JSON.stringify(next)) } catch {}
+    queueDraftPatch('creator', SK.c_platforms, JSON.stringify(next))
     window.dispatchEvent(new Event('ob-snap-update'))
   }
 
-  function handleContinue() {
+  async function handleContinue() {
     if (advancing) return
     setAdvancing(true)
+    await flushDraftPatch('creator')
     router.push('/onboarding/creator/C7')
   }
 
-  function handleSkip() {
+  async function handleSkip() {
     if (advancing) return
     setAdvancing(true)
     try { sessionStorage.setItem(SK.c_platforms, '[]') } catch {}
+    queueDraftPatch('creator', SK.c_platforms, '[]')
+    await flushDraftPatch('creator')
     router.push('/onboarding/creator/C7')
   }
 

@@ -1,13 +1,17 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { usePathname } from 'next/navigation'
 import { ONBOARDING, PAPER } from '@/lib/onboarding/design-tokens'
 import SplitRightPanel from '@/components/onboarding/SplitRightPanel'
 import { WimcWordmark } from '@/components/WimcWordmark'
+import { getOnboardingDraft } from '@/app/actions/onboarding-draft'
+import { queueLastStepPath, cancelPendingDraftWrites, type OnboardingPersona } from '@/lib/onboarding/draft-sync'
+import { SK } from '@/lib/onboarding/session-keys'
 
 // ── Step configuration per path ───────────────────────────────────────────────
-const STEP_MAP: Record<string, { total: number; current: number }> = {
+// Exported so /onboarding (S1) can show "step N of total" on the resume prompt.
+export const STEP_MAP: Record<string, { total: number; current: number }> = {
   '/onboarding/creator/C2': { total: 7, current: 1 },
   '/onboarding/creator/C3': { total: 7, current: 2 },
   '/onboarding/creator/C4': { total: 7, current: 3 },
@@ -36,6 +40,13 @@ const STEP_MAP: Record<string, { total: number; current: number }> = {
   '/onboarding/business/R5': { total: 6, current: 6 },
 }
 
+// C8 and E7 call completeOnboarding()/completeExplorerOnboarding() at MOUNT
+// (the account already exists by the time either page's own content
+// matters) and delete the draft row as part of that — see the long comment
+// at this set's one use site below for why they're excluded from
+// last-step-path tracking specifically.
+const TERMINAL_STEPS = new Set(['/onboarding/creator/C8', '/onboarding/explorer/E7'])
+
 // Step-progress chrome is deliberately persona/category-agnostic — a single
 // passive tone so it never fights with whatever accent the page content is
 // using (e.g. the creator's chosen category colour).
@@ -55,8 +66,96 @@ const FULL_BLEED = new Set([
 const LEFT_BG  = '#1A2744'  // dark navy — always
 const RIGHT_BG = PAPER.bg
 
+// Persona is inferred from the URL prefix — /onboarding itself (persona
+// select / resume prompt) has no persona yet and needs no rehydration here;
+// its own page handles the cross-persona "which draft is newest" lookup.
+function personaForPathname(pathname: string): OnboardingPersona | null {
+  if (pathname.startsWith('/onboarding/creator/'))  return 'creator'
+  if (pathname.startsWith('/onboarding/business/')) return 'business'
+  if (pathname.startsWith('/onboarding/explorer/')) return 'explorer'
+  return null
+}
+
 export default function OnboardingLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
+  const persona  = personaForPathname(pathname)
+
+  // ── Draft rehydration — runs once per persona per tab-session (guarded by
+  // a sessionStorage flag so step-to-step navigation within the flow doesn't
+  // refetch). Writes any wimc_ob_* keys the draft has that sessionStorage is
+  // currently missing, BEFORE children render, so every step page's existing
+  // mount-time guard (check sessionStorage, router.replace backward if a
+  // required key is missing) runs unmodified against already-rehydrated
+  // state. If nothing was ever entered for this persona, this is a no-op and
+  // those guards behave exactly as they do today.
+  //
+  // checkedPersona (not a plain boolean) matters here: this layout instance
+  // does NOT remount on client-side navigation from /onboarding into
+  // /onboarding/creator/C5 (same layout segment), so `persona` flips from
+  // null to 'creator' within one mounted instance. A plain "have we ever
+  // rehydrated" boolean would already be true from the null-persona render
+  // and let C5 render immediately, before the fetch below resolves — races
+  // exactly the redirect-backward guard it's meant to prevent. Tracking
+  // *which* persona was last confirmed keeps the gate correct across that
+  // transition.
+  const [checkedPersona, setCheckedPersona] = useState<OnboardingPersona | null>(null)
+  const rehydrated = persona === null || checkedPersona === persona
+
+  useEffect(() => {
+    if (!persona || checkedPersona === persona) return
+    const checkedFlag = `wimc_ob_draft_checked_${persona}`
+    let cancelled = false
+    try {
+      if (sessionStorage.getItem(checkedFlag)) { setCheckedPersona(persona); return }
+    } catch { setCheckedPersona(persona); return }
+
+    getOnboardingDraft(persona).then(result => {
+      if (cancelled) return
+      try {
+        if (result) {
+          sessionStorage.setItem(SK.persona, persona)
+          for (const [key, value] of Object.entries(result.draft)) {
+            if (typeof value !== 'string') continue
+            const skKey = `wimc_ob_${key}`
+            if (sessionStorage.getItem(skKey) === null) sessionStorage.setItem(skKey, value)
+          }
+        }
+        sessionStorage.setItem(checkedFlag, '1')
+      } catch {}
+      setCheckedPersona(persona)
+    }).catch(() => { if (!cancelled) setCheckedPersona(persona) })
+
+    return () => { cancelled = true }
+  }, [persona, checkedPersona])
+
+  // ── Record the furthest step reached, for the explicit resume prompt at
+  // /onboarding. Every routable step (including the redirect stubs V5/R2 —
+  // they immediately redirect onward, so this gets overwritten a moment
+  // later by the real destination) is a key in STEP_MAP — except C8 and E7,
+  // which call completeOnboarding()/completeExplorerOnboarding() at MOUNT
+  // (the account already exists by the time either page's own content
+  // matters) and delete the draft row as part of that; recording those two
+  // as a resume point would be pointless even if it were safe.
+  //
+  // Landing on C8/E7 also cancels any write still pending from whichever
+  // step came before it — not just skips queuing a new one. Without this,
+  // the step-before's own debounced queueLastStepPath call (e.g. E6's,
+  // queued on E6's mount) is still in flight when the user reaches E7
+  // moments later, and fires on its own timer regardless: after
+  // completeExplorerOnboarding() has already deleted the draft, silently
+  // resurrecting it with E6 as the recorded last_step_path. Confirmed
+  // happening in practice, not just theoretically, via a real resume test.
+  //
+  // Debounced (see queueLastStepPath) — R5/V8, the two completion screens
+  // that reach here, cancel any pending call themselves (both this and any
+  // pending field patch — see cancelPendingDraftWrites) before submitting,
+  // so this doesn't need to guess a timeout long enough to never race.
+  useEffect(() => {
+    if (!persona) return
+    if (!(pathname in STEP_MAP)) return
+    if (TERMINAL_STEPS.has(pathname)) { cancelPendingDraftWrites(persona); return }
+    queueLastStepPath(persona, pathname)
+  }, [pathname, persona])
 
   // Onboarding's header/footer are position:fixed and must track the real,
   // visible viewport (100dvh) so the CTA is always reachable without a
@@ -75,11 +174,30 @@ export default function OnboardingLayout({ children }: { children: React.ReactNo
     return () => { document.body.style.overflow = prev }
   }, [])
 
+  // iOS Safari's 100dvh lags the real visual viewport specifically across the
+  // on-screen-keyboard dismiss transition (tapping the keyboard's own "hide"
+  // control, as opposed to blurring by tapping elsewhere) — the CSS value
+  // doesn't reflow back down to the keyboard-closed height, and with body
+  // scroll locked (above) there's no scroll-triggered reflow left to correct
+  // it, so body's near-black background stays exposed below our box. Track
+  // the real height via visualViewport and drive it through a CSS var instead
+  // of trusting dvh to update on its own.
+  useEffect(() => {
+    const vv = window.visualViewport
+    if (!vv) return
+    const setVh = () => {
+      document.documentElement.style.setProperty('--ob-vh', `${vv.height}px`)
+    }
+    setVh()
+    vv.addEventListener('resize', setVh)
+    return () => vv.removeEventListener('resize', setVh)
+  }, [])
+
   // S1 and C2 self-manage their split
   if (FULL_BLEED.has(pathname)) {
     return (
-      <div style={{ height: '100dvh', overflow: 'hidden', background: '#1A2744' }}>
-        {children}
+      <div style={{ height: 'var(--ob-vh, 100dvh)', overflow: 'hidden', background: '#1A2744' }}>
+        {rehydrated ? children : null}
         <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" />
         <style>{`.material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }`}</style>
       </div>
@@ -89,7 +207,7 @@ export default function OnboardingLayout({ children }: { children: React.ReactNo
   const { total, current } = STEP_MAP[pathname] ?? { total: 0, current: 0 }
 
   return (
-    <div style={{ height: '100dvh', overflow: 'hidden', display: 'flex', background: RIGHT_BG }}>
+    <div style={{ height: 'var(--ob-vh, 100dvh)', overflow: 'hidden', display: 'flex', background: RIGHT_BG }}>
 
       {/* ── LEFT PANEL — always dark navy ──────────────────────────────────── */}
       {/*
@@ -167,7 +285,7 @@ export default function OnboardingLayout({ children }: { children: React.ReactNo
 
         {/* Scrollable content area — children render here */}
         <div style={{ flex: 1, marginTop: ONBOARDING.layout.headerH, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-          {children}
+          {rehydrated ? children : null}
         </div>
       </div>
 

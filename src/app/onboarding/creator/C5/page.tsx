@@ -10,6 +10,7 @@ import type { CreatorType } from '@/types/database'
 import { CreatorEventTicket } from '@/components/onboarding/BoardingPassArtifact'
 import { ONBOARDING_CTA } from '@/lib/constants/onboarding-cta-copy'
 import { OnboardingFooter } from '@/components/onboarding/OnboardingFooter'
+import { queueDraftPatch, flushDraftPatch } from '@/lib/onboarding/draft-sync'
 
 const NOT_YET = 'not_yet'
 
@@ -78,21 +79,26 @@ export default function C5Page() {
         next = without.includes(val) ? without.filter(s => s !== val) : [...without, val]
       }
       try { sessionStorage.setItem(SK.c_subtypes, JSON.stringify(next)) } catch {}
+      queueDraftPatch('creator', SK.c_subtypes, JSON.stringify(next))
       return next
     })
   }
 
-  function handleContinue() {
+  async function handleContinue() {
     if (advancing) return
     setAdvancing(true)
     try { sessionStorage.setItem(SK.c_subtypes, JSON.stringify(selected)) } catch {}
+    queueDraftPatch('creator', SK.c_subtypes, JSON.stringify(selected))
+    await flushDraftPatch('creator')
     router.push('/onboarding/creator/C6')
   }
 
-  function handleSkip() {
+  async function handleSkip() {
     if (advancing) return
     setAdvancing(true)
     try { sessionStorage.setItem(SK.c_subtypes, '[]') } catch {}
+    queueDraftPatch('creator', SK.c_subtypes, '[]')
+    await flushDraftPatch('creator')
     router.push('/onboarding/creator/C6')
   }
 

@@ -1415,6 +1415,43 @@ export interface Database {
         ]
       }
 
+      // Onboarding wizard resume drafts (migration 081)
+      onboarding_drafts: {
+        Row: {
+          auth_user_id: string
+          persona: 'creator' | 'business' | 'explorer'
+          draft: Json
+          last_step_path: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          auth_user_id: string
+          persona: 'creator' | 'business' | 'explorer'
+          draft?: Json
+          last_step_path?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          auth_user_id?: string
+          persona?: 'creator' | 'business' | 'explorer'
+          draft?: Json
+          last_step_path?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'onboarding_drafts_auth_user_id_fkey'
+            columns: ['auth_user_id']
+            isOneToOne: false
+            referencedRelation: 'users'
+            referencedColumns: ['id']
+          }
+        ]
+      }
+
       // Creator/Brand profile split (migration 075)
       creator_profiles: {
         Row: {
@@ -2359,6 +2396,10 @@ export interface Database {
       }
       increment_user_metric: {
         Args: { p_user_id: string; p_column: string; p_delta?: number }
+        Returns: undefined
+      }
+      merge_onboarding_draft: {
+        Args: { p_auth_user_id: string; p_persona: string; p_patch: Json; p_last_step_path?: string | null }
         Returns: undefined
       }
     }

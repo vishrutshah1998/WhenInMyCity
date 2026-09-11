@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import { getPersonaProfile } from '@/app/actions/profile'
+import { deleteOnboardingDraftByUserId } from '@/app/actions/onboarding-draft'
 
 // ---------------------------------------------------------------------------
 // completeExplorerOnboarding
@@ -127,6 +128,7 @@ export async function completeExplorerOnboarding(payload: ExplorerPayload) {
   await supabase.auth.updateUser({
     data: { onboarding_complete: true, persona: 'explorer' },
   })
+  await deleteOnboardingDraftByUserId(user.id, 'explorer')
 }
 
 // ---------------------------------------------------------------------------
@@ -235,6 +237,7 @@ export async function completeBusinessOnboarding(payload: BrandPayload): Promise
   await supabase.auth.updateUser({
     data: { onboarding_complete: true, persona: 'brand' },
   })
+  await deleteOnboardingDraftByUserId(user.id, 'business')
 
   return { username: slug }
 }

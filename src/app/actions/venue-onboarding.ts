@@ -10,6 +10,7 @@ import { z } from 'zod'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { requireAuth } from '@/lib/auth/requireAuth'
 import type { PricingModel } from '@/types/database'
+import { deleteOnboardingDraftByUserId } from '@/app/actions/onboarding-draft'
 
 // ---------------------------------------------------------------------------
 // Step-data shapes
@@ -281,6 +282,7 @@ export async function completeVenueOnboarding(
     .maybeSingle()
 
   if (existing) {
+    await deleteOnboardingDraftByUserId(user.id, 'business')
     return { slug: existing.slug, error: null }
   }
 
@@ -390,6 +392,8 @@ export async function completeVenueOnboarding(
       .update({ personas: [...existingPersonas, 'venue'] })
       .eq('id', user.id)
   }
+
+  await deleteOnboardingDraftByUserId(user.id, 'business')
 
   return { slug, error: null }
 }

@@ -9,6 +9,7 @@ import { getCategoryColour } from '@/lib/onboarding/design-tokens'
 import { ONBOARDING_CTA } from '@/lib/constants/onboarding-cta-copy'
 import { OnboardingFooter } from '@/components/onboarding/OnboardingFooter'
 import { CitySelect } from '@/components/shared/CitySelect'
+import { queueDraftPatch, flushDraftPatch } from '@/lib/onboarding/draft-sync'
 
 const CITY_TAGLINES: Record<string, string> = {
   'Gandhinagar':          "India's greenest planned capital — 54 trees per person",
@@ -46,13 +47,16 @@ export default function C4Page() {
         sessionStorage.setItem(SK.c_city, city.name)
         window.dispatchEvent(new Event('ob-snap-update'))
       } catch {}
+      queueDraftPatch('creator', SK.c_city, city.name, { immediate: true })
     }
   }
 
-  function handleContinue() {
+  async function handleContinue() {
     if (!selectedCity || isAdvancing) return
     setIsAdvancing(true)
     try { sessionStorage.setItem(SK.c_city, selectedCity.name) } catch {}
+    queueDraftPatch('creator', SK.c_city, selectedCity.name)
+    await flushDraftPatch('creator')
     router.push('/onboarding/creator/C5')
   }
 

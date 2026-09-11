@@ -69,12 +69,17 @@ export default function R1Page() {
     setUploadError(null)
     const fd = new FormData()
     fd.append('file', file)
-    const result = await uploadOnboardingAvatar(fd)
-    setUploading(false)
-    if (result.error) { setUploadError(result.error); return }
-    if (result.url) {
-      try { sessionStorage.setItem(SK.b_logo_url, result.url) } catch {}
-      setLogoPreview(result.url)
+    try {
+      const result = await uploadOnboardingAvatar(fd)
+      if (result.error) { setUploadError(result.error); return }
+      if (result.url) {
+        try { sessionStorage.setItem(SK.b_logo_url, result.url) } catch {}
+        setLogoPreview(result.url)
+      }
+    } catch {
+      setUploadError('Upload failed. Please try again.')
+    } finally {
+      setUploading(false)
     }
   }
 

@@ -4,10 +4,10 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { SK } from '@/lib/onboarding/session-keys'
 import { VenueNoticePoster } from '@/components/onboarding/BoardingPassArtifact'
-import { saveVenueOnboardingStep } from '@/app/actions/venue-onboarding'
 import { deriveWimcTypes } from '@/lib/onboarding/google-type-map'
 import { ONBOARDING_CTA } from '@/lib/constants/onboarding-cta-copy'
 import { OnboardingFooter } from '@/components/onboarding/OnboardingFooter'
+import { queueDraftPatch, flushDraftPatch } from '@/lib/onboarding/draft-sync'
 
 const ACCENT = '#5DD9D0'
 const MONO   = "var(--font-jetbrains-mono), 'JetBrains Mono', monospace"
@@ -36,25 +36,6 @@ const VENUE_TYPES = [
 ] as const
 
 type VenueTypeId = typeof VENUE_TYPES[number]['id']
-
-type ValidVenueType =
-  | 'cafe' | 'coworking' | 'gallery' | 'community_hall'
-  | 'rooftop' | 'garden' | 'studio' | 'library' | 'restaurant'
-
-const TYPE_TO_VALID: Record<string, ValidVenueType> = {
-  cafe:       'cafe',       coworking:  'coworking', studio:     'studio',
-  rooftop:    'rooftop',   gallery:    'gallery',   theatre:    'community_hall',
-  event_hall: 'community_hall', retail: 'restaurant', bar:       'restaurant',
-  outdoor:    'garden',    library:    'library',   sports:     'coworking',
-  film_set:   'studio',    hotel_hall: 'community_hall', garden: 'garden',
-  workshop:   'coworking',
-}
-
-function toValidVenueTypes(types: string[]): ValidVenueType[] {
-  const result = new Set<ValidVenueType>()
-  types.forEach(t => { const v = TYPE_TO_VALID[t]; if (v) result.add(v) })
-  return Array.from(result)
-}
 
 const CHROME_HEADER: React.CSSProperties = {
   display: 'flex', justifyContent: 'space-between', alignItems: 'center',
@@ -133,6 +114,7 @@ export default function V4Page() {
     setVenueTypes(prev => {
       const next = prev.includes(id) ? prev.filter(v => v !== id) : [...prev, id]
       try { sessionStorage.setItem(SK.v_types, JSON.stringify(next)) } catch {}
+      queueDraftPatch('business', SK.v_types, JSON.stringify(next))
       return next
     })
   }
@@ -140,13 +122,17 @@ export default function V4Page() {
   function handleMinChange(val: string) {
     const n = val === '' ? '' : (parseInt(val, 10) || 1)
     setMinCapacity(n)
-    try { sessionStorage.setItem(SK.v_capacity, JSON.stringify({ min: n || null, max: maxCapacity || null })) } catch {}
+    const serialized = JSON.stringify({ min: n || null, max: maxCapacity || null })
+    try { sessionStorage.setItem(SK.v_capacity, serialized) } catch {}
+    queueDraftPatch('business', SK.v_capacity, serialized)
   }
 
   function handleMaxChange(val: string) {
     const n = val === '' ? '' : (parseInt(val, 10) || 1)
     setMaxCapacity(n)
-    try { sessionStorage.setItem(SK.v_capacity, JSON.stringify({ min: minCapacity || null, max: n || null })) } catch {}
+    const serialized = JSON.stringify({ min: minCapacity || null, max: n || null })
+    try { sessionStorage.setItem(SK.v_capacity, serialized) } catch {}
+    queueDraftPatch('business', SK.v_capacity, serialized)
   }
 
   const canProceed = venueTypes.length >= 1 && maxCapacity !== '' && (maxCapacity as number) > 0
@@ -158,34 +144,9 @@ export default function V4Page() {
       sessionStorage.setItem(SK.v_types, JSON.stringify(venueTypes))
       sessionStorage.setItem(SK.v_capacity, JSON.stringify({ min: minCapacity || null, max: maxCapacity || null }))
     } catch {}
-    try {
-      // Save step 1 (address) — captured in B2, persisted here once subpath is confirmed
-      const address       = sessionStorage.getItem(SK.v_address) ?? ''
-      const neighbourhood = sessionStorage.getItem(SK.v_neighbourhood) || undefined
-      const lat           = parseFloat(sessionStorage.getItem(SK.v_lat) ?? '') || undefined
-      const lng           = parseFloat(sessionStorage.getItem(SK.v_lng) ?? '') || undefined
-      const city          = sessionStorage.getItem(SK.v_city) || sessionStorage.getItem(SK.b_city) || bCity
-      if (address.trim().length >= 5) {
-        await saveVenueOnboardingStep(1, {
-          step: 1, name: bName, city,
-          address, neighbourhood, lat, lng,
-        })
-      }
-    } catch {}
-    try {
-      const validTypes = toValidVenueTypes(venueTypes)
-      if (validTypes.length > 0) {
-        const capMin = typeof minCapacity === 'number' ? minCapacity : undefined
-        const capMax = typeof maxCapacity === 'number' ? maxCapacity : undefined
-        await saveVenueOnboardingStep(2, {
-          step:                    2,
-          venue_type:               validTypes,
-          capacity_min:            capMin,
-          capacity_max:            capMax,
-          capacity_configurations: [],
-        })
-      }
-    } catch {}
+    queueDraftPatch('business', SK.v_types, JSON.stringify(venueTypes))
+    queueDraftPatch('business', SK.v_capacity, JSON.stringify({ min: minCapacity || null, max: maxCapacity || null }))
+    await flushDraftPatch('business')
     router.push('/onboarding/business/V6')
   }
 

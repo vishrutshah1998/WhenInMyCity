@@ -13,6 +13,7 @@ import {
 } from '@/types/onboarding'
 import type { SocialPlatform, Json, UserTier, UserProfile, PageBlock, Event, CreatorType } from '@/types/database'
 import { resolveTheme, type ProfileTheme } from '@/types/theme'
+import { deleteOnboardingDraftByUserId } from '@/app/actions/onboarding-draft'
 
 // ---------------------------------------------------------------------------
 // Internal helpers
@@ -387,6 +388,7 @@ export async function completeOnboarding(
         }
       }
 
+      await deleteOnboardingDraftByUserId(user.id, 'creator')
       return { username: existingProfile.username, error: null }
     }
 
@@ -533,6 +535,7 @@ export async function completeOnboarding(
     await supabase.auth.updateUser({
       data: { onboarding_s1: null, onboarding_s2: null },
     })
+    await deleteOnboardingDraftByUserId(user.id, 'creator')
 
     return { username, error: null }
   } catch (err) {
@@ -608,13 +611,18 @@ export async function uploadOnboardingAvatar(
   }
 
   const { data: urlData } = admin.storage.from('avatars').getPublicUrl(storagePath)
+  // Cache-bust: the storage path is fixed per user (upsert overwrites the same
+  // file), so the URL never changes between uploads. Without this, browsers/CDNs
+  // can keep serving a previously cached image at this URL (cacheControl is
+  // max-age=3600) instead of the just-uploaded one.
+  const bustedUrl = `${urlData.publicUrl}?v=${Date.now()}`
 
   await admin
     .from('user_profiles')
-    .update({ avatar_url: urlData.publicUrl })
+    .update({ avatar_url: bustedUrl })
     .eq('id', user.id)
 
-  return { url: urlData.publicUrl, error: null }
+  return { url: bustedUrl, error: null }
 }
 
 // ---------------------------------------------------------------------------

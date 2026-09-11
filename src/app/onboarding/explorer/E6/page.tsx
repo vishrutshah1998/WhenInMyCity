@@ -6,6 +6,7 @@ import { SK } from '@/lib/onboarding/session-keys'
 import { uploadOnboardingAvatar } from '@/app/actions/onboarding'
 import { ONBOARDING_CTA } from '@/lib/constants/onboarding-cta-copy'
 import { OnboardingFooter } from '@/components/onboarding/OnboardingFooter'
+import { queueDraftPatch, flushDraftPatch } from '@/lib/onboarding/draft-sync'
 const ACCENT = '#9B8FFF'
 const NAVY   = '#1A2744'
 
@@ -45,19 +46,27 @@ export default function E6Page() {
     setAvatarError(null)
     const fd = new FormData()
     fd.append('file', file)
-    const result = await uploadOnboardingAvatar(fd)
-    setAvatarUploading(false)
-    if (result.error) {
-      setAvatarError(result.error)
-    } else if (result.url) {
-      setAvatarPreviewUrl(result.url)
-      try { sessionStorage.setItem(SK.e_avatar_url, result.url) } catch {}
+    try {
+      const result = await uploadOnboardingAvatar(fd)
+      if (result.error) {
+        setAvatarError(result.error)
+      } else if (result.url) {
+        setAvatarPreviewUrl(result.url)
+        try { sessionStorage.setItem(SK.e_avatar_url, result.url) } catch {}
+        queueDraftPatch('explorer', SK.e_avatar_url, result.url, { immediate: true })
+      }
+    } catch {
+      setAvatarError('Upload failed. Please try again.')
+    } finally {
+      setAvatarUploading(false)
     }
   }
 
-  function handleContinue() {
+  async function handleContinue() {
     if (selectedIntent) {
       try { sessionStorage.setItem(SK.e_intent, selectedIntent) } catch {}
+      queueDraftPatch('explorer', SK.e_intent, selectedIntent)
+      await flushDraftPatch('explorer')
     }
     router.push('/onboarding/explorer/E7')
   }
