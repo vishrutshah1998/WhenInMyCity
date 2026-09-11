@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation'
 import type { Metadata } from 'next'
 import { getEventBySlug } from '@/app/actions/events'
 import { getMyRSVPForEvent } from '@/app/actions/rsvp'
+import { getMyEventApplicationStatus } from '@/app/actions/event-applications'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
 import EventPage, { type EventReview } from './event-page'
@@ -62,7 +63,13 @@ export default async function EventSlugPage({
     return <CancelledEventNotice event={event} hadBooking={hadBooking} />
   }
 
-  const [{ data: creator }, { data: reviewHistory }, { rsvp: myRSVP }, { data: viewerProfile }] = await Promise.all([
+  const [
+    { data: creator },
+    { data: reviewHistory },
+    { rsvp: myRSVP },
+    { data: viewerProfile },
+    { status: myPaidApplicationStatus, applicationId: myPaidApplicationId, paymentDeadline: myPaidApplicationPaymentDeadline },
+  ] = await Promise.all([
     admin
       .from('user_profiles')
       .select('display_name, avatar_url, username, city, creator_type, is_verified, user_tier, lantern_since, beacon_since, tier_recovery_until')
@@ -79,6 +86,7 @@ export default async function EventSlugPage({
     session
       ? admin.from('user_profiles').select('display_name').eq('id', session.user.id).maybeSingle()
       : Promise.resolve({ data: null }),
+    getMyEventApplicationStatus(event.id),
   ])
 
   // Prefill source for the RSVP sheet's Name/Phone fields (authenticated
@@ -124,6 +132,9 @@ export default async function EventSlugPage({
       creator={creator ?? null}
       reviews={reviews}
       myRSVP={myRSVP}
+      myPaidApplicationStatus={myPaidApplicationStatus}
+      myPaidApplicationId={myPaidApplicationId}
+      myPaidApplicationPaymentDeadline={myPaidApplicationPaymentDeadline}
       isAuthenticated={isAuthenticated}
       discoverySource={discoverySource}
       viewerName={viewerName}
