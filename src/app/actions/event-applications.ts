@@ -29,11 +29,12 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
 import { requireAuth } from '@/lib/auth/requireAuth'
 import { isGuestPhoneVerified } from '@/app/actions/guest-otp'
+import { isApplicationStatusPhoneVerified } from '@/app/actions/application-status-otp'
 import { checkRSVPRateLimit } from '@/lib/ratelimit'
 import { sendWhatsAppTemplate } from '@/lib/whatsapp'
 import { initiateRSVP } from '@/app/actions/rsvp'
 import type { TicketTier } from '@/types/events'
-import type { EventApplicationStatus } from '@/types/database'
+import type { ApplicationStatus, EventApplicationStatus } from '@/types/database'
 
 // ---------------------------------------------------------------------------
 // applyToEvent
@@ -182,6 +183,94 @@ export async function applyToEvent(params: {
   }
 
   return { applicationId: inserted.id, error: null }
+}
+
+// ---------------------------------------------------------------------------
+// getMyEventApplicationStatus / getMyEventApplicationStatusGuest
+// ---------------------------------------------------------------------------
+
+export interface MyEventApplicationStatus {
+  status:          ApplicationStatus | null
+  /** The application's id — needed to link an 'approved' status to /pay/[applicationId] (see initiatePaymentForApplication/PayClient below). Null whenever status is null. */
+  applicationId:   string | null
+  /** Only meaningful when status is 'approved' — the window to complete payment before this application lapses to 'expired'. Same field PaidApplicationsClient surfaces to the host, shown here to the applicant instead. */
+  paymentDeadline: string | null
+}
+
+/**
+ * Returns the authenticated user's most recent paid-gated application status
+ * for this event (migration 080), if any. Companion to rsvp.ts's
+ * getMyRSVPForEvent, which only ever reads `rsvps` — a paid application has
+ * no rsvps row until payment succeeds (see file header), so without this a
+ * returning authenticated applicant had no way to see their pending/
+ * approved/declined/waitlisted status at all. Silent/automatic exactly like
+ * getMyRSVPForEvent — no OTP involved, keyed on the session's user id.
+ *
+ * 'expired' collapses to null: it's a permanent terminal state (see
+ * initiatePaymentForApplication below) whose only path forward is a brand
+ * new application, so it should read identically to "no application yet."
+ */
+export async function getMyEventApplicationStatus(
+  eventId: string,
+): Promise<MyEventApplicationStatus> {
+  const EMPTY = { status: null, applicationId: null, paymentDeadline: null }
+
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return EMPTY
+
+  const admin = createAdminClient()
+  const { data } = await admin
+    .from('event_applications')
+    .select('id, status, payment_deadline')
+    .eq('event_id', eventId)
+    .eq('applicant_user_id', user.id)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  if (!data || data.status === 'expired') return EMPTY
+  return { status: data.status, applicationId: data.id, paymentDeadline: data.payment_deadline }
+}
+
+/**
+ * Guest-facing counterpart to getMyEventApplicationStatus. An unauthenticated
+ * applicant has no session to key a lookup on, so this is a deliberate,
+ * OTP-gated action the guest triggers themselves ("Check my application
+ * status" on the event page) rather than something loaded automatically —
+ * there's nothing to silently key on until the phone is verified.
+ *
+ * Reuses the guest-lookup query shape from applyToEvent's dedup check
+ * (matched on phone, since a guest application always has
+ * applicant_user_id = null) but drops its `.eq('status', 'pending')` filter
+ * and takes the most recent row instead — a status check should reflect
+ * whatever the guest's latest application says, not just a still-open one.
+ */
+export async function getMyEventApplicationStatusGuest(
+  eventId: string,
+  phone: string,
+): Promise<MyEventApplicationStatus & { error: string | null }> {
+  const EMPTY = { status: null, applicationId: null, paymentDeadline: null }
+
+  const eventIdParsed = z.string().uuid().safeParse(eventId)
+  if (!eventIdParsed.success) return { ...EMPTY, error: 'Invalid event.' }
+
+  const verified = await isApplicationStatusPhoneVerified(phone)
+  if (!verified) return { ...EMPTY, error: 'Please verify your phone number first.' }
+
+  const admin = createAdminClient()
+  const { data } = await admin
+    .from('event_applications')
+    .select('id, status, payment_deadline')
+    .eq('event_id', eventId)
+    .is('applicant_user_id', null)
+    .eq('applicant_phone', phone)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  if (!data || data.status === 'expired') return { ...EMPTY, error: null }
+  return { status: data.status, applicationId: data.id, paymentDeadline: data.payment_deadline, error: null }
 }
 
 // ---------------------------------------------------------------------------

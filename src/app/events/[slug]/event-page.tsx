@@ -7,8 +7,9 @@ import { useRouter } from 'next/navigation'
 import { getCountryCallingCode, isValidPhoneNumber, type CountryCode } from 'libphonenumber-js'
 import { initiateRSVP, checkRSVPStatus, getConfirmedRSVPToken, confirmRSVPPayment, casualRSVP, casualRSVPGuest } from '@/app/actions/rsvp'
 import type { MyRSVP } from '@/app/actions/rsvp'
-import { applyToEvent } from '@/app/actions/event-applications'
+import { applyToEvent, getMyEventApplicationStatusGuest } from '@/app/actions/event-applications'
 import { sendRsvpGuestOtp, verifyRsvpGuestOtp } from '@/app/actions/guest-otp'
+import { sendApplicationStatusOtp, verifyApplicationStatusOtp } from '@/app/actions/application-status-otp'
 import { validateReferralCode } from '@/app/actions/referral'
 import type { Event, ApplicationStatus } from '@/types/database'
 import { TornEdge } from '@/components/ui/TornEdge'
@@ -82,6 +83,12 @@ interface EventPageProps {
   creator:         CreatorProfile | null
   reviews?:        EventReview[]
   myRSVP?:         MyRSVP | null
+  /** Authenticated viewer's paid-gated application status (migration 080), if any — see getMyEventApplicationStatus. Always null for a guest or a non-paid-gated event. */
+  myPaidApplicationStatus?: ApplicationStatus | null
+  /** The above application's id — links an 'approved' status to /pay/[applicationId]. Null whenever myPaidApplicationStatus is null. */
+  myPaidApplicationId?: string | null
+  /** The above application's payment window, when approved. Null otherwise. */
+  myPaidApplicationPaymentDeadline?: string | null
   isAuthenticated: boolean
   /** How the visitor arrived at this booking page (?src= query param). Undefined = 'direct'. */
   discoverySource?: 'creator_link' | 'platform_discovery'
@@ -91,7 +98,7 @@ interface EventPageProps {
   viewerPhoneDigits?: string | null
 }
 
-type Sheet = 'none' | 'step1' | 'step2' | 'confirmed' | 'casualGuest' | 'apply' | 'applyPending' | 'casualApply' | 'casualPending'
+type Sheet = 'none' | 'step1' | 'step2' | 'confirmed' | 'casualGuest' | 'apply' | 'applyPending' | 'casualApply' | 'casualPending' | 'checkStatus'
 
 interface ConfirmedData {
   qrToken: string | null
@@ -121,6 +128,28 @@ function formatTime(iso: string): string {
 function formatPrice(paise: number): string {
   if (paise === 0) return 'Free'
   return `₹${(paise / 100).toLocaleString('en-IN')}`
+}
+
+function formatDeadline(iso: string): string {
+  return new Date(iso).toLocaleString('en-IN', {
+    day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', hour12: true,
+  })
+}
+
+const DEADLINE_URGENT_WINDOW_MS = 2 * 60 * 60 * 1000   // 2 hours — same threshold PaidApplicationsClient uses for the host-side queue
+
+/**
+ * Same urgency rule as PaidApplicationsClient's deadlineUrgency (host-facing
+ * review queue) — worth mirroring here for the applicant-facing "Pay now"
+ * banner too, so a closing-soon deadline reads with the same normal/amber/red
+ * signal on both sides. Not live-ticking, same tradeoff as the host version:
+ * a tab left open for hours won't flip color until the next render.
+ */
+function deadlineUrgency(paymentDeadline: string): 'normal' | 'urgent' | 'elapsed' {
+  const msLeft = new Date(paymentDeadline).getTime() - Date.now()
+  if (msLeft <= 0) return 'elapsed'
+  if (msLeft <= DEADLINE_URGENT_WINDOW_MS) return 'urgent'
+  return 'normal'
 }
 
 function formatCreatorType(raw: string): string {
@@ -166,7 +195,7 @@ declare global {
   }
 }
 
-export default function EventPage({ event, rsvpCount, spotsLeft, creator, reviews = [], myRSVP = null, isAuthenticated, discoverySource, viewerName = null, viewerPhoneDigits = null }: EventPageProps) {
+export default function EventPage({ event, rsvpCount, spotsLeft, creator, reviews = [], myRSVP = null, myPaidApplicationStatus = null, myPaidApplicationId = null, myPaidApplicationPaymentDeadline = null, isAuthenticated, discoverySource, viewerName = null, viewerPhoneDigits = null }: EventPageProps) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const isCasual = (event as any).rsvp_style === 'casual' || event.ticket_price === 0
@@ -188,7 +217,16 @@ export default function EventPage({ event, rsvpCount, spotsLeft, creator, review
   // identical to one who was fully confirmed. Kept in its own state (not
   // read directly from myRSVP everywhere) because a fresh submission this
   // session updates it locally without a full page reload.
-  const [myApplicationStatus, setMyApplicationStatus] = useState<ApplicationStatus | null>(() => myRSVP?.applicationStatus ?? null)
+  //
+  // Also seeded from myPaidApplicationStatus (getMyEventApplicationStatus,
+  // event-applications.ts) for the paid-gated case (migration 080): myRSVP
+  // is always null there until payment succeeds, so without this a
+  // returning authenticated applicant had no way to see their pending/
+  // waitlisted/declined status either. myRSVP?.applicationStatus and
+  // myPaidApplicationStatus are never both non-null for the same event (an
+  // event is either casual or paid-gated, never both), so this fallback
+  // never picks the wrong source.
+  const [myApplicationStatus, setMyApplicationStatus] = useState<ApplicationStatus | null>(() => myRSVP?.applicationStatus ?? myPaidApplicationStatus ?? null)
   const [casualPending, startCasualTransition] = useTransition()
 
   // Guest casual RSVP — the intent tapped (Going/Maybe/Can't go) before the
@@ -249,6 +287,28 @@ export default function EventPage({ event, rsvpCount, spotsLeft, creator, review
   const [applyAnswer, setApplyAnswer] = useState('')
   const [applyError, setApplyError] = useState<string | null>(null)
   const [applyPending, startApplyTransition] = useTransition()
+
+  // Guest "Check my application status" (Phase B) — a separate, self-
+  // triggered OTP flow (application-status-otp.ts, its own OTP purpose) so
+  // it can't be confused with or throttled by the apply sheet's guest OTP
+  // above. Deliberately its own phone/country/OTP state rather than reusing
+  // phoneDigits/countryIso/otp*: those flows key on a different OTP purpose
+  // ('guest-rsvp'), and a stale otpVerified=true from booking/applying
+  // earlier in the same visit must not let this flow skip verification for
+  // a purpose the server never actually verified.
+  const [checkStatusPhoneDigits, setCheckStatusPhoneDigits] = useState('')
+  const [checkStatusCountryIso, setCheckStatusCountryIso] = useState<CountryCode>('IN')
+  const [checkStatusOtpSent, setCheckStatusOtpSent] = useState(false)
+  const [checkStatusOtpVerified, setCheckStatusOtpVerified] = useState(false)
+  const [checkStatusOtpCode, setCheckStatusOtpCode] = useState('')
+  const [checkStatusOtpChannel, setCheckStatusOtpChannel] = useState<'sms' | 'whatsapp'>('whatsapp')
+  const [checkStatusError, setCheckStatusError] = useState<string | null>(null)
+  const [checkStatusResult, setCheckStatusResult] = useState<{
+    status:          ApplicationStatus | 'not_found'
+    applicationId:   string | null
+    paymentDeadline: string | null
+  } | null>(null)
+  const [checkStatusPending, startCheckStatusTransition] = useTransition()
 
   // Referral code
   const [refExpanded, setRefExpanded] = useState(false)
@@ -585,6 +645,49 @@ export default function EventPage({ event, rsvpCount, spotsLeft, creator, review
     }
 
     startApplyTransition(submitApplication)
+  }
+
+  // ── Paid-gated application — guest "Check my application status" ───────────
+
+  function handleCheckStatusSubmit() {
+    setCheckStatusError(null)
+    if (!isGuestPhoneValid(checkStatusPhoneDigits, checkStatusCountryIso)) {
+      setCheckStatusError(checkStatusCountryIso === 'IN' ? 'Please enter a valid 10-digit Indian mobile number.' : 'Please enter a valid phone number.')
+      return
+    }
+
+    const statusPhone = `+${getCountryCallingCode(checkStatusCountryIso)}${checkStatusPhoneDigits}`
+
+    if (!checkStatusOtpVerified) {
+      if (!checkStatusOtpSent) {
+        startCheckStatusTransition(async () => {
+          const r = await sendApplicationStatusOtp(statusPhone, checkStatusCountryIso === 'IN' ? 'sms' : 'whatsapp')
+          if (!r.success) { setCheckStatusError(r.error ?? 'Could not send verification code.'); return }
+          setCheckStatusOtpChannel(r.channel)
+          setCheckStatusOtpSent(true)
+        })
+        return
+      }
+      if (!/^\d{6}$/.test(checkStatusOtpCode)) {
+        setCheckStatusError('Enter the 6-digit code sent to your phone.')
+        return
+      }
+      startCheckStatusTransition(async () => {
+        const v = await verifyApplicationStatusOtp(statusPhone, checkStatusOtpCode)
+        if (!v.success) { setCheckStatusError(v.error ?? 'Incorrect code.'); return }
+        setCheckStatusOtpVerified(true)
+        const r = await getMyEventApplicationStatusGuest(event.id, statusPhone)
+        if (r.error) { setCheckStatusError(r.error); return }
+        setCheckStatusResult({ status: r.status ?? 'not_found', applicationId: r.applicationId, paymentDeadline: r.paymentDeadline })
+      })
+      return
+    }
+
+    startCheckStatusTransition(async () => {
+      const r = await getMyEventApplicationStatusGuest(event.id, statusPhone)
+      if (r.error) { setCheckStatusError(r.error); return }
+      setCheckStatusResult({ status: r.status ?? 'not_found', applicationId: r.applicationId, paymentDeadline: r.paymentDeadline })
+    })
   }
 
   // ── Razorpay Standard Checkout ─────────────────────────────────────────────
@@ -1283,6 +1386,64 @@ export default function EventPage({ event, rsvpCount, spotsLeft, creator, review
                         )
                       )}
 
+                      {/* Returning-applicant status (migration 080) — mirrors the
+                          casual gate-state badges above (myApplicationStatus). */}
+                      {myApplicationStatus === 'pending' && (
+                        <p className="text-center font-mono text-[10px] uppercase tracking-wider text-amber-800 bg-amber-100 py-1.5">
+                          Pending host review
+                        </p>
+                      )}
+                      {myApplicationStatus === 'waitlisted' && (
+                        <p className="text-center font-mono text-[10px] uppercase tracking-wider text-amber-800 bg-amber-100 py-1.5">
+                          Waitlisted
+                        </p>
+                      )}
+                      {myApplicationStatus === 'declined' && (
+                        <p className="text-center font-mono text-[10px] uppercase tracking-wider text-[#57423e] bg-[#F0E8DC] py-1.5">
+                          Not approved
+                        </p>
+                      )}
+                      {myApplicationStatus === 'approved' && myPaidApplicationId && (
+                        <div className="flex flex-col gap-1.5">
+                          <p className="text-center font-mono text-[10px] uppercase tracking-wider text-white bg-[#006a43] py-1.5">
+                            Approved!
+                          </p>
+                          <Link
+                            href={`/pay/${myPaidApplicationId}`}
+                            className="w-full bg-[#006a43] text-white font-sans font-semibold py-3.5 uppercase flex justify-center items-center gap-2 hover:bg-[#00875a] transition-colors border-2 border-[#07070A] text-sm tracking-wider"
+                          >
+                            Pay Now
+                            <span className="material-symbols-outlined text-sm" style={{ fontVariationSettings: "'FILL' 0" }}>arrow_forward</span>
+                          </Link>
+                          {myPaidApplicationPaymentDeadline && (() => {
+                            const urgency = deadlineUrgency(myPaidApplicationPaymentDeadline)
+                            const color = urgency === 'elapsed' ? '#EF4444' : urgency === 'urgent' ? '#F59E0B' : undefined
+                            return (
+                              <p className={`text-center font-mono text-[10px] ${color ? '' : 'text-[#57423e]'}`} style={color ? { color } : undefined}>
+                                {urgency === 'elapsed'
+                                  ? `Payment window elapsed ${formatDeadline(myPaidApplicationPaymentDeadline)}`
+                                  : `Pay by ${formatDeadline(myPaidApplicationPaymentDeadline)}${urgency === 'urgent' ? ' — closing soon' : ''}`}
+                              </p>
+                            )
+                          })()}
+                        </div>
+                      )}
+
+                      {!isAuthenticated && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setCheckStatusError(null)
+                            setCheckStatusResult(null)
+                            setCheckStatusOtpSent(false); setCheckStatusOtpVerified(false); setCheckStatusOtpCode('')
+                            setSheet('checkStatus')
+                          }}
+                          className="w-full text-center font-mono text-[10px] uppercase tracking-wider text-[#57423e] hover:underline"
+                        >
+                          Check my application status
+                        </button>
+                      )}
+
                       {myRSVP && (
                         <button
                           onClick={() => setSheet('confirmed')}
@@ -1492,31 +1653,86 @@ export default function EventPage({ event, rsvpCount, spotsLeft, creator, review
             </button>
           ) : isPaidGated ? (
             canApply ? (
-              isAuthenticated ? (
-                <button
-                  onClick={() => setSheet('apply')}
-                  className="bg-gradient-to-r from-[#AB2E00] to-[#CF4519] text-white rounded-lg px-8 py-4 w-full flex items-center justify-center gap-2 font-headline font-bold text-sm uppercase tracking-wider shadow-[0_-8px_24px_rgba(171,46,0,0.12)] hover:brightness-110 transition-all active:scale-95"
-                >
-                  <span className="material-symbols-outlined">fact_check</span>
-                  Apply to Attend
-                </button>
-              ) : (
-                <div className="flex flex-col gap-1.5 w-full">
+              <div className="flex flex-col gap-1.5 w-full">
+                {isAuthenticated ? (
                   <button
                     onClick={() => setSheet('apply')}
                     className="bg-gradient-to-r from-[#AB2E00] to-[#CF4519] text-white rounded-lg px-8 py-4 w-full flex items-center justify-center gap-2 font-headline font-bold text-sm uppercase tracking-wider shadow-[0_-8px_24px_rgba(171,46,0,0.12)] hover:brightness-110 transition-all active:scale-95"
                   >
                     <span className="material-symbols-outlined">fact_check</span>
-                    Apply as Guest
+                    Apply to Attend
                   </button>
-                  <Link
-                    href={`/signin?next=/events/${event.slug}`}
+                ) : (
+                  <>
+                    <button
+                      onClick={() => setSheet('apply')}
+                      className="bg-gradient-to-r from-[#AB2E00] to-[#CF4519] text-white rounded-lg px-8 py-4 w-full flex items-center justify-center gap-2 font-headline font-bold text-sm uppercase tracking-wider shadow-[0_-8px_24px_rgba(171,46,0,0.12)] hover:brightness-110 transition-all active:scale-95"
+                    >
+                      <span className="material-symbols-outlined">fact_check</span>
+                      Apply as Guest
+                    </button>
+                    <Link
+                      href={`/signin?next=/events/${event.slug}`}
+                      className="text-center text-on-surface-variant text-xs font-mono uppercase tracking-wider py-1 hover:underline"
+                    >
+                      Sign in instead
+                    </Link>
+                  </>
+                )}
+                {/* Returning-applicant status (migration 080) — mirrors the
+                    casual gate-state badges elsewhere (myApplicationStatus). */}
+                {myApplicationStatus === 'pending' && (
+                  <p className="text-center text-xs font-mono uppercase tracking-wider text-amber-800 bg-amber-100 rounded-lg py-1.5">
+                    Pending host review
+                  </p>
+                )}
+                {myApplicationStatus === 'waitlisted' && (
+                  <p className="text-center text-xs font-mono uppercase tracking-wider text-amber-800 bg-amber-100 rounded-lg py-1.5">
+                    Waitlisted
+                  </p>
+                )}
+                {myApplicationStatus === 'declined' && (
+                  <p className="text-center text-xs font-mono uppercase tracking-wider text-on-surface-variant bg-surface-container-high rounded-lg py-1.5">
+                    Not approved
+                  </p>
+                )}
+                {myApplicationStatus === 'approved' && myPaidApplicationId && (
+                  <>
+                    <Link
+                      href={`/pay/${myPaidApplicationId}`}
+                      className="bg-[#006a43] text-white rounded-lg px-8 py-4 w-full flex items-center justify-center gap-2 font-headline font-bold text-sm uppercase tracking-wider hover:brightness-110 transition-all active:scale-95"
+                    >
+                      <span className="material-symbols-outlined">confirmation_number</span>
+                      Pay Now
+                    </Link>
+                    {myPaidApplicationPaymentDeadline && (() => {
+                      const urgency = deadlineUrgency(myPaidApplicationPaymentDeadline)
+                      const color = urgency === 'elapsed' ? '#EF4444' : urgency === 'urgent' ? '#F59E0B' : undefined
+                      return (
+                        <p className={`text-center text-xs font-mono ${color ? '' : 'text-on-surface-variant'}`} style={color ? { color } : undefined}>
+                          {urgency === 'elapsed'
+                            ? `Payment window elapsed ${formatDeadline(myPaidApplicationPaymentDeadline)}`
+                            : `Pay by ${formatDeadline(myPaidApplicationPaymentDeadline)}${urgency === 'urgent' ? ' — closing soon' : ''}`}
+                        </p>
+                      )
+                    })()}
+                  </>
+                )}
+                {!isAuthenticated && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCheckStatusError(null)
+                      setCheckStatusResult(null)
+                      setCheckStatusOtpSent(false); setCheckStatusOtpVerified(false); setCheckStatusOtpCode('')
+                      setSheet('checkStatus')
+                    }}
                     className="text-center text-on-surface-variant text-xs font-mono uppercase tracking-wider py-1 hover:underline"
                   >
-                    Sign in instead
-                  </Link>
-                </div>
-              )
+                    Check my application status
+                  </button>
+                )}
+              </div>
             ) : (
               <div className="w-full py-4 text-center text-on-surface-variant text-sm font-semibold bg-surface-container-low rounded-lg">
                 {isPast ? 'Event Ended' : event.status === 'cancelled' ? 'Event Cancelled' : ''}
@@ -2312,6 +2528,179 @@ export default function EventPage({ event, rsvpCount, spotsLeft, creator, review
                     No payment is collected now. You&apos;ll only be charged if the host approves your application and you complete payment within the window they set.
                   </p>
                 </div>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* ════════════════════════════════════════════════════════════════════ */}
+      {/* Paid-gated application — guest "Check my application status"        */}
+      {/* (Phase B). Separate from the apply flow itself: a guest applicant   */}
+      {/* has no session, so their pending/approved/declined/waitlisted state */}
+      {/* only shows here once they OTP-verify the phone they applied with —  */}
+      {/* nothing loads automatically the way it does for an authenticated    */}
+      {/* returning applicant (myPaidApplicationStatus, seeded server-side).  */}
+      {/* ════════════════════════════════════════════════════════════════════ */}
+      {sheet === 'checkStatus' && (
+        <>
+          <SheetBackdrop onClick={() => setSheet('none')} />
+          <div className="fixed bottom-0 left-0 w-full z-[70]">
+            <div className="bg-surface-container-lowest rounded-t-[32px] shadow-[0_-12px_32px_rgba(171,46,0,0.12)] max-w-2xl mx-auto overflow-hidden">
+              <SheetGrabber />
+              <div className="px-6 pb-8 pt-2">
+                <header className="mb-8">
+                  <h2 className="font-headline text-2xl font-bold text-on-surface">Check my application status</h2>
+                  <p className="text-on-surface-variant text-sm">
+                    Enter the phone number you applied with — we&apos;ll text you a code to confirm it&apos;s you.
+                  </p>
+                </header>
+
+                {checkStatusResult ? (
+                  <div className="space-y-6">
+                    {checkStatusResult.status === 'not_found' && (
+                      <p className="text-center text-sm text-on-surface-variant py-3">
+                        We couldn&apos;t find an application for this event under that number.
+                      </p>
+                    )}
+                    {checkStatusResult.status === 'pending' && (
+                      <p className="text-center font-mono text-xs uppercase tracking-wider text-amber-800 bg-amber-100 rounded-lg py-3">
+                        Pending host review
+                      </p>
+                    )}
+                    {checkStatusResult.status === 'waitlisted' && (
+                      <p className="text-center font-mono text-xs uppercase tracking-wider text-amber-800 bg-amber-100 rounded-lg py-3">
+                        Waitlisted
+                      </p>
+                    )}
+                    {checkStatusResult.status === 'declined' && (
+                      <p className="text-center font-mono text-xs uppercase tracking-wider text-on-surface-variant bg-surface-container-high rounded-lg py-3">
+                        Not approved
+                      </p>
+                    )}
+                    {checkStatusResult.status === 'approved' && (
+                      <div className="space-y-3">
+                        <p className="text-center font-mono text-xs uppercase tracking-wider text-white bg-[#006a43] rounded-lg py-3">
+                          Approved!
+                        </p>
+                        {checkStatusResult.applicationId && (
+                          <Link
+                            href={`/pay/${checkStatusResult.applicationId}`}
+                            className="w-full bg-gradient-to-r from-primary to-primary-container text-on-primary py-5 rounded-xl font-headline font-bold text-lg flex items-center justify-center gap-3 shadow-[0_12px_32px_rgba(171,46,0,0.15)] active:scale-[0.98] transition-all"
+                          >
+                            Pay Now
+                            <span className="material-symbols-outlined">arrow_forward</span>
+                          </Link>
+                        )}
+                        {checkStatusResult.paymentDeadline && (() => {
+                          const urgency = deadlineUrgency(checkStatusResult.paymentDeadline!)
+                          const color = urgency === 'elapsed' ? '#EF4444' : urgency === 'urgent' ? '#F59E0B' : undefined
+                          return (
+                            <p className={`text-center text-xs font-mono ${color ? '' : 'text-on-surface-variant'}`} style={color ? { color } : undefined}>
+                              {urgency === 'elapsed'
+                                ? `Payment window elapsed ${formatDeadline(checkStatusResult.paymentDeadline!)}`
+                                : `Pay by ${formatDeadline(checkStatusResult.paymentDeadline!)}${urgency === 'urgent' ? ' — closing soon' : ''}`}
+                            </p>
+                          )
+                        })()}
+                      </div>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => setSheet('none')}
+                      className="w-full bg-gradient-to-r from-primary to-primary-container text-on-primary py-5 rounded-xl font-headline font-bold text-lg flex items-center justify-center gap-3 shadow-[0_12px_32px_rgba(171,46,0,0.15)] active:scale-[0.98] transition-all"
+                    >
+                      Done
+                    </button>
+                  </div>
+                ) : (
+                  <div className="space-y-6">
+                    {/* Phone */}
+                    <div>
+                      <label className="block text-xs font-bold text-on-surface-variant uppercase tracking-widest mb-2 px-1">
+                        {checkStatusCountryIso === 'IN' ? 'WhatsApp Number' : 'Phone Number'}
+                      </label>
+                      <div className="flex gap-2">
+                        <CountryCodeSelect
+                          value={checkStatusCountryIso}
+                          onChange={(iso) => {
+                            setCheckStatusCountryIso(iso)
+                            setCheckStatusPhoneDigits('')
+                            setCheckStatusOtpSent(false); setCheckStatusOtpVerified(false); setCheckStatusOtpCode('')
+                          }}
+                        />
+                        <input
+                          type="tel"
+                          value={checkStatusPhoneDigits}
+                          onChange={(e) => {
+                            setCheckStatusPhoneDigits(e.target.value.replace(/\D/g, '').slice(0, checkStatusCountryIso === 'IN' ? 10 : 14))
+                            setCheckStatusOtpSent(false); setCheckStatusOtpVerified(false); setCheckStatusOtpCode('')
+                          }}
+                          placeholder={checkStatusCountryIso === 'IN' ? '98765 43210' : 'Phone number'}
+                          className="w-full bg-surface-container-low border-none rounded-xl px-4 py-4 focus:outline-none focus:ring-2 focus:ring-outline transition-all text-on-surface placeholder:text-outline-variant"
+                        />
+                      </div>
+                    </div>
+
+                    {/* OTP entry — shown once a code has been sent */}
+                    {checkStatusOtpSent && !checkStatusOtpVerified && (
+                      <div className="p-4 bg-surface-container-high rounded-xl flex flex-col gap-3">
+                        <div>
+                          <span className="block font-headline font-bold text-on-surface text-sm">Verify your number</span>
+                          <span className="text-xs text-on-surface-variant">
+                            Enter the 6-digit code sent via {checkStatusOtpChannel === 'whatsapp' ? 'WhatsApp' : 'SMS'} to +{getCountryCallingCode(checkStatusCountryIso)} {checkStatusPhoneDigits}
+                          </span>
+                        </div>
+                        <input
+                          type="tel"
+                          inputMode="numeric"
+                          value={checkStatusOtpCode}
+                          onChange={(e) => setCheckStatusOtpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                          placeholder="000000"
+                          className="w-full bg-surface-container-lowest border-none rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-outline transition-all text-on-surface placeholder:text-outline-variant font-mono text-lg tracking-[0.3em] text-center"
+                        />
+                        <button
+                          type="button"
+                          disabled={checkStatusPending}
+                          onClick={() => {
+                            setCheckStatusError(null)
+                            setCheckStatusOtpCode('')
+                            startCheckStatusTransition(async () => {
+                              const statusPhone = `+${getCountryCallingCode(checkStatusCountryIso)}${checkStatusPhoneDigits}`
+                              const r = await sendApplicationStatusOtp(statusPhone, checkStatusOtpChannel)
+                              if (!r.success) { setCheckStatusError(r.error ?? 'Could not resend code.'); return }
+                              setCheckStatusOtpChannel(r.channel)
+                            })
+                          }}
+                          className="self-start text-xs font-mono uppercase tracking-wider text-primary hover:underline disabled:opacity-50"
+                        >
+                          Resend code
+                        </button>
+                      </div>
+                    )}
+
+                    {checkStatusError && (
+                      <p className="text-error text-sm flex items-start gap-1.5">
+                        <span className="material-symbols-outlined text-base shrink-0 mt-0.5">error</span>
+                        {checkStatusError}
+                      </p>
+                    )}
+
+                    <button
+                      type="button"
+                      onClick={handleCheckStatusSubmit}
+                      disabled={checkStatusPending}
+                      className="w-full bg-gradient-to-r from-primary to-primary-container text-on-primary py-5 rounded-xl font-headline font-bold text-lg flex items-center justify-center gap-3 shadow-[0_12px_32px_rgba(171,46,0,0.15)] active:scale-[0.98] transition-all disabled:opacity-50"
+                    >
+                      {checkStatusPending
+                        ? 'Processing…'
+                        : !checkStatusOtpSent
+                          ? 'Send verification code'
+                          : 'Verify & check status'}
+                      {!checkStatusPending && <span className="material-symbols-outlined">arrow_forward</span>}
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           </div>
