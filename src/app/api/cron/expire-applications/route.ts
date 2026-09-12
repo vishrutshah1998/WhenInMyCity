@@ -62,7 +62,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { sendWhatsAppTemplate } from '@/lib/whatsapp'
+import { sendWhatsAppTemplate, recordWhatsAppSendFailure } from '@/lib/whatsapp'
 
 // ---------------------------------------------------------------------------
 // Auth guard
@@ -90,7 +90,9 @@ const PAGE_SIZE = 500
 // ---------------------------------------------------------------------------
 
 type ExpiredRow = {
+  id:              string
   applicant_phone: string
+  event_id:        string
   event: { title: string; slug: string; starts_at: string } | { title: string; slug: string; starts_at: string }[] | null
 }
 
@@ -111,21 +113,19 @@ async function notifyExpiry(row: ExpiredRow): Promise<void> {
   const event = Array.isArray(row.event) ? row.event[0] : row.event
   if (!event) return
 
-  const eventDateOnly = new Date(event.starts_at).toLocaleDateString('en-IN', {
-    weekday: 'long', day: 'numeric', month: 'short', year: 'numeric',
-  })
-
   try {
-    // NOTE: rsvp_application_expired_v1 is a placeholder name — this
-    // template does not exist in Meta Business Manager yet, so this send
-    // will fail silently (caught + logged below) until it's created and
-    // approved there. Same situation as every placeholder template
-    // introduced for this event_applications flow (event-applications.ts).
+    // Meta's approved body is "Your payment window for {{1}} has closed and
+    // your spot was released." — 1 body var (title only, no date). Confirmed
+    // against WhatsApp Manager 2026-09-11.
     await sendWhatsAppTemplate(row.applicant_phone, 'rsvp_application_expired_v1', 'en', [
-      event.title, eventDateOnly,
+      event.title,
     ], [{ index: 0, urlParameter: event.slug }])
   } catch (err) {
     console.error('[expire-applications] WhatsApp send failed', { error: String(err) })
+    await recordWhatsAppSendFailure({
+      templateName: 'rsvp_application_expired_v1', recipientPhone: row.applicant_phone, error: err,
+      eventId: row.event_id, contextId: row.id,
+    })
   }
 }
 
@@ -187,7 +187,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     .in('id', ids)
     .eq('status', 'approved')
     .is('rsvp_id', null)
-    .select('id, applicant_phone, event:event_id (title, slug, starts_at)')
+    .select('id, applicant_phone, event_id, event:event_id (title, slug, starts_at)')
 
   if (updateError) {
     console.error('[expire-applications] update failed', updateError.message)

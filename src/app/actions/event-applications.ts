@@ -31,7 +31,7 @@ import { requireAuth } from '@/lib/auth/requireAuth'
 import { isGuestPhoneVerified } from '@/app/actions/guest-otp'
 import { isApplicationStatusPhoneVerified } from '@/app/actions/application-status-otp'
 import { checkRSVPRateLimit } from '@/lib/ratelimit'
-import { sendWhatsAppTemplate } from '@/lib/whatsapp'
+import { sendWhatsAppTemplate, recordWhatsAppSendFailure } from '@/lib/whatsapp'
 import { initiateRSVP } from '@/app/actions/rsvp'
 import type { TicketTier } from '@/types/events'
 import type { ApplicationStatus, EventApplicationStatus } from '@/types/database'
@@ -391,10 +391,12 @@ const DecisionSchema = z.enum(['approved', 'declined', 'waitlisted'])
 async function notifyApplicationDecision(
   decision: 'approved' | 'declined',
   application: { id: string; applicant_phone: string },
-  event: { title: string; slug: string; starts_at: string },
+  event: { id: string; title: string; slug: string; starts_at: string },
   paymentDeadline: string | null,
 ): Promise<void> {
   if (!application.applicant_phone) return
+
+  const templateName = decision === 'approved' ? 'rsvp_application_approved_paid_v1' : 'rsvp_application_decline'
 
   try {
     if (decision === 'approved') {
@@ -406,25 +408,39 @@ async function notifyApplicationDecision(
       const deadlineTimeStr = paymentDeadline
         ? new Date(paymentDeadline).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })
         : ''
+      const eventDateOnly = new Date(event.starts_at).toLocaleDateString('en-IN', {
+        weekday: 'long', day: 'numeric', month: 'short', year: 'numeric',
+      })
+      const eventTimeOnly = new Date(event.starts_at).toLocaleTimeString('en-IN', {
+        hour: '2-digit', minute: '2-digit',
+      })
 
-      // NOTE: rsvp_application_approved_paid_v1 is a placeholder name — this
-      // template does not exist in Meta Business Manager yet, so this send
-      // will fail silently (caught + logged below) until it's created and
-      // approved there. Same situation as every placeholder template
-      // introduced in migration 079 (rsvp.ts).
+      // Meta's approved body is "Complete payment for {{1}} by {{2}} — your
+      // event is on {{3}} at {{4}}": {{2}} is the payment deadline (a single
+      // combined date+time string), {{3}}/{{4}} are the EVENT's own date/time
+      // — distinct from the deadline. Confirmed against WhatsApp Manager
+      // 2026-09-11 (4 body vars, not 3).
       await sendWhatsAppTemplate(application.applicant_phone, 'rsvp_application_approved_paid_v1', 'en', [
-        event.title, deadlineDateStr, deadlineTimeStr,
+        event.title, `${deadlineDateStr}, ${deadlineTimeStr}`, eventDateOnly, eventTimeOnly,
       ], [{ index: 0, urlParameter: application.id }])
     } else {
       const eventDateOnly = new Date(event.starts_at).toLocaleDateString('en-IN', {
         weekday: 'long', day: 'numeric', month: 'short', year: 'numeric',
       })
-      await sendWhatsAppTemplate(application.applicant_phone, 'rsvp_application_declined_v1', 'en', [
+      // Meta's approved decline template is named 'rsvp_application_decline'
+      // — no '_v1', and "decline" not "declined" (same rename as rsvp.ts's
+      // sendApplicationDecisionWhatsApp) — and has no button component at
+      // all, unlike the other 4 templates, so no buttons param is passed.
+      await sendWhatsAppTemplate(application.applicant_phone, 'rsvp_application_decline', 'en', [
         event.title, eventDateOnly,
-      ], [{ index: 0, urlParameter: event.slug }])
+      ])
     }
   } catch (err) {
     console.error('[decidePaidApplication] WhatsApp send failed', { decision, error: String(err) })
+    await recordWhatsAppSendFailure({
+      templateName, recipientPhone: application.applicant_phone, error: err,
+      eventId: event.id, contextId: application.id,
+    })
   }
 }
 

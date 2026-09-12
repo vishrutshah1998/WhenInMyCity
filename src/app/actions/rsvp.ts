@@ -41,7 +41,7 @@ import { updateAttendanceStreak } from '@/lib/streak'
 import { redeemReferralCode } from '@/app/actions/referral'
 import { createNotification } from '@/app/actions/notifications'
 import { isGuestPhoneVerified } from '@/app/actions/guest-otp'
-import { sendWhatsAppTemplate } from '@/lib/whatsapp'
+import { sendWhatsAppTemplate, recordWhatsAppSendFailure } from '@/lib/whatsapp'
 import type { UserTier, ApplicationStatus } from '@/types/database'
 
 // ---------------------------------------------------------------------------
@@ -1209,15 +1209,22 @@ export async function casualRSVPGuest(params: {
   //
   // A 'going' response gated into application_status='pending' gets the
   // "application received" template instead of the normal confirmation —
-  // it isn't confirmed as an attendee yet. NOTE: rsvp_application_received_v1
-  // is a placeholder name — this template does not exist in Meta Business
-  // Manager yet, so the send below will fail silently (caught + logged)
-  // until it's created and approved there.
+  // it isn't confirmed as an attendee yet.
   if (newApplicationStatus === 'pending') {
+    const eventDateOnly = new Date(event.starts_at).toLocaleDateString('en-IN', {
+      weekday: 'long', day: 'numeric', month: 'short', year: 'numeric',
+    })
+    const eventTimeOnly = new Date(event.starts_at).toLocaleTimeString('en-IN', {
+      hour: '2-digit', minute: '2-digit',
+    })
     sendWhatsAppTemplate(phone, 'rsvp_application_received_v1', 'en', [
-      event.title,
+      event.title, eventDateOnly, eventTimeOnly,
     ], [{ index: 0, urlParameter: event.slug }]).catch((err) => {
       console.error('[casualRSVPGuest] application-received WhatsApp send failed', { eventId, error: String(err) })
+      recordWhatsAppSendFailure({
+        templateName: 'rsvp_application_received_v1', recipientPhone: phone, error: err,
+        eventId, contextId: existing?.id ?? null,
+      })
     })
   } else if (intent !== 'not_going') {
     const eventDateOnly = new Date(event.starts_at).toLocaleDateString('en-IN', {
@@ -1338,8 +1345,8 @@ const DecisionSchema = z.enum(['approved', 'declined', 'waitlisted'])
 
 async function sendApplicationDecisionWhatsApp(
   decision: 'approved' | 'declined',
-  rsvp: { attendee_name: string; attendee_phone: string },
-  event: { title: string; slug: string; starts_at: string; venue_name: string; venue_address: string },
+  rsvp: { id: string; attendee_name: string; attendee_phone: string },
+  event: { id: string; title: string; slug: string; starts_at: string },
 ): Promise<void> {
   if (!rsvp.attendee_phone) return
 
@@ -1349,23 +1356,27 @@ async function sendApplicationDecisionWhatsApp(
   const eventTimeOnly = new Date(event.starts_at).toLocaleTimeString('en-IN', {
     hour: '2-digit', minute: '2-digit',
   })
-  const venueLine = `${event.venue_name}${event.venue_address ? `, ${event.venue_address}` : ''}`
 
-  // NOTE: rsvp_application_approved_v1 / rsvp_application_declined_v1 are
-  // placeholder names — neither template exists in Meta Business Manager
-  // yet, so these sends will fail silently (caught + logged) until they're
-  // created and approved there.
-  const templateName = decision === 'approved' ? 'rsvp_application_approved_v1' : 'rsvp_application_declined_v1'
+  // Meta's approved decline template is named 'rsvp_application_decline' —
+  // no '_v1', and "decline" not "declined" — confirmed 2026-09-11 against
+  // WhatsApp Manager after 'rsvp_application_declined_v1' 404'd outright.
+  const templateName = decision === 'approved' ? 'rsvp_application_approved_v1' : 'rsvp_application_decline'
   const templateParams = decision === 'approved'
-    ? [event.title, eventDateOnly, eventTimeOnly, venueLine]
+    ? [event.title, eventDateOnly, eventTimeOnly]
     : [event.title, eventDateOnly]
 
   try {
-    await sendWhatsAppTemplate(rsvp.attendee_phone, templateName, 'en', templateParams, [
-      { index: 0, urlParameter: event.slug },
-    ])
+    // rsvp_application_decline has no button component in Meta — passing a
+    // button param for it 400s ("Template does not contain button
+    // components"). Only the approved template has one.
+    const buttons = decision === 'approved' ? [{ index: 0, urlParameter: event.slug }] : undefined
+    await sendWhatsAppTemplate(rsvp.attendee_phone, templateName, 'en', templateParams, buttons)
   } catch (err) {
     console.error('[decideApplication] WhatsApp send failed', { decision, error: String(err) })
+    await recordWhatsAppSendFailure({
+      templateName, recipientPhone: rsvp.attendee_phone, error: err,
+      eventId: event.id, contextId: rsvp.id,
+    })
   }
 }
 
@@ -1393,7 +1404,7 @@ export async function decideApplication(
 
   const { data: event } = await admin
     .from('events')
-    .select('id, creator_id, title, slug, starts_at, venue_name, venue_address')
+    .select('id, creator_id, title, slug, starts_at')
     .eq('id', eventId)
     .maybeSingle()
 
@@ -1454,7 +1465,7 @@ export async function bulkDecideApplications(
 
   const { data: event } = await admin
     .from('events')
-    .select('id, creator_id, title, slug, starts_at, venue_name, venue_address')
+    .select('id, creator_id, title, slug, starts_at')
     .eq('id', eventId)
     .maybeSingle()
 

@@ -9,6 +9,7 @@ const NAV = [
   { href: '/admin/events',        label: 'Events',        icon: 'event' },
   { href: '/admin/venues',         label: 'Venues',         icon: 'apartment' },
   { href: '/admin/communities',    label: 'Communities',    icon: 'groups' },
+  { href: '/admin/whatsapp-failures', label: 'WhatsApp Failures', icon: 'error_outline' },
 ]
 
 export default function AdminNav() {

@@ -24,8 +24,37 @@
 // =============================================================================
 
 import 'server-only'
+import { createAdminClient } from '@/lib/supabase/admin'
 
 const META_API_VERSION = 'v20.0'
+
+/**
+ * Persists a failed send for the small set of templates critical enough to
+ * need admin visibility (see migration 082's comment for the full list and
+ * reasoning) — call this from a catch block after sendWhatsAppTemplate
+ * rejects. Best-effort: never throws, so a broken failure-log write can
+ * never mask or compound the original send failure.
+ */
+export async function recordWhatsAppSendFailure(params: {
+  templateName:   string
+  recipientPhone: string
+  error:          unknown
+  eventId?:       string | null
+  contextId?:     string | null
+}): Promise<void> {
+  try {
+    const admin = createAdminClient()
+    await admin.from('whatsapp_send_failures').insert({
+      template_name:   params.templateName,
+      recipient_phone: params.recipientPhone,
+      error_detail:    params.error instanceof Error ? params.error.message : String(params.error),
+      event_id:        params.eventId ?? null,
+      context_id:      params.contextId ?? null,
+    })
+  } catch (err) {
+    console.error('[recordWhatsAppSendFailure] failed to persist WhatsApp send failure', String(err))
+  }
+}
 
 /**
  * Sends a plain-text WhatsApp message to the given phone number.
@@ -103,7 +132,11 @@ export interface WhatsAppTemplateButton {
  * `params` are mapped positionally to the template body's {{1}}, {{2}}, ... placeholders.
  * `buttons`, if the template defines any dynamic URL buttons, supplies their suffixes.
  *
- * Fails silently — notifications must never crash the caller.
+ * Rejects on a non-OK Meta response or a network/fetch exception — every
+ * caller must handle the rejection (try/catch or .catch()). Notifications
+ * must still never crash a caller outright, so this is a contract on
+ * callers, not a guarantee the function makes itself; the env-var-absent
+ * fallback path above is the one case that still resolves normally.
  */
 export async function sendWhatsAppTemplate(
   phone: string,
@@ -122,21 +155,22 @@ export async function sendWhatsAppTemplate(
     return
   }
 
-  try {
-    const components = [
-      {
-        type:       'body',
-        parameters: params.map((text) => ({ type: 'text', text })),
-      },
-      ...(buttons ?? []).map((button) => ({
-        type:       'button',
-        sub_type:   'url',
-        index:      String(button.index),
-        parameters: [{ type: 'text', text: button.urlParameter }],
-      })),
-    ]
+  const components = [
+    {
+      type:       'body',
+      parameters: params.map((text) => ({ type: 'text', text })),
+    },
+    ...(buttons ?? []).map((button) => ({
+      type:       'button',
+      sub_type:   'url',
+      index:      String(button.index),
+      parameters: [{ type: 'text', text: button.urlParameter }],
+    })),
+  ]
 
-    const res = await fetch(
+  let res: Response
+  try {
+    res = await fetch(
       `https://graph.facebook.com/${META_API_VERSION}/${phoneNumberId}/messages`,
       {
         method: 'POST',
@@ -156,14 +190,16 @@ export async function sendWhatsAppTemplate(
         }),
       },
     )
-
-    if (!res.ok) {
-      const body = await res.text().catch(() => '')
-      console.error('[sendWhatsAppTemplate] API error', {
-        status: res.status, to: normalisedPhone, templateName, body,
-      })
-    }
   } catch (err) {
     console.error('[sendWhatsAppTemplate] fetch failed', String(err))
+    throw err
+  }
+
+  if (!res.ok) {
+    const body = await res.text().catch(() => '')
+    console.error('[sendWhatsAppTemplate] API error', {
+      status: res.status, to: normalisedPhone, templateName, body,
+    })
+    throw new Error(`WhatsApp template send failed (${res.status}): ${body || res.statusText}`)
   }
 }
