@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { SK } from '@/lib/onboarding/session-keys'
 import { ONBOARDING_CTA } from '@/lib/constants/onboarding-cta-copy'
+import { OnboardingFooter } from '@/components/onboarding/OnboardingFooter'
+import { queueDraftPatch, flushDraftPatch } from '@/lib/onboarding/draft-sync'
 
 const ACCENT  = '#9B8FFF'
 const TEAL    = '#5DD9D0'
@@ -47,7 +49,7 @@ export default function E5bPage() {
     setFormats(prev => prev.includes(id) ? prev.filter(f => f !== id) : [...prev, id])
   }
 
-  function handleContinue() {
+  async function handleContinue() {
     if (isAdvancing) return
     setIsAdvancing(true)
     try {
@@ -56,6 +58,11 @@ export default function E5bPage() {
       sessionStorage.setItem(SK.e_notif_wa,    String(notifWa))
       sessionStorage.setItem(SK.e_digest_freq, digestFreq)
     } catch {}
+    queueDraftPatch('explorer', SK.e_formats,     JSON.stringify(formats))
+    queueDraftPatch('explorer', SK.e_price_max,   String(priceMax))
+    queueDraftPatch('explorer', SK.e_notif_wa,    String(notifWa))
+    queueDraftPatch('explorer', SK.e_digest_freq, digestFreq)
+    await flushDraftPatch('explorer')
     router.push('/onboarding/explorer/E6')
   }
 
@@ -173,33 +180,15 @@ export default function E5bPage() {
         </div>
       </div>
 
-      <footer style={{
-        position: 'fixed', bottom: 0, left: 0, right: 0, height: 72, zIndex: 50,
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 24px',
-        background: 'linear-gradient(to top, var(--ob-panel-bg, #1A2744) 60%, transparent 100%)',
-      }}>
-        <button type="button" onClick={() => router.push('/onboarding/explorer/E5')}
-          style={{ background: 'none', border: 'none', fontFamily: "'DM Sans', sans-serif", fontSize: 15, color: 'rgba(255,255,255,0.25)', cursor: 'pointer', padding: 0 }}>
-          ← Back
-        </button>
-        <button type="button" onClick={handleContinue} disabled={isAdvancing}
-          style={{
-            background:    ACCENT,
-            color:         NAVY,
-            fontFamily:    "var(--font-barlow), 'Barlow Condensed', sans-serif",
-            fontWeight:    700,
-            fontSize:      15,
-            letterSpacing: '0.08em',
-            textTransform: 'uppercase',
-            padding:       '12px 32px',
-            border:        'none',
-            boxShadow:     '8px 8px 0px 0px #000000',
-            cursor:        isAdvancing ? 'wait' : 'pointer',
-            opacity:       isAdvancing ? 0.7 : 1,
-          }}>
-          {ONBOARDING_CTA.E5b}
-        </button>
-      </footer>
+      <OnboardingFooter
+        onBack={() => router.push('/onboarding/explorer/E5')}
+        cta={ONBOARDING_CTA.E5b}
+        onContinue={handleContinue}
+        ctaDisabled={isAdvancing}
+        ctaMode="loadingOnly"
+        ctaAccent={ACCENT}
+        ctaTextColor={NAVY}
+      />
     </>
   )
 }

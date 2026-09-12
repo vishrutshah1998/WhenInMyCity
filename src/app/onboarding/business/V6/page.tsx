@@ -6,6 +6,7 @@ import { SK } from '@/lib/onboarding/session-keys'
 import { VenueNoticePoster } from '@/components/onboarding/BoardingPassArtifact'
 import { inferAmenitiesFromGoogle } from '@/lib/onboarding/google-type-map'
 import { AMENITY_CATEGORIES } from '@/lib/constants/venueOnboarding'
+import { queueDraftPatch, flushDraftPatch } from '@/lib/onboarding/draft-sync'
 
 const ACCENT = '#5DD9D0'
 const MONO   = "var(--font-jetbrains-mono), 'JetBrains Mono', monospace"
@@ -96,6 +97,7 @@ export default function V6Page() {
       if (next.has(item)) next.delete(item)
       else next.add(item)
       try { sessionStorage.setItem(SK.v_amenities, JSON.stringify([...next])) } catch {}
+      queueDraftPatch('business', SK.v_amenities, JSON.stringify([...next]))
       return next
     })
   }
@@ -112,16 +114,20 @@ export default function V6Page() {
   function clearAll() {
     setSelectedAmenities(new Set())
     try { sessionStorage.setItem(SK.v_amenities, JSON.stringify([])) } catch {}
+    queueDraftPatch('business', SK.v_amenities, JSON.stringify([]), { immediate: true })
   }
 
   function handleSaveDraft() {
     try { sessionStorage.setItem(SK.v_amenities, JSON.stringify([...selectedAmenities])) } catch {}
+    queueDraftPatch('business', SK.v_amenities, JSON.stringify([...selectedAmenities]), { immediate: true })
   }
 
   async function handleLookingGood() {
     if (isSaving) return
     setIsSaving(true)
     try { sessionStorage.setItem(SK.v_amenities, JSON.stringify([...selectedAmenities])) } catch {}
+    queueDraftPatch('business', SK.v_amenities, JSON.stringify([...selectedAmenities]))
+    await flushDraftPatch('business')
     router.push('/onboarding/business/V7')
   }
 
@@ -324,6 +330,7 @@ export default function V6Page() {
       <footer style={{
         position:   'fixed', bottom: 0, left: 0, right: 0, zIndex: 50,
         background: 'linear-gradient(to top, var(--ob-panel-bg, #1A2744) 60%, transparent 100%)',
+        paddingBottom: 'env(safe-area-inset-bottom, 0px)',
       }}>
         <p style={{
           fontFamily:  MONO, fontSize: 9, letterSpacing: '0.06em',

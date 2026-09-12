@@ -8,6 +8,7 @@ import { completeBusinessOnboarding } from '@/app/actions/persona-complete'
 import { createClient } from '@/lib/supabase/client'
 import { ArtifactStyles, ScaledStage, BrandCard } from '@/components/onboarding/artifacts'
 import { profileUrl } from '@/lib/profile-url'
+import { queueDraftPatch, cancelPendingDraftWrites } from '@/lib/onboarding/draft-sync'
 
 const ACCENT = '#F5A800'
 const CORAL  = '#E8705A'
@@ -193,9 +194,11 @@ const name    = sessionStorage.getItem(SK.b_name) ?? ''
   }, [router])
 
   useEffect(() => {
+    const serialized = JSON.stringify({ whatsapp, email, instagram, bio })
     try {
-      sessionStorage.setItem(SK.r_contact, JSON.stringify({ whatsapp, email, instagram, bio }))
+      sessionStorage.setItem(SK.r_contact, serialized)
     } catch {}
+    queueDraftPatch('business', SK.r_contact, serialized)
   }, [whatsapp, email, instagram, bio])
 
   function getGoals(): string[] {
@@ -236,6 +239,7 @@ const name    = sessionStorage.getItem(SK.b_name) ?? ''
 
   async function handleDone() {
     if (!email.trim() || isSubmitting) return
+    cancelPendingDraftWrites('business')
     triggerThump()
     setIsSubmitting(true)
     setSubmitError(null)
@@ -736,6 +740,7 @@ const name    = sessionStorage.getItem(SK.b_name) ?? ''
         position:   'fixed', bottom: 0, left: 0, right: 0, zIndex: 50, height: 72,
         display:    'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 24px',
         background: `linear-gradient(to top, ${NAVY} 60%, transparent 100%)`,
+        paddingBottom: 'env(safe-area-inset-bottom, 0px)',
       }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
           <span style={{ fontFamily: MONO, fontSize: 10, color: `${ACCENT}99`, letterSpacing: '0.15em', textTransform: 'uppercase' as const }}>

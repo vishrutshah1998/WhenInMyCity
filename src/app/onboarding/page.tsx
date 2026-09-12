@@ -3,9 +3,12 @@
 import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
-import { SK } from '@/lib/onboarding/session-keys'
+import { SK, clearNewOnboardingKeys } from '@/lib/onboarding/session-keys'
 import { WimcWordmark } from '@/components/WimcWordmark'
 import { PAPER } from '@/lib/onboarding/design-tokens'
+import { getLatestOnboardingDraft, deleteOnboardingDraft } from '@/app/actions/onboarding-draft'
+import type { OnboardingPersona } from '@/lib/onboarding/draft-sync'
+import { STEP_MAP } from '@/app/onboarding/layout'
 
 const LEFT_BG  = '#1A2744'
 const RIGHT_BG = PAPER.bg
@@ -68,13 +71,71 @@ const PERSONAS = [
   },
 ] as const
 
+// Deep-link persona map — hoisted so both the initial-render selection below
+// and the mount effect share one source of truth.
+const PERSONA_MAP: Record<string, { skValue: string; selectedId: string; freshNext: string; addNext: string }> = {
+  creator:  { skValue: 'creator',  selectedId: 'creator',  freshNext: '/onboarding/creator/C2',       addNext: '/onboarding/creator/C2?mode=add' },
+  explorer: { skValue: 'explorer', selectedId: 'explorer', freshNext: '/onboarding/explorer/E2',      addNext: '/onboarding/explorer/E2?mode=add' },
+  venue:    { skValue: 'business', selectedId: 'business', freshNext: '/onboarding/business/B3',      addNext: '/onboarding/business/B2?mode=add&type=venue' },
+  brand:    { skValue: 'business', selectedId: 'business', freshNext: '/onboarding/business/B3',      addNext: '/onboarding/business/B2?mode=add&type=brand' },
+}
+
+// Add-mode (?mode=add&persona=X) pre-selects a persona before the S1 screen
+// ever paints, so the first frame already shows it selected instead of
+// flashing the neutral "Who are you?" state and correcting after mount.
+function getInitialAddSelection(searchParams: URLSearchParams): typeof PERSONAS[number]['id'] | null {
+  if (searchParams.get('mode') !== 'add') return null
+  const p = searchParams.get('persona')
+  if (!p) return null
+  const entry = PERSONA_MAP[p]
+  return entry ? (entry.selectedId as typeof PERSONAS[number]['id']) : null
+}
+
 function S1Inner() {
   const router       = useRouter()
   const searchParams = useSearchParams()
-  const [selected,  setSelected]  = useState<string | null>(null)
+  const [selected,  setSelected]  = useState<string | null>(() => getInitialAddSelection(searchParams))
   const [hovered,   setHovered]   = useState<string | null>(null)
-  const [advancing, setAdvancing] = useState(false)
+  const [advancing, setAdvancing] = useState<boolean>(() => getInitialAddSelection(searchParams) !== null)
   const [cityNode,  setCityNode]  = useState('NODE_IN_01')
+
+  // ── Explicit resume prompt ────────────────────────────────────────────────
+  // Only for an organic landing on /onboarding — a deep-linked ?persona= or
+  // ?mode=add visit is already an explicit choice (e.g. "Add a persona" from
+  // the dashboard) and shouldn't be interrupted by an older draft's prompt.
+  const isDeepLink = searchParams.get('persona') !== null
+  const [resumeStatus, setResumeStatus] = useState<'checking' | 'offer' | 'none'>(isDeepLink ? 'none' : 'checking')
+  const [resumeInfo,   setResumeInfo]   = useState<{ persona: OnboardingPersona; last_step_path: string } | null>(null)
+
+  useEffect(() => {
+    if (isDeepLink) return
+    let cancelled = false
+    getLatestOnboardingDraft().then(result => {
+      if (cancelled) return
+      if (result) {
+        setResumeInfo(result)
+        setResumeStatus('offer')
+      } else {
+        setResumeStatus('none')
+      }
+    }).catch(() => { if (!cancelled) setResumeStatus('none') })
+    return () => { cancelled = true }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  async function handleResume() {
+    if (!resumeInfo) return
+    try { sessionStorage.setItem(SK.persona, resumeInfo.persona) } catch {}
+    router.push(resumeInfo.last_step_path)
+  }
+
+  async function handleStartFresh() {
+    if (!resumeInfo) return
+    const persona = resumeInfo.persona
+    try { clearNewOnboardingKeys() } catch {}
+    setResumeStatus('none')
+    await deleteOnboardingDraft(persona)
+  }
 
   useEffect(() => {
     try {
@@ -90,18 +151,14 @@ function S1Inner() {
   // Deep-link: ?persona=creator/venue/explorer/brand
   // Fresh onboarding (?persona only): skip S1 entirely.
   // Add-persona (?mode=add&persona): pre-select and auto-advance so the user
-  // briefly sees which persona was chosen before moving on.
+  // briefly sees which persona was chosen before moving on. selected/advancing
+  // are already correct on the very first render (see getInitialAddSelection
+  // above) — this effect just re-asserts them (covers searchParams changing
+  // without a remount) and owns the sessionStorage write + delayed navigate.
   useEffect(() => {
     const p     = searchParams.get('persona')
     const isAdd = searchParams.get('mode') === 'add'
     if (!p) return
-
-    const PERSONA_MAP: Record<string, { skValue: string; selectedId: string; freshNext: string; addNext: string }> = {
-      creator:  { skValue: 'creator',  selectedId: 'creator',  freshNext: '/onboarding/creator/C2',       addNext: '/onboarding/creator/C2?mode=add' },
-      explorer: { skValue: 'explorer', selectedId: 'explorer', freshNext: '/onboarding/explorer/E2',      addNext: '/onboarding/explorer/E2?mode=add' },
-      venue:    { skValue: 'business', selectedId: 'business', freshNext: '/onboarding/business/B3',      addNext: '/onboarding/business/B2?mode=add&type=venue' },
-      brand:    { skValue: 'business', selectedId: 'business', freshNext: '/onboarding/business/B3',      addNext: '/onboarding/business/B2?mode=add&type=brand' },
-    }
 
     const entry = PERSONA_MAP[p]
     if (!entry) return
@@ -140,8 +197,73 @@ function S1Inner() {
 
   const activeId = hovered || selected
 
+  // ── Resume-check gate — avoids a flash of the "Who are you?" cards before
+  // we know whether there's a draft to offer resuming instead.
+  if (resumeStatus === 'checking') {
+    return <div style={{ minHeight: 'max(884px, 100dvh)', background: LEFT_BG }} />
+  }
+
+  if (resumeStatus === 'offer' && resumeInfo) {
+    const p = PERSONAS.find(x => x.id === resumeInfo.persona)
+    const accent = p?.accent ?? CORAL
+    const step = STEP_MAP[resumeInfo.last_step_path]
+    return (
+      <div style={{ minHeight: 'max(884px, 100dvh)', display: 'flex', overflow: 'hidden' }}>
+        <div style={{
+          width: '100%', maxWidth: 620, margin: '0 auto',
+          background: LEFT_BG, display: 'flex', flexDirection: 'column',
+        }}>
+          <div style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            padding: '18px 28px', borderBottom: `1px dashed rgba(232,112,90,0.25)`, flexShrink: 0,
+          }}>
+            <WimcWordmark color="white" height={26} />
+          </div>
+
+          <div style={{ flex: 1, padding: '48px 40px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+            <p style={{ fontFamily: 'var(--font-jetbrains-mono), monospace', fontSize: 9, letterSpacing: '0.25em', textTransform: 'uppercase', color: `${accent}99`, margin: '0 0 16px' }}>
+              — WELCOME BACK
+            </p>
+            <h1 style={{ fontFamily: "'Outfit', sans-serif", fontSize: 'clamp(30px, 4vw, 44px)', fontWeight: 900, color: '#F0EFF8', lineHeight: 1.08, letterSpacing: '-0.02em', margin: '0 0 18px' }}>
+              Pick up where<br />you left off?
+            </h1>
+            <p style={{ fontFamily: 'var(--font-dm-sans), sans-serif', fontSize: 14, color: 'rgba(255,255,255,0.45)', lineHeight: 1.5, margin: '0 0 36px', maxWidth: 440 }}>
+              {p ? <>{p.emoji} You were setting up your <strong style={{ color: accent }}>{p.label}</strong> page{step ? <> — step {step.current} of {step.total}</> : null}.</> : 'You have an onboarding draft in progress.'}
+            </p>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
+              <button
+                type="button"
+                onClick={handleResume}
+                style={{
+                  background: accent, color: '#1A2744',
+                  fontFamily: 'var(--font-dm-sans), sans-serif', fontWeight: 700, fontSize: 14,
+                  letterSpacing: '0.06em', padding: '13px 26px', border: 'none', cursor: 'pointer',
+                  boxShadow: '6px 6px 0px 0px rgba(0,0,0,0.9)', transition: 'all 140ms',
+                }}
+              >
+                CONTINUE →
+              </button>
+              <button
+                type="button"
+                onClick={handleStartFresh}
+                style={{
+                  background: 'none', border: 'none', fontFamily: 'var(--font-dm-sans), sans-serif', fontSize: 13,
+                  color: 'rgba(255,255,255,0.35)', cursor: 'pointer', padding: 0,
+                  textDecoration: 'underline', textDecorationStyle: 'dashed', textUnderlineOffset: 3,
+                }}
+              >
+                Start fresh instead
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
-    <div style={{ height: '100dvh', display: 'flex', overflow: 'hidden' }}>
+    <div style={{ minHeight: 'max(884px, 100dvh)', display: 'flex', overflow: 'hidden' }}>
 
       {/* ── LEFT PANEL ─────────────────────────────── */}
       <div className="ob-s1-left" style={{

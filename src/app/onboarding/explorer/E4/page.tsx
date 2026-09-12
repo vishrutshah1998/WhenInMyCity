@@ -1,73 +1,56 @@
 'use client'
 
-import { useState, useEffect, useMemo, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { SK } from '@/lib/onboarding/session-keys'
 import { ONBOARDING_CTA } from '@/lib/constants/onboarding-cta-copy'
+import { OnboardingFooter } from '@/components/onboarding/OnboardingFooter'
+import { CitySelect } from '@/components/shared/CitySelect'
+import { CITIES, type City } from '@/lib/constants/interests'
+import { queueDraftPatch, flushDraftPatch } from '@/lib/onboarding/draft-sync'
 const ACCENT = '#9B8FFF'
-
-interface City { name: string; state: string }
-
-const CITIES: City[] = [
-  { name: 'Ahmedabad',   state: 'GJ' }, { name: 'Gandhinagar', state: 'GJ' },
-]
-
-const DEFAULT_TOP = ['Ahmedabad', 'Gandhinagar']
 
 export default function E4Page() {
   const router = useRouter()
   const [selectedCity,   setSelectedCity]   = useState<City | null>(null)
-  const [searchQuery,    setSearchQuery]    = useState('')
-  const [showDropdown,   setShowDropdown]   = useState(true)
   const [isAdvancing,    setIsAdvancing]    = useState(false)
   const [eName,          setEName]          = useState('')
-  const [eScene,         setEScene]         = useState('')
   const [neighbourhood,  setNeighbourhood]  = useState('')
 
   useEffect(() => {
     if (typeof window === 'undefined') return
     if (sessionStorage.getItem(SK.persona) !== 'explorer') { router.replace('/onboarding'); return }
-    const scene = sessionStorage.getItem(SK.e_scene)
-    if (!scene) { router.replace('/onboarding/explorer/E3'); return }
-    setEScene(scene)
-    const n = sessionStorage.getItem(SK.e_name)
-    if (n) setEName(n)
+    const name = sessionStorage.getItem(SK.e_name)
+    if (!name) { router.replace('/onboarding/explorer/E2'); return }
+    setEName(name)
     const saved = sessionStorage.getItem(SK.e_city)
     if (saved) {
       const city = CITIES.find(c => c.name === saved)
-      if (city) { setSelectedCity(city); setSearchQuery(city.name); setShowDropdown(false) }
+      if (city) setSelectedCity(city)
     }
     const savedNeighbourhood = sessionStorage.getItem(SK.e_neighbourhood)
     if (savedNeighbourhood) setNeighbourhood(savedNeighbourhood)
   }, [router])
 
-  const filteredCities = useMemo<City[]>(() => {
-    const q = searchQuery.trim().toLowerCase()
-    if (!q) return CITIES.filter(c => DEFAULT_TOP.includes(c.name))
-    return CITIES.filter(c => c.name.toLowerCase().includes(q)).slice(0, 6)
-  }, [searchQuery])
-
-  function handleCitySelect(city: City) {
+  function handleCityChange(city: City | null) {
     setSelectedCity(city)
-    setSearchQuery(city.name)
-    setShowDropdown(false)
-    try { sessionStorage.setItem(SK.e_city, city.name) } catch {}
-    window.dispatchEvent(new Event('ob-snap-update'))
+    if (city) {
+      try { sessionStorage.setItem(SK.e_city, city.name) } catch {}
+      queueDraftPatch('explorer', SK.e_city, city.name, { immediate: true })
+      window.dispatchEvent(new Event('ob-snap-update'))
+    }
   }
 
-  function handleSearchChange(val: string) {
-    setSearchQuery(val)
-    setShowDropdown(true)
-    if (selectedCity && val !== selectedCity.name) setSelectedCity(null)
-  }
-
-  function handleContinue() {
+  async function handleContinue() {
     if (!selectedCity || isAdvancing) return
     setIsAdvancing(true)
     try {
       sessionStorage.setItem(SK.e_city, selectedCity.name)
       sessionStorage.setItem(SK.e_neighbourhood, neighbourhood.trim())
     } catch {}
+    queueDraftPatch('explorer', SK.e_city,          selectedCity.name)
+    queueDraftPatch('explorer', SK.e_neighbourhood, neighbourhood.trim())
+    await flushDraftPatch('explorer')
     router.push('/onboarding/explorer/E5')
   }
 
@@ -135,14 +118,13 @@ export default function E4Page() {
         </p>
 
         <div style={{ maxWidth: 480 }}>
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={e => handleSearchChange(e.target.value)}
-            onFocus={() => setShowDropdown(true)}
+          <CitySelect
+            value={selectedCity?.name ?? ''}
+            onChange={handleCityChange}
+            dropdownWhenEmpty
+            theme={{ accent: ACCENT }}
             placeholder="Search your city..."
-            autoComplete="off"
-            style={{
+            inputStyle={{
               width:         '100%',
               background:    'transparent',
               border:        'none',
@@ -157,39 +139,6 @@ export default function E4Page() {
               transition:    'border-color 200ms',
             }}
           />
-
-          {showDropdown && filteredCities.length > 0 && (
-            <div style={{ marginTop: 4, background: '#09090E', border: '1px solid rgba(255,255,255,0.10)', boxShadow: '0 4px 16px rgba(0,0,0,0.50)', overflow: 'hidden' }}>
-              {filteredCities.map(city => {
-                const isSel = selectedCity?.name === city.name
-                return (
-                  <div
-                    key={city.name}
-                    onClick={() => handleCitySelect(city)}
-                    style={{
-                      padding:        '12px 16px',
-                      background:     isSel ? ACCENT : 'transparent',
-                      borderBottom:   '1px solid rgba(255,255,255,0.07)',
-                      display:        'flex',
-                      justifyContent: 'space-between',
-                      alignItems:     'center',
-                      cursor:         'pointer',
-                    }}
-                  >
-                    <div style={{ display: 'flex', gap: 8, alignItems: 'baseline' }}>
-                      <span style={{ fontFamily: "var(--font-barlow), 'Barlow Condensed', sans-serif", fontWeight: 700, fontSize: 16, color: isSel ? '#1A2744' : '#F0EFF8' }}>
-                        {city.name}
-                      </span>
-                      <span style={{ fontFamily: "var(--font-jetbrains-mono), monospace", fontSize: 11, color: isSel ? 'rgba(26,39,68,0.50)' : 'rgba(240,239,248,0.30)' }}>
-                        {city.state}
-                      </span>
-                    </div>
-                    {isSel && <span className="material-symbols-outlined" style={{ fontSize: 18, color: '#1A2744' }}>check</span>}
-                  </div>
-                )
-              })}
-            </div>
-          )}
         </div>
 
         {/* Neighbourhood — optional */}
@@ -226,32 +175,13 @@ export default function E4Page() {
         )}
       </div>
 
-      <footer style={{
-        position: 'fixed', bottom: 0, left: 0, right: 0, height: 72, zIndex: 50,
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 24px',
-        background: 'linear-gradient(to top, var(--ob-panel-bg, #1A2744) 60%, transparent 100%)',
-      }}>
-        <button type="button" onClick={() => router.push('/onboarding/explorer/E3')}
-          style={{ background: 'none', border: 'none', fontFamily: "'DM Sans', sans-serif", fontSize: 15, color: 'rgba(255,255,255,0.25)', cursor: 'pointer', padding: 0 }}>
-          ← Back
-        </button>
-        <button type="button" onClick={handleContinue} disabled={!canProceed}
-          style={{
-            background:    canProceed ? ACCENT : 'rgba(255,255,255,0.08)',
-            color:         canProceed ? '#1A2744' : 'rgba(255,255,255,0.22)',
-            fontFamily:    "var(--font-barlow), 'Barlow Condensed', sans-serif",
-            fontWeight:    700,
-            fontSize:      15,
-            letterSpacing: '0.08em',
-            textTransform: 'uppercase',
-            padding:       '12px 32px',
-            border:        'none',
-            boxShadow:     canProceed ? '8px 8px 0px 0px #000000' : 'none',
-            cursor:        canProceed ? 'pointer' : 'not-allowed',
-          }}>
-          {ONBOARDING_CTA.E4}
-        </button>
-      </footer>
+      <OnboardingFooter
+        onBack={() => router.push('/onboarding/explorer/E2')}
+        cta={ONBOARDING_CTA.E4}
+        onContinue={handleContinue}
+        ctaDisabled={!canProceed}
+        ctaAccent={ACCENT}
+      />
     </>
   )
 }

@@ -4,9 +4,10 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { SK } from '@/lib/onboarding/session-keys'
 import { VenueNoticePoster } from '@/components/onboarding/BoardingPassArtifact'
-import { saveVenueOnboardingStep } from '@/app/actions/venue-onboarding'
 import { deriveWimcTypes } from '@/lib/onboarding/google-type-map'
 import { ONBOARDING_CTA } from '@/lib/constants/onboarding-cta-copy'
+import { OnboardingFooter } from '@/components/onboarding/OnboardingFooter'
+import { queueDraftPatch, flushDraftPatch } from '@/lib/onboarding/draft-sync'
 
 const ACCENT = '#5DD9D0'
 const MONO   = "var(--font-jetbrains-mono), 'JetBrains Mono', monospace"
@@ -35,25 +36,6 @@ const VENUE_TYPES = [
 ] as const
 
 type VenueTypeId = typeof VENUE_TYPES[number]['id']
-
-type ValidVenueType =
-  | 'cafe' | 'coworking' | 'gallery' | 'community_hall'
-  | 'rooftop' | 'garden' | 'studio' | 'library' | 'restaurant'
-
-const TYPE_TO_VALID: Record<string, ValidVenueType> = {
-  cafe:       'cafe',       coworking:  'coworking', studio:     'studio',
-  rooftop:    'rooftop',   gallery:    'gallery',   theatre:    'community_hall',
-  event_hall: 'community_hall', retail: 'restaurant', bar:       'restaurant',
-  outdoor:    'garden',    library:    'library',   sports:     'coworking',
-  film_set:   'studio',    hotel_hall: 'community_hall', garden: 'garden',
-  workshop:   'coworking',
-}
-
-function toValidVenueTypes(types: string[]): ValidVenueType[] {
-  const result = new Set<ValidVenueType>()
-  types.forEach(t => { const v = TYPE_TO_VALID[t]; if (v) result.add(v) })
-  return Array.from(result)
-}
 
 const CHROME_HEADER: React.CSSProperties = {
   display: 'flex', justifyContent: 'space-between', alignItems: 'center',
@@ -132,6 +114,7 @@ export default function V4Page() {
     setVenueTypes(prev => {
       const next = prev.includes(id) ? prev.filter(v => v !== id) : [...prev, id]
       try { sessionStorage.setItem(SK.v_types, JSON.stringify(next)) } catch {}
+      queueDraftPatch('business', SK.v_types, JSON.stringify(next))
       return next
     })
   }
@@ -139,13 +122,17 @@ export default function V4Page() {
   function handleMinChange(val: string) {
     const n = val === '' ? '' : (parseInt(val, 10) || 1)
     setMinCapacity(n)
-    try { sessionStorage.setItem(SK.v_capacity, JSON.stringify({ min: n || null, max: maxCapacity || null })) } catch {}
+    const serialized = JSON.stringify({ min: n || null, max: maxCapacity || null })
+    try { sessionStorage.setItem(SK.v_capacity, serialized) } catch {}
+    queueDraftPatch('business', SK.v_capacity, serialized)
   }
 
   function handleMaxChange(val: string) {
     const n = val === '' ? '' : (parseInt(val, 10) || 1)
     setMaxCapacity(n)
-    try { sessionStorage.setItem(SK.v_capacity, JSON.stringify({ min: minCapacity || null, max: n || null })) } catch {}
+    const serialized = JSON.stringify({ min: minCapacity || null, max: n || null })
+    try { sessionStorage.setItem(SK.v_capacity, serialized) } catch {}
+    queueDraftPatch('business', SK.v_capacity, serialized)
   }
 
   const canProceed = venueTypes.length >= 1 && maxCapacity !== '' && (maxCapacity as number) > 0
@@ -157,34 +144,9 @@ export default function V4Page() {
       sessionStorage.setItem(SK.v_types, JSON.stringify(venueTypes))
       sessionStorage.setItem(SK.v_capacity, JSON.stringify({ min: minCapacity || null, max: maxCapacity || null }))
     } catch {}
-    try {
-      // Save step 1 (address) — captured in B2, persisted here once subpath is confirmed
-      const address       = sessionStorage.getItem(SK.v_address) ?? ''
-      const neighbourhood = sessionStorage.getItem(SK.v_neighbourhood) || undefined
-      const lat           = parseFloat(sessionStorage.getItem(SK.v_lat) ?? '') || undefined
-      const lng           = parseFloat(sessionStorage.getItem(SK.v_lng) ?? '') || undefined
-      const city          = sessionStorage.getItem(SK.v_city) || sessionStorage.getItem(SK.b_city) || bCity
-      if (address.trim().length >= 5) {
-        await saveVenueOnboardingStep(1, {
-          step: 1, name: bName, city,
-          address, neighbourhood, lat, lng,
-        })
-      }
-    } catch {}
-    try {
-      const validTypes = toValidVenueTypes(venueTypes)
-      if (validTypes.length > 0) {
-        const capMin = typeof minCapacity === 'number' ? minCapacity : undefined
-        const capMax = typeof maxCapacity === 'number' ? maxCapacity : undefined
-        await saveVenueOnboardingStep(2, {
-          step:                    2,
-          venue_type:               validTypes,
-          capacity_min:            capMin,
-          capacity_max:            capMax,
-          capacity_configurations: [],
-        })
-      }
-    } catch {}
+    queueDraftPatch('business', SK.v_types, JSON.stringify(venueTypes))
+    queueDraftPatch('business', SK.v_capacity, JSON.stringify({ min: minCapacity || null, max: maxCapacity || null }))
+    await flushDraftPatch('business')
     router.push('/onboarding/business/V6')
   }
 
@@ -353,36 +315,14 @@ export default function V4Page() {
 
       </div>
 
-      <footer style={{
-        position:   'fixed', bottom: 0, left: 0, right: 0, height: 72, zIndex: 50,
-        display:    'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 24px',
-        background: 'linear-gradient(to top, var(--ob-panel-bg, #1A2744) 60%, transparent 100%)',
-      }}>
-        <button
-          type="button"
-          onClick={() => router.push('/onboarding/business/B2')}
-          style={{ background: 'none', border: 'none', fontFamily: DM, fontSize: 15, color: 'rgba(255,255,255,0.25)', cursor: 'pointer', padding: 0 }}
-        >
-          ← Back
-        </button>
-        <button
-          type="button"
-          onClick={handleContinue}
-          disabled={!canProceed || advancing}
-          style={{
-            background:    canProceed ? ACCENT : 'rgba(255,255,255,0.08)',
-            color:         canProceed ? '#1A2744' : 'rgba(255,255,255,0.22)',
-            fontFamily:    BARLOW, fontWeight: 700, fontSize: 15,
-            letterSpacing: '0.08em', textTransform: 'uppercase' as const,
-            padding:       '12px 32px', border: 'none',
-            boxShadow:     canProceed ? '4px 4px 0px 0px rgba(0,0,0,1)' : 'none',
-            cursor:        canProceed ? 'pointer' : 'not-allowed',
-            transition:    'all 150ms',
-          }}
-        >
-          {advancing ? 'Saving…' : canProceed ? ONBOARDING_CTA.V4.withCount(venueTypes.length) : ONBOARDING_CTA.V4.base}
-        </button>
-      </footer>
+      <OnboardingFooter
+        onBack={() => router.push('/onboarding/business/B2')}
+        cta={advancing ? 'Saving…' : canProceed ? ONBOARDING_CTA.V4.withCount(venueTypes.length) : ONBOARDING_CTA.V4.base}
+        onContinue={handleContinue}
+        ctaDisabled={!canProceed || advancing}
+        ctaAccent={ACCENT}
+        ctaShadow="4px 4px 0px 0px rgba(0,0,0,1)"
+      />
     </>
   )
 }

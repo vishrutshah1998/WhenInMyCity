@@ -2,6 +2,7 @@ import { notFound, redirect } from 'next/navigation'
 import type { Metadata } from 'next'
 import { getVenuePublicPage } from '@/app/actions/venue'
 import { getBrandPublicPage } from '@/app/actions/persona-complete'
+import { getPersonaProfile, type CreatorProfileRow, type ExplorerProfileRow } from '@/app/actions/profile'
 import { getCreatorPosts, type CreatorPostWithReactions } from '@/app/actions/posts'
 import { getSubstackPosts } from '@/app/actions/blocks'
 import type { SubstackPost } from '@/lib/validators/blocks'
@@ -70,20 +71,30 @@ export async function generateMetadata({
   const supabase = await createClient()
   const { data: profile } = await supabase
     .from('user_profiles')
-    .select('display_name, bio, avatar_url, username, city')
+    .select('id, display_name, bio, avatar_url, username, city, user_role')
     .eq('username', slug)
     .maybeSingle()
 
   if (profile) {
-    const canonical = `https://www.wheninmycity.com/${cityToSlug(profile.city)}/${profile.username}`
+    // Same staleness as the main page render below: bio/avatar_url/city are
+    // frozen on user_profiles for a re-onboarded Creator (explorer_profiles
+    // has no bio column, so only avatar_url/city apply for Explorer).
+    const personaProfile = profile.user_role === 'explorer'
+      ? await getPersonaProfile(profile.id, 'explorer')
+      : await getPersonaProfile(profile.id, 'creator')
+    const bio        = (personaProfile && 'bio' in personaProfile ? personaProfile.bio : undefined) ?? profile.bio
+    const avatarUrl  = personaProfile?.avatar_url ?? profile.avatar_url
+    const city        = personaProfile?.city ?? profile.city
+
+    const canonical = `https://www.wheninmycity.com/${cityToSlug(city)}/${profile.username}`
     return {
       title:       `${profile.display_name} (@${profile.username}) — When In My City`,
-      description: profile.bio ?? `Check out ${profile.display_name}'s page on WIMC`,
+      description: bio ?? `Check out ${profile.display_name}'s page on WIMC`,
       alternates:  { canonical },
       openGraph: {
         title:       `${profile.display_name} on WIMC`,
-        description: profile.bio ?? undefined,
-        images:      profile.avatar_url ? [{ url: profile.avatar_url }] : [],
+        description: bio ?? undefined,
+        images:      avatarUrl ? [{ url: avatarUrl }] : [],
         url:         canonical,
       },
     }
@@ -151,8 +162,18 @@ export default async function CitySlugPage({
     .maybeSingle()
 
   if (profile) {
+    // Fetched once, up front, so the canonical-city redirect below (and
+    // everything downstream) uses the persona table's city — creator_
+    // profiles/explorer_profiles is what onboarding + settings actually
+    // keep current; user_profiles.city is only guaranteed fresh when both
+    // happen to have been dual-written (see Phase 2a-patch).
+    const personaProfile = profile.user_role === 'explorer'
+      ? await getPersonaProfile(profile.id, 'explorer')
+      : await getPersonaProfile(profile.id, 'creator')
+    const currentCity = personaProfile?.city ?? profile.city
+
     // Redirect to canonical city slug if the URL doesn't match
-    const canonicalCitySlug = cityToSlug(profile.city)
+    const canonicalCitySlug = cityToSlug(currentCity)
     if (city !== canonicalCitySlug) {
       redirect(`/${canonicalCitySlug}/${profile.username}`)
     }
@@ -278,29 +299,13 @@ export default async function CitySlugPage({
 
     const upcomingEvents: Event[]     = upcomingRaw ?? []
     const blocks:         PageBlock[] = (blocksRaw ?? []) as PageBlock[]
-    const theme = resolveTheme(profile.page_theme, {
-      creatorType:        profile.creator_type,
-      explorerScene:      profile.explorer_scene,
-      businessCategories: profile.business_categories,
-    })
 
     // Explorer profile — different public page
     if (profile.user_role === 'explorer') {
       const admin = createAdminClient()
-
-      type ExplorerRow = {
-        id: string
-        interest_tags: string[]
-        preferred_formats: string[]
-        total_events_attended: number
-        followed_maker_ids: string[]
-        explorer_score: number
-      }
-      const { data: explorerRow } = await admin
-        .from('explorer_profiles')
-        .select('id, interest_tags, preferred_formats, total_events_attended, followed_maker_ids, explorer_score')
-        .eq('auth_user_id', profile.id)
-        .maybeSingle() as { data: ExplorerRow | null }
+      // Already fetched above (needed for the canonical-city redirect) —
+      // the runtime branch here guarantees it was fetched as 'explorer'.
+      const explorerRow = personaProfile as ExplorerProfileRow | null
 
       type AttendedEvent = { id: string; title: string; venue_name: string; starts_at: string; slug: string; rating: number | null }
       let attendedEvents: AttendedEvent[] = []
@@ -328,12 +333,38 @@ export default async function CitySlugPage({
         for (const row of ((historyRes.data ?? []) as HistoryRow[])) {
           if (row.events) attendedEvents.push({ ...row.events, rating: row.rating })
         }
-        followedCreators = (creatorsRes.data ?? []) as typeof followedCreators
+
+        // The bulk list above reads creator_type/city/avatar_url off
+        // user_profiles, which is frozen for those fields on re-onboarding
+        // (see Phase 2a-patch) — overlay creator_profiles for the same ids
+        // so a followed creator's card doesn't show a stale category/city.
+        const rawFollowed = (creatorsRes.data ?? []) as typeof followedCreators
+        if (rawFollowed.length > 0) {
+          const { data: followedCreatorProfiles } = await admin
+            .from('creator_profiles')
+            .select('auth_user_id, creator_type, city, avatar_url')
+            .in('auth_user_id', rawFollowed.map((c) => c.id))
+          const overlayById = new Map((followedCreatorProfiles ?? []).map((cp) => [cp.auth_user_id, cp]))
+          followedCreators = rawFollowed.map((c) => {
+            const overlay = overlayById.get(c.id)
+            return overlay ? { ...c, creator_type: overlay.creator_type, city: overlay.city, avatar_url: overlay.avatar_url ?? c.avatar_url } : c
+          })
+        }
       }
+
+      // Explicit field overrides only — a blind spread would clobber `id`
+      // (explorer_profiles has its own PK, distinct from the auth user id
+      // used everywhere downstream) and fields explorer_profiles doesn't
+      // own, like show_city_mastery.
+      const mergedProfile = explorerRow ? {
+        ...profile,
+        avatar_url: explorerRow.avatar_url ?? profile.avatar_url,
+        city:       explorerRow.city ?? profile.city,
+      } : profile
 
       return (
         <ExplorerPublicProfile
-          profile={profile}
+          profile={mergedProfile}
           explorerData={explorerRow ?? { interest_tags: [], preferred_formats: [], total_events_attended: 0, followed_maker_ids: [], explorer_score: 0 }}
           attendedEvents={attendedEvents}
           followedCreators={followedCreators}
@@ -342,9 +373,34 @@ export default async function CitySlugPage({
       )
     }
 
+    // Creator profile — creator_profiles is the table every current write
+    // path (onboarding + settings) actually keeps current; user_profiles is
+    // only guaranteed fresh for city/creator_type (dual-written), not for
+    // bio/avatar_url/social_links/page_theme on re-onboarding. Explicit
+    // field overrides only — a blind spread would clobber `id` (creator_
+    // profiles has its own PK) and show_city_mastery (never written to
+    // creator_profiles — user_profiles is the only current source for it).
+    // Already fetched above (needed for the canonical-city redirect) — the
+    // runtime branch here (past the explorer `return`) guarantees it was
+    // fetched as 'creator'.
+    const creatorProfile = personaProfile as CreatorProfileRow | null
+    const mergedProfile = creatorProfile ? {
+      ...profile,
+      bio:          creatorProfile.bio ?? profile.bio,
+      avatar_url:   creatorProfile.avatar_url ?? profile.avatar_url,
+      city:         creatorProfile.city ?? profile.city,
+      creator_type: creatorProfile.creator_type ?? profile.creator_type,
+      social_links: creatorProfile.social_links ?? profile.social_links,
+    } : profile
+
+    const theme = resolveTheme(creatorProfile?.page_theme ?? profile.page_theme, {
+      creatorType:        mergedProfile.creator_type,
+      businessCategories: profile.business_categories,
+    })
+
     return (
       <PublicProfilePage
-        profile={profile}
+        profile={mergedProfile}
         blocks={blocks}
         upcomingEvents={upcomingEvents}
         calendarEvents={upcomingEvents}

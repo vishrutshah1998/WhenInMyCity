@@ -1,4 +1,4 @@
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import {
   Inter, Plus_Jakarta_Sans, Dancing_Script, Playfair_Display,
   Space_Grotesk, Archivo_Black, Outfit, DM_Sans, JetBrains_Mono,
@@ -62,6 +62,16 @@ const dmSerifDisplay = DM_Serif_Display({
 export const metadata: Metadata = {
   title: 'When In My City',
   description: 'Creator-led offline experiences for Tier-2 India',
+}
+
+// viewportFit: 'cover' is required for env(safe-area-inset-*) to resolve to
+// anything other than 0 — without it iOS Safari never extends the layout
+// under the notch/home-indicator area at all, so safe-area insets used by
+// the persona bottom navs (PersonaNav.tsx) would silently be zero.
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  viewportFit: 'cover',
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

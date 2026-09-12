@@ -160,6 +160,44 @@ export const CreateEventSchema = z
      * Only valid when ticket_price === 0; form enforces this.
      */
     rsvp_style: z.enum(['ticketed', 'casual']).optional(),
+
+    /**
+     * If true, applicants are held for host review instead of being
+     * confirmed/booked immediately. Meaningful two ways:
+     *   - rsvp_style === 'casual' (free) — a "going" RSVP is held as
+     *     rsvps.application_status, set by casualRSVP/casualRSVPGuest
+     *     (migration 079, Phase A).
+     *   - rsvp_style === 'ticketed' with ticket_price > 0 (paid) — an
+     *     application is held in the event_applications table, set by
+     *     applyToEvent (migration 080, Phase B).
+     * A free ticketed event has no gating mechanism — this is forced false
+     * for it regardless of what's passed (see createEvent).
+     */
+    requires_approval: z.boolean().optional(),
+
+    /**
+     * Optional single custom question shown to applicants. Max 200 chars.
+     * Shared by both the free-casual (Phase A) and paid-gated (Phase B)
+     * approval flows.
+     */
+    application_question: z
+      .string()
+      .max(200, 'Application question must be at most 200 characters')
+      .optional(),
+
+    /**
+     * Minutes an approved paid-gated applicant has to pay before their
+     * approval expires (60-10080, i.e. 1 hour to 7 days). Only meaningful
+     * when rsvp_style === 'ticketed', ticket_price > 0, and
+     * requires_approval is true. No DB default (migration 080) — the
+     * 24h/1440-minute default is applied by the create-event form.
+     */
+    application_payment_window_minutes: z
+      .number()
+      .int()
+      .min(60, 'Payment window must be at least 60 minutes (1 hour)')
+      .max(10080, 'Payment window must be at most 10080 minutes (7 days)')
+      .optional(),
   })
   .refine(
     (data) => {

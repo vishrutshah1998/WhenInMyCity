@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation'
 import { SK } from '@/lib/onboarding/session-keys'
 import { BrandNoticeAd } from '@/components/onboarding/BoardingPassArtifact'
 import { ONBOARDING_CTA } from '@/lib/constants/onboarding-cta-copy'
+import { OnboardingFooter } from '@/components/onboarding/OnboardingFooter'
+import { queueDraftPatch, flushDraftPatch } from '@/lib/onboarding/draft-sync'
 
 const ACCENT = '#F5A800'
 const NAVY   = '#1A2744'
@@ -105,22 +107,27 @@ export default function R4Page() {
     const next = selectedCategory === id ? '' : id
     setSelectedCategory(next)
     try { sessionStorage.setItem(SK.r_categories, next) } catch {}
+    queueDraftPatch('business', SK.r_categories, next, { immediate: true })
   }
 
   function toggleGoal(id: string) {
     setSelectedGoals(prev => {
       const next = prev.includes(id) ? prev.filter(g => g !== id) : [...prev, id]
       try { sessionStorage.setItem(SK.r_goals, JSON.stringify(next)) } catch {}
+      queueDraftPatch('business', SK.r_goals, JSON.stringify(next))
       return next
     })
   }
 
-  function handleNext() {
+  async function handleNext() {
     if (!selectedCategory) return
     try {
       sessionStorage.setItem(SK.r_categories, selectedCategory)
       sessionStorage.setItem(SK.r_goals, JSON.stringify(selectedGoals))
     } catch {}
+    queueDraftPatch('business', SK.r_categories, selectedCategory)
+    queueDraftPatch('business', SK.r_goals, JSON.stringify(selectedGoals))
+    await flushDraftPatch('business')
     router.push('/onboarding/business/R5')
   }
 
@@ -394,16 +401,19 @@ export default function R4Page() {
       </div>
 
       {/* ── Fixed footer ──────────────────────────────── */}
-      <footer style={{
-        position:   'fixed', bottom: 0, left: 0, right: 0, zIndex: 50, height: 72,
-        display:    'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 24px',
-        background: `linear-gradient(to top, ${NAVY} 60%, transparent 100%)`,
-      }}>
-        <button type="button" onClick={() => router.push('/onboarding/business/R3')}
-          style={{ background: 'none', border: 'none', fontFamily: DM, fontSize: 15, color: 'rgba(255,255,255,0.25)', cursor: 'pointer', padding: 0 }}>
-          ← Back
-        </button>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+      <OnboardingFooter
+        onBack={() => router.push('/onboarding/business/R3')}
+        cta={ONBOARDING_CTA.R4}
+        onContinue={handleNext}
+        ctaDisabled={!canProceed}
+        ctaAccent={ACCENT}
+        ctaTextColor={NAVY}
+        ctaFontFamily={ABRIL}
+        ctaFontWeight={undefined}
+        ctaLetterSpacing={undefined}
+        ctaPadding="12px 28px"
+        ctaShadow="8px 8px 0px 0px rgba(0,0,0,0.9)"
+        sideInfo={
           <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
             <span style={{ fontFamily: BARLOW, fontWeight: 600, fontSize: 10, color: 'rgba(255,255,255,0.30)', letterSpacing: '0.10em', textTransform: 'uppercase' as const }}>
               NODE_ID: R004-BRAND
@@ -412,20 +422,8 @@ export default function R4Page() {
               STATUS: {canProceed ? 'CATEGORY_SET' : 'AWAITING_CATEGORY'}
             </span>
           </div>
-          <button type="button" onClick={handleNext} disabled={!canProceed}
-            style={{
-              background:    canProceed ? ACCENT : 'rgba(255,255,255,0.08)',
-              color:         canProceed ? NAVY : 'rgba(255,255,255,0.22)',
-              fontFamily:    ABRIL, fontSize: 15, textTransform: 'uppercase',
-              padding:       '12px 28px', border: 'none',
-              boxShadow:     canProceed ? '8px 8px 0px 0px rgba(0,0,0,0.9)' : 'none',
-              cursor:        canProceed ? 'pointer' : 'not-allowed',
-              transition:    'all 150ms',
-            }}>
-            {ONBOARDING_CTA.R4}
-          </button>
-        </div>
-      </footer>
+        }
+      />
     </>
   )
 }

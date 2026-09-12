@@ -28,10 +28,14 @@ import { sendOtpWhatsApp } from '@/lib/whatsapp-otp'
 export type OtpChannel = 'sms' | 'whatsapp'
 
 /** Namespaces Redis keys per call site so future purposes (e.g. signup/login,
- * if ever migrated onto app-owned delivery) can't collide with guest-RSVP's. */
-export type OtpPurpose = 'guest-rsvp'
+ * if ever migrated onto app-owned delivery) can't collide with guest-RSVP's.
+ * 'application-status' is the guest-facing paid-application status check
+ * (src/app/actions/application-status-otp.ts) — kept separate from
+ * 'guest-rsvp' so a status lookup can't consume or be throttled by the
+ * booking/application OTP flow. */
+export type OtpPurpose = 'guest-rsvp' | 'application-status'
 
-const OTP_TTL_SECONDS = 5 * 60
+const OTP_TTL_SECONDS = 10 * 60
 const VERIFIED_TTL_SECONDS = 15 * 60
 
 function otpKey(purpose: OtpPurpose, phone: string): string {

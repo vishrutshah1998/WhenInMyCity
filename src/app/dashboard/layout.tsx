@@ -104,7 +104,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
       <div className="wimc-grain" aria-hidden />
 
       {/* Persistent circular nav on every sub-route below /dashboard — the
-          index route's own SwipeCarousel already renders a live version of
+          index route's own PersonaTabSwitcher already renders a live version of
           this; PersonaNavGate no-ops there to avoid a double nav. Deliberately
           a sibling of .dash-content, NOT nested inside it: .dash-content has a
           mount entrance animation (globals.css, transform: translateY(28px)

@@ -18,7 +18,6 @@ import { getCreatorNavPages } from '@/lib/constants/personaNavPages'
 import CreatorHomeMobile from './CreatorHomeMobile'
 import CreatorBusinessSlot from './CreatorBusinessSlot'
 import CreatorCommunitySlot from './CreatorCommunitySlot'
-import CreatorProgressSlot from './CreatorProgressSlot'
 import { PERF_STYLE, formatPaiseCompact, formatPaiseFull, EventTicket } from './homeShared'
 import type { Notification } from '@/types/database'
 
@@ -322,7 +321,6 @@ export default function DashboardPage() {
     communitySlot: profile ? (
       <CreatorCommunitySlot currentUserId={profile.id} profile={profile} accentColor="var(--wimc-accent)" />
     ) : null,
-    progressSlot: <CreatorProgressSlot viewerCity={profile?.city ?? null} />,
   }
 
   return (

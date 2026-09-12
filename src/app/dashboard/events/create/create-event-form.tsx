@@ -458,6 +458,9 @@ export default function CreateEventForm({ profile, communityId }: { profile: Pro
   const [rsvpStyle,         setRsvpStyle        ] = useState<'ticketed' | 'casual'>('ticketed')
   const [isInviteOnly,      setIsInviteOnly     ] = useState(false)
   const [requireApproval,   setRequireApproval  ] = useState(false)
+  const [applicationQuestion, setApplicationQuestion] = useState('')
+  // Default 1440 (24h) is this form's own default — the DB column has none (migration 080).
+  const [paymentWindowMinutes, setPaymentWindowMinutes] = useState(1440)
   const [capacityType,      setCapacityType     ] = useState<'unlimited' | 'limited'>('unlimited')
   const [capacityValue,     setCapacityValue    ] = useState('')
 
@@ -549,6 +552,9 @@ export default function CreateEventForm({ profile, communityId }: { profile: Pro
     const vAddr = activeVenueAddr.trim()
     if (vAddr.length < 5) return 'Full venue address required (5+ chars).'
     if (!isFree && ticketPricePaise <= 0) return 'Please enter a ticket price greater than ₹0.'
+    if (!isFree && requireApproval && (paymentWindowMinutes < 60 || paymentWindowMinutes > 10080)) {
+      return 'Payment window must be between 60 and 10,080 minutes (1 hour to 7 days).'
+    }
     if (fanTiersEnabled && isLanternPlus && fanTiers.some(t => !t.name.trim())) return 'Each ticket tier needs a name.'
     if (!startDate || startHour === null || startMinute === null) return 'Please set a start date and time.'
     const startsAt = buildIso(startDate, startHour, startMinute)
@@ -578,6 +584,18 @@ export default function CreateEventForm({ profile, communityId }: { profile: Pro
       early_access_at: earlyAccessAt ? new Date(earlyAccessAt).toISOString() : undefined,
       ticket_tiers:    finalTiers,
       rsvp_style:      isFree ? rsvpStyle : 'ticketed',
+      // Two mutually-exclusive gated paths (see events.ts's isGatableEvent):
+      // free casual (Phase A, rsvps.application_status) or paid ticketed
+      // (Phase B, event_applications). A free ticketed event has no gate.
+      requires_approval: (isFree && rsvpStyle === 'casual') || (!isFree && finalPrice > 0)
+        ? requireApproval
+        : undefined,
+      application_question: requireApproval && ((isFree && rsvpStyle === 'casual') || (!isFree && finalPrice > 0))
+        ? (applicationQuestion.trim() || undefined)
+        : undefined,
+      application_payment_window_minutes: !isFree && finalPrice > 0 && requireApproval
+        ? paymentWindowMinutes
+        : undefined,
     }
   }
 
@@ -874,7 +892,54 @@ export default function CreateEventForm({ profile, communityId }: { profile: Pro
                 )}
 
                 <div className="space-y-2">
-                  <Toggle on={requireApproval} onToggle={() => setRequireApproval(v => !v)} label="Require approval for attendees" />
+                  {/* Only meaningful for free 'casual' RSVPs — application_status
+                      (migration 079) is only ever read/written by casualRSVP /
+                      casualRSVPGuest, which is the 'casual' flow. A ticketed
+                      event (free or paid) books through initiateRSVP instead,
+                      where this would be a silent no-op — same gate as
+                      EventManageClient's isFreeCasualEvent. */}
+                  {isFree && rsvpStyle === 'casual' && (
+                    <div>
+                      <Toggle on={requireApproval} onToggle={() => setRequireApproval(v => !v)} label="Require approval for attendees" />
+                      {requireApproval && (
+                        <textarea value={applicationQuestion} onChange={e => setApplicationQuestion(e.target.value)} maxLength={200}
+                                  placeholder="Application question (optional) — e.g. Why do you want to join?"
+                                  rows={2}
+                                  className="w-full bg-white/5 border border-dashed border-white/10 focus:border-[#E8705A] outline-none px-4 py-3 text-white/80 placeholder:text-white/20 transition-colors resize-none mt-2"
+                                  style={{ fontFamily: 'var(--font-dm-sans)', fontSize: 13, lineHeight: 1.6 }} />
+                      )}
+                    </div>
+                  )}
+
+                  {/* Paid-gated path (migration 080, Phase B) — routes through
+                      event_applications via applyToEvent/decidePaidApplication
+                      instead of rsvps.application_status. Same requireApproval/
+                      applicationQuestion state as the free-casual block above;
+                      safe to share since the two blocks never render together. */}
+                  {!isFree && (
+                    <div>
+                      <Toggle on={requireApproval} onToggle={() => setRequireApproval(v => !v)} label="Require approval before payment" />
+                      {requireApproval && (
+                        <>
+                          <textarea value={applicationQuestion} onChange={e => setApplicationQuestion(e.target.value)} maxLength={200}
+                                    placeholder="Application question (optional) — e.g. Why do you want to join?"
+                                    rows={2}
+                                    className="w-full bg-white/5 border border-dashed border-white/10 focus:border-[#E8705A] outline-none px-4 py-3 text-white/80 placeholder:text-white/20 transition-colors resize-none mt-2"
+                                    style={{ fontFamily: 'var(--font-dm-sans)', fontSize: 13, lineHeight: 1.6 }} />
+                          <div style={{ fontFamily: 'var(--font-jetbrains-mono)' }} className="text-white/40 text-[9px] uppercase tracking-widest mb-2 mt-3">
+                            Payment window (minutes)
+                          </div>
+                          <input type="number" min={60} max={10080} value={paymentWindowMinutes}
+                                 onChange={e => setPaymentWindowMinutes(Number(e.target.value))}
+                                 className="w-full bg-white/5 border-2 border-dashed border-white/10 focus:border-[#E8705A] outline-none px-4 py-2 text-white placeholder:text-white/30 transition-colors"
+                                 style={{ fontFamily: 'var(--font-jetbrains-mono)', fontSize: 13 }} />
+                          <div style={{ fontFamily: 'var(--font-jetbrains-mono)' }} className="text-white/30 text-[9px] mt-1.5">
+                            ≈ {(paymentWindowMinutes / 60).toFixed(1)}h — 60 (1hr) to 10,080 (7 days). Default 1440 (24hr).
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  )}
 
                   <div>
                     <div style={{ fontFamily: 'var(--font-jetbrains-mono)' }} className="text-white/40 text-[9px] uppercase tracking-widest mb-2 mt-3">CAPACITY</div>
