@@ -8,7 +8,7 @@
 
 import { requireAdmin } from '@/lib/auth/requireAuth'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { sendWhatsAppTemplate } from '@/lib/whatsapp'
+import { sendWhatsAppTemplate, recordWhatsAppSendFailure } from '@/lib/whatsapp'
 import { z } from 'zod'
 import type { PayoutStatus, EventStatus } from '@/types/database'
 import { createNotification } from '@/app/actions/notifications'
@@ -181,6 +181,7 @@ export async function updatePayoutStatus(raw: unknown): Promise<{ success: boole
           .eq('id', creatorId)
           .maybeSingle()
         if (profile?.phone) {
+          const phone = profile.phone
           const eventCount = payout.event_ids?.length ?? 0
           const eventLabel = eventCount === 1 ? '1 event' : `${eventCount} events`
           const accountType = payout.upi_id ? 'UPI' : payout.bank_name ? 'bank' : 'payment'
@@ -188,9 +189,15 @@ export async function updatePayoutStatus(raw: unknown): Promise<{ success: boole
             day: 'numeric', month: 'short', year: 'numeric',
           })
           const referenceNumber = id.slice(0, 8).toUpperCase()
-          await sendWhatsAppTemplate(profile.phone, 'payout_notice', 'en', [
+          await sendWhatsAppTemplate(phone, 'payout_notice', 'en', [
             amountRs.replace('₹', ''), eventLabel, accountType, processedDateStr, referenceNumber,
-          ]).catch(() => {})
+          ]).catch(async (err) => {
+            console.error('[updatePayoutStatus] payout_notice WhatsApp send failed', { payoutId: id, creatorId, error: String(err) })
+            await recordWhatsAppSendFailure({
+              templateName: 'payout_notice', recipientPhone: phone, error: err,
+              eventId: null, contextId: id,
+            })
+          })
         }
       })(),
     ])
@@ -432,4 +439,38 @@ export async function toggleVenueVerified(raw: unknown): Promise<{ success: bool
 
   if (error) return { success: false, error: error.message }
   return { success: true }
+}
+
+// ---------------------------------------------------------------------------
+// WhatsApp Send Failures (migration 082)
+// ---------------------------------------------------------------------------
+
+export interface AdminWhatsAppFailureRow {
+  id:              string
+  template_name:   string
+  recipient_phone: string
+  error_detail:    string
+  event_id:        string | null
+  context_id:      string | null
+  created_at:      string
+}
+
+/**
+ * Most recent 200 failed sends for the critical-template subset that writes
+ * to whatsapp_send_failures (see migration 082) — not every WhatsApp
+ * template in the codebase. A flat recent list, not paginated — this is an
+ * ops-visibility view, not a report.
+ */
+export async function getWhatsAppSendFailures(): Promise<{ data: AdminWhatsAppFailureRow[] | null; error?: string }> {
+  await requireAdmin()
+  const admin = createAdminClient()
+
+  const { data, error } = await admin
+    .from('whatsapp_send_failures')
+    .select('id, template_name, recipient_phone, error_detail, event_id, context_id, created_at')
+    .order('created_at', { ascending: false })
+    .limit(200)
+
+  if (error) return { data: null, error: error.message }
+  return { data: data ?? [] }
 }

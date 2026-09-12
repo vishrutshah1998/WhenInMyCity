@@ -2359,6 +2359,45 @@ export interface Database {
           }
         ]
       }
+
+      whatsapp_send_failures: {
+        Row: {
+          id:              string
+          template_name:   string
+          recipient_phone: string
+          error_detail:    string
+          event_id:        string | null
+          context_id:      string | null
+          created_at:      string
+        }
+        Insert: {
+          id?:              string
+          template_name:    string
+          recipient_phone:  string
+          error_detail:     string
+          event_id?:        string | null
+          context_id?:      string | null
+          created_at?:      string
+        }
+        Update: {
+          id?:              string
+          template_name?:   string
+          recipient_phone?: string
+          error_detail?:    string
+          event_id?:        string | null
+          context_id?:      string | null
+          created_at?:      string
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'whatsapp_send_failures_event_id_fkey'
+            columns: ['event_id']
+            isOneToOne: false
+            referencedRelation: 'events'
+            referencedColumns: ['id']
+          }
+        ]
+      }
     }
 
     Views: {
@@ -2465,6 +2504,7 @@ export type PayoutRequest        = Tables<'payout_requests'>
 export type BookingInquiry       = Tables<'booking_inquiries'>
 export type DigitalPurchase      = Tables<'digital_purchases'>
 export type WaitlistEntry        = Tables<'waitlist_entries'>
+export type WhatsAppSendFailure  = Tables<'whatsapp_send_failures'>
 
 // RSVP joined with its parent event — used in the attendee Tickets panel
 export interface RsvpWithEvent {
