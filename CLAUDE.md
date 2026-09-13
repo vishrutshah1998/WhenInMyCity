@@ -219,3 +219,16 @@ Supabase Auth phone OTP delivery goes through a MSG91 Send-SMS Auth Hook (commit
   initializer), instead of defaulting to `false` and correcting post-mount.
   Affects all 7 files currently using the hook — a shared-utility fix,
   not a per-component one.
+- **`/signin` (signup/login OTP) is still +91-only.** Phase 3 of the OTP
+  unification (WhatsApp channel for signup/login, alongside the existing SMS
+  path) shipped SMS/WhatsApp channel choice for domestic numbers only —
+  `normaliseIndianPhone()` in `src/app/actions/auth.ts` still hard-rejects
+  anything that isn't a 10-digit Indian mobile, and `signin/page.tsx` has no
+  `CountryCodeSelect`. This was a deliberate scope cut, not an oversight:
+  supporting international signin needs three coupled changes (replacing
+  `normaliseIndianPhone` with `libphonenumber-js` validation like
+  `guest-otp.ts`'s `PhoneSchema`, adding `CountryCodeSelect` to the signin UI,
+  and extending the channel-selector copy for the WhatsApp-only international
+  policy) that were bigger than this pass's scope. Guest-RSVP checkout
+  (`event-page.tsx` / `guest-otp.ts`) already supports international numbers
+  via WhatsApp-only — mirror that policy when this is eventually built.
