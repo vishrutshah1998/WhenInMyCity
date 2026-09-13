@@ -1,6 +1,6 @@
 'use client'
 
-import SwipeCarousel from '@/components/shared/SwipeCarousel'
+import PersonaTabSwitcher from '@/components/shared/PersonaTabSwitcher'
 
 interface Props {
   mapSlot:         React.ReactNode
@@ -17,22 +17,22 @@ interface Props {
 // the Server Component layout/page can't import — keep the metadata's
 // key/label/icon in sync with the `pages` array below by hand.
 
-// Thin wrapper around the shared SwipeCarousel base (extracted alongside
-// Creator's own swipe carousel — see src/components/shared/SwipeCarousel.tsx
-// for the drag/hint/nested-scroll mechanics, all unchanged from this file's
-// original hand-rolled implementation). Map is the one gutter-only page here
-// (Leaflet needs untouched single-finger pan) — every other consumer of
-// SwipeCarousel defaults to full-surface capture.
+// Thin wrapper around the shared PersonaTabSwitcher base (see
+// src/components/shared/PersonaTabSwitcher.tsx, and CreatorCarousel.tsx /
+// VenueCarousel.tsx / BrandCarousel.tsx, its other consumers). Map keeps
+// fullBleed (edge-to-edge Leaflet, no rounded-corner/scroll-clip treatment)
+// — it no longer needs gutterOnly, since there's no swipe gesture left to
+// arbitrate against; single-finger pan on the map is untouched by construction
+// now, not by a gesture-capture rule.
 export default function ExplorerCarousel({ mapSlot, homeSlot, communitiesSlot, defaultIndex = 1 }: Props) {
   return (
-    <SwipeCarousel
+    <PersonaTabSwitcher
       pages={[
-        { key: 'map',         label: 'Map',         icon: 'map',    content: mapSlot,         gutterOnly: true, fullBleed: true },
+        { key: 'map',         label: 'Map',         icon: 'map',    content: mapSlot, fullBleed: true },
         { key: 'home',        label: 'Home',        icon: 'home',   content: homeSlot },
         { key: 'communities', label: 'Communities', icon: 'groups', content: communitiesSlot },
       ]}
       defaultIndex={defaultIndex}
-      hintStorageKey="wimc_explorer_carousel_hint_v1"
       accentColor="var(--venue-accent)"
       mutedColor="var(--venue-text-secondary)"
       bgColor="var(--venue-bg-base)"

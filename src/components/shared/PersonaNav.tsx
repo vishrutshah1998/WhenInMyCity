@@ -9,7 +9,10 @@ export { NAV_HEIGHT }
 
 const useIsomorphicLayoutEffect = typeof window !== 'undefined' ? useLayoutEffect : useEffect
 
-const GAP = 10        // px gap between (virtual) slides — must match SwipeCarousel's own GAP
+const GAP = 10        // px gap between (virtual) slides — purely internal to this
+                       // file's own resting-position math now (PersonaTabSwitcher
+                       // has no real side-by-side slide track to keep in sync with,
+                       // unlike the old SwipeCarousel.tsx it replaced)
 const NAV_SLOT_W = 92 // px width of each nav circle's slot — tune live
 
 export function slideWidthOf(w: number) { return w }
@@ -39,12 +42,13 @@ interface PersonaNavBarProps {
 // fully visible — icon AND label always — sliding in a second track (this
 // component's own motion.div) whose x is a linear remap of the content
 // track's real trackX, so the active circle is always dead-center and the
-// neighbors sit partly visible at the edges, live, in both swipe directions.
+// neighbors sit partly visible at the edges as trackX springs from one
+// resting position to the next on tap.
 // Tint+ring rather than a solid accentColor fill deliberately: accentColor
 // resolves to a different (sometimes per-session-dynamic, e.g. Creator's
 // --wimc-accent) color per persona, and tint/ring only ever uses it as a
 // foreground/low-alpha value, which stays legible at any lightness.
-// Used both live (mounted inside SwipeCarousel, real drag-driven trackX) and
+// Used both live (mounted inside PersonaTabSwitcher, a tap-and-spring trackX) and
 // standalone (PersonaNavStandalone below, a trackX that's fixed forever) —
 // this component itself doesn't care which, it just reads whatever trackX
 // it's given.
@@ -212,7 +216,7 @@ interface PersonaNavStandaloneProps {
 }
 
 // For sub-routes with no live carousel mounted — measures its own width
-// (mirrors SwipeCarousel's own width-measurement effect), creates a trackX
+// (mirrors PersonaTabSwitcher's own width-measurement effect), creates a trackX
 // that's fixed at activeKey's resting position and never animated (no drag
 // handlers, nothing ever calls .set() or animate() on it again), and wires
 // tapping a circle to a real navigation instead of a local page-turn.
