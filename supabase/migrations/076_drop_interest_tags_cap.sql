@@ -7,4 +7,4 @@
 -- =============================================================================
 
 ALTER TABLE public.creator_profiles
-  DROP CONSTRAINT creator_profiles_interest_tags_max;
+  DROP CONSTRAINT IF EXISTS creator_profiles_interest_tags_max;
