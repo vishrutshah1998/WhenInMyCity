@@ -2,7 +2,7 @@
 
 import PersonaTabSwitcher from '@/components/shared/PersonaTabSwitcher'
 
-interface Props {
+export interface CreatorCarouselProps {
   accentColor:   string
   homeSlot:      React.ReactNode
   businessSlot:  React.ReactNode
@@ -33,7 +33,7 @@ interface Props {
 // card inside Business (CreatorBusinessSlot.tsx's "Recognition" group)
 // linking to /dashboard/progress, reachable regardless of tier same as
 // before.
-export default function CreatorCarousel({ accentColor, homeSlot, businessSlot, communitySlot, defaultIndex = 1 }: Props) {
+export default function CreatorCarousel({ accentColor, homeSlot, businessSlot, communitySlot, defaultIndex = 1 }: CreatorCarouselProps) {
   return (
     <PersonaTabSwitcher
       pages={[

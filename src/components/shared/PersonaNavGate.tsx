@@ -26,6 +26,7 @@ interface Props {
 // pathname.
 export default function PersonaNavGate({ pages, homeKey, indexHref, sectionRoutes, accentColor, mutedColor, elevatedBgColor, borderColor }: Props) {
   const pathname = usePathname()
+  console.log('[NAV] PersonaNavGate — pathname:', pathname, '— will render:', pathname !== indexHref)
   if (pathname === indexHref) return null
   // Studio routes (/dashboard/studio, /business/venue/studio, etc.) render
   // StudioShell, which is its own full-viewport `position:fixed; inset:0`

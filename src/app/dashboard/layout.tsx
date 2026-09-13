@@ -6,6 +6,8 @@ import Sidebar from '@/components/dashboard/Sidebar'
 import NotificationBell from '@/components/dashboard/NotificationBell'
 import CreatorAuthenticatedTopBar from '@/components/dashboard/CreatorAuthenticatedTopBar'
 import PersonaNavGate from '@/components/shared/PersonaNavGate'
+import { CreatorCarouselProvider } from './CreatorCarouselContext'
+import CreatorCarouselSlot from './CreatorCarouselSlot'
 import { getCreatorNavPages, NAV_HEIGHT, CREATOR_SECTION_ROUTES } from '@/lib/constants/personaNavPages'
 import { getNotificationsForUser } from '@/app/actions/notifications'
 import { getUnreadMessageCount } from '@/app/actions/hub'
@@ -90,6 +92,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
     .slice(0, 2)
 
   return (
+    <CreatorCarouselProvider>
     <div
       className="flex min-h-screen"
       style={{
@@ -123,6 +126,18 @@ export default async function DashboardLayout({ children }: { children: React.Re
         elevatedBgColor="var(--wimc-bg-elevated)"
         borderColor="var(--wimc-border-default)"
       />
+
+      {/* Layout-level sibling of .dash-content for the index route's own
+          PersonaTabSwitcher (rendered via CreatorCarousel) — same
+          containing-block rationale as PersonaNavGate above: a sibling of
+          .dash-content, NOT nested inside it, so the tab bar's
+          `position: fixed` elements anchor to the real viewport instead of
+          getting trapped by .dash-content's transform-in-keyframes mount
+          animation. page.tsx (a Client Component) still owns the actual
+          Supabase fetch and publishes its computed slot content up through
+          CreatorCarouselContext for this to render — see
+          CreatorCarouselContext.tsx / CreatorCarouselSlot.tsx. */}
+      <CreatorCarouselSlot />
 
       <div className="hidden md:block">
         <Sidebar
@@ -185,5 +200,6 @@ export default async function DashboardLayout({ children }: { children: React.Re
         </main>
       </div>
     </div>
+    </CreatorCarouselProvider>
   )
 }
