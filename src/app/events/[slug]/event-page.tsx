@@ -15,6 +15,7 @@ import type { Event, ApplicationStatus } from '@/types/database'
 import { TornEdge } from '@/components/ui/TornEdge'
 import { CountryCodeSelect } from '@/components/CountryCodeSelect'
 import { profileUrl } from '@/lib/profile-url'
+import { getRazorpayCheckoutKey } from '@/lib/razorpay/client'
 
 /** Domestic (+91) keeps its exact original validation; everything else defers to libphonenumber-js. */
 function isGuestPhoneValid(digits: string, iso: CountryCode): boolean {
@@ -709,7 +710,7 @@ export default function EventPage({ event, rsvpCount, spotsLeft, creator, review
     }
 
     const rzp = new window.Razorpay({
-      key:         process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID ?? '',
+      key:         getRazorpayCheckoutKey(),
       amount:      order.amount,
       currency:    'INR',
       name:        'When In My City',

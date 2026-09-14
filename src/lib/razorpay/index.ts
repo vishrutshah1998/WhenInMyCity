@@ -44,17 +44,29 @@ const RAZORPAY_BASE_V2 = 'https://api.razorpay.com/v2'
 // ---------------------------------------------------------------------------
 
 /**
+ * `RAZORPAY_MODE=test` switches every server-side Razorpay credential (API
+ * key, payment-signature secret, webhook secret) to its `_TEST`-suffixed
+ * counterpart. Unset/anything else defaults to live — existing deploys with
+ * no `RAZORPAY_MODE` set are unaffected.
+ */
+function isTestMode(): boolean {
+  return process.env.RAZORPAY_MODE === 'test'
+}
+
+/**
  * Returns a Basic Auth header value for the Razorpay API.
  * Throws if credentials are missing so callers fail loudly at startup rather
  * than silently during a live payment.
  */
 function authHeader(): string {
-  const keyId = process.env.RAZORPAY_KEY_ID
-  const keySecret = process.env.RAZORPAY_KEY_SECRET
+  const keyId = isTestMode() ? process.env.RAZORPAY_KEY_ID_TEST : process.env.RAZORPAY_KEY_ID
+  const keySecret = isTestMode() ? process.env.RAZORPAY_KEY_SECRET_TEST : process.env.RAZORPAY_KEY_SECRET
 
   if (!keyId || !keySecret) {
     throw new Error(
-      'RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET must be set in environment variables',
+      isTestMode()
+        ? 'RAZORPAY_KEY_ID_TEST and RAZORPAY_KEY_SECRET_TEST must be set in environment variables'
+        : 'RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET must be set in environment variables',
     )
   }
 
@@ -170,6 +182,20 @@ async function rzFetchBase<T>(
  * Razorpay's own API does not enforce this and will silently accept a
  * transfer to a non-activated account).
  *
+ * `capture`/`captureOptions` (optional, per-order): omitted entirely by
+ * default, which keeps every existing caller on the legacy `payment_capture:
+ * 1` auto-capture flag below, byte-identical to today. Pass `capture:
+ * 'manual'` for a fully manual-capture order (never auto-captured; Razorpay
+ * auto-refunds anything left in `authorized` after 5 days — a fixed platform
+ * ceiling, not configurable). Pass `capture: 'automatic'` with
+ * `captureOptions` to auto-capture after a delay instead — Razorpay's
+ * `payment.capture_options.automatic_expiry_period` (minutes, minimum 12).
+ * Uses the newer `payment.capture` request shape (confirmed against
+ * Razorpay's Configure Payment Capture Settings via Orders API docs,
+ * 2026-09-14), which takes precedence over dashboard capture settings — set
+ * per-order deliberately so this never touches the existing ticketed-event
+ * flow's dashboard-independent auto-capture behavior.
+ *
  * @example
  * const order = await createRazorpayOrder({
  *   amount: 29900,
@@ -184,6 +210,12 @@ export async function createRazorpayOrder(params: {
   receipt: string
   notes: Record<string, string>
   transfers?: RazorpayOrderTransfer[]
+  capture?: 'manual' | 'automatic'
+  captureOptions?: {
+    automaticExpiryPeriod: number
+    manualExpiryPeriod?: number
+    refundSpeed?: 'normal' | 'optimum'
+  }
 }): Promise<RazorpayOrder> {
   // Razorpay receipt field max length is 40 chars.
   const receipt = params.receipt.slice(0, 40)
@@ -193,10 +225,29 @@ export async function createRazorpayOrder(params: {
     currency: params.currency,
     receipt,
     notes: params.notes,
+  }
+
+  if (params.capture) {
+    // Newer `payment.capture` shape — takes precedence over the legacy
+    // `payment_capture` flag, so that flag is omitted entirely here rather
+    // than set alongside it.
+    body.payment = {
+      capture: params.capture,
+      ...(params.capture === 'automatic' && params.captureOptions
+        ? {
+            capture_options: {
+              automatic_expiry_period: params.captureOptions.automaticExpiryPeriod,
+              manual_expiry_period: params.captureOptions.manualExpiryPeriod ?? 7200,
+              refund_speed: params.captureOptions.refundSpeed ?? 'normal',
+            },
+          }
+        : {}),
+    }
+  } else {
     // payment_capture: 1 → auto-capture immediately after authorization.
     // This means we don't need a separate capture step; the webhook fires
     // payment.captured (not payment.authorized) when funds are received.
-    payment_capture: 1,
+    body.payment_capture = 1
   }
 
   if (params.transfers?.length) {
@@ -233,8 +284,8 @@ export function verifyPaymentSignature(params: {
   payment_id: string
   signature: string
 }): boolean {
-  const keySecret = process.env.RAZORPAY_KEY_SECRET
-  if (!keySecret) throw new Error('RAZORPAY_KEY_SECRET not set')
+  const keySecret = isTestMode() ? process.env.RAZORPAY_KEY_SECRET_TEST : process.env.RAZORPAY_KEY_SECRET
+  if (!keySecret) throw new Error(isTestMode() ? 'RAZORPAY_KEY_SECRET_TEST not set' : 'RAZORPAY_KEY_SECRET not set')
 
   const payload = `${params.order_id}|${params.payment_id}`
 
@@ -272,8 +323,8 @@ export function verifyWebhookSignature(
   rawBody: string,
   signature: string,
 ): boolean {
-  const webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET
-  if (!webhookSecret) throw new Error('RAZORPAY_WEBHOOK_SECRET not set')
+  const webhookSecret = isTestMode() ? process.env.RAZORPAY_WEBHOOK_SECRET_TEST : process.env.RAZORPAY_WEBHOOK_SECRET
+  if (!webhookSecret) throw new Error(isTestMode() ? 'RAZORPAY_WEBHOOK_SECRET_TEST not set' : 'RAZORPAY_WEBHOOK_SECRET not set')
 
   const expected = createHmac('sha256', webhookSecret)
     .update(rawBody)

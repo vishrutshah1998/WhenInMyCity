@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import Image from 'next/image'
 import { initiateDigitalPurchase, confirmDigitalPurchase } from '@/app/actions/digital'
+import { getRazorpayCheckoutKey } from '@/lib/razorpay/client'
 
 // Declare window.Razorpay for TypeScript
 declare global {
@@ -65,7 +66,7 @@ export default function DigitalProductBlock({
     }
 
     const rzp = new window.Razorpay({
-      key:         process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID ?? '',
+      key:         getRazorpayCheckoutKey(),
       amount:      result.amount,
       currency:    'INR',
       name:        'When In My City',

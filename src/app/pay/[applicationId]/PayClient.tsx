@@ -10,6 +10,7 @@ import { confirmRSVPPayment } from '@/app/actions/rsvp'
 import { sendRsvpGuestOtp, verifyRsvpGuestOtp } from '@/app/actions/guest-otp'
 import { signOut } from '@/app/actions/auth'
 import { calculateChargeAmount } from '@/types/events'
+import { getRazorpayCheckoutKey } from '@/lib/razorpay/client'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -184,7 +185,7 @@ export default function PayClient({ application, event, isAuthenticated, session
     }
 
     const rzp = new window.Razorpay({
-      key:         process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID ?? '',
+      key:         getRazorpayCheckoutKey(),
       amount:      order.amount,
       currency:    'INR',
       name:        'When In My City',
