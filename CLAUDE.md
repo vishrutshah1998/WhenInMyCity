@@ -105,11 +105,11 @@ Supabase Auth phone OTP delivery goes through a MSG91 Send-SMS Auth Hook (commit
   `/api/cron/reconcile-payments` sweeps `payment_status='pending'` rows older than 15 minutes and
   asks Razorpay's API directly, catching cases where the webhook itself was never delivered (not just
   delayed). No equivalent sweep exists for `digital_purchases`; a purchase whose webhook delivery is
-  lost entirely (not just delayed) will stay `pending` forever with no second chance. Deliberately not
-  built in this pass: crons are not currently executing in production, so adding one now would be
-  inert without anyone knowing — flagged here as a decision, not an oversight. Build it (mirroring the
-  RSVP sweep, keyed off `razorpay_payment_id` via `fetchPaymentStatus`) once crons are confirmed
-  running, or if this task is specifically scoped in.
+  lost entirely (not just delayed) will stay `pending` forever with no second chance. Not built in
+  this pass — scoped as future work, not blocked on cron infrastructure: crons are confirmed running
+  in production (verified 2026-09-15 directly against scheduled-function logs — `evaluate-tiers`
+  completed successfully 2026-09-14 07:30:22, 8474ms, clean run). Build it (mirroring the RSVP sweep,
+  keyed off `razorpay_payment_id` via `fetchPaymentStatus`) if this task is specifically scoped in.
 - **Digital-product purchase flow is duplicated, not shared, between `DigitalProductBlock.tsx` and
   `ShopTheLookBlock.tsx`.** Both independently implement `initiateDigitalPurchase` →
   `loadRazorpay` → open checkout → `confirmDigitalPurchase`. Kept separate because Shop the Look
