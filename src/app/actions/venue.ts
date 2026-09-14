@@ -1248,7 +1248,7 @@ export async function getVenuePublicPage(slug: string): Promise<{
   const now = new Date().toISOString()
   const in60Days = new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString()
 
-  const [upcomingResult, pastResult, profileResult] = await Promise.all([
+  const [upcomingResult, pastResult] = await Promise.all([
     supabase
       .from('events')
       .select('*')
@@ -1266,12 +1266,6 @@ export async function getVenuePublicPage(slug: string): Promise<{
       .eq('status', 'completed')
       .order('starts_at', { ascending: false })
       .limit(6),
-
-    supabase
-      .from('user_profiles')
-      .select('page_theme')
-      .eq('id', venue.auth_user_id)
-      .maybeSingle(),
   ])
 
   const upcomingEvents = upcomingResult.data ?? []
@@ -1329,7 +1323,10 @@ export async function getVenuePublicPage(slug: string): Promise<{
     average_rating: venue.average_maker_rating,
   }
 
-  const theme = resolveTheme(profileResult.data?.page_theme, { venueTypes: venue.venue_type ?? [] })
+  // venue_profiles.page_theme (dual-written since migration 075, backfilled by
+  // migration 077) is now the source of truth — user_profiles.page_theme is
+  // the stale/shared copy every other persona has already cut over from.
+  const theme = resolveTheme(venue.page_theme, { venueTypes: venue.venue_type ?? [] })
 
   return {
     venue,
