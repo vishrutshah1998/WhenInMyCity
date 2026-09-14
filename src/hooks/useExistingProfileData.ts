@@ -14,12 +14,9 @@ export type ExistingProfileData = {
 export type ExistingProfilePersona = 'creator' | 'brand' | 'explorer' | 'venue'
 
 // Persona-aware read for the ?mode=add&persona=X re-onboarding flow. Each
-// persona now has its own table (migration 075) — a "no row" result here
-// correctly means "this account doesn't have that persona yet," which the
-// callers already treat as add-new-persona defaults (no code change needed
-// there). 'venue' (and no persona passed) keeps the pre-split behavior of
-// reading straight off user_profiles, since venue_profiles isn't wired to
-// this hook and Venue onboarding is out of scope for this phase.
+// persona has its own table — a "no row" result here correctly means "this
+// account doesn't have that persona yet," which the callers already treat
+// as add-new-persona defaults (no code change needed there).
 export function useExistingProfileData(
   persona?: ExistingProfilePersona,
 ): {
@@ -89,7 +86,35 @@ export function useExistingProfileData(
         return
       }
 
-      // 'venue' or no persona passed — unchanged pre-split behavior.
+      if (persona === 'venue') {
+        // venue_profiles has its own `city` column (migration 007) and is
+        // one-per-user (auth_user_id UNIQUE, same as brand_profiles) — no
+        // multi-venue ambiguity to resolve. Query it directly instead of
+        // the old fallback to account-level user_profiles.city below,
+        // which was silently prefilling whatever OTHER persona's city
+        // happened to be set there (e.g. an existing Brand's city leaking
+        // into a first-time Venue). No avatar_url/bio columns on
+        // venue_profiles besides `description` — mirrors brand_profiles'
+        // bio slot.
+        const [{ data: userProfile }, { data: profile }] = await Promise.all([
+          supabase.from('user_profiles').select('display_name').eq('id', user.id).maybeSingle(),
+          supabase.from('venue_profiles').select('name, city, description, instagram_handle').eq('auth_user_id', user.id).maybeSingle(),
+        ])
+        if (profile) {
+          setData({
+            name:       profile.name ?? userProfile?.display_name ?? undefined,
+            city:       profile.city ?? undefined,
+            bio:        profile.description ?? undefined,
+            instagram:  profile.instagram_handle ?? undefined,
+          })
+        }
+        setLoading(false)
+        return
+      }
+
+      // No persona passed — unchanged pre-split behavior. Not hit by any
+      // current caller (all onboarding entry points pass an explicit
+      // persona), kept only as a defensive default.
       const { data: profile } = await supabase
         .from('user_profiles')
         .select('display_name, city, instagram_handle, bio, avatar_url')

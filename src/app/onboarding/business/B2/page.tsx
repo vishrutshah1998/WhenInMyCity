@@ -12,7 +12,8 @@ import { ONBOARDING_CTA } from '@/lib/constants/onboarding-cta-copy'
 import { OnboardingFooter } from '@/components/onboarding/OnboardingFooter'
 import { queueDraftPatch, flushDraftPatch } from '@/lib/onboarding/draft-sync'
 
-const ACCENT = '#5DD9D0'
+const TEAL   = '#5DD9D0'
+const AMBER  = '#F5A800'
 const MONO   = "var(--font-jetbrains-mono), 'JetBrains Mono', monospace"
 const BARLOW = "var(--font-barlow), 'Barlow Condensed', sans-serif"
 const OUTFIT = "'Outfit', sans-serif"
@@ -72,6 +73,23 @@ function B2Content() {
   const searchParams = useSearchParams()
   const isAddMode    = searchParams.get('mode') === 'add'
   const addType      = searchParams.get('type') ?? 'venue'
+
+  // ── Persona display (Venue vs Brand) ────────────────────────────────────────
+  // The `type` query param is only reliable in add-mode (set by S1's deep link).
+  // The fresh flow (B3 → B2) carries no `type` param — B3 writes the choice to
+  // SK.b_subpath instead — so fall back to sessionStorage for that path.
+  const urlType = searchParams.get('type')
+  const [displayType, setDisplayType] = useState<'venue' | 'brand'>(
+    urlType === 'brand' ? 'brand' : 'venue'
+  )
+  useEffect(() => {
+    if (urlType === 'venue' || urlType === 'brand') return
+    try {
+      const stored = sessionStorage.getItem(SK.b_subpath)
+      if (stored === 'venue' || stored === 'brand') setDisplayType(stored)
+    } catch {}
+  }, [urlType])
+  const ACCENT = displayType === 'brand' ? AMBER : TEAL
 
   // ── Name ─────────────────────────────────────────────────────────────────────
   const [businessName, setBusinessName] = useState('')
@@ -310,6 +328,7 @@ function B2Content() {
         <BusinessCardArtifact
           name={businessName || undefined}
           city={details?.city || manualCity || undefined}
+          type={displayType}
           accent={ACCENT}
         />
 
@@ -330,7 +349,7 @@ function B2Content() {
           lineHeight: 0.95,
           margin:     '0 0 32px',
         }}>
-          What&apos;s your business called?
+          What&apos;s your {displayType === 'brand' ? 'brand' : 'venue'} called?
         </h1>
 
         {/* ── Name input — ticket chrome ───────────────────────── */}
