@@ -185,16 +185,20 @@ async function rzFetchBase<T>(
  * `capture`/`captureOptions` (optional, per-order): omitted entirely by
  * default, which keeps every existing caller on the legacy `payment_capture:
  * 1` auto-capture flag below, byte-identical to today. Pass `capture:
- * 'manual'` for a fully manual-capture order (never auto-captured; Razorpay
- * auto-refunds anything left in `authorized` after 5 days — a fixed platform
- * ceiling, not configurable). Pass `capture: 'automatic'` with
- * `captureOptions` to auto-capture after a delay instead — Razorpay's
- * `payment.capture_options.automatic_expiry_period` (minutes, minimum 12).
- * Uses the newer `payment.capture` request shape (confirmed against
- * Razorpay's Configure Payment Capture Settings via Orders API docs,
- * 2026-09-14), which takes precedence over dashboard capture settings — set
- * per-order deliberately so this never touches the existing ticketed-event
- * flow's dashboard-independent auto-capture behavior.
+ * 'manual'` for a manual-capture order (never auto-captured — capture it
+ * yourself via the separate Capture API; Razorpay auto-refunds anything
+ * still `authorized` after `manual_expiry_period`, max 7200 minutes = 5
+ * days, a hard platform ceiling). Pass `capture: 'automatic'` with
+ * `captureOptions.automaticExpiryPeriod` (minutes, minimum 12) to
+ * auto-capture after a delay instead. Uses the newer `payment.capture`
+ * request shape, which takes precedence over dashboard capture settings —
+ * set per-order deliberately so this never touches the existing
+ * ticketed-event flow's dashboard-independent auto-capture behavior.
+ * Confirmed live (2026-09-14): Razorpay 400s `capture: 'manual'` unless
+ * `capture_options.manual_expiry_period` is present too, undocumented in
+ * the manual-mode example — so `capture_options` is always sent (defaulting
+ * `manualExpiryPeriod` to 7200) once `capture` is set, not only for
+ * 'automatic'.
  *
  * @example
  * const order = await createRazorpayOrder({
@@ -212,7 +216,7 @@ export async function createRazorpayOrder(params: {
   transfers?: RazorpayOrderTransfer[]
   capture?: 'manual' | 'automatic'
   captureOptions?: {
-    automaticExpiryPeriod: number
+    automaticExpiryPeriod?: number
     manualExpiryPeriod?: number
     refundSpeed?: 'normal' | 'optimum'
   }
@@ -231,17 +235,23 @@ export async function createRazorpayOrder(params: {
     // Newer `payment.capture` shape — takes precedence over the legacy
     // `payment_capture` flag, so that flag is omitted entirely here rather
     // than set alongside it.
+    //
+    // Confirmed live (2026-09-14): Razorpay rejects `capture: 'manual'` with
+    // 400 "Config Manual duration should be set when capture is manual"
+    // unless `capture_options.manual_expiry_period` is present too — this
+    // isn't documented as required outside the 'automatic' example, but the
+    // API enforces it either way. So `capture_options` (at minimum
+    // `manual_expiry_period`) is always sent once `capture` is set, not only
+    // for 'automatic'.
     body.payment = {
       capture: params.capture,
-      ...(params.capture === 'automatic' && params.captureOptions
-        ? {
-            capture_options: {
-              automatic_expiry_period: params.captureOptions.automaticExpiryPeriod,
-              manual_expiry_period: params.captureOptions.manualExpiryPeriod ?? 7200,
-              refund_speed: params.captureOptions.refundSpeed ?? 'normal',
-            },
-          }
-        : {}),
+      capture_options: {
+        ...(params.capture === 'automatic'
+          ? { automatic_expiry_period: params.captureOptions?.automaticExpiryPeriod ?? 12 }
+          : {}),
+        manual_expiry_period: params.captureOptions?.manualExpiryPeriod ?? 7200,
+        refund_speed: params.captureOptions?.refundSpeed ?? 'normal',
+      },
     }
   } else {
     // payment_capture: 1 → auto-capture immediately after authorization.
