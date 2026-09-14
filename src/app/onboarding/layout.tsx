@@ -182,15 +182,67 @@ export default function OnboardingLayout({ children }: { children: React.ReactNo
   // it, so body's near-black background stays exposed below our box. Track
   // the real height via visualViewport and drive it through a CSS var instead
   // of trusting dvh to update on its own.
+  //
+  // Confirmed live (Elements inspection) that visualViewport's own 'resize'
+  // event doesn't reliably fire on this exact dismiss path — --ob-vh can get
+  // stuck at the keyboard-open height even with the debounce above working
+  // correctly, since the debounce only ever fires off of events that aren't
+  // arriving. The focusout listener below is a safety net independent of
+  // that: any field losing focus anywhere in the flow re-checks vv.height
+  // a moment later, catching the case where 'resize' silently never fires.
   useEffect(() => {
     const vv = window.visualViewport
     if (!vv) return
+
     const setVh = () => {
       document.documentElement.style.setProperty('--ob-vh', `${vv.height}px`)
     }
+
+    let settleTimeout: ReturnType<typeof setTimeout> | null = null
+    const onResize = () => {
+      if (settleTimeout) clearTimeout(settleTimeout)
+      settleTimeout = setTimeout(setVh, 120)
+    }
     setVh()
-    vv.addEventListener('resize', setVh)
-    return () => vv.removeEventListener('resize', setVh)
+    vv.addEventListener('resize', onResize)
+
+    let blurTimeout: ReturnType<typeof setTimeout> | null = null
+    const onFocusOut = () => {
+      if (blurTimeout) clearTimeout(blurTimeout)
+      blurTimeout = setTimeout(setVh, 200)
+    }
+    document.addEventListener('focusout', onFocusOut)
+
+    return () => {
+      vv.removeEventListener('resize', onResize)
+      if (settleTimeout) clearTimeout(settleTimeout)
+      document.removeEventListener('focusout', onFocusOut)
+      if (blurTimeout) clearTimeout(blurTimeout)
+    }
+  }, [])
+
+  // iOS only performs its own native "reveal scroll" (shifting the layout
+  // viewport to keep a focused field visible above the keyboard) when it
+  // decides the field isn't already positioned where the keyboard will
+  // land — that native scroll, on this transform:translateZ(0)-promoted
+  // panel, is what was causing a brief blackout at the instant of focus
+  // (confirmed via device testing with zero custom focus handling in
+  // place). Pre-empting it ourselves, synchronously, before iOS's own
+  // logic runs, makes its native scroll a no-op. Attached to `document`
+  // (not a ref to the panel) to match the focusout safety net just above —
+  // no ref currently exists for the panel, and document-level keeps this
+  // independent of which route/container is mounted.
+  useEffect(() => {
+    const onFocusIn = (e: FocusEvent) => {
+      const el = e.target
+      if (!(el instanceof HTMLElement)) return
+      if (!el.matches('input, textarea, [contenteditable]')) return
+      requestAnimationFrame(() => {
+        el.scrollIntoView({ block: 'center', behavior: 'auto' })
+      })
+    }
+    document.addEventListener('focusin', onFocusIn)
+    return () => document.removeEventListener('focusin', onFocusIn)
   }, [])
 
   // S1 and C2 self-manage their split
