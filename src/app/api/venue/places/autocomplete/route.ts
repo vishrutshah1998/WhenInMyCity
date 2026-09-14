@@ -27,6 +27,7 @@ export async function GET(req: NextRequest) {
 
   const body = await res.json() as {
     status: string
+    error_message?: string
     predictions?: {
       place_id: string
       description: string
@@ -35,7 +36,8 @@ export async function GET(req: NextRequest) {
   }
 
   if (body.status !== 'OK' && body.status !== 'ZERO_RESULTS') {
-    return NextResponse.json({ predictions: [] })
+    console.error('[venue/places/autocomplete] Google API error:', body.status, body.error_message)
+    return NextResponse.json({ predictions: [], error: body.status })
   }
 
   return NextResponse.json({ predictions: body.predictions ?? [] })

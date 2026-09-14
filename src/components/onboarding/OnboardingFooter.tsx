@@ -143,6 +143,13 @@ export function OnboardingFooter({
 
   return (
     <footer style={{
+      // bottom:0 — rides along with .ob-layout-left's own box, which is
+      // already correctly sized via height: var(--ob-vh). Tried anchoring
+      // this independently from --ob-vh directly (top + translateY(-100%));
+      // reverted after it was implicated in a black-screen-on-focus
+      // regression on the translateZ(0)-promoted panel. Keep this footer a
+      // passive rider on its parent's box, not a second independent
+      // consumer of --ob-vh.
       position: 'fixed', bottom: 0, left: 0, right: 0, height: 72, zIndex: 50,
       display: 'flex', alignItems: 'center', justifyContent: 'space-between',
       paddingLeft: 24, paddingRight: 24, paddingTop: 0,

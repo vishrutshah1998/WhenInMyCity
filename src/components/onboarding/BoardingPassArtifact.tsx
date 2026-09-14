@@ -821,7 +821,7 @@ export function BusinessCardArtifact({
       <div style={{ flex: 1, padding: 18, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', borderRight: '2px dashed rgba(26,39,68,0.20)' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <span style={{ fontFamily: MONO, fontSize: 9, color: 'rgba(26,39,68,0.50)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-            Business Pass
+            {type === 'venue' ? 'Venue Pass' : type === 'brand' ? 'Brand Pass' : 'Business Pass'}
           </span>
           <span style={{ fontFamily: MONO, fontSize: 9, color: 'rgba(26,39,68,0.50)', letterSpacing: '0.05em' }}>
             WIMC·B·01
