@@ -38,6 +38,12 @@ export type AvailabilityStatus = 'available' | 'blocked' | 'pending' | 'confirme
 
 export type ConnectionStatus = 'pending' | 'accepted' | 'declined'
 
+export type LinkedAccountOwnerType = 'creator' | 'venue'
+export type LinkedAccountStatus =
+  | 'not_started' | 'pending_kyc' | 'requested' | 'under_review'
+  | 'activated' | 'needs_clarification' | 'config_locked'
+  | 'suspended' | 'rejected'
+
 export type CreatorType =
   // Legacy values (pre-v2 onboarding) — kept for existing profiles
   | 'music_performance'
@@ -2398,6 +2404,72 @@ export interface Database {
           }
         ]
       }
+      linked_accounts: {
+        Row: {
+          id:                     string
+          owner_type:             string
+          owner_id:               string
+          razorpay_account_id:    string | null
+          stakeholder_id:         string | null
+          product_config_id:      string | null
+          status:                 string
+          rejection_reason:       string | null
+          legal_name:             string | null
+          business_type:          string | null
+          business_pan:           string | null
+          bank_account_last4:     string | null
+          bank_ifsc:              string | null
+          bank_beneficiary_name:  string | null
+          cooling_period_ends_at: string | null
+          submitted_at:           string | null
+          activated_at:           string | null
+          created_at:             string
+          updated_at:             string
+        }
+        Insert: {
+          id?:                     string
+          owner_type:              string
+          owner_id:                string
+          razorpay_account_id?:    string | null
+          stakeholder_id?:         string | null
+          product_config_id?:      string | null
+          status?:                 string
+          rejection_reason?:       string | null
+          legal_name?:             string | null
+          business_type?:          string | null
+          business_pan?:           string | null
+          bank_account_last4?:     string | null
+          bank_ifsc?:              string | null
+          bank_beneficiary_name?:  string | null
+          cooling_period_ends_at?: string | null
+          submitted_at?:           string | null
+          activated_at?:           string | null
+          created_at?:             string
+          updated_at?:             string
+        }
+        Update: {
+          id?:                     string
+          owner_type?:             string
+          owner_id?:               string
+          razorpay_account_id?:    string | null
+          stakeholder_id?:         string | null
+          product_config_id?:      string | null
+          status?:                 string
+          rejection_reason?:       string | null
+          legal_name?:             string | null
+          business_type?:          string | null
+          business_pan?:           string | null
+          bank_account_last4?:     string | null
+          bank_ifsc?:              string | null
+          bank_beneficiary_name?:  string | null
+          cooling_period_ends_at?: string | null
+          submitted_at?:           string | null
+          activated_at?:           string | null
+          created_at?:             string
+          updated_at?:             string
+        }
+        Relationships: []
+      }
     }
 
     Views: {
@@ -2505,6 +2577,7 @@ export type BookingInquiry       = Tables<'booking_inquiries'>
 export type DigitalPurchase      = Tables<'digital_purchases'>
 export type WaitlistEntry        = Tables<'waitlist_entries'>
 export type WhatsAppSendFailure  = Tables<'whatsapp_send_failures'>
+export type LinkedAccount        = Tables<'linked_accounts'>
 
 // RSVP joined with its parent event — used in the attendee Tickets panel
 export interface RsvpWithEvent {

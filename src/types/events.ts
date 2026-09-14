@@ -286,6 +286,82 @@ export interface RazorpayItem {
 }
 
 // ---------------------------------------------------------------------------
+// Razorpay Route — Linked Accounts (v2). See src/lib/razorpay/index.ts and
+// the Route integration plan for the validated request/response shapes.
+// ---------------------------------------------------------------------------
+
+export interface RazorpayAddress {
+  street1: string
+  street2?: string
+  city: string
+  state: string
+  postal_code: string
+  country: string   // ISO 3166-1 alpha-2, e.g. 'IN'
+}
+
+export interface RazorpayLinkedAccount {
+  id: string               // acc_xxx
+  entity: 'account'
+  email: string
+  phone: string
+  type: 'route'
+  status: string
+  reference_id: string
+  legal_business_name: string
+  business_type: string
+  contact_name: string
+  profile: {
+    category: string
+    subcategory: string
+    addresses: { registered: RazorpayAddress }
+  }
+  legal_info: {
+    pan: string
+    gst?: string
+  }
+  created_at: number
+}
+
+export interface RazorpayStakeholder {
+  id: string               // sth_xxx
+  entity: 'stakeholder'
+  name: string
+  email: string
+  addresses: { residential: RazorpayAddress }
+  kyc: { pan: string }
+  created_at: number
+}
+
+/**
+ * One item in a Product Configuration's `requirements[]`. Only `description`
+ * (used to detect the "Max retry exceeded" lockout — there is no distinct
+ * reason_code for that specific case, confirmed in live testing) and
+ * `reason_code` are relied on by WIMC code; other fields Razorpay may
+ * include (e.g. `field_reference`) are read but not typed strictly since
+ * their exact shape wasn't part of what the plan's live testing confirmed.
+ */
+export interface RazorpayProductRequirement {
+  reason_code?: string
+  description: string
+  [key: string]: unknown
+}
+
+export interface RazorpayProductConfiguration {
+  id: string                                   // acc_prd_xxx
+  product_name: 'route'
+  active: boolean
+  // Present on the response but NOT a trustworthy completion signal — see
+  // the "Validated Findings" in the plan doc (Finding #11): activation_status
+  // transitions asynchronously and can change between consecutive reads with
+  // no API call from us in between. Never branch app logic on this field
+  // directly; it's typed here only so it can be displayed/logged.
+  activation_status?: string
+  requirements: RazorpayProductRequirement[]
+  tnc?: { id: string; accepted: boolean; accepted_at: number | null }
+  created_at?: number
+}
+
+// ---------------------------------------------------------------------------
 // Normalised Razorpay payment status → WIMC PaymentStatus
 // ---------------------------------------------------------------------------
 

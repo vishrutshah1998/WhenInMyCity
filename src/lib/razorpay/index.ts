@@ -20,11 +20,17 @@ import type {
   RazorpayPayment,
   RazorpayRefund,
   RazorpayItem,
+  RazorpayAddress,
+  RazorpayLinkedAccount,
+  RazorpayStakeholder,
+  RazorpayProductConfiguration,
+  RazorpayProductRequirement,
   NormalisedPaymentStatus,
 } from '@/types/events'
 
 const RAZORPAY_BASE = 'https://api.razorpay.com/v1'
-// v2 base — Route / Linked Accounts (KYC Track B). Not called anywhere yet.
+// v2 base — Route / Linked Accounts (KYC Track B). Used by createLinkedAccount
+// / createStakeholder below (Product Configuration is a later, separate task).
 const RAZORPAY_BASE_V2 = 'https://api.razorpay.com/v2'
 
 // ---------------------------------------------------------------------------
@@ -62,6 +68,28 @@ export class RazorpayApiError extends Error {
 }
 
 /**
+ * Formats a RazorpayApiError's `code`/`description`/`field` into a single
+ * human-readable string — for writing into `linked_accounts.rejection_reason`
+ * (or any other caller-facing surface) instead of a generic "request failed".
+ * Falls back to the bare error message if the body isn't Razorpay's standard
+ * `{ error: { code, description, field } }` envelope.
+ */
+export function describeRazorpayError(err: unknown): string {
+  if (!(err instanceof RazorpayApiError)) {
+    return err instanceof Error ? err.message : String(err)
+  }
+
+  const body = err.body as { error?: { code?: string; description?: string; field?: string } } | null
+  const e = body?.error
+  if (!e) return err.message
+
+  const parts = [e.code, e.field ? `field: ${e.field}` : null, e.description]
+    .filter((p): p is string => Boolean(p))
+
+  return parts.length ? parts.join(' — ') : err.message
+}
+
+/**
  * Thin wrapper around `fetch` for Razorpay API calls.
  * Adds auth, sets JSON headers, and throws `RazorpayApiError` on non-2xx.
  */
@@ -74,7 +102,7 @@ async function rzFetch<T>(
 
 /**
  * Same auth/error handling as `rzFetch`, but against the Razorpay v2 base.
- * Plumbing only for now — Route / Linked Accounts calls land in Track B.
+ * Used by the Route / Linked Accounts calls (createLinkedAccount, createStakeholder).
  */
 async function rzFetchV2<T>(
   path: string,
@@ -343,4 +371,268 @@ export async function initializeRazorpayEvent(params: {
   })
 
   return item.id
+}
+
+// ---------------------------------------------------------------------------
+// createLinkedAccount / createStakeholder — Razorpay Route (v2)
+//
+// Phase 1 of the Route integration plan: KYC onboarding for a creator's or
+// venue's Linked Account. See supabase/migrations/083_linked_accounts.sql
+// for the row this writes into, and the plan doc's "Validated Findings" for
+// how these shapes were confirmed against the live v2 API (not assumed from
+// docs alone).
+// ---------------------------------------------------------------------------
+
+/**
+ * Creates a Razorpay Route Linked Account — `POST /v2/accounts`.
+ *
+ * Caller must have already validated `pan` against `businessType` locally
+ * (see `validatePanMatchesBusinessType`) — Razorpay's own 400 on a mismatch
+ * is a confirmed but late signal; failing fast client-side avoids a wasted
+ * round trip on a predictable error.
+ *
+ * `category`/`subcategory` are not yet confirmed for a real ticketing
+ * business (plan Finding #6) — callers currently get Razorpay's own
+ * example placeholders via `ROUTE_CATEGORY`/`ROUTE_SUBCATEGORY` below.
+ */
+export async function createLinkedAccount(params: {
+  email: string
+  phone: string
+  referenceId: string
+  legalBusinessName: string
+  businessType: string
+  contactName: string
+  registeredAddress: RazorpayAddress
+  pan: string
+  gst?: string
+}): Promise<RazorpayLinkedAccount> {
+  return rzFetchV2<RazorpayLinkedAccount>('/accounts', {
+    method: 'POST',
+    body: JSON.stringify({
+      email: params.email,
+      phone: params.phone,
+      type: 'route',
+      reference_id: params.referenceId,
+      legal_business_name: params.legalBusinessName,
+      business_type: params.businessType,
+      contact_name: params.contactName,
+      profile: {
+        // TODO: confirm real category/subcategory for a ticketing business
+        // with Razorpay support (plan Phase 0 / Finding #6) — these are
+        // Razorpay's own documented example values, not WIMC-specific.
+        category: 'healthcare',
+        subcategory: 'clinic',
+        addresses: {
+          registered: params.registeredAddress,
+        },
+      },
+      legal_info: {
+        pan: params.pan,
+        ...(params.gst ? { gst: params.gst } : {}),
+      },
+    }),
+  })
+}
+
+/**
+ * Creates the (single, Route-limited) Stakeholder on a Linked Account —
+ * `POST /v2/accounts/:account_id/stakeholders`.
+ *
+ * Only call this once `accountId` (an `acc_...` id from `createLinkedAccount`)
+ * exists — Route requires the account before a stakeholder can attach to it.
+ */
+export async function createStakeholder(
+  accountId: string,
+  params: {
+    name: string
+    email: string
+    residentialAddress: RazorpayAddress
+    pan: string
+  },
+): Promise<RazorpayStakeholder> {
+  return rzFetchV2<RazorpayStakeholder>(`/accounts/${accountId}/stakeholders`, {
+    method: 'POST',
+    body: JSON.stringify({
+      name: params.name,
+      email: params.email,
+      addresses: {
+        residential: params.residentialAddress,
+      },
+      kyc: {
+        pan: params.pan,
+      },
+    }),
+  })
+}
+
+// ---------------------------------------------------------------------------
+// PAN ↔ business_type validation
+//
+// The Income Tax Dept's PAN structure encodes the holder's entity category
+// in the 4th character. Razorpay cross-validates this against the account's
+// declared `business_type` and hard-400s on a mismatch (plan Finding #3) —
+// this check exists to catch that locally, before ever calling Razorpay.
+//
+// Only 'partnership' → 'F' has been confirmed against Razorpay's specific
+// validation via live testing (Finding #3). The rest follow the standard
+// CBDT PAN category codes but are NOT yet confirmed against Razorpay's exact
+// business_type enum — entity types with a genuinely ambiguous PAN category
+// (society/ngo/trust can each legally hold 'A' or 'T' PANs; 'llp' can hold
+// either the pre-2018 'F' or the dedicated 'E' code) are intentionally left
+// unchecked here rather than guessing and producing a false-positive
+// rejection. Confirm the full mapping with Razorpay support before treating
+// this as exhaustive (see plan Phase 0).
+// ---------------------------------------------------------------------------
+
+/** Razorpay's documented `business_type` values for a Route Linked Account. */
+export const ROUTE_BUSINESS_TYPES = [
+  'individual',
+  'proprietorship',
+  'partnership',
+  'private_limited',
+  'public_limited',
+  'llp',
+  'huf',
+  'trust',
+  'society',
+  'ngo',
+  'not_yet_registered',
+  'education',
+  'other',
+] as const
+
+export type RouteBusinessType = (typeof ROUTE_BUSINESS_TYPES)[number]
+
+/** business_type → expected PAN 4th-character(s). Omitted = no local check (see comment above). */
+const PAN_FOURTH_CHAR_BY_BUSINESS_TYPE: Partial<Record<RouteBusinessType, string[]>> = {
+  individual: ['P'],
+  proprietorship: ['P'],
+  partnership: ['F'],   // confirmed live — plan Finding #3
+  private_limited: ['C'],
+  public_limited: ['C'],
+  llp: ['E', 'F'],
+  huf: ['H'],
+  not_yet_registered: ['P'],
+}
+
+/**
+ * Fails fast if `pan`'s 4th character doesn't match what `businessType`
+ * predicts, mirroring Razorpay's own server-side check (plan Finding #3).
+ * Returns `{ ok: true }` (no opinion) for business types with no confirmed
+ * 1:1 PAN-category mapping — see the comment block above.
+ */
+export function validatePanMatchesBusinessType(
+  pan: string,
+  businessType: string,
+): { ok: true } | { ok: false; error: string } {
+  const expected = PAN_FOURTH_CHAR_BY_BUSINESS_TYPE[businessType as RouteBusinessType]
+  if (!expected) return { ok: true }
+
+  const actual = pan.toUpperCase().charAt(3)
+  if (!expected.includes(actual)) {
+    return {
+      ok: false,
+      error: `PAN "${pan}" (4th character "${actual}") does not match business_type "${businessType}" (expected ${expected.join(' or ')}). Razorpay will hard-reject this at Create Linked Account.`,
+    }
+  }
+  return { ok: true }
+}
+
+// ---------------------------------------------------------------------------
+// requestProductConfiguration / updateProductConfiguration — Razorpay Route (v2)
+//
+// Phase 1, second half: attaches the Route product to a Linked Account and
+// submits settlement (bank) details. See the plan doc's Validated Findings
+// #8-#14 for the confirmed, sometimes-surprising behavior these wrap:
+// idempotent-but-not-resettable Request, a hard retry ceiling on Update with
+// no distinct error code, and async/non-deterministic activation_status.
+// ---------------------------------------------------------------------------
+
+/**
+ * Requests a Product Configuration — `POST /v2/accounts/:account_id/products`.
+ *
+ * CRITICAL (plan Finding #9): this is idempotent per account, not a way to
+ * get a fresh config. Calling it again on an account that already has a
+ * product_config_id returns the SAME config (possibly already retry-locked)
+ * — it does not reset anything. Callers must only invoke this when they
+ * don't already have a product_config_id on file; see
+ * `requestProductConfigurationAction` in route-linked-accounts.ts.
+ */
+export async function requestProductConfiguration(
+  accountId: string,
+): Promise<RazorpayProductConfiguration> {
+  return rzFetchV2<RazorpayProductConfiguration>(`/accounts/${accountId}/products`, {
+    method: 'POST',
+    body: JSON.stringify({
+      product_name: 'route',
+      tnc_accepted: true,
+    }),
+  })
+}
+
+/**
+ * Submits settlement (bank) details onto an existing Product Configuration —
+ * `PATCH /v2/accounts/:account_id/products/:product_config_id`.
+ *
+ * Has a confirmed, hard, per-config retry ceiling (observed at 2 failed
+ * submissions — plan Finding #8) with no recovery path other than a brand
+ * new Linked Account (Finding #9) — callers must gate on the account's
+ * current status before ever reaching this call; see
+ * `updateProductConfigurationAction`.
+ */
+export async function updateProductConfiguration(
+  accountId: string,
+  productConfigId: string,
+  settlements: { accountNumber: string; beneficiaryName: string; ifscCode: string },
+): Promise<RazorpayProductConfiguration> {
+  return rzFetchV2<RazorpayProductConfiguration>(
+    `/accounts/${accountId}/products/${productConfigId}`,
+    {
+      method: 'PATCH',
+      body: JSON.stringify({
+        settlements: {
+          account_number: settlements.accountNumber,
+          beneficiary_name: settlements.beneficiaryName,
+          ifsc_code: settlements.ifscCode,
+        },
+      }),
+    },
+  )
+}
+
+/**
+ * Reads the current Product Configuration state — `GET
+ * /v2/accounts/:account_id/products/:product_config_id`.
+ *
+ * NOT a source of truth for activation (plan Finding #11 — the same
+ * account/config was observed flipping needs_clarification -> under_review
+ * -> needs_clarification across consecutive reads with no API call from us
+ * in between). Only for manual/admin "check now" tooling; never write this
+ * response's `activation_status` into `linked_accounts.status` as if it
+ * were authoritative — only a webhook can be.
+ */
+export async function fetchProductConfiguration(
+  accountId: string,
+  productConfigId: string,
+): Promise<RazorpayProductConfiguration> {
+  return rzFetchV2<RazorpayProductConfiguration>(
+    `/accounts/${accountId}/products/${productConfigId}`,
+  )
+}
+
+/**
+ * True if any requirement's `description` indicates the account's retry
+ * ceiling on settlement submission has been exceeded. There is no distinct
+ * `reason_code` for this case (confirmed live — plan Finding #8); the only
+ * signal is this substring in `description`, shared with the ordinary
+ * user-fixable `needs_clarification` reason_code. Case-insensitive substring
+ * match, matching how this was actually observed in testing.
+ */
+export function isConfigLockedResponse(requirements: RazorpayProductRequirement[]): boolean {
+  return requirements.some((r) => /max retry exceeded/i.test(r.description ?? ''))
+}
+
+/** Joins requirement descriptions into one string for `rejection_reason`. */
+export function summarizeRequirements(requirements: RazorpayProductRequirement[]): string {
+  return requirements.map((r) => r.description).filter(Boolean).join('; ')
 }
