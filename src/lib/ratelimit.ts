@@ -59,6 +59,12 @@ const RSVP_LIMIT = { requests: 10, window: '10 m' } as const
 // throttled by (or throttle) the separate Supabase sign-in OTP flow.
 const GUEST_RSVP_OTP_LIMIT = { requests: 5, window: '60 s' } as const
 
+// Application-status OTP: 5 requests per 60 s per IP — same shape as
+// GUEST_RSVP_OTP_LIMIT, kept as its own bucket so a guest checking their
+// paid-application status can't be throttled by (or throttle) guest-rsvp's
+// booking/application OTP flow.
+const APPLICATION_STATUS_OTP_LIMIT = { requests: 5, window: '60 s' } as const
+
 function makeLimiter(prefix: string, requests: number, window: `${number} ${'s' | 'm' | 'h' | 'd'}`) {
   const r = getRedis()
   if (!r) return null
@@ -149,6 +155,15 @@ export async function checkGuestRsvpOtpRateLimit(): Promise<LimitResult> {
     'guest-rsvp-otp',
     GUEST_RSVP_OTP_LIMIT.requests,
     GUEST_RSVP_OTP_LIMIT.window,
+    'Too many verification attempts. Please wait a minute before trying again.',
+  )
+}
+
+export async function checkApplicationStatusOtpRateLimit(): Promise<LimitResult> {
+  return check(
+    'application-status-otp',
+    APPLICATION_STATUS_OTP_LIMIT.requests,
+    APPLICATION_STATUS_OTP_LIMIT.window,
     'Too many verification attempts. Please wait a minute before trying again.',
   )
 }

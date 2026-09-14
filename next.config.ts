@@ -30,7 +30,18 @@ const nextConfig: NextConfig = {
         'wheninmycity.com',
         'www.wheninmycity.com',
         process.env.NEXT_PUBLIC_APP_URL ?? '',
+        // Dev-only: lets a phone on the same Wi-Fi hit the dev server via LAN IP
+        // (e.g. http://192.168.1.11:3000) for on-device testing. Update the IP
+        // below if it changes, or add more via a comma-separated
+        // NEXT_PUBLIC_DEV_LAN_ORIGINS env var instead of editing this file.
+        ...(process.env.NODE_ENV !== 'production'
+          ? ['192.168.1.11:3000', ...(process.env.NEXT_PUBLIC_DEV_LAN_ORIGINS?.split(',') ?? [])]
+          : []),
       ].filter(Boolean),
+      // Server Actions default to a 1 MB body limit; onboarding avatar/logo
+      // uploads (uploadOnboardingAvatar in src/app/actions/onboarding.ts) validate
+      // up to 5 MB, so raise the limit here to match.
+      bodySizeLimit: '5mb',
     },
   },
   images: {

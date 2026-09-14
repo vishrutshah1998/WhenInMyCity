@@ -233,7 +233,7 @@ export default function BrandPageEditorClient({
 
   async function handleThemeSave() {
     setThemeSaving(true)
-    const result = await updateProfileTheme(theme)
+    const result = await updateProfileTheme(theme, 'brand')
     setThemeSaving(false)
     if (result.error) {
       setThemeStatus('error')

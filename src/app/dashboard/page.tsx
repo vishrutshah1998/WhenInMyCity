@@ -1,7 +1,7 @@
 'use client'
 
-import { Suspense, useEffect, useState } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import type { UserProfile, Event } from '@/types/database'
@@ -13,12 +13,10 @@ import { profileUrl } from '@/lib/profile-url'
 import { TIER_THRESHOLDS } from '@/lib/constants/interests'
 import PersonaSwitcherPills from '@/components/PersonaSwitcherPills'
 import BookingConfirmedBanner from '@/components/shared/BookingConfirmedBanner'
-import CreatorCarousel from './CreatorCarousel'
-import { getCreatorNavPages } from '@/lib/constants/personaNavPages'
+import { CreatorCarouselPublisher } from './CreatorCarouselContext'
 import CreatorHomeMobile from './CreatorHomeMobile'
 import CreatorBusinessSlot from './CreatorBusinessSlot'
 import CreatorCommunitySlot from './CreatorCommunitySlot'
-import CreatorProgressSlot from './CreatorProgressSlot'
 import { PERF_STYLE, formatPaiseCompact, formatPaiseFull, EventTicket } from './homeShared'
 import type { Notification } from '@/types/database'
 
@@ -156,20 +154,6 @@ function Postmark({ text, rotate = 0, opacity = 0.07 }: { text: string; rotate?:
   )
 }
 
-// Reads the `?panel=` query param (set by a persistent-nav tap on a
-// sub-route, e.g. /dashboard/notifications) to land the carousel directly
-// on the right tab. Split into its own component because useSearchParams()
-// requires a Suspense boundary in Next.js 15 — wrapping just this small
-// reader (not the whole already-'use client' page) keeps that requirement
-// minimal and localized.
-function CreatorCarouselWithPanel(props: Omit<React.ComponentProps<typeof CreatorCarousel>, 'defaultIndex'>) {
-  const searchParams = useSearchParams()
-  const panel = searchParams.get('panel')
-  const pages = getCreatorNavPages()
-  const panelIndex = panel ? pages.findIndex(p => p.key === panel) : -1
-  return <CreatorCarousel {...props} defaultIndex={panelIndex !== -1 ? panelIndex : 1} />
-}
-
 // ── Main component ─────────────────────────────────────────────────────────────
 
 export default function DashboardPage() {
@@ -299,9 +283,9 @@ export default function DashboardPage() {
 
   const personas = profile?.personas ?? []
 
-  // Computed once so the same slots can be reused for both the Suspense
-  // fallback (rendered before useSearchParams() resolves) and the real,
-  // panel-aware carousel below — without duplicating this JSX twice.
+  // Published to CreatorCarouselSlot (a layout-level sibling of
+  // .dash-content) via CreatorCarouselPublisher below, rather than rendered
+  // directly here — see CreatorCarouselContext.tsx for why.
   const creatorCarouselProps = {
     accentColor: 'var(--wimc-accent)',
     homeSlot: (
@@ -322,7 +306,6 @@ export default function DashboardPage() {
     communitySlot: profile ? (
       <CreatorCommunitySlot currentUserId={profile.id} profile={profile} accentColor="var(--wimc-accent)" />
     ) : null,
-    progressSlot: <CreatorProgressSlot viewerCity={profile?.city ?? null} />,
   }
 
   return (
@@ -817,33 +800,20 @@ export default function DashboardPage() {
       </div>
 
       {/* ═══════════════ MOBILE — swipe carousel ═══════════════════════════════ */}
-      {/* Replaces the old flat md:hidden block (now CreatorHomeMobile.tsx, unchanged
-          JSX) as the Home slot, alongside three new carousel-only pages. Gated at
-          lg:hidden (not the old md:hidden) so it stays mutually exclusive with the
-          desktop block above — matches the lg convention the top bar already uses. */}
-      <div className="lg:hidden">
-        {/* Suspense-wrapped since CreatorCarouselWithPanel calls useSearchParams()
-            (reads `?panel=` from a persistent-nav tap on a sub-route). The
-            fallback is a lightweight skeleton, NOT the real carousel — an
-            earlier version reused creatorCarouselProps (the same slot
-            elements, including CreatorCommunitySlot) for both the fallback
-            and the real children. If that fallback ever painted, it mounted
-            CreatorCommunitySlot's data-fetching effect, which then got torn
-            down and restarted the moment Suspense swapped to the real
-            children — discarding the in-flight fetch before it could commit
-            `loading=false`, so the Community tab hung on "Loading…"
-            indefinitely. A skeleton fallback never mounts any data-fetching
-            slot, so there's nothing to discard. */}
-        <Suspense fallback={
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh', background: '#F2EDE3' }}>
-            <p style={{ color: '#1A2744', fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.25em', fontFamily: 'var(--font-jetbrains-mono)' }}>
-              LOADING BOARD...
-            </p>
-          </div>
-        }>
-          <CreatorCarouselWithPanel {...creatorCarouselProps} />
-        </Suspense>
-      </div>
+      {/* The actual carousel (CreatorCarousel/PersonaTabSwitcher) no longer
+          renders here — it renders from CreatorCarouselSlot, a genuine
+          layout-level sibling of .dash-content (dashboard/layout.tsx), same
+          placement as PersonaNavGate. Rendering it in place here would trap
+          its `position: fixed` tab bar inside .dash-content's containing
+          block (its mount-in animation keyframes include a transform, and a
+          transform on any ancestor creates a new containing block for fixed
+          descendants) — the same bug PersonaNavGate's own placement avoids.
+          This component stays the sole owner of the Supabase fetch that
+          feeds the carousel's slots (unchanged below); it just publishes the
+          computed props up through CreatorCarouselContext instead of
+          rendering the carousel itself. CreatorCarouselPublisher renders
+          nothing visible. */}
+      <CreatorCarouselPublisher {...creatorCarouselProps} />
     </>
   )
 }

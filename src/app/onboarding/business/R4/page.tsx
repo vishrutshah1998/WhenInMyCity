@@ -6,6 +6,7 @@ import { SK } from '@/lib/onboarding/session-keys'
 import { BrandNoticeAd } from '@/components/onboarding/BoardingPassArtifact'
 import { ONBOARDING_CTA } from '@/lib/constants/onboarding-cta-copy'
 import { OnboardingFooter } from '@/components/onboarding/OnboardingFooter'
+import { queueDraftPatch, flushDraftPatch } from '@/lib/onboarding/draft-sync'
 
 const ACCENT = '#F5A800'
 const NAVY   = '#1A2744'
@@ -106,22 +107,27 @@ export default function R4Page() {
     const next = selectedCategory === id ? '' : id
     setSelectedCategory(next)
     try { sessionStorage.setItem(SK.r_categories, next) } catch {}
+    queueDraftPatch('business', SK.r_categories, next, { immediate: true })
   }
 
   function toggleGoal(id: string) {
     setSelectedGoals(prev => {
       const next = prev.includes(id) ? prev.filter(g => g !== id) : [...prev, id]
       try { sessionStorage.setItem(SK.r_goals, JSON.stringify(next)) } catch {}
+      queueDraftPatch('business', SK.r_goals, JSON.stringify(next))
       return next
     })
   }
 
-  function handleNext() {
+  async function handleNext() {
     if (!selectedCategory) return
     try {
       sessionStorage.setItem(SK.r_categories, selectedCategory)
       sessionStorage.setItem(SK.r_goals, JSON.stringify(selectedGoals))
     } catch {}
+    queueDraftPatch('business', SK.r_categories, selectedCategory)
+    queueDraftPatch('business', SK.r_goals, JSON.stringify(selectedGoals))
+    await flushDraftPatch('business')
     router.push('/onboarding/business/R5')
   }
 

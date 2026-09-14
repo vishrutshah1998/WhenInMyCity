@@ -389,6 +389,51 @@ export default async function VenueDashboardPage({
           <PendingRequests proposals={pendingProposals} />
         </div>
 
+        {/* ── Expand your presence — shown when user has missing personas.
+            Same ALL_P/missing filter, link targets and copy as Creator's
+            dashboard/page.tsx PaperCard version; styled with this persona's
+            own dark-theme tokens (--venue-accent resolves teal here via the
+            .venue-variant class applied in layout.tsx). homeContent is
+            shared between the lg:block desktop view and the lg:hidden
+            carousel below, so this renders on both automatically. ── */}
+        {(() => {
+          const ALL_P = ['creator', 'explorer', 'venue', 'brand'] as const
+          const missing = ALL_P.filter(p => !personas.includes(p))
+          if (missing.length === 0) return null
+          const PERSONA_URL: Record<string, string> = {
+            creator: '/onboarding?mode=add&persona=creator', explorer: '/onboarding?mode=add&persona=explorer',
+            venue: '/onboarding?mode=add&persona=venue', brand: '/onboarding?mode=add&persona=brand',
+          }
+          const PERSONA_LABEL: Record<string, string> = {
+            creator: 'Become a Creator', explorer: 'Become an Explorer',
+            venue: 'List an Venue', brand: 'Add a Brand',
+          }
+          return (
+            <div style={{
+              background: 'var(--venue-bg-surface)',
+              border: '1px solid var(--venue-border-default)',
+              borderLeft: '3px solid var(--venue-accent)',
+              padding: '20px 24px',
+              marginBottom: 24,
+            }}>
+              <p style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.2em', color: 'var(--venue-accent)', fontFamily: 'var(--font-jetbrains-mono)', marginBottom: 4 }}>✦ EXPAND YOUR PRESENCE</p>
+              <h2 style={{ fontFamily: 'var(--font-dm-sans)', fontSize: 16, fontWeight: 700, color: 'var(--venue-text-primary)', marginBottom: 12 }}>Add another side to your WIMC profile</h2>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                {missing.map(p => (
+                  <Link
+                    key={p}
+                    href={PERSONA_URL[p]}
+                    style={{ padding: '8px 16px', borderRadius: 9999, background: 'var(--venue-accent)', color: '#1A2744', textDecoration: 'none', fontSize: 13, fontWeight: 700, fontFamily: 'var(--font-jetbrains-mono)', display: 'inline-flex', alignItems: 'center', gap: 6 }}
+                  >
+                    <span className="material-symbols-outlined" style={{ fontSize: 15 }}>add</span>
+                    {PERSONA_LABEL[p]}
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )
+        })()}
+
         <RevenueTrend data={revenueTrendData} />
 
         <TierProgressCard venue={venueProfile} reviewCount={reviewCount} />

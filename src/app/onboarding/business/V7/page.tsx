@@ -4,10 +4,10 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { SK } from '@/lib/onboarding/session-keys'
 import { VenueNoticePoster } from '@/components/onboarding/BoardingPassArtifact'
-import { saveVenueOnboardingStep } from '@/app/actions/venue-onboarding'
 import { PRICING_MODELS, PRICING_TO_VALID, EVENT_TYPES, type PricingId } from '@/lib/constants/venueOnboarding'
 import { ONBOARDING_CTA } from '@/lib/constants/onboarding-cta-copy'
 import { OnboardingFooter } from '@/components/onboarding/OnboardingFooter'
+import { queueDraftPatch, flushDraftPatch } from '@/lib/onboarding/draft-sync'
 
 const ACCENT = '#5DD9D0'
 const MONO   = "var(--font-jetbrains-mono), 'JetBrains Mono', monospace"
@@ -59,10 +59,6 @@ const TYPE_SUGGESTIONS: Record<string, string[]> = {
   library:        ['Talks', 'Workshops', 'Meetups', 'Screenings', 'Networking'],
 }
 
-const DAY_FULL: Record<string, 'monday'|'tuesday'|'wednesday'|'thursday'|'friday'|'saturday'|'sunday'> = {
-  MON: 'monday', TUE: 'tuesday', WED: 'wednesday', THU: 'thursday',
-  FRI: 'friday', SAT: 'saturday', SUN: 'sunday',
-}
 
 // 24h "HH:MM" ↔ 12h parts
 function to12h(t: string): { h: string; m: string; period: 'AM' | 'PM' } {
@@ -251,6 +247,7 @@ export default function V7Page() {
     setEventTypes(prev => {
       const next = prev.includes(type) ? prev.filter(t => t !== type) : [...prev, type]
       try { sessionStorage.setItem(SK.v_events, JSON.stringify(next)) } catch {}
+      queueDraftPatch('business', SK.v_events, JSON.stringify(next))
       return next
     })
   }
@@ -258,9 +255,11 @@ export default function V7Page() {
   function saveDaySchedules(next: DayScheduleMap) {
     setDaySchedules(next)
     try { sessionStorage.setItem(SK.v_day_schedules, JSON.stringify(next)) } catch {}
+    queueDraftPatch('business', SK.v_day_schedules, JSON.stringify(next))
     // keep v_days in sync for right-panel snapshot
     const enabled = DAYS.filter(d => next[d]?.enabled)
     try { sessionStorage.setItem(SK.v_days, JSON.stringify(enabled)) } catch {}
+    queueDraftPatch('business', SK.v_days, JSON.stringify(enabled))
   }
 
   function toggleDayEnabled(day: DayKey) {
@@ -307,9 +306,6 @@ export default function V7Page() {
     setIsSaving(true)
     try {
       const enabledKeys = DAYS.filter(d => daySchedules[d]?.enabled)
-      const fullDays    = enabledKeys
-        .map(d => DAY_FULL[d])
-        .filter((d): d is 'monday'|'tuesday'|'wednesday'|'thursday'|'friday'|'saturday'|'sunday' => !!d)
       const timeBuckets = slotsToTimeBuckets(daySchedules)
 
       sessionStorage.setItem(SK.v_pricing,        pricingModel)
@@ -321,28 +317,15 @@ export default function V7Page() {
       sessionStorage.setItem(SK.v_day_schedules,  JSON.stringify(daySchedules))
       sessionStorage.setItem(SK.v_lead,           leadTime)
 
-      if (pricingModel) {
-        const validModel = PRICING_TO_VALID[pricingModel as PricingId] ?? 'fixed_rental'
-        const amountPaise = pricingAmount ? Math.round(parseFloat(pricingAmount) * 100) : undefined
-        const splitPct    = pricingSplit  ? parseFloat(pricingSplit)  : undefined
-
-        const pricing_config: Record<string, number> = {}
-        if (validModel === 'fixed_rental'   && amountPaise) pricing_config.fixed_rental_paise   = amountPaise
-        if (validModel === 'door_split'     && splitPct    !== undefined) pricing_config.door_split_percent    = splitPct
-        if (validModel === 'hybrid') {
-          if (amountPaise)            pricing_config.hybrid_rental_paise  = amountPaise
-          if (splitPct !== undefined) pricing_config.hybrid_split_percent = splitPct
-        }
-        if (validModel === 'f_and_b_minimum' && amountPaise) pricing_config.f_and_b_minimum_paise = amountPaise
-
-        await saveVenueOnboardingStep(3, {
-          step:           3,
-          amenities:      [],
-          pricing_model:  validModel,
-          pricing_config,
-          available_days: fullDays,
-        })
-      }
+      queueDraftPatch('business', SK.v_pricing,        pricingModel)
+      queueDraftPatch('business', SK.v_pricing_amount, pricingAmount)
+      queueDraftPatch('business', SK.v_pricing_split,  pricingSplit)
+      queueDraftPatch('business', SK.v_events,         JSON.stringify(eventTypes))
+      queueDraftPatch('business', SK.v_days,           JSON.stringify(enabledKeys))
+      queueDraftPatch('business', SK.v_times,          JSON.stringify(timeBuckets))
+      queueDraftPatch('business', SK.v_day_schedules,  JSON.stringify(daySchedules))
+      queueDraftPatch('business', SK.v_lead,           leadTime)
+      await flushDraftPatch('business')
     } catch {}
     router.push('/onboarding/business/V8')
   }
@@ -414,6 +397,7 @@ export default function V7Page() {
                     }
                     setPricingModel(next)
                     try { sessionStorage.setItem(SK.v_pricing, next) } catch {}
+                    queueDraftPatch('business', SK.v_pricing, next, { immediate: true })
                   }}
                   style={{
                     display:       'flex', flexDirection: 'column', gap: 6,
@@ -474,7 +458,7 @@ export default function V7Page() {
                 <div style={{ display: 'flex', gap: 8, marginBottom: 10, flexWrap: 'wrap' }}>
                   {['500', '1000', '1500', '2000', '3000'].map(v => (
                     <button key={v} type="button"
-                      onClick={() => { setPricingAmount(v); try { sessionStorage.setItem(SK.v_pricing_amount, v) } catch {} }}
+                      onClick={() => { setPricingAmount(v); try { sessionStorage.setItem(SK.v_pricing_amount, v) } catch {}; queueDraftPatch('business', SK.v_pricing_amount, v, { immediate: true }) }}
                       style={{
                         padding: '6px 14px', cursor: 'pointer', transition: 'all 120ms',
                         background: pricingAmount === v ? ACCENT : 'transparent',
@@ -489,7 +473,7 @@ export default function V7Page() {
                   <input
                     type="number" inputMode="numeric" placeholder="Custom amount / hour"
                     value={pricingAmount}
-                    onChange={e => { setPricingAmount(e.target.value); try { sessionStorage.setItem(SK.v_pricing_amount, e.target.value) } catch {} }}
+                    onChange={e => { setPricingAmount(e.target.value); try { sessionStorage.setItem(SK.v_pricing_amount, e.target.value) } catch {}; queueDraftPatch('business', SK.v_pricing_amount, e.target.value) }}
                     style={{
                       flex: 1, background: '#09090E', border: '1px solid rgba(255,255,255,0.16)',
                       padding: '10px 14px', fontFamily: MONO, fontSize: 16,
@@ -515,7 +499,7 @@ export default function V7Page() {
                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 10 }}>
                   {['10', '15', '20', '25', '30', '40'].map(v => (
                     <button key={v} type="button"
-                      onClick={() => { setPricingSplit(v); try { sessionStorage.setItem(SK.v_pricing_split, v) } catch {} }}
+                      onClick={() => { setPricingSplit(v); try { sessionStorage.setItem(SK.v_pricing_split, v) } catch {}; queueDraftPatch('business', SK.v_pricing_split, v, { immediate: true }) }}
                       style={{
                         padding: '8px 16px', cursor: 'pointer', transition: 'all 120ms',
                         background: pricingSplit === v ? ACCENT : 'transparent',
@@ -529,7 +513,7 @@ export default function V7Page() {
                   <input
                     type="number" inputMode="numeric" placeholder="Custom %" min={1} max={99}
                     value={pricingSplit}
-                    onChange={e => { setPricingSplit(e.target.value); try { sessionStorage.setItem(SK.v_pricing_split, e.target.value) } catch {} }}
+                    onChange={e => { setPricingSplit(e.target.value); try { sessionStorage.setItem(SK.v_pricing_split, e.target.value) } catch {}; queueDraftPatch('business', SK.v_pricing_split, e.target.value) }}
                     style={{
                       flex: 1, background: '#09090E', border: '1px solid rgba(255,255,255,0.16)',
                       padding: '10px 14px', fontFamily: MONO, fontSize: 16,
@@ -561,7 +545,7 @@ export default function V7Page() {
                   <div style={{ display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap', marginBottom: 8 }}>
                     {['500', '1000', '1500', '2000'].map(v => (
                       <button key={v} type="button"
-                        onClick={() => { setPricingAmount(v); try { sessionStorage.setItem(SK.v_pricing_amount, v) } catch {} }}
+                        onClick={() => { setPricingAmount(v); try { sessionStorage.setItem(SK.v_pricing_amount, v) } catch {}; queueDraftPatch('business', SK.v_pricing_amount, v, { immediate: true }) }}
                         style={{
                           padding: '6px 14px', cursor: 'pointer', transition: 'all 120ms',
                           background: pricingAmount === v ? ACCENT : 'transparent',
@@ -576,7 +560,7 @@ export default function V7Page() {
                     <input
                       type="number" inputMode="numeric" placeholder="Custom booking fee"
                       value={pricingAmount}
-                      onChange={e => { setPricingAmount(e.target.value); try { sessionStorage.setItem(SK.v_pricing_amount, e.target.value) } catch {} }}
+                      onChange={e => { setPricingAmount(e.target.value); try { sessionStorage.setItem(SK.v_pricing_amount, e.target.value) } catch {}; queueDraftPatch('business', SK.v_pricing_amount, e.target.value) }}
                       style={{
                         flex: 1, background: '#09090E', border: '1px solid rgba(255,255,255,0.16)',
                         padding: '10px 14px', fontFamily: MONO, fontSize: 16,
@@ -593,7 +577,7 @@ export default function V7Page() {
                   <div style={{ display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap', marginBottom: 8 }}>
                     {['5', '10', '15', '20'].map(v => (
                       <button key={v} type="button"
-                        onClick={() => { setPricingSplit(v); try { sessionStorage.setItem(SK.v_pricing_split, v) } catch {} }}
+                        onClick={() => { setPricingSplit(v); try { sessionStorage.setItem(SK.v_pricing_split, v) } catch {}; queueDraftPatch('business', SK.v_pricing_split, v, { immediate: true }) }}
                         style={{
                           padding: '6px 14px', cursor: 'pointer', transition: 'all 120ms',
                           background: pricingSplit === v ? ACCENT : 'transparent',
@@ -607,7 +591,7 @@ export default function V7Page() {
                     <input
                       type="number" inputMode="numeric" placeholder="Custom %" min={1} max={99}
                       value={pricingSplit}
-                      onChange={e => { setPricingSplit(e.target.value); try { sessionStorage.setItem(SK.v_pricing_split, e.target.value) } catch {} }}
+                      onChange={e => { setPricingSplit(e.target.value); try { sessionStorage.setItem(SK.v_pricing_split, e.target.value) } catch {}; queueDraftPatch('business', SK.v_pricing_split, e.target.value) }}
                       style={{
                         flex: 1, background: '#09090E', border: '1px solid rgba(255,255,255,0.16)',
                         padding: '10px 14px', fontFamily: MONO, fontSize: 16,
@@ -630,7 +614,7 @@ export default function V7Page() {
                 <div style={{ display: 'flex', gap: 8, marginBottom: 10, flexWrap: 'wrap' }}>
                   {['2000', '5000', '10000', '15000', '20000'].map(v => (
                     <button key={v} type="button"
-                      onClick={() => { setPricingAmount(v); try { sessionStorage.setItem(SK.v_pricing_amount, v) } catch {} }}
+                      onClick={() => { setPricingAmount(v); try { sessionStorage.setItem(SK.v_pricing_amount, v) } catch {}; queueDraftPatch('business', SK.v_pricing_amount, v, { immediate: true }) }}
                       style={{
                         padding: '6px 14px', cursor: 'pointer', transition: 'all 120ms',
                         background: pricingAmount === v ? ACCENT : 'transparent',
@@ -645,7 +629,7 @@ export default function V7Page() {
                   <input
                     type="number" inputMode="numeric" placeholder="Custom minimum spend"
                     value={pricingAmount}
-                    onChange={e => { setPricingAmount(e.target.value); try { sessionStorage.setItem(SK.v_pricing_amount, e.target.value) } catch {} }}
+                    onChange={e => { setPricingAmount(e.target.value); try { sessionStorage.setItem(SK.v_pricing_amount, e.target.value) } catch {}; queueDraftPatch('business', SK.v_pricing_amount, e.target.value) }}
                     style={{
                       flex: 1, background: '#09090E', border: '1px solid rgba(255,255,255,0.16)',
                       padding: '10px 14px', fontFamily: MONO, fontSize: 16,
@@ -897,6 +881,7 @@ export default function V7Page() {
                   onClick={() => {
                     setLeadTime(opt)
                     try { sessionStorage.setItem(SK.v_lead, opt) } catch {}
+                    queueDraftPatch('business', SK.v_lead, opt, { immediate: true })
                   }}
                   style={{
                     flex:          1, padding: '10px 0', textAlign: 'center',

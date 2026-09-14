@@ -7,12 +7,15 @@ import { useRouter } from 'next/navigation'
 import { getCountryCallingCode, isValidPhoneNumber, type CountryCode } from 'libphonenumber-js'
 import { initiateRSVP, checkRSVPStatus, getConfirmedRSVPToken, confirmRSVPPayment, casualRSVP, casualRSVPGuest } from '@/app/actions/rsvp'
 import type { MyRSVP } from '@/app/actions/rsvp'
+import { applyToEvent, getMyEventApplicationStatusGuest } from '@/app/actions/event-applications'
 import { sendRsvpGuestOtp, verifyRsvpGuestOtp } from '@/app/actions/guest-otp'
+import { sendApplicationStatusOtp, verifyApplicationStatusOtp } from '@/app/actions/application-status-otp'
 import { validateReferralCode } from '@/app/actions/referral'
-import type { Event } from '@/types/database'
+import type { Event, ApplicationStatus } from '@/types/database'
 import { TornEdge } from '@/components/ui/TornEdge'
 import { CountryCodeSelect } from '@/components/CountryCodeSelect'
 import { profileUrl } from '@/lib/profile-url'
+import { getRazorpayCheckoutKey } from '@/lib/razorpay/client'
 
 /** Domestic (+91) keeps its exact original validation; everything else defers to libphonenumber-js. */
 function isGuestPhoneValid(digits: string, iso: CountryCode): boolean {
@@ -81,6 +84,12 @@ interface EventPageProps {
   creator:         CreatorProfile | null
   reviews?:        EventReview[]
   myRSVP?:         MyRSVP | null
+  /** Authenticated viewer's paid-gated application status (migration 080), if any — see getMyEventApplicationStatus. Always null for a guest or a non-paid-gated event. */
+  myPaidApplicationStatus?: ApplicationStatus | null
+  /** The above application's id — links an 'approved' status to /pay/[applicationId]. Null whenever myPaidApplicationStatus is null. */
+  myPaidApplicationId?: string | null
+  /** The above application's payment window, when approved. Null otherwise. */
+  myPaidApplicationPaymentDeadline?: string | null
   isAuthenticated: boolean
   /** How the visitor arrived at this booking page (?src= query param). Undefined = 'direct'. */
   discoverySource?: 'creator_link' | 'platform_discovery'
@@ -90,7 +99,7 @@ interface EventPageProps {
   viewerPhoneDigits?: string | null
 }
 
-type Sheet = 'none' | 'step1' | 'step2' | 'confirmed' | 'casualGuest'
+type Sheet = 'none' | 'step1' | 'step2' | 'confirmed' | 'casualGuest' | 'apply' | 'applyPending' | 'casualApply' | 'casualPending' | 'checkStatus'
 
 interface ConfirmedData {
   qrToken: string | null
@@ -120,6 +129,28 @@ function formatTime(iso: string): string {
 function formatPrice(paise: number): string {
   if (paise === 0) return 'Free'
   return `₹${(paise / 100).toLocaleString('en-IN')}`
+}
+
+function formatDeadline(iso: string): string {
+  return new Date(iso).toLocaleString('en-IN', {
+    day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', hour12: true,
+  })
+}
+
+const DEADLINE_URGENT_WINDOW_MS = 2 * 60 * 60 * 1000   // 2 hours — same threshold PaidApplicationsClient uses for the host-side queue
+
+/**
+ * Same urgency rule as PaidApplicationsClient's deadlineUrgency (host-facing
+ * review queue) — worth mirroring here for the applicant-facing "Pay now"
+ * banner too, so a closing-soon deadline reads with the same normal/amber/red
+ * signal on both sides. Not live-ticking, same tradeoff as the host version:
+ * a tab left open for hours won't flip color until the next render.
+ */
+function deadlineUrgency(paymentDeadline: string): 'normal' | 'urgent' | 'elapsed' {
+  const msLeft = new Date(paymentDeadline).getTime() - Date.now()
+  if (msLeft <= 0) return 'elapsed'
+  if (msLeft <= DEADLINE_URGENT_WINDOW_MS) return 'urgent'
+  return 'normal'
 }
 
 function formatCreatorType(raw: string): string {
@@ -165,12 +196,38 @@ declare global {
   }
 }
 
-export default function EventPage({ event, rsvpCount, spotsLeft, creator, reviews = [], myRSVP = null, isAuthenticated, discoverySource, viewerName = null, viewerPhoneDigits = null }: EventPageProps) {
+export default function EventPage({ event, rsvpCount, spotsLeft, creator, reviews = [], myRSVP = null, myPaidApplicationStatus = null, myPaidApplicationId = null, myPaidApplicationPaymentDeadline = null, isAuthenticated, discoverySource, viewerName = null, viewerPhoneDigits = null }: EventPageProps) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const isCasual = (event as any).rsvp_style === 'casual' || event.ticket_price === 0
+  // Paid-gated (Phase B, migration 080): a paid ticketed event with
+  // requires_approval on routes through applyToEvent/event_applications
+  // instead of straight into initiateRSVP — mirrors the exact isGatableEvent
+  // condition in events.ts's createEvent (rsvp_style === 'ticketed' &&
+  // ticket_price > 0 && requires_approval).
+  const isPaidGated = event.rsvp_style === 'ticketed' && event.ticket_price > 0 && event.requires_approval === true
   const [sheet, setSheet] = useState<Sheet>(() => (myRSVP && !isCasual) ? 'confirmed' : 'none')
-  const [casualIntent, setCasualIntent] = useState<'going' | 'maybe' | 'not_going' | null>(() => myRSVP ? 'going' : null)
+  // Bug fix: this used to default to 'going' whenever ANY myRSVP row existed,
+  // which was wrong for a returning user whose casual response was actually
+  // 'maybe'/'not_going' — getMyRSVPForEvent didn't return casual_intent at
+  // all until this fix, so there was nothing else to initialize from.
+  const [casualIntent, setCasualIntent] = useState<'going' | 'maybe' | 'not_going' | null>(() => myRSVP?.casualIntent ?? null)
+  // Gate state for a returning user's casual "going" response (migration
+  // 079) — same bug: getMyRSVPForEvent never returned this, so a returning
+  // applicant whose 'going' was actually still pending review looked
+  // identical to one who was fully confirmed. Kept in its own state (not
+  // read directly from myRSVP everywhere) because a fresh submission this
+  // session updates it locally without a full page reload.
+  //
+  // Also seeded from myPaidApplicationStatus (getMyEventApplicationStatus,
+  // event-applications.ts) for the paid-gated case (migration 080): myRSVP
+  // is always null there until payment succeeds, so without this a
+  // returning authenticated applicant had no way to see their pending/
+  // waitlisted/declined status either. myRSVP?.applicationStatus and
+  // myPaidApplicationStatus are never both non-null for the same event (an
+  // event is either casual or paid-gated, never both), so this fallback
+  // never picks the wrong source.
+  const [myApplicationStatus, setMyApplicationStatus] = useState<ApplicationStatus | null>(() => myRSVP?.applicationStatus ?? myPaidApplicationStatus ?? null)
   const [casualPending, startCasualTransition] = useTransition()
 
   // Guest casual RSVP — the intent tapped (Going/Maybe/Can't go) before the
@@ -223,6 +280,37 @@ export default function EventPage({ event, rsvpCount, spotsLeft, creator, review
     return () => clearTimeout(t)
   }, [otpSent, otpVerified, isIndia, otpChannel])
 
+  // Paid-gated application (Phase B) — reuses name/phoneDigits/countryIso/
+  // selectedTierId/OTP state above (safe: the apply sheet and the ticketed
+  // step1 sheet never render together, same reasoning as isCasual/ticketed
+  // sharing state). Kept as its own error/pending pair so it never cross-
+  // talks with step1's, same pattern as the casualGuest sheet above.
+  const [applyAnswer, setApplyAnswer] = useState('')
+  const [applyError, setApplyError] = useState<string | null>(null)
+  const [applyPending, startApplyTransition] = useTransition()
+
+  // Guest "Check my application status" (Phase B) — a separate, self-
+  // triggered OTP flow (application-status-otp.ts, its own OTP purpose) so
+  // it can't be confused with or throttled by the apply sheet's guest OTP
+  // above. Deliberately its own phone/country/OTP state rather than reusing
+  // phoneDigits/countryIso/otp*: those flows key on a different OTP purpose
+  // ('guest-rsvp'), and a stale otpVerified=true from booking/applying
+  // earlier in the same visit must not let this flow skip verification for
+  // a purpose the server never actually verified.
+  const [checkStatusPhoneDigits, setCheckStatusPhoneDigits] = useState('')
+  const [checkStatusCountryIso, setCheckStatusCountryIso] = useState<CountryCode>('IN')
+  const [checkStatusOtpSent, setCheckStatusOtpSent] = useState(false)
+  const [checkStatusOtpVerified, setCheckStatusOtpVerified] = useState(false)
+  const [checkStatusOtpCode, setCheckStatusOtpCode] = useState('')
+  const [checkStatusOtpChannel, setCheckStatusOtpChannel] = useState<'sms' | 'whatsapp'>('whatsapp')
+  const [checkStatusError, setCheckStatusError] = useState<string | null>(null)
+  const [checkStatusResult, setCheckStatusResult] = useState<{
+    status:          ApplicationStatus | 'not_found'
+    applicationId:   string | null
+    paymentDeadline: string | null
+  } | null>(null)
+  const [checkStatusPending, startCheckStatusTransition] = useTransition()
+
   // Referral code
   const [refExpanded, setRefExpanded] = useState(false)
   const [refInput, setRefInput] = useState('')
@@ -251,6 +339,12 @@ export default function EventPage({ event, rsvpCount, spotsLeft, creator, review
   const goingCount = event.capacity !== null && rsvpCount >= 5 ? `${rsvpCount} of ${event.capacity}` : `${rsvpCount}`
   const isPast = new Date(event.starts_at) <= new Date()
   const canBook = event.status === 'published' && !soldOut && !isPast
+  // Deliberately NOT gated on soldOut: approving an applicant doesn't
+  // reserve a spot (capacity is only checked by initiateRSVP at payment
+  // time, by design — see event-applications.ts), so applying should stay
+  // open even once nominal capacity shows full. Applying costs nothing;
+  // only a captured payment consumes a spot.
+  const canApply = event.status === 'published' && !isPast
   const maxQty = Math.min(10, spotsLeft ?? 10)
   const effectivePrice = refApplied ? 0 : hasFanTiers ? (selectedTier?.price_paise ?? 0) : event.ticket_price
   const totalPaise = effectivePrice * quantity
@@ -284,17 +378,63 @@ export default function EventPage({ event, rsvpCount, spotsLeft, creator, review
 
   // ── Casual RSVP ────────────────────────────────────────────────────────────
 
+  // A 'going' response on a requires_approval event is gated into
+  // application_status='pending' (migration 079) — 'maybe'/'not_going' are
+  // never gated (resolveApplicationStatus in rsvp.ts).
+  const isGatedGoing = (intent: 'going' | 'maybe' | 'not_going') => intent === 'going' && event.requires_approval === true
+
   function handleCasualRSVP(intent: 'going' | 'maybe' | 'not_going') {
     if (!isAuthenticated) {
       setPendingCasualIntent(intent)
       setCasualGuestError(null)
+      setApplyAnswer('')
       setOtpSent(false); setOtpVerified(false); setOtpCode(''); setOtpChannel('whatsapp')
       setSheet('casualGuest')
       return
     }
+
+    // Gated 'going' needs the application question answered first (when the
+    // host set one) — open a small sheet instead of submitting immediately,
+    // same reasoning as the guest path already uses casualGuest for this.
+    if (isGatedGoing(intent) && event.application_question) {
+      setPendingCasualIntent(intent)
+      setApplyAnswer('')
+      setApplyError(null)
+      setSheet('casualApply')
+      return
+    }
+
     setCasualIntent(intent)  // optimistic update
     startCasualTransition(async () => {
-      await casualRSVP({ eventId: event.id, intent })
+      const result = await casualRSVP({ eventId: event.id, intent })
+      if (result.error) return  // no inline error surface for the authenticated toggle — matches prior behavior
+      setMyApplicationStatus(result.applicationStatus)
+      if (isGatedGoing(intent) && result.applicationStatus === 'pending') {
+        setSheet('casualPending')
+      }
+    })
+  }
+
+  // ── Casual RSVP — gated 'going', authenticated user (question only) ────────
+
+  function handleCasualApplySubmit() {
+    setApplyError(null)
+    if (event.application_question && !applyAnswer.trim()) {
+      setApplyError('Please answer the question to apply.')
+      return
+    }
+    if (!pendingCasualIntent) return
+
+    setCasualIntent(pendingCasualIntent)  // optimistic update
+    startApplyTransition(async () => {
+      const result = await casualRSVP({
+        eventId: event.id,
+        intent:  pendingCasualIntent!,
+        answer:  applyAnswer.trim() || undefined,
+      })
+      if (result.error) { setApplyError(result.error); return }
+      setMyApplicationStatus(result.applicationStatus)
+      setSheet(result.applicationStatus === 'pending' ? 'casualPending' : 'none')
     })
   }
 
@@ -307,10 +447,12 @@ export default function EventPage({ event, rsvpCount, spotsLeft, creator, review
       intent:  pendingCasualIntent,
       name:    name.trim(),
       phone,
+      ...(isGatedGoing(pendingCasualIntent) && event.application_question ? { answer: applyAnswer.trim() } : {}),
     })
     if (result.error) { setCasualGuestError(result.error); return }
     setCasualIntent(pendingCasualIntent)
-    setSheet('none')
+    setMyApplicationStatus(result.applicationStatus)
+    setSheet(result.applicationStatus === 'pending' ? 'casualPending' : 'none')
   }
 
   function handleCasualGuestSubmit() {
@@ -318,6 +460,10 @@ export default function EventPage({ event, rsvpCount, spotsLeft, creator, review
     if (!name.trim()) { setCasualGuestError('Please enter your name.'); return }
     if (!isGuestPhoneValid(phoneDigits, countryIso)) {
       setCasualGuestError(isIndia ? 'Please enter a valid 10-digit Indian mobile number.' : 'Please enter a valid phone number.')
+      return
+    }
+    if (pendingCasualIntent && isGatedGoing(pendingCasualIntent) && event.application_question && !applyAnswer.trim()) {
+      setCasualGuestError('Please answer the question to apply.')
       return
     }
 
@@ -442,6 +588,109 @@ export default function EventPage({ event, rsvpCount, spotsLeft, creator, review
     startTransition(submitRSVP)
   }
 
+  // ── Paid-gated application (Phase B) ────────────────────────────────────────
+
+  async function submitApplication() {
+    const result = await applyToEvent({
+      eventId: event.id,
+      name:    name.trim(),
+      phone,
+      ...(event.application_question ? { answer: applyAnswer.trim() } : {}),
+      ...(hasFanTiers && selectedTier ? { ticketTierId: selectedTier.id } : {}),
+    })
+
+    if (result.error) { setApplyError(result.error); return }
+    setSheet('applyPending')
+  }
+
+  function handleApplySubmit() {
+    setApplyError(null)
+    if (!name.trim()) { setApplyError('Please enter your name.'); return }
+    if (!isGuestPhoneValid(phoneDigits, countryIso)) {
+      setApplyError(isIndia ? 'Please enter a valid 10-digit Indian mobile number.' : 'Please enter a valid phone number.')
+      return
+    }
+    // applyToEvent rejects a tierless application to a tiered event outright
+    // — catch it here too so the guest never round-trips to the server just
+    // to learn a tier is required (the picker always has one pre-selected,
+    // this only guards the theoretical case where it doesn't).
+    if (hasFanTiers && !selectedTierId) { setApplyError('Please select a ticket tier.'); return }
+    if (event.application_question && !applyAnswer.trim()) {
+      setApplyError('Please answer the question to apply.')
+      return
+    }
+
+    // Guests (no WIMC session) must OTP-verify their phone before applying —
+    // same gate initiateRSVP applies to guest bookings, reused as-is here.
+    if (!isAuthenticated && !otpVerified) {
+      if (!otpSent) {
+        startApplyTransition(async () => {
+          const r = await sendRsvpGuestOtp(phone, isIndia ? 'sms' : 'whatsapp')
+          if (!r.success) { setApplyError(r.error ?? 'Could not send verification code.'); return }
+          setOtpChannel(r.channel)
+          setOtpSent(true)
+        })
+        return
+      }
+      if (!/^\d{6}$/.test(otpCode)) {
+        setApplyError('Enter the 6-digit code sent to your phone.')
+        return
+      }
+      startApplyTransition(async () => {
+        const r = await verifyRsvpGuestOtp(phone, otpCode)
+        if (!r.success) { setApplyError(r.error ?? 'Incorrect code.'); return }
+        setOtpVerified(true)
+        await submitApplication()
+      })
+      return
+    }
+
+    startApplyTransition(submitApplication)
+  }
+
+  // ── Paid-gated application — guest "Check my application status" ───────────
+
+  function handleCheckStatusSubmit() {
+    setCheckStatusError(null)
+    if (!isGuestPhoneValid(checkStatusPhoneDigits, checkStatusCountryIso)) {
+      setCheckStatusError(checkStatusCountryIso === 'IN' ? 'Please enter a valid 10-digit Indian mobile number.' : 'Please enter a valid phone number.')
+      return
+    }
+
+    const statusPhone = `+${getCountryCallingCode(checkStatusCountryIso)}${checkStatusPhoneDigits}`
+
+    if (!checkStatusOtpVerified) {
+      if (!checkStatusOtpSent) {
+        startCheckStatusTransition(async () => {
+          const r = await sendApplicationStatusOtp(statusPhone, checkStatusCountryIso === 'IN' ? 'sms' : 'whatsapp')
+          if (!r.success) { setCheckStatusError(r.error ?? 'Could not send verification code.'); return }
+          setCheckStatusOtpChannel(r.channel)
+          setCheckStatusOtpSent(true)
+        })
+        return
+      }
+      if (!/^\d{6}$/.test(checkStatusOtpCode)) {
+        setCheckStatusError('Enter the 6-digit code sent to your phone.')
+        return
+      }
+      startCheckStatusTransition(async () => {
+        const v = await verifyApplicationStatusOtp(statusPhone, checkStatusOtpCode)
+        if (!v.success) { setCheckStatusError(v.error ?? 'Incorrect code.'); return }
+        setCheckStatusOtpVerified(true)
+        const r = await getMyEventApplicationStatusGuest(event.id, statusPhone)
+        if (r.error) { setCheckStatusError(r.error); return }
+        setCheckStatusResult({ status: r.status ?? 'not_found', applicationId: r.applicationId, paymentDeadline: r.paymentDeadline })
+      })
+      return
+    }
+
+    startCheckStatusTransition(async () => {
+      const r = await getMyEventApplicationStatusGuest(event.id, statusPhone)
+      if (r.error) { setCheckStatusError(r.error); return }
+      setCheckStatusResult({ status: r.status ?? 'not_found', applicationId: r.applicationId, paymentDeadline: r.paymentDeadline })
+    })
+  }
+
   // ── Razorpay Standard Checkout ─────────────────────────────────────────────
 
   async function openRazorpayCheckout(
@@ -461,7 +710,7 @@ export default function EventPage({ event, rsvpCount, spotsLeft, creator, review
     }
 
     const rzp = new window.Razorpay({
-      key:         process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID ?? '',
+      key:         getRazorpayCheckoutKey(),
       amount:      order.amount,
       currency:    'INR',
       name:        'When In My City',
@@ -1070,6 +1319,25 @@ export default function EventPage({ event, rsvpCount, spotsLeft, creator, review
                             Can&apos;t go
                           </button>
                         </div>
+                        {/* Returning-user gate state (migration 079) — a
+                            'going' response that's still pending review, or
+                            was declined, must not look identical to a plain
+                            confirmed "Going" toggle. */}
+                        {myApplicationStatus === 'pending' && (
+                          <p className="text-center font-mono text-[10px] uppercase tracking-wider text-amber-800 bg-amber-100 py-1.5">
+                            Pending host review
+                          </p>
+                        )}
+                        {myApplicationStatus === 'waitlisted' && (
+                          <p className="text-center font-mono text-[10px] uppercase tracking-wider text-amber-800 bg-amber-100 py-1.5">
+                            Waitlisted
+                          </p>
+                        )}
+                        {myApplicationStatus === 'declined' && (
+                          <p className="text-center font-mono text-[10px] uppercase tracking-wider text-[#57423e] bg-[#F0E8DC] py-1.5">
+                            Not approved
+                          </p>
+                        )}
                         {!isAuthenticated && (
                           <Link
                             href={`/signin?next=/events/${event.slug}`}
@@ -1089,6 +1357,110 @@ export default function EventPage({ event, rsvpCount, spotsLeft, creator, review
                         {soldOut ? 'Sold Out' : isPast ? 'Event Ended' : event.status === 'cancelled' ? 'Cancelled' : ''}
                       </div>
                     )
+                  ) : isPaidGated ? (
+                    <>
+                      {canApply && !myRSVP && (
+                        isAuthenticated ? (
+                          <button
+                            onClick={() => setSheet('apply')}
+                            className="w-full bg-[#07070A] text-[#FAF7F0] font-sans font-semibold py-3.5 uppercase flex justify-center items-center gap-2 hover:bg-primary transition-colors border-2 border-[#07070A] group text-sm tracking-wider"
+                          >
+                            Apply to Attend
+                            <span className="material-symbols-outlined text-sm group-hover:translate-x-1 transition-transform" style={{ fontVariationSettings: "'FILL' 0" }}>arrow_forward</span>
+                          </button>
+                        ) : (
+                          <div className="flex flex-col gap-2">
+                            <button
+                              onClick={() => setSheet('apply')}
+                              className="w-full bg-[#07070A] text-[#FAF7F0] font-sans font-semibold py-3.5 uppercase flex justify-center items-center gap-2 hover:bg-primary transition-colors border-2 border-[#07070A] group text-sm tracking-wider"
+                            >
+                              Apply as Guest
+                              <span className="material-symbols-outlined text-sm group-hover:translate-x-1 transition-transform" style={{ fontVariationSettings: "'FILL' 0" }}>arrow_forward</span>
+                            </button>
+                            <Link
+                              href={`/signin?next=/events/${event.slug}`}
+                              className="w-full text-center font-mono text-xs uppercase tracking-wider text-[#07070A] py-1 hover:underline"
+                            >
+                              Sign in instead
+                            </Link>
+                          </div>
+                        )
+                      )}
+
+                      {/* Returning-applicant status (migration 080) — mirrors the
+                          casual gate-state badges above (myApplicationStatus). */}
+                      {myApplicationStatus === 'pending' && (
+                        <p className="text-center font-mono text-[10px] uppercase tracking-wider text-amber-800 bg-amber-100 py-1.5">
+                          Pending host review
+                        </p>
+                      )}
+                      {myApplicationStatus === 'waitlisted' && (
+                        <p className="text-center font-mono text-[10px] uppercase tracking-wider text-amber-800 bg-amber-100 py-1.5">
+                          Waitlisted
+                        </p>
+                      )}
+                      {myApplicationStatus === 'declined' && (
+                        <p className="text-center font-mono text-[10px] uppercase tracking-wider text-[#57423e] bg-[#F0E8DC] py-1.5">
+                          Not approved
+                        </p>
+                      )}
+                      {myApplicationStatus === 'approved' && myPaidApplicationId && (
+                        <div className="flex flex-col gap-1.5">
+                          <p className="text-center font-mono text-[10px] uppercase tracking-wider text-white bg-[#006a43] py-1.5">
+                            Approved!
+                          </p>
+                          <Link
+                            href={`/pay/${myPaidApplicationId}`}
+                            className="w-full bg-[#006a43] text-white font-sans font-semibold py-3.5 uppercase flex justify-center items-center gap-2 hover:bg-[#00875a] transition-colors border-2 border-[#07070A] text-sm tracking-wider"
+                          >
+                            Pay Now
+                            <span className="material-symbols-outlined text-sm" style={{ fontVariationSettings: "'FILL' 0" }}>arrow_forward</span>
+                          </Link>
+                          {myPaidApplicationPaymentDeadline && (() => {
+                            const urgency = deadlineUrgency(myPaidApplicationPaymentDeadline)
+                            const color = urgency === 'elapsed' ? '#EF4444' : urgency === 'urgent' ? '#F59E0B' : undefined
+                            return (
+                              <p className={`text-center font-mono text-[10px] ${color ? '' : 'text-[#57423e]'}`} style={color ? { color } : undefined}>
+                                {urgency === 'elapsed'
+                                  ? `Payment window elapsed ${formatDeadline(myPaidApplicationPaymentDeadline)}`
+                                  : `Pay by ${formatDeadline(myPaidApplicationPaymentDeadline)}${urgency === 'urgent' ? ' — closing soon' : ''}`}
+                              </p>
+                            )
+                          })()}
+                        </div>
+                      )}
+
+                      {!isAuthenticated && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setCheckStatusError(null)
+                            setCheckStatusResult(null)
+                            setCheckStatusOtpSent(false); setCheckStatusOtpVerified(false); setCheckStatusOtpCode('')
+                            setSheet('checkStatus')
+                          }}
+                          className="w-full text-center font-mono text-[10px] uppercase tracking-wider text-[#57423e] hover:underline"
+                        >
+                          Check my application status
+                        </button>
+                      )}
+
+                      {myRSVP && (
+                        <button
+                          onClick={() => setSheet('confirmed')}
+                          className="w-full bg-[#006a43] text-white font-sans font-semibold py-3.5 flex justify-center items-center gap-2 border-2 border-[#07070A] text-sm tracking-wider uppercase hover:bg-[#00875a] transition-colors"
+                        >
+                          <span className="material-symbols-outlined text-sm" style={{ fontVariationSettings: "'FILL' 1" }}>confirmation_number</span>
+                          View My Ticket
+                        </button>
+                      )}
+
+                      {(!canApply && !myRSVP) && (
+                        <div className="w-full py-3 text-center font-mono text-xs uppercase tracking-wider text-[#07070A] bg-[#F0E8DC] border-2 border-[#07070A]">
+                          {isPast ? 'Event Ended' : event.status === 'cancelled' ? 'Cancelled' : ''}
+                        </div>
+                      )}
+                    </>
                   ) : (
                     <>
                       {canBook && !myRSVP && (
@@ -1240,6 +1612,21 @@ export default function EventPage({ event, rsvpCount, spotsLeft, creator, review
                     Can&apos;t go
                   </button>
                 </div>
+                {myApplicationStatus === 'pending' && (
+                  <p className="text-center text-xs font-mono uppercase tracking-wider text-amber-800 bg-amber-100 rounded-lg py-1.5">
+                    Pending host review
+                  </p>
+                )}
+                {myApplicationStatus === 'waitlisted' && (
+                  <p className="text-center text-xs font-mono uppercase tracking-wider text-amber-800 bg-amber-100 rounded-lg py-1.5">
+                    Waitlisted
+                  </p>
+                )}
+                {myApplicationStatus === 'declined' && (
+                  <p className="text-center text-xs font-mono uppercase tracking-wider text-on-surface-variant bg-surface-container-high rounded-lg py-1.5">
+                    Not approved
+                  </p>
+                )}
                 {!isAuthenticated && (
                   <Link
                     href={`/signin?next=/events/${event.slug}`}
@@ -1265,6 +1652,93 @@ export default function EventPage({ event, rsvpCount, spotsLeft, creator, review
               <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>confirmation_number</span>
               View My Ticket
             </button>
+          ) : isPaidGated ? (
+            canApply ? (
+              <div className="flex flex-col gap-1.5 w-full">
+                {isAuthenticated ? (
+                  <button
+                    onClick={() => setSheet('apply')}
+                    className="bg-gradient-to-r from-[#AB2E00] to-[#CF4519] text-white rounded-lg px-8 py-4 w-full flex items-center justify-center gap-2 font-headline font-bold text-sm uppercase tracking-wider shadow-[0_-8px_24px_rgba(171,46,0,0.12)] hover:brightness-110 transition-all active:scale-95"
+                  >
+                    <span className="material-symbols-outlined">fact_check</span>
+                    Apply to Attend
+                  </button>
+                ) : (
+                  <>
+                    <button
+                      onClick={() => setSheet('apply')}
+                      className="bg-gradient-to-r from-[#AB2E00] to-[#CF4519] text-white rounded-lg px-8 py-4 w-full flex items-center justify-center gap-2 font-headline font-bold text-sm uppercase tracking-wider shadow-[0_-8px_24px_rgba(171,46,0,0.12)] hover:brightness-110 transition-all active:scale-95"
+                    >
+                      <span className="material-symbols-outlined">fact_check</span>
+                      Apply as Guest
+                    </button>
+                    <Link
+                      href={`/signin?next=/events/${event.slug}`}
+                      className="text-center text-on-surface-variant text-xs font-mono uppercase tracking-wider py-1 hover:underline"
+                    >
+                      Sign in instead
+                    </Link>
+                  </>
+                )}
+                {/* Returning-applicant status (migration 080) — mirrors the
+                    casual gate-state badges elsewhere (myApplicationStatus). */}
+                {myApplicationStatus === 'pending' && (
+                  <p className="text-center text-xs font-mono uppercase tracking-wider text-amber-800 bg-amber-100 rounded-lg py-1.5">
+                    Pending host review
+                  </p>
+                )}
+                {myApplicationStatus === 'waitlisted' && (
+                  <p className="text-center text-xs font-mono uppercase tracking-wider text-amber-800 bg-amber-100 rounded-lg py-1.5">
+                    Waitlisted
+                  </p>
+                )}
+                {myApplicationStatus === 'declined' && (
+                  <p className="text-center text-xs font-mono uppercase tracking-wider text-on-surface-variant bg-surface-container-high rounded-lg py-1.5">
+                    Not approved
+                  </p>
+                )}
+                {myApplicationStatus === 'approved' && myPaidApplicationId && (
+                  <>
+                    <Link
+                      href={`/pay/${myPaidApplicationId}`}
+                      className="bg-[#006a43] text-white rounded-lg px-8 py-4 w-full flex items-center justify-center gap-2 font-headline font-bold text-sm uppercase tracking-wider hover:brightness-110 transition-all active:scale-95"
+                    >
+                      <span className="material-symbols-outlined">confirmation_number</span>
+                      Pay Now
+                    </Link>
+                    {myPaidApplicationPaymentDeadline && (() => {
+                      const urgency = deadlineUrgency(myPaidApplicationPaymentDeadline)
+                      const color = urgency === 'elapsed' ? '#EF4444' : urgency === 'urgent' ? '#F59E0B' : undefined
+                      return (
+                        <p className={`text-center text-xs font-mono ${color ? '' : 'text-on-surface-variant'}`} style={color ? { color } : undefined}>
+                          {urgency === 'elapsed'
+                            ? `Payment window elapsed ${formatDeadline(myPaidApplicationPaymentDeadline)}`
+                            : `Pay by ${formatDeadline(myPaidApplicationPaymentDeadline)}${urgency === 'urgent' ? ' — closing soon' : ''}`}
+                        </p>
+                      )
+                    })()}
+                  </>
+                )}
+                {!isAuthenticated && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCheckStatusError(null)
+                      setCheckStatusResult(null)
+                      setCheckStatusOtpSent(false); setCheckStatusOtpVerified(false); setCheckStatusOtpCode('')
+                      setSheet('checkStatus')
+                    }}
+                    className="text-center text-on-surface-variant text-xs font-mono uppercase tracking-wider py-1 hover:underline"
+                  >
+                    Check my application status
+                  </button>
+                )}
+              </div>
+            ) : (
+              <div className="w-full py-4 text-center text-on-surface-variant text-sm font-semibold bg-surface-container-low rounded-lg">
+                {isPast ? 'Event Ended' : event.status === 'cancelled' ? 'Event Cancelled' : ''}
+              </div>
+            )
           ) : canBook ? (
             isAuthenticated ? (
               <button
@@ -1729,6 +2203,28 @@ export default function EventPage({ event, rsvpCount, spotsLeft, creator, review
                   )}
 
                   {/* Error */}
+                  {/* Application question — only for a gated 'going' response
+                      (migration 079). No payment is ever involved here; this
+                      is purely a review gate on the RSVP itself. */}
+                  {pendingCasualIntent && isGatedGoing(pendingCasualIntent) && event.application_question && (
+                    <div>
+                      <label className="block text-xs font-bold text-on-surface-variant uppercase tracking-widest mb-2 px-1">
+                        {event.application_question}
+                      </label>
+                      <textarea
+                        value={applyAnswer}
+                        onChange={(e) => setApplyAnswer(e.target.value.slice(0, 500))}
+                        rows={3}
+                        placeholder="Your answer"
+                        className="w-full bg-surface-container-low border-none rounded-xl px-4 py-4 focus:outline-none focus:ring-2 focus:ring-outline transition-all text-on-surface placeholder:text-outline-variant resize-none"
+                      />
+                      <div className="text-right text-[10px] text-on-surface-variant mt-1">{applyAnswer.length}/500</div>
+                      <p className="text-xs text-on-surface-variant mt-2">
+                        This event requires host approval — you&apos;ll hear back before you&apos;re confirmed.
+                      </p>
+                    </div>
+                  )}
+
                   {casualGuestError && (
                     <p className="text-error text-sm flex items-start gap-1.5">
                       <span className="material-symbols-outlined text-base shrink-0 mt-0.5">error</span>
@@ -1749,7 +2245,9 @@ export default function EventPage({ event, rsvpCount, spotsLeft, creator, review
                         ? 'Send verification code'
                         : !otpVerified
                           ? 'Verify & continue'
-                          : 'Confirm'}
+                          : pendingCasualIntent && isGatedGoing(pendingCasualIntent)
+                            ? 'Submit'
+                            : 'Confirm'}
                     {!guestPending && <span className="material-symbols-outlined">arrow_forward</span>}
                   </button>
                 </div>
@@ -1757,6 +2255,562 @@ export default function EventPage({ event, rsvpCount, spotsLeft, creator, review
             </div>
           </div>
         </>
+      )}
+
+      {/* ════════════════════════════════════════════════════════════════════ */}
+      {/* Casual RSVP: gated 'going', authenticated user — question only, name/ */}
+      {/* phone already known. Only reached when the host set a question; a    */}
+      {/* gated-but-questionless 'going' submits immediately from the toggle.  */}
+      {/* ════════════════════════════════════════════════════════════════════ */}
+      {sheet === 'casualApply' && (
+        <>
+          <SheetBackdrop onClick={() => setSheet('none')} />
+          <div className="fixed bottom-0 left-0 w-full z-[70]">
+            <div className="bg-surface-container-lowest rounded-t-[32px] shadow-[0_-12px_32px_rgba(171,46,0,0.12)] max-w-2xl mx-auto overflow-hidden">
+              <SheetGrabber />
+              <div className="px-6 pb-8 pt-2">
+                <header className="mb-8">
+                  <h2 className="font-headline text-2xl font-bold text-on-surface">One more thing</h2>
+                  <p className="text-on-surface-variant text-sm">
+                    This event requires host approval — answer this to apply. No payment is involved.
+                  </p>
+                </header>
+
+                <div className="space-y-6">
+                  {event.application_question && (
+                    <div>
+                      <label className="block text-xs font-bold text-on-surface-variant uppercase tracking-widest mb-2 px-1">
+                        {event.application_question}
+                      </label>
+                      <textarea
+                        value={applyAnswer}
+                        onChange={(e) => setApplyAnswer(e.target.value.slice(0, 500))}
+                        rows={3}
+                        placeholder="Your answer"
+                        className="w-full bg-surface-container-low border-none rounded-xl px-4 py-4 focus:outline-none focus:ring-2 focus:ring-outline transition-all text-on-surface placeholder:text-outline-variant resize-none"
+                        autoFocus
+                      />
+                      <div className="text-right text-[10px] text-on-surface-variant mt-1">{applyAnswer.length}/500</div>
+                    </div>
+                  )}
+
+                  {applyError && (
+                    <p className="text-error text-sm flex items-start gap-1.5">
+                      <span className="material-symbols-outlined text-base shrink-0 mt-0.5">error</span>
+                      {applyError}
+                    </p>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={handleCasualApplySubmit}
+                    disabled={applyPending}
+                    className="w-full bg-gradient-to-r from-primary to-primary-container text-on-primary py-5 rounded-xl font-headline font-bold text-lg flex items-center justify-center gap-3 shadow-[0_12px_32px_rgba(171,46,0,0.15)] active:scale-[0.98] transition-all disabled:opacity-50"
+                  >
+                    {applyPending ? 'Processing…' : 'Submit'}
+                    {!applyPending && <span className="material-symbols-outlined">arrow_forward</span>}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* ════════════════════════════════════════════════════════════════════ */}
+      {/* Paid-gated application (Phase B, migration 080) — submits to the    */}
+      {/* review queue via applyToEvent. No payment happens here; that only   */}
+      {/* happens later, from the "you're in, pay by X" link, on /pay/[id].   */}
+      {/* ════════════════════════════════════════════════════════════════════ */}
+      {sheet === 'apply' && (
+        <>
+          <SheetBackdrop onClick={() => setSheet('none')} />
+          <div className="fixed bottom-0 left-0 w-full z-[70]">
+            <div className="bg-surface-container-lowest rounded-t-[32px] shadow-[0_-12px_32px_rgba(171,46,0,0.12)] max-w-2xl mx-auto overflow-hidden max-h-[90vh] overflow-y-auto">
+              <SheetGrabber />
+              <div className="px-6 pb-8 pt-2">
+                <header className="mb-8">
+                  <h2 className="font-headline text-2xl font-bold text-on-surface">Apply to attend</h2>
+                  <p className="text-on-surface-variant text-sm">
+                    {event.title} requires host approval before you can book. Submit your application — if approved, you&apos;ll get a link to pay and confirm your spot.
+                  </p>
+                </header>
+
+                <div className="space-y-6">
+                  {/* Fan Tier Picker — same picker as the ticketed flow. Always has a
+                      tier pre-selected, so a tierless application (which applyToEvent
+                      rejects) can't round-trip to the server from here. */}
+                  {hasFanTiers && (
+                    <div>
+                      <label className="block text-xs font-bold text-on-surface-variant uppercase tracking-widest mb-3 px-1">
+                        Choose Your Tier
+                      </label>
+                      <div className="space-y-2">
+                        {fanTiers.map((tier) => {
+                          const isSelected = selectedTierId === tier.id
+                          return (
+                            <button
+                              key={tier.id}
+                              type="button"
+                              onClick={() => setSelectedTierId(tier.id)}
+                              className={`w-full text-left p-4 rounded-xl border-2 transition-all ${
+                                isSelected
+                                  ? 'border-primary bg-primary/8'
+                                  : 'border-outline-variant/30 bg-surface-container-low hover:border-outline-variant'
+                              }`}
+                            >
+                              <div className="flex items-center justify-between gap-3">
+                                <div className="flex items-center gap-3 min-w-0">
+                                  <div className={`w-4 h-4 rounded-full border-2 shrink-0 flex items-center justify-center ${
+                                    isSelected ? 'border-primary' : 'border-outline-variant'
+                                  }`}>
+                                    {isSelected && <div className="w-2 h-2 rounded-full bg-primary" />}
+                                  </div>
+                                  <div className="min-w-0">
+                                    <span className="font-headline font-bold text-on-surface text-sm">{tier.name}</span>
+                                    {tier.description && (
+                                      <p className="text-xs text-on-surface-variant mt-0.5">{tier.description}</p>
+                                    )}
+                                  </div>
+                                </div>
+                                <span className={`font-headline font-bold text-sm shrink-0 ${isSelected ? 'text-primary' : 'text-on-surface'}`}>
+                                  {formatPrice(tier.price_paise)}
+                                </span>
+                              </div>
+                            </button>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Name */}
+                  <div>
+                    <label className="block text-xs font-bold text-on-surface-variant uppercase tracking-widest mb-2 px-1">
+                      Full Name
+                    </label>
+                    <input
+                      type="text"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      placeholder="Enter your name"
+                      className="w-full bg-surface-container-low border-none rounded-xl px-4 py-4 focus:outline-none focus:ring-2 focus:ring-outline transition-all text-on-surface placeholder:text-outline-variant"
+                    />
+                  </div>
+
+                  {/* Phone */}
+                  <div>
+                    <label className="block text-xs font-bold text-on-surface-variant uppercase tracking-widest mb-2 px-1">
+                      {isIndia ? 'WhatsApp Number' : 'Phone Number'}
+                    </label>
+                    <div className="flex gap-2">
+                      <CountryCodeSelect
+                        value={countryIso}
+                        onChange={(iso) => {
+                          setCountryIso(iso)
+                          setPhoneDigits('')
+                          if (!isAuthenticated) { setOtpSent(false); setOtpVerified(false); setOtpCode(''); setOtpChannel('whatsapp') }
+                        }}
+                      />
+                      <input
+                        type="tel"
+                        value={phoneDigits}
+                        onChange={(e) => {
+                          setPhoneDigits(e.target.value.replace(/\D/g, '').slice(0, isIndia ? 10 : 14))
+                          if (!isAuthenticated) { setOtpSent(false); setOtpVerified(false); setOtpCode(''); setOtpChannel('whatsapp') }
+                        }}
+                        placeholder={isIndia ? '98765 43210' : 'Phone number'}
+                        className="w-full bg-surface-container-low border-none rounded-xl px-4 py-4 focus:outline-none focus:ring-2 focus:ring-outline transition-all text-on-surface placeholder:text-outline-variant"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Guest phone verification — shown once a code has been sent */}
+                  {!isAuthenticated && otpSent && !otpVerified && (
+                    <div className="p-4 bg-surface-container-high rounded-xl flex flex-col gap-3">
+                      <div>
+                        <span className="block font-headline font-bold text-on-surface text-sm">Verify your number</span>
+                        <span className="text-xs text-on-surface-variant">
+                          {isIndia
+                            ? <>Enter the 6-digit code sent via {otpChannel === 'whatsapp' ? 'WhatsApp' : 'SMS'} to +91 {phoneDigits}</>
+                            : <>Enter the 6-digit code sent via WhatsApp to +{dialCode} {phoneDigits}</>}
+                        </span>
+                      </div>
+                      <input
+                        type="tel"
+                        inputMode="numeric"
+                        value={otpCode}
+                        onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                        placeholder="000000"
+                        className="w-full bg-surface-container-lowest border-none rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-outline transition-all text-on-surface placeholder:text-outline-variant font-mono text-lg tracking-[0.3em] text-center"
+                      />
+                      <div className="flex items-center gap-4">
+                        <button
+                          type="button"
+                          disabled={applyPending}
+                          onClick={() => {
+                            setApplyError(null)
+                            setOtpCode('')
+                            startApplyTransition(async () => {
+                              const r = await sendRsvpGuestOtp(phone, otpChannel)
+                              if (!r.success) { setApplyError(r.error ?? 'Could not resend code.'); return }
+                              setOtpChannel(r.channel)
+                            })
+                          }}
+                          className="self-start text-xs font-mono uppercase tracking-wider text-primary hover:underline disabled:opacity-50"
+                        >
+                          Resend code
+                        </button>
+                        {isIndia && otpChannel === 'sms' && whatsappFallbackReady && (
+                          <button
+                            type="button"
+                            disabled={applyPending}
+                            onClick={() => {
+                              setApplyError(null)
+                              setOtpCode('')
+                              startApplyTransition(async () => {
+                                const r = await sendRsvpGuestOtp(phone, 'whatsapp')
+                                if (!r.success) { setApplyError(r.error ?? 'Could not send WhatsApp code.'); return }
+                                setOtpChannel(r.channel)
+                              })
+                            }}
+                            className="self-start text-xs font-mono uppercase tracking-wider text-primary hover:underline disabled:opacity-50"
+                          >
+                            Didn&apos;t get it? Try WhatsApp instead
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Application question */}
+                  {event.application_question && (
+                    <div>
+                      <label className="block text-xs font-bold text-on-surface-variant uppercase tracking-widest mb-2 px-1">
+                        {event.application_question}
+                      </label>
+                      <textarea
+                        value={applyAnswer}
+                        onChange={(e) => setApplyAnswer(e.target.value.slice(0, 500))}
+                        rows={3}
+                        placeholder="Your answer"
+                        className="w-full bg-surface-container-low border-none rounded-xl px-4 py-4 focus:outline-none focus:ring-2 focus:ring-outline transition-all text-on-surface placeholder:text-outline-variant resize-none"
+                      />
+                      <div className="text-right text-[10px] text-on-surface-variant mt-1">{applyAnswer.length}/500</div>
+                    </div>
+                  )}
+
+                  {/* Error */}
+                  {applyError && (
+                    <p className="text-error text-sm flex items-start gap-1.5">
+                      <span className="material-symbols-outlined text-base shrink-0 mt-0.5">error</span>
+                      {applyError}
+                    </p>
+                  )}
+
+                  {/* CTA */}
+                  <button
+                    type="button"
+                    onClick={handleApplySubmit}
+                    disabled={applyPending}
+                    className="w-full bg-gradient-to-r from-primary to-primary-container text-on-primary py-5 rounded-xl font-headline font-bold text-lg flex items-center justify-center gap-3 shadow-[0_12px_32px_rgba(171,46,0,0.15)] active:scale-[0.98] transition-all disabled:opacity-50"
+                  >
+                    {applyPending
+                      ? 'Processing…'
+                      : (!isAuthenticated && !otpVerified && !otpSent)
+                        ? 'Send verification code'
+                        : (!isAuthenticated && !otpVerified && otpSent)
+                          ? 'Verify & continue'
+                          : 'Submit Application'}
+                    {!applyPending && <span className="material-symbols-outlined">arrow_forward</span>}
+                  </button>
+
+                  <p className="text-center text-xs text-on-surface-variant">
+                    No payment is collected now. You&apos;ll only be charged if the host approves your application and you complete payment within the window they set.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* ════════════════════════════════════════════════════════════════════ */}
+      {/* Paid-gated application — guest "Check my application status"        */}
+      {/* (Phase B). Separate from the apply flow itself: a guest applicant   */}
+      {/* has no session, so their pending/approved/declined/waitlisted state */}
+      {/* only shows here once they OTP-verify the phone they applied with —  */}
+      {/* nothing loads automatically the way it does for an authenticated    */}
+      {/* returning applicant (myPaidApplicationStatus, seeded server-side).  */}
+      {/* ════════════════════════════════════════════════════════════════════ */}
+      {sheet === 'checkStatus' && (
+        <>
+          <SheetBackdrop onClick={() => setSheet('none')} />
+          <div className="fixed bottom-0 left-0 w-full z-[70]">
+            <div className="bg-surface-container-lowest rounded-t-[32px] shadow-[0_-12px_32px_rgba(171,46,0,0.12)] max-w-2xl mx-auto overflow-hidden">
+              <SheetGrabber />
+              <div className="px-6 pb-8 pt-2">
+                <header className="mb-8">
+                  <h2 className="font-headline text-2xl font-bold text-on-surface">Check my application status</h2>
+                  <p className="text-on-surface-variant text-sm">
+                    Enter the phone number you applied with — we&apos;ll text you a code to confirm it&apos;s you.
+                  </p>
+                </header>
+
+                {checkStatusResult ? (
+                  <div className="space-y-6">
+                    {checkStatusResult.status === 'not_found' && (
+                      <p className="text-center text-sm text-on-surface-variant py-3">
+                        We couldn&apos;t find an application for this event under that number.
+                      </p>
+                    )}
+                    {checkStatusResult.status === 'pending' && (
+                      <p className="text-center font-mono text-xs uppercase tracking-wider text-amber-800 bg-amber-100 rounded-lg py-3">
+                        Pending host review
+                      </p>
+                    )}
+                    {checkStatusResult.status === 'waitlisted' && (
+                      <p className="text-center font-mono text-xs uppercase tracking-wider text-amber-800 bg-amber-100 rounded-lg py-3">
+                        Waitlisted
+                      </p>
+                    )}
+                    {checkStatusResult.status === 'declined' && (
+                      <p className="text-center font-mono text-xs uppercase tracking-wider text-on-surface-variant bg-surface-container-high rounded-lg py-3">
+                        Not approved
+                      </p>
+                    )}
+                    {checkStatusResult.status === 'approved' && (
+                      <div className="space-y-3">
+                        <p className="text-center font-mono text-xs uppercase tracking-wider text-white bg-[#006a43] rounded-lg py-3">
+                          Approved!
+                        </p>
+                        {checkStatusResult.applicationId && (
+                          <Link
+                            href={`/pay/${checkStatusResult.applicationId}`}
+                            className="w-full bg-gradient-to-r from-primary to-primary-container text-on-primary py-5 rounded-xl font-headline font-bold text-lg flex items-center justify-center gap-3 shadow-[0_12px_32px_rgba(171,46,0,0.15)] active:scale-[0.98] transition-all"
+                          >
+                            Pay Now
+                            <span className="material-symbols-outlined">arrow_forward</span>
+                          </Link>
+                        )}
+                        {checkStatusResult.paymentDeadline && (() => {
+                          const urgency = deadlineUrgency(checkStatusResult.paymentDeadline!)
+                          const color = urgency === 'elapsed' ? '#EF4444' : urgency === 'urgent' ? '#F59E0B' : undefined
+                          return (
+                            <p className={`text-center text-xs font-mono ${color ? '' : 'text-on-surface-variant'}`} style={color ? { color } : undefined}>
+                              {urgency === 'elapsed'
+                                ? `Payment window elapsed ${formatDeadline(checkStatusResult.paymentDeadline!)}`
+                                : `Pay by ${formatDeadline(checkStatusResult.paymentDeadline!)}${urgency === 'urgent' ? ' — closing soon' : ''}`}
+                            </p>
+                          )
+                        })()}
+                      </div>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => setSheet('none')}
+                      className="w-full bg-gradient-to-r from-primary to-primary-container text-on-primary py-5 rounded-xl font-headline font-bold text-lg flex items-center justify-center gap-3 shadow-[0_12px_32px_rgba(171,46,0,0.15)] active:scale-[0.98] transition-all"
+                    >
+                      Done
+                    </button>
+                  </div>
+                ) : (
+                  <div className="space-y-6">
+                    {/* Phone */}
+                    <div>
+                      <label className="block text-xs font-bold text-on-surface-variant uppercase tracking-widest mb-2 px-1">
+                        {checkStatusCountryIso === 'IN' ? 'WhatsApp Number' : 'Phone Number'}
+                      </label>
+                      <div className="flex gap-2">
+                        <CountryCodeSelect
+                          value={checkStatusCountryIso}
+                          onChange={(iso) => {
+                            setCheckStatusCountryIso(iso)
+                            setCheckStatusPhoneDigits('')
+                            setCheckStatusOtpSent(false); setCheckStatusOtpVerified(false); setCheckStatusOtpCode('')
+                          }}
+                        />
+                        <input
+                          type="tel"
+                          value={checkStatusPhoneDigits}
+                          onChange={(e) => {
+                            setCheckStatusPhoneDigits(e.target.value.replace(/\D/g, '').slice(0, checkStatusCountryIso === 'IN' ? 10 : 14))
+                            setCheckStatusOtpSent(false); setCheckStatusOtpVerified(false); setCheckStatusOtpCode('')
+                          }}
+                          placeholder={checkStatusCountryIso === 'IN' ? '98765 43210' : 'Phone number'}
+                          className="w-full bg-surface-container-low border-none rounded-xl px-4 py-4 focus:outline-none focus:ring-2 focus:ring-outline transition-all text-on-surface placeholder:text-outline-variant"
+                        />
+                      </div>
+                    </div>
+
+                    {/* OTP entry — shown once a code has been sent */}
+                    {checkStatusOtpSent && !checkStatusOtpVerified && (
+                      <div className="p-4 bg-surface-container-high rounded-xl flex flex-col gap-3">
+                        <div>
+                          <span className="block font-headline font-bold text-on-surface text-sm">Verify your number</span>
+                          <span className="text-xs text-on-surface-variant">
+                            Enter the 6-digit code sent via {checkStatusOtpChannel === 'whatsapp' ? 'WhatsApp' : 'SMS'} to +{getCountryCallingCode(checkStatusCountryIso)} {checkStatusPhoneDigits}
+                          </span>
+                        </div>
+                        <input
+                          type="tel"
+                          inputMode="numeric"
+                          value={checkStatusOtpCode}
+                          onChange={(e) => setCheckStatusOtpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                          placeholder="000000"
+                          className="w-full bg-surface-container-lowest border-none rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-outline transition-all text-on-surface placeholder:text-outline-variant font-mono text-lg tracking-[0.3em] text-center"
+                        />
+                        <button
+                          type="button"
+                          disabled={checkStatusPending}
+                          onClick={() => {
+                            setCheckStatusError(null)
+                            setCheckStatusOtpCode('')
+                            startCheckStatusTransition(async () => {
+                              const statusPhone = `+${getCountryCallingCode(checkStatusCountryIso)}${checkStatusPhoneDigits}`
+                              const r = await sendApplicationStatusOtp(statusPhone, checkStatusOtpChannel)
+                              if (!r.success) { setCheckStatusError(r.error ?? 'Could not resend code.'); return }
+                              setCheckStatusOtpChannel(r.channel)
+                            })
+                          }}
+                          className="self-start text-xs font-mono uppercase tracking-wider text-primary hover:underline disabled:opacity-50"
+                        >
+                          Resend code
+                        </button>
+                      </div>
+                    )}
+
+                    {checkStatusError && (
+                      <p className="text-error text-sm flex items-start gap-1.5">
+                        <span className="material-symbols-outlined text-base shrink-0 mt-0.5">error</span>
+                        {checkStatusError}
+                      </p>
+                    )}
+
+                    <button
+                      type="button"
+                      onClick={handleCheckStatusSubmit}
+                      disabled={checkStatusPending}
+                      className="w-full bg-gradient-to-r from-primary to-primary-container text-on-primary py-5 rounded-xl font-headline font-bold text-lg flex items-center justify-center gap-3 shadow-[0_12px_32px_rgba(171,46,0,0.15)] active:scale-[0.98] transition-all disabled:opacity-50"
+                    >
+                      {checkStatusPending
+                        ? 'Processing…'
+                        : !checkStatusOtpSent
+                          ? 'Send verification code'
+                          : 'Verify & check status'}
+                      {!checkStatusPending && <span className="material-symbols-outlined">arrow_forward</span>}
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* ════════════════════════════════════════════════════════════════════ */}
+      {/* Casual RSVP: gated 'going', pending review. Closely mirrors           */}
+      {/* 'applyPending' below, minus every payment/deadline reference — a free */}
+      {/* casual event holds nothing but the RSVP itself, there's no window to  */}
+      {/* pay within. Reached from a fresh gated submission (handleCasualRSVP / */}
+      {/* handleCasualApplySubmit / submitCasualGuestRSVP), not on every revisit*/}
+      {/* — a returning user instead sees the inline "Pending review" badge     */}
+      {/* next to the Going/Maybe/Can't-go toggle (see myApplicationStatus).    */}
+      {/* ════════════════════════════════════════════════════════════════════ */}
+      {sheet === 'casualPending' && (
+        <div className="fixed inset-0 z-[80] bg-background overflow-y-auto">
+
+          <header className="w-full bg-surface/90 backdrop-blur-md">
+            <div className="flex items-center px-4 h-16 max-w-7xl mx-auto">
+              <button onClick={() => setSheet('none')} className="p-2 -ml-2 rounded-full hover:bg-surface-container-high transition-colors">
+                <span className="material-symbols-outlined text-primary">close</span>
+              </button>
+              <h1 className="ml-4 font-headline font-semibold text-lg text-primary">When In My City</h1>
+            </div>
+          </header>
+
+          <div className="pt-6 pb-32 px-4 max-w-lg mx-auto relative overflow-hidden">
+
+            <section className="text-center mb-10">
+              <div className="inline-flex items-center justify-center w-20 h-20 bg-amber-100 rounded-full mb-6 shadow-[0_12px_32px_rgba(180,83,9,0.15)]">
+                <span
+                  className="material-symbols-outlined text-amber-700 text-4xl"
+                  style={{ fontVariationSettings: "'FILL' 1" }}
+                >schedule</span>
+              </div>
+              <h2 className="font-headline font-extrabold text-4xl text-on-surface tracking-tight mb-2">
+                Response submitted
+              </h2>
+              <p className="text-on-surface-variant font-medium">
+                The host reviews &quot;Going&quot; responses for this event before confirming attendance.
+              </p>
+            </section>
+
+            <section className="bg-surface-container-highest rounded-xl overflow-hidden shadow-[0_12px_32px_rgba(171,46,0,0.08)] mb-8">
+              {event.cover_image_url && (
+                <div className="relative h-32 w-full">
+                  <Image
+                    src={event.cover_image_url}
+                    alt={event.title}
+                    fill
+                    className="object-cover"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-surface-container-highest to-transparent" />
+                </div>
+              )}
+              <div className="px-6 pb-6 -mt-8 relative z-10">
+                <div className="inline-flex px-3 py-1 bg-amber-100 rounded-full text-amber-800 text-xs font-bold uppercase tracking-wider mb-3">
+                  Pending review
+                </div>
+                <h3 className="font-headline font-bold text-2xl text-on-surface mb-2">{event.title}</h3>
+                <div className="flex items-center gap-4 text-on-surface-variant text-sm flex-wrap">
+                  <div className="flex items-center gap-1.5">
+                    <span className="material-symbols-outlined text-base">calendar_today</span>
+                    <span suppressHydrationWarning>{formatDate(event.starts_at)}</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="material-symbols-outlined text-base">schedule</span>
+                    <span suppressHydrationWarning>{formatTime(event.starts_at)}</span>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <section className="bg-surface-container-lowest rounded-xl p-6 mb-10">
+              <p className="font-label font-bold text-xs uppercase tracking-widest text-on-surface-variant mb-3">
+                What happens next
+              </p>
+              <ul className="space-y-2 text-sm text-on-surface-variant">
+                <li className="flex items-start gap-2">
+                  <span className="material-symbols-outlined text-base shrink-0 mt-0.5 text-primary">looks_one</span>
+                  The host reviews your response.
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="material-symbols-outlined text-base shrink-0 mt-0.5 text-primary">looks_two</span>
+                  You&apos;ll get a WhatsApp message once they decide.
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="material-symbols-outlined text-base shrink-0 mt-0.5 text-primary">looks_3</span>
+                  If approved, you&apos;re confirmed — nothing more to do, nothing to pay.
+                </li>
+              </ul>
+            </section>
+
+          </div>
+
+          <nav className="fixed bottom-0 left-0 w-full p-4 flex justify-center z-50">
+            <div className="bg-surface/70 backdrop-blur-md w-full max-w-lg rounded-xl shadow-[0_-12px_32px_rgba(171,46,0,0.08)] flex justify-center p-2">
+              <button
+                onClick={() => router.push('/explore/dashboard/saved')}
+                className="bg-gradient-to-r from-[#AB2E00] to-[#CF4519] text-white rounded-lg px-8 py-4 w-full flex items-center justify-center gap-2 font-headline font-bold text-sm uppercase tracking-wider hover:brightness-110 transition-all"
+              >
+                <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>confirmation_number</span>
+                Browse more events
+              </button>
+            </div>
+          </nav>
+
+        </div>
       )}
 
       {/* ════════════════════════════════════════════════════════════════════ */}
@@ -2097,6 +3151,111 @@ export default function EventPage({ event, rsvpCount, spotsLeft, creator, review
                 Join WhatsApp Group
               </a>
             )}
+          </div>
+
+          {/* Bottom nav */}
+          <nav className="fixed bottom-0 left-0 w-full p-4 flex justify-center z-50">
+            <div className="bg-surface/70 backdrop-blur-md w-full max-w-lg rounded-xl shadow-[0_-12px_32px_rgba(171,46,0,0.08)] flex justify-center p-2">
+              <button
+                onClick={() => router.push('/explore/dashboard/saved')}
+                className="bg-gradient-to-r from-[#AB2E00] to-[#CF4519] text-white rounded-lg px-8 py-4 w-full flex items-center justify-center gap-2 font-headline font-bold text-sm uppercase tracking-wider hover:brightness-110 transition-all"
+              >
+                <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>confirmation_number</span>
+                Browse more events
+              </button>
+            </div>
+          </nav>
+
+        </div>
+      )}
+
+      {/* ════════════════════════════════════════════════════════════════════ */}
+      {/* Application submitted — pending host review. Deliberately distinct   */}
+      {/* from the "confirmed" screen above: nothing is booked or paid for    */}
+      {/* yet, so no QR/ticket, no "Add to Calendar", no green success framing.*/}
+      {/* ════════════════════════════════════════════════════════════════════ */}
+      {sheet === 'applyPending' && (
+        <div className="fixed inset-0 z-[80] bg-background overflow-y-auto">
+
+          <header className="w-full bg-surface/90 backdrop-blur-md">
+            <div className="flex items-center px-4 h-16 max-w-7xl mx-auto">
+              <button onClick={() => setSheet('none')} className="p-2 -ml-2 rounded-full hover:bg-surface-container-high transition-colors">
+                <span className="material-symbols-outlined text-primary">close</span>
+              </button>
+              <h1 className="ml-4 font-headline font-semibold text-lg text-primary">When In My City</h1>
+            </div>
+          </header>
+
+          <div className="pt-6 pb-32 px-4 max-w-lg mx-auto relative overflow-hidden">
+
+            {/* Hero */}
+            <section className="text-center mb-10">
+              <div className="inline-flex items-center justify-center w-20 h-20 bg-amber-100 rounded-full mb-6 shadow-[0_12px_32px_rgba(180,83,9,0.15)]">
+                <span
+                  className="material-symbols-outlined text-amber-700 text-4xl"
+                  style={{ fontVariationSettings: "'FILL' 1" }}
+                >schedule</span>
+              </div>
+              <h2 className="font-headline font-extrabold text-4xl text-on-surface tracking-tight mb-2">
+                Application submitted
+              </h2>
+              <p className="text-on-surface-variant font-medium">
+                The host reviews applications for this event before spots are confirmed. Nothing has been charged.
+              </p>
+            </section>
+
+            {/* Event card */}
+            <section className="bg-surface-container-highest rounded-xl overflow-hidden shadow-[0_12px_32px_rgba(171,46,0,0.08)] mb-8">
+              {event.cover_image_url && (
+                <div className="relative h-32 w-full">
+                  <Image
+                    src={event.cover_image_url}
+                    alt={event.title}
+                    fill
+                    className="object-cover"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-surface-container-highest to-transparent" />
+                </div>
+              )}
+              <div className="px-6 pb-6 -mt-8 relative z-10">
+                <div className="inline-flex px-3 py-1 bg-amber-100 rounded-full text-amber-800 text-xs font-bold uppercase tracking-wider mb-3">
+                  Pending review
+                </div>
+                <h3 className="font-headline font-bold text-2xl text-on-surface mb-2">{event.title}</h3>
+                <div className="flex items-center gap-4 text-on-surface-variant text-sm flex-wrap">
+                  <div className="flex items-center gap-1.5">
+                    <span className="material-symbols-outlined text-base">calendar_today</span>
+                    <span suppressHydrationWarning>{formatDate(event.starts_at)}</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="material-symbols-outlined text-base">schedule</span>
+                    <span suppressHydrationWarning>{formatTime(event.starts_at)}</span>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            {/* What happens next */}
+            <section className="bg-surface-container-lowest rounded-xl p-6 mb-10">
+              <p className="font-label font-bold text-xs uppercase tracking-widest text-on-surface-variant mb-3">
+                What happens next
+              </p>
+              <ul className="space-y-2 text-sm text-on-surface-variant">
+                <li className="flex items-start gap-2">
+                  <span className="material-symbols-outlined text-base shrink-0 mt-0.5 text-primary">looks_one</span>
+                  The host reviews your application.
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="material-symbols-outlined text-base shrink-0 mt-0.5 text-primary">looks_two</span>
+                  If approved, you&apos;ll get a WhatsApp message with a link and a payment deadline.
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="material-symbols-outlined text-base shrink-0 mt-0.5 text-primary">looks_3</span>
+                  Complete payment before the deadline to confirm your spot — approval alone doesn&apos;t reserve it.
+                </li>
+              </ul>
+            </section>
+
           </div>
 
           {/* Bottom nav */}

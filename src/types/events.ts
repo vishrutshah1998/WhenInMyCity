@@ -160,6 +160,44 @@ export const CreateEventSchema = z
      * Only valid when ticket_price === 0; form enforces this.
      */
     rsvp_style: z.enum(['ticketed', 'casual']).optional(),
+
+    /**
+     * If true, applicants are held for host review instead of being
+     * confirmed/booked immediately. Meaningful two ways:
+     *   - rsvp_style === 'casual' (free) — a "going" RSVP is held as
+     *     rsvps.application_status, set by casualRSVP/casualRSVPGuest
+     *     (migration 079, Phase A).
+     *   - rsvp_style === 'ticketed' with ticket_price > 0 (paid) — an
+     *     application is held in the event_applications table, set by
+     *     applyToEvent (migration 080, Phase B).
+     * A free ticketed event has no gating mechanism — this is forced false
+     * for it regardless of what's passed (see createEvent).
+     */
+    requires_approval: z.boolean().optional(),
+
+    /**
+     * Optional single custom question shown to applicants. Max 200 chars.
+     * Shared by both the free-casual (Phase A) and paid-gated (Phase B)
+     * approval flows.
+     */
+    application_question: z
+      .string()
+      .max(200, 'Application question must be at most 200 characters')
+      .optional(),
+
+    /**
+     * Minutes an approved paid-gated applicant has to pay before their
+     * approval expires (60-10080, i.e. 1 hour to 7 days). Only meaningful
+     * when rsvp_style === 'ticketed', ticket_price > 0, and
+     * requires_approval is true. No DB default (migration 080) — the
+     * 24h/1440-minute default is applied by the create-event form.
+     */
+    application_payment_window_minutes: z
+      .number()
+      .int()
+      .min(60, 'Payment window must be at least 60 minutes (1 hour)')
+      .max(10080, 'Payment window must be at most 10080 minutes (7 days)')
+      .optional(),
   })
   .refine(
     (data) => {
@@ -208,6 +246,24 @@ export interface RazorpayOrder {
   created_at: number      // UNIX timestamp
 }
 
+/**
+ * A Route transfer attached to an order at creation time via the order's
+ * `transfers` array (`POST /v1/orders`) — Razorpay Route, Phase 2. Confirmed
+ * live: this is embedded directly in the order-creation call, not a
+ * separate endpoint. `amount` may be less than the order's own `amount`;
+ * the remainder implicitly stays with the main account (no explicit
+ * "platform transfer" object is needed).
+ */
+export interface RazorpayOrderTransfer {
+  account: string                    // recipient's razorpay_account_id (acc_xxx)
+  amount: number                     // paise; must not exceed the order's amount
+  currency: 'INR'
+  notes?: Record<string, string>
+  linked_account_notes?: string[]
+  on_hold?: boolean
+  on_hold_until?: number             // UNIX timestamp (seconds)
+}
+
 export interface RazorpayPayment {
   id: string              // pay_xxx
   entity: 'payment'
@@ -237,6 +293,55 @@ export interface RazorpayRefund {
   speed_requested: string
 }
 
+/**
+ * A transfer attached to a payment — `GET /v1/payments/:id/transfers`
+ * (Razorpay Route, Phase 3). Fetched fresh at refund time rather than cached
+ * from order creation, so `amount_reversed` always reflects Razorpay's
+ * current state (see reverseTransfersForPartialRefund in
+ * src/lib/razorpay/route-refunds.ts).
+ */
+export interface RazorpayTransfer {
+  id: string               // trf_xxx
+  entity: 'transfer'
+  source: string            // pay_xxx (the payment this transfer was made from)
+  recipient: string         // acc_xxx
+  amount: number             // paise — the transfer's own (original) amount
+  currency: 'INR'
+  amount_reversed: number    // paise — cumulative amount already reversed
+  notes: Record<string, string>
+  fees: number | null
+  tax: number | null
+  on_hold: boolean
+  recipient_settlement_id: string | null
+  created_at: number         // UNIX timestamp
+}
+
+/** `GET /v1/payments/:id/transfers` response envelope. */
+export interface RazorpayTransferCollection {
+  entity: 'collection'
+  count: number
+  items: RazorpayTransfer[]
+}
+
+/**
+ * A Transfer Reversal — `POST /v1/transfers/:id/reversals` (Razorpay Route,
+ * Phase 3). `customer_refund_id` is confirmed (live testing, plan Phase 3)
+ * to always be `null` in this response, even when the reversal was performed
+ * specifically to compensate for a refund — Razorpay does not link the two.
+ * See migration 085 (`route_transfer_reversals`) for how WIMC tracks that
+ * link itself.
+ */
+export interface RazorpayTransferReversal {
+  id: string                        // rvrsl_xxx
+  entity: 'transfer'
+  transfer_id?: string
+  amount: number                     // paise
+  currency: 'INR'
+  notes: Record<string, string>
+  customer_refund_id: string | null  // always null per live testing — see comment above
+  created_at: number
+}
+
 export interface RazorpayItem {
   id: string              // item_xxx
   active: boolean
@@ -245,6 +350,82 @@ export interface RazorpayItem {
   currency: 'INR'
   name: string
   description: string | null
+}
+
+// ---------------------------------------------------------------------------
+// Razorpay Route — Linked Accounts (v2). See src/lib/razorpay/index.ts and
+// the Route integration plan for the validated request/response shapes.
+// ---------------------------------------------------------------------------
+
+export interface RazorpayAddress {
+  street1: string
+  street2?: string
+  city: string
+  state: string
+  postal_code: string
+  country: string   // ISO 3166-1 alpha-2, e.g. 'IN'
+}
+
+export interface RazorpayLinkedAccount {
+  id: string               // acc_xxx
+  entity: 'account'
+  email: string
+  phone: string
+  type: 'route'
+  status: string
+  reference_id: string
+  legal_business_name: string
+  business_type: string
+  contact_name: string
+  profile: {
+    category: string
+    subcategory: string
+    addresses: { registered: RazorpayAddress }
+  }
+  legal_info: {
+    pan: string
+    gst?: string
+  }
+  created_at: number
+}
+
+export interface RazorpayStakeholder {
+  id: string               // sth_xxx
+  entity: 'stakeholder'
+  name: string
+  email: string
+  addresses: { residential: RazorpayAddress }
+  kyc: { pan: string }
+  created_at: number
+}
+
+/**
+ * One item in a Product Configuration's `requirements[]`. Only `description`
+ * (used to detect the "Max retry exceeded" lockout — there is no distinct
+ * reason_code for that specific case, confirmed in live testing) and
+ * `reason_code` are relied on by WIMC code; other fields Razorpay may
+ * include (e.g. `field_reference`) are read but not typed strictly since
+ * their exact shape wasn't part of what the plan's live testing confirmed.
+ */
+export interface RazorpayProductRequirement {
+  reason_code?: string
+  description: string
+  [key: string]: unknown
+}
+
+export interface RazorpayProductConfiguration {
+  id: string                                   // acc_prd_xxx
+  product_name: 'route'
+  active: boolean
+  // Present on the response but NOT a trustworthy completion signal — see
+  // the "Validated Findings" in the plan doc (Finding #11): activation_status
+  // transitions asynchronously and can change between consecutive reads with
+  // no API call from us in between. Never branch app logic on this field
+  // directly; it's typed here only so it can be displayed/logged.
+  activation_status?: string
+  requirements: RazorpayProductRequirement[]
+  tnc?: { id: string; accepted: boolean; accepted_at: number | null }
+  created_at?: number
 }
 
 // ---------------------------------------------------------------------------

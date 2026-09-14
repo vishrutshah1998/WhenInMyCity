@@ -6,7 +6,12 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { ProfileThemeSchema } from '@/types/theme'
 import type { ProfileTheme } from '@/types/theme'
-import type { CreatorType, Json } from '@/types/database'
+import type { CreatorType, Json, Database } from '@/types/database'
+
+export type CreatorProfileRow  = Database['public']['Tables']['creator_profiles']['Row']
+export type BrandProfileRow    = Database['public']['Tables']['brand_profiles']['Row']
+export type VenueProfileRow    = Database['public']['Tables']['venue_profiles']['Row']
+export type ExplorerProfileRow = Database['public']['Tables']['explorer_profiles']['Row']
 import { UsernameSchema } from '@/types/onboarding'
 
 // ---------------------------------------------------------------------------
@@ -44,18 +49,29 @@ const SCHEME_PRESETS: Record<string, ProfileTheme> = {
 
 export async function updateColorScheme(
   schemeId: string,
+  persona: PersonaKind,
 ): Promise<{ error: string | null }> {
   const preset = SCHEME_PRESETS[schemeId]
   if (!preset) return { error: 'Unknown color scheme.' }
-  return updateProfileTheme(preset)
+  return updateProfileTheme(preset, persona)
 }
 
 // ---------------------------------------------------------------------------
 // updateProfileTheme
 // ---------------------------------------------------------------------------
 
+export type PersonaKind = 'creator' | 'brand' | 'venue' | 'explorer'
+
+const PERSONA_PROFILE_TABLE: Record<PersonaKind, 'creator_profiles' | 'brand_profiles' | 'venue_profiles' | 'explorer_profiles'> = {
+  creator:  'creator_profiles',
+  brand:    'brand_profiles',
+  venue:    'venue_profiles',
+  explorer: 'explorer_profiles',
+}
+
 export async function updateProfileTheme(
   theme: ProfileTheme,
+  persona: PersonaKind,
 ): Promise<{ error: string | null }> {
   const parsed = ProfileThemeSchema.safeParse(theme)
   if (!parsed.success) {
@@ -66,6 +82,11 @@ export async function updateProfileTheme(
   const { data: { user }, error: authError } = await supabase.auth.getUser()
   if (authError || !user) return { error: 'Not authenticated.' }
 
+  // Dual-write: every current read site (all 4 Studios and all 4 public
+  // pages) still reads page_theme off user_profiles — none have been cut
+  // over to the per-persona tables yet (that's Phase 2b). The per-persona
+  // write here keeps that column populated ahead of the eventual read-path
+  // migration; it is not yet load-bearing on its own.
   const { error } = await supabase
     .from('user_profiles')
     .update({ page_theme: parsed.data, updated_at: new Date().toISOString() })
@@ -76,8 +97,42 @@ export async function updateProfileTheme(
     return { error: 'Failed to save theme.' }
   }
 
+  const { error: personaError } = await supabase
+    .from(PERSONA_PROFILE_TABLE[persona])
+    .update({ page_theme: parsed.data })
+    .eq('auth_user_id', user.id)
+
+  if (personaError) {
+    console.error('[updateProfileTheme] persona table', personaError.message)
+    return { error: 'Failed to save theme.' }
+  }
+
   revalidatePath('/dashboard')
   return { error: null }
+}
+
+// ---------------------------------------------------------------------------
+// getPersonaProfile — reads a persona's own table (migration 075/078 split).
+// Always uses the admin client: creator_profiles/brand_profiles/venue_profiles
+// are publicly selectable anyway (SELECT USING (true)), but explorer_profiles
+// restricts SELECT to the owning row (explorer_profiles_select_own) — this
+// helper is for public-page reads of someone ELSE's persona data, the same
+// reason [username]/[slug]/page.tsx's explorer branch already reaches for
+// the admin client to read this table today.
+// ---------------------------------------------------------------------------
+
+export async function getPersonaProfile(userId: string, persona: 'creator'): Promise<CreatorProfileRow | null>
+export async function getPersonaProfile(userId: string, persona: 'brand'): Promise<BrandProfileRow | null>
+export async function getPersonaProfile(userId: string, persona: 'venue'): Promise<VenueProfileRow | null>
+export async function getPersonaProfile(userId: string, persona: 'explorer'): Promise<ExplorerProfileRow | null>
+export async function getPersonaProfile(userId: string, persona: PersonaKind) {
+  const admin = createAdminClient()
+  const { data } = await admin
+    .from(PERSONA_PROFILE_TABLE[persona])
+    .select('*')
+    .eq('auth_user_id', userId)
+    .maybeSingle()
+  return data
 }
 
 // ---------------------------------------------------------------------------
@@ -199,8 +254,6 @@ export async function updateProfile(
       ...(input.show_city_mastery !== undefined ? { show_city_mastery: input.show_city_mastery } : {}),
       contact_email:      input.contact_email?.trim() || null,
       website_url:        input.website_url?.trim() || null,
-      ...(input.explorer_scene !== undefined ? { explorer_scene: input.explorer_scene?.trim() || null } : {}),
-      ...(input.explorer_creator_intent !== undefined ? { explorer_creator_intent: input.explorer_creator_intent } : {}),
       updated_at:         new Date().toISOString(),
     })
     .eq('id', user.id)
@@ -208,6 +261,51 @@ export async function updateProfile(
   if (error) {
     console.error('[updateProfile]', error.message)
     if (error.code === '23505') return { error: 'That username is already taken. Please choose another.' }
+    return { error: 'Failed to save profile.' }
+  }
+
+  // explorer_scene/explorer_creator_intent moved to explorer_profiles
+  // (migration 078) — this screen edits them for dual-persona accounts that
+  // already have an explorer_profiles row; .update() (not upsert) since this
+  // isn't the place to create one for an account that doesn't have it yet.
+  if (input.explorer_scene !== undefined || input.explorer_creator_intent !== undefined) {
+    const { error: epError } = await supabase
+      .from('explorer_profiles')
+      .update({
+        ...(input.explorer_scene !== undefined ? { explorer_scene: input.explorer_scene?.trim() || null } : {}),
+        ...(input.explorer_creator_intent !== undefined ? { explorer_creator_intent: input.explorer_creator_intent } : {}),
+      })
+      .eq('auth_user_id', user.id)
+
+    if (epError) {
+      console.error('[updateProfile] explorer_profiles', epError.message)
+      return { error: 'Failed to save profile.' }
+    }
+  }
+
+  // bio/city/creator_type/sub_types/offline_activities/interest_tags/
+  // social_links/avatar_url moved to creator_profiles (migration 075) —
+  // this settings screen is shared across personas, so mirror the
+  // explorer_profiles pattern above: .update() (not upsert) targets only
+  // accounts that already have a creator_profiles row from Creator
+  // onboarding, and is a no-op for Explorer-only/Business-only accounts.
+  const { error: cpError } = await supabase
+    .from('creator_profiles')
+    .update({
+      bio:                input.bio.trim() || null,
+      city:               input.city.trim(),
+      ...(input.creator_type ? { creator_type: input.creator_type } : {}),
+      sub_types:          input.sub_types,
+      offline_activities: input.offline_activities,
+      ...(input.interest_tags !== undefined ? { interest_tags: input.interest_tags } : {}),
+      social_links:       socialLinks,
+      instagram_handle:   socialLinks.instagram ?? null,
+      ...(input.avatar_url ? { avatar_url: input.avatar_url } : {}),
+    })
+    .eq('auth_user_id', user.id)
+
+  if (cpError) {
+    console.error('[updateProfile] creator_profiles', cpError.message)
     return { error: 'Failed to save profile.' }
   }
 

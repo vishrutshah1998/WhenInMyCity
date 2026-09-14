@@ -7,6 +7,7 @@ import { INTEREST_TAGS, INTEREST_CATEGORY_ORDER } from '@/lib/constants/interest
 import { ONBOARDING_CTA } from '@/lib/constants/onboarding-cta-copy'
 import InterestTagPicker from '@/components/shared/InterestTagPicker'
 import { OnboardingFooter } from '@/components/onboarding/OnboardingFooter'
+import { queueDraftPatch, flushDraftPatch } from '@/lib/onboarding/draft-sync'
 
 const ACCENT = '#9B8FFF'
 const MIN_TAGS = 3
@@ -58,6 +59,7 @@ export default function E5Page() {
     const next = selected.includes(id) ? selected.filter(t => t !== id) : [...selected, id]
     setSelected(next)
     try { sessionStorage.setItem(SK.e_interests, JSON.stringify(next)) } catch {}
+    queueDraftPatch('explorer', SK.e_interests, JSON.stringify(next))
     window.dispatchEvent(new Event('ob-snap-update'))
   }
 
@@ -70,10 +72,12 @@ export default function E5Page() {
     })
   }
 
-  function handleContinue() {
+  async function handleContinue() {
     if (isAdvancing || selected.length < MIN_TAGS) return
     setIsAdvancing(true)
     try { sessionStorage.setItem(SK.e_interests, JSON.stringify(selected)) } catch {}
+    queueDraftPatch('explorer', SK.e_interests, JSON.stringify(selected))
+    await flushDraftPatch('explorer')
     router.push('/onboarding/explorer/E5b')
   }
 

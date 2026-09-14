@@ -55,7 +55,7 @@ export default async function ExplorerDashboardLayout({
       <div className="wimc-grain" aria-hidden />
 
       {/* Persistent circular nav on every sub-route below /explore/dashboard —
-          the index route's own SwipeCarousel already renders a live version
+          the index route's own PersonaTabSwitcher already renders a live version
           of this; PersonaNavGate no-ops there to avoid a double nav. A sibling
           of the inner content wrapper, NOT nested inside it — Creator/Venue/
           Brand's equivalent wrapper (.dash-content) has a mount entrance

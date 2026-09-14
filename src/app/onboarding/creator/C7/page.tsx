@@ -8,6 +8,7 @@ import { getCategoryColour } from '@/lib/onboarding/design-tokens'
 import { ONBOARDING_CTA } from '@/lib/constants/onboarding-cta-copy'
 import InterestTagPicker from '@/components/shared/InterestTagPicker'
 import { OnboardingFooter } from '@/components/onboarding/OnboardingFooter'
+import { queueDraftPatch, flushDraftPatch } from '@/lib/onboarding/draft-sync'
 
 const MIN_TAGS = 3
 const SCENE_BLUE = '#5EC8F2'
@@ -62,6 +63,7 @@ export default function C7Page() {
     const next = selected.includes(id) ? selected.filter(t => t !== id) : [...selected, id]
     setSelected(next)
     try { sessionStorage.setItem(SK.c_interests, JSON.stringify(next)) } catch {}
+    queueDraftPatch('creator', SK.c_interests, JSON.stringify(next))
     window.dispatchEvent(new Event('ob-snap-update'))
   }
 
@@ -74,17 +76,21 @@ export default function C7Page() {
     })
   }
 
-  function handleContinue() {
+  async function handleContinue() {
     if (isAdvancing || selected.length < MIN_TAGS) return
     setIsAdvancing(true)
     try { sessionStorage.setItem(SK.c_interests, JSON.stringify(selected)) } catch {}
+    queueDraftPatch('creator', SK.c_interests, JSON.stringify(selected))
+    await flushDraftPatch('creator')
     router.push('/onboarding/creator/C8')
   }
 
-  function handleSkip() {
+  async function handleSkip() {
     if (isAdvancing) return
     setIsAdvancing(true)
     try { sessionStorage.setItem(SK.c_interests, '[]') } catch {}
+    queueDraftPatch('creator', SK.c_interests, '[]')
+    await flushDraftPatch('creator')
     router.push('/onboarding/creator/C8')
   }
 

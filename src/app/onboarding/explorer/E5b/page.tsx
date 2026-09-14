@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { SK } from '@/lib/onboarding/session-keys'
 import { ONBOARDING_CTA } from '@/lib/constants/onboarding-cta-copy'
 import { OnboardingFooter } from '@/components/onboarding/OnboardingFooter'
+import { queueDraftPatch, flushDraftPatch } from '@/lib/onboarding/draft-sync'
 
 const ACCENT  = '#9B8FFF'
 const TEAL    = '#5DD9D0'
@@ -48,7 +49,7 @@ export default function E5bPage() {
     setFormats(prev => prev.includes(id) ? prev.filter(f => f !== id) : [...prev, id])
   }
 
-  function handleContinue() {
+  async function handleContinue() {
     if (isAdvancing) return
     setIsAdvancing(true)
     try {
@@ -57,6 +58,11 @@ export default function E5bPage() {
       sessionStorage.setItem(SK.e_notif_wa,    String(notifWa))
       sessionStorage.setItem(SK.e_digest_freq, digestFreq)
     } catch {}
+    queueDraftPatch('explorer', SK.e_formats,     JSON.stringify(formats))
+    queueDraftPatch('explorer', SK.e_price_max,   String(priceMax))
+    queueDraftPatch('explorer', SK.e_notif_wa,    String(notifWa))
+    queueDraftPatch('explorer', SK.e_digest_freq, digestFreq)
+    await flushDraftPatch('explorer')
     router.push('/onboarding/explorer/E6')
   }
 

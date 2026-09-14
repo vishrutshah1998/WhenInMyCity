@@ -10,6 +10,7 @@ import { prefillVenueKeys, prefillBrandKeys } from '@/lib/onboarding/prefill'
 import { prefetchGooglePhotos } from '@/app/actions/google-photos'
 import { ONBOARDING_CTA } from '@/lib/constants/onboarding-cta-copy'
 import { OnboardingFooter } from '@/components/onboarding/OnboardingFooter'
+import { queueDraftPatch, flushDraftPatch } from '@/lib/onboarding/draft-sync'
 
 const ACCENT = '#5DD9D0'
 const MONO   = "var(--font-jetbrains-mono), 'JetBrains Mono', monospace"
@@ -92,8 +93,9 @@ function B2Content() {
   const [neighbourhood,  setNeighbourhood]  = useState('')
   const [manual,         setManual]         = useState(false)
   const [manualAddress,  setManualAddress]  = useState('')
+  const [manualCity,     setManualCity]     = useState('')
 
-  const { data: existingData } = useExistingProfileData()
+  const { data: existingData } = useExistingProfileData(addType === 'venue' ? 'venue' : 'brand')
 
   useEffect(() => {
     if (isAddMode && existingData) {
@@ -163,6 +165,8 @@ function B2Content() {
     const slug = slugify(val)
     setSlugPreview(slug)
     try { sessionStorage.setItem(SK.b_name, val); sessionStorage.setItem(SK.b_slug, slug) } catch {}
+    queueDraftPatch('business', SK.b_name, val)
+    queueDraftPatch('business', SK.b_slug, slug)
   }
 
   const fetchPredictions = useCallback(async (input: string) => {
@@ -195,6 +199,7 @@ function B2Content() {
       setPhase('confirming')
       if (d.neighbourhood) setNeighbourhood(d.neighbourhood)
       try { if (d.city) sessionStorage.setItem(SK.b_city, d.city) } catch {}
+      if (d.city) queueDraftPatch('business', SK.b_city, d.city, { immediate: true })
       sessionTokenRef.current = crypto.randomUUID()
     } catch {
       setPhase('idle')
@@ -223,7 +228,7 @@ function B2Content() {
   const nameChromeShadow = (nameFocused || businessName)
     ? '4px 4px 0px 0px rgba(0,0,0,0.50)'
     : '4px 4px 0px 0px rgba(0,0,0,0.30)'
-  const addressConfirmed = isConfirming || (manual && manualAddress.trim().length >= 5)
+  const addressConfirmed = isConfirming || (manual && manualAddress.trim().length >= 5 && manualCity.trim().length > 0)
   const canProceed       = businessName.trim().length >= 3 && addressConfirmed && !isAdvancing
 
   async function handleNext() {
@@ -233,6 +238,8 @@ function B2Content() {
       sessionStorage.setItem(SK.b_name, businessName)
       sessionStorage.setItem(SK.b_slug, slugPreview)
     } catch {}
+    queueDraftPatch('business', SK.b_name, businessName)
+    queueDraftPatch('business', SK.b_slug, slugPreview)
 
     if (!manual && details) {
       try {
@@ -254,18 +261,43 @@ function B2Content() {
         if (details.wheelchairAccessible !== null) sessionStorage.setItem(SK.v_wheelchair, String(details.wheelchairAccessible))
         if (details.priceLevel !== null) sessionStorage.setItem('wimc_ob_v_price_level', String(details.priceLevel))
       } catch {}
+      queueDraftPatch('business', SK.v_address,         details.formattedAddress)
+      queueDraftPatch('business', SK.v_neighbourhood,   neighbourhood || details.neighbourhood || '')
+      queueDraftPatch('business', SK.b_city,            details.city || '')
+      queueDraftPatch('business', SK.v_city,            details.city || '')
+      queueDraftPatch('business', SK.v_lat,             String(details.lat))
+      queueDraftPatch('business', SK.v_lng,             String(details.lng))
+      queueDraftPatch('business', SK.v_google_place_id, details.googlePlaceId)
+      queueDraftPatch('business', SK.v_google_name,     details.googleName)
+      queueDraftPatch('business', SK.v_phone,           details.phone)
+      queueDraftPatch('business', SK.v_website,         details.website)
+      queueDraftPatch('business', SK.v_google_rating,   String(details.existingRating ?? ''))
+      queueDraftPatch('business', SK.v_google_reviews,  JSON.stringify(details.reviews ?? []))
+      queueDraftPatch('business', SK.v_opening_hours,   JSON.stringify(details.openingHoursParsed ?? {}))
+      queueDraftPatch('business', SK.v_google_types,    JSON.stringify(details.placeTypes ?? []))
+      if (details.editorialSummary) queueDraftPatch('business', SK.v_editorial, details.editorialSummary)
+      if (details.wheelchairAccessible !== null) queueDraftPatch('business', SK.v_wheelchair, String(details.wheelchairAccessible))
+      if (details.priceLevel !== null) queueDraftPatch('business', 'wimc_ob_v_price_level', String(details.priceLevel))
       if (details.photoRefs.length > 0) {
         setPhase('prefetchingPhotos')
         const result = await prefetchGooglePhotos(details.photoRefs)
         try { sessionStorage.setItem(SK.v_google_photos, JSON.stringify(result.urls)) } catch {}
+        queueDraftPatch('business', SK.v_google_photos, JSON.stringify(result.urls))
       }
     } else if (manual) {
       try {
         sessionStorage.setItem(SK.v_address,       manualAddress)
         sessionStorage.setItem(SK.v_neighbourhood, neighbourhood)
+        sessionStorage.setItem(SK.b_city,          manualCity.trim())
+        sessionStorage.setItem(SK.v_city,          manualCity.trim())
       } catch {}
+      queueDraftPatch('business', SK.v_address,       manualAddress)
+      queueDraftPatch('business', SK.v_neighbourhood, neighbourhood)
+      queueDraftPatch('business', SK.b_city,          manualCity.trim())
+      queueDraftPatch('business', SK.v_city,          manualCity.trim())
     }
 
+    await flushDraftPatch('business')
     const subpath = sessionStorage.getItem(SK.b_subpath)
     router.push(subpath === 'brand' ? '/onboarding/business/R1' : '/onboarding/business/V4')
   }
@@ -277,7 +309,7 @@ function B2Content() {
         {/* ── Business card artifact ───────────────────────────── */}
         <BusinessCardArtifact
           name={businessName || undefined}
-          city={details?.city || undefined}
+          city={details?.city || manualCity || undefined}
           accent={ACCENT}
         />
 
@@ -455,8 +487,30 @@ function B2Content() {
                 <input
                   value={manualAddress}
                   onChange={e => setManualAddress(e.target.value)}
-                  placeholder="Street name, area, city..."
+                  placeholder="Street name, area..."
                   autoFocus
+                  style={{ flex: 1, background: 'transparent', border: 'none', outline: 'none', fontFamily: OUTFIT, fontWeight: 900, fontSize: 18, color: '#1A2744', caretColor: ACCENT }}
+                />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── Manual city input — required; nothing else derives a city
+            once the Google Places lookup is bypassed, and completeVenueOnboarding
+            rejects an empty one ── */}
+        {manual && (
+          <div style={{ marginBottom: 12 }}>
+            <div style={{ background: '#FAF7F0', borderLeft: `4px solid ${ACCENT}`, boxShadow: '4px 4px 0px 0px rgba(0,0,0,0.30)', overflow: 'hidden' }}>
+              <div style={CHROME_HEADER}>
+                <span style={CHROME_LABEL}>CITY</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', padding: '11px 14px', gap: 8 }}>
+                <span className="material-symbols-outlined" style={{ fontSize: 20, color: ACCENT, flexShrink: 0 }}>location_city</span>
+                <input
+                  value={manualCity}
+                  onChange={e => setManualCity(e.target.value)}
+                  placeholder="Ahmedabad, Jaipur, Indore..."
                   style={{ flex: 1, background: 'transparent', border: 'none', outline: 'none', fontFamily: OUTFIT, fontWeight: 900, fontSize: 18, color: '#1A2744', caretColor: ACCENT }}
                 />
               </div>

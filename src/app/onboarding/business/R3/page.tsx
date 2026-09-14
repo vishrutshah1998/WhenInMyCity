@@ -6,6 +6,7 @@ import { SK } from '@/lib/onboarding/session-keys'
 import { BrandNoticeAd } from '@/components/onboarding/BoardingPassArtifact'
 import { ONBOARDING_CTA } from '@/lib/constants/onboarding-cta-copy'
 import { OnboardingFooter } from '@/components/onboarding/OnboardingFooter'
+import { queueDraftPatch, flushDraftPatch } from '@/lib/onboarding/draft-sync'
 
 const ACCENT = '#F5A800'
 const NAVY   = '#1A2744'
@@ -92,10 +93,12 @@ export default function R3Page() {
   function selectAesthetic(id: AestheticId) {
     setAesthetic(id)
     try { sessionStorage.setItem(SK.r_aesthetic, id) } catch {}
+    queueDraftPatch('business', SK.r_aesthetic, id, { immediate: true })
   }
 
-  function handleNext() {
+  async function handleNext() {
     if (!aesthetic) return
+    await flushDraftPatch('business')
     router.push('/onboarding/business/R4')
   }
 

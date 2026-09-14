@@ -8,6 +8,7 @@ import { useExistingProfileData } from '@/hooks/useExistingProfileData'
 import { prefillExplorerKeys } from '@/lib/onboarding/prefill'
 import { ONBOARDING_CTA } from '@/lib/constants/onboarding-cta-copy'
 import { OnboardingFooter } from '@/components/onboarding/OnboardingFooter'
+import { queueDraftPatch, flushDraftPatch } from '@/lib/onboarding/draft-sync'
 
 const ACCENT = '#9B8FFF'
 
@@ -21,7 +22,7 @@ function E2Content() {
   const isAddMode    = searchParams.get('mode') === 'add'
   const [displayName, setDisplayName] = useState('')
 
-  const { data: existingData } = useExistingProfileData()
+  const { data: existingData } = useExistingProfileData('explorer')
 
   useEffect(() => {
     if (isAddMode && existingData) {
@@ -43,12 +44,17 @@ function E2Content() {
 
   const canProceed = displayName.trim().length >= 2
 
-  function handleContinue() {
+  async function handleContinue() {
     if (!canProceed) return
+    const trimmed = displayName.trim()
+    const username = slugify(trimmed).substring(0, 20)
     try {
-      sessionStorage.setItem(SK.e_name,     displayName.trim())
-      sessionStorage.setItem(SK.e_username, slugify(displayName.trim()).substring(0, 20))
+      sessionStorage.setItem(SK.e_name,     trimmed)
+      sessionStorage.setItem(SK.e_username, username)
     } catch {}
+    queueDraftPatch('explorer', SK.e_name,     trimmed)
+    queueDraftPatch('explorer', SK.e_username, username)
+    await flushDraftPatch('explorer')
     router.push('/onboarding/explorer/E4')
   }
 

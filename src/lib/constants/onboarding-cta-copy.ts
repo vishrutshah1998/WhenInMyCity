@@ -9,7 +9,6 @@ export const ONBOARDING_CTA = {
   C6: { base: 'Save these', withCount: (n: number) => `Save these (${n})` },
   C7: { withCount: (n: number) => `Light it up (${n})` },
   E2: "I'm in →",
-  E3: 'Sounds right →',
   E4: "That's me →",
   E5: { withCount: (n: number) => `These are mine (${n})` },
   E5b: 'Onward →',
@@ -20,6 +19,5 @@ export const ONBOARDING_CTA = {
   R3: 'Almost there →',
   R4: 'One more thing →',
   V4: { base: 'Good picks →', withCount: (n: number) => `Good picks (${n}) →` },
-  VC: 'Sounds right →',
   V7: 'Almost done →',
 } as const

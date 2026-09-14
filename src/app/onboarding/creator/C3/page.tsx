@@ -8,6 +8,7 @@ import { CreatorEventTicket } from '@/components/onboarding/BoardingPassArtifact
 import { getCategoryColour } from '@/lib/onboarding/design-tokens'
 import { ONBOARDING_CTA } from '@/lib/constants/onboarding-cta-copy'
 import { OnboardingFooter } from '@/components/onboarding/OnboardingFooter'
+import { queueDraftPatch } from '@/lib/onboarding/draft-sync'
 
 const NAVY = '#1A2744'
 
@@ -29,6 +30,7 @@ export default function C3Page() {
   function handleSelect(id: string) {
     setSelected(id)
     try { sessionStorage.setItem(SK.c_category, id) } catch {}
+    queueDraftPatch('creator', SK.c_category, id, { immediate: true })
     // Notify right panel immediately (same-tab storage events don't fire)
     window.dispatchEvent(new CustomEvent('ob-snap-update'))
     // Card flip animation still runs; user confirms with Continue button

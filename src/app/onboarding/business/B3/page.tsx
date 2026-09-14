@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { SK } from '@/lib/onboarding/session-keys'
 import { ONBOARDING_CTA } from '@/lib/constants/onboarding-cta-copy'
 import { OnboardingFooter } from '@/components/onboarding/OnboardingFooter'
+import { queueDraftPatch, flushDraftPatch } from '@/lib/onboarding/draft-sync'
 
 const TEAL   = '#5DD9D0'
 const AMBER  = '#F5A800'
@@ -50,14 +51,18 @@ export default function B3Page() {
     setSelected(type)
     setAdvancing(true)
     try { sessionStorage.setItem(SK.b_subpath, type) } catch {}
+    queueDraftPatch('business', SK.b_subpath, type)
+    await flushDraftPatch('business')
     await new Promise<void>(r => setTimeout(r, 600))
     router.push(next)
   }
 
-  function handleContinue() {
+  async function handleContinue() {
     if (!selected || advancing) return
     setAdvancing(true)
     try { sessionStorage.setItem(SK.b_subpath, selected) } catch {}
+    queueDraftPatch('business', SK.b_subpath, selected)
+    await flushDraftPatch('business')
     router.push('/onboarding/business/B2')
   }
 

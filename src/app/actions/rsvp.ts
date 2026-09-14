@@ -33,7 +33,8 @@ import {
   verifyPaymentSignature,
   RazorpayApiError,
 } from '@/lib/razorpay'
-import { calculateChargeAmount } from '@/types/events'
+import { buildVenueRouteTransfer } from '@/lib/razorpay/route-transfers'
+import { calculateChargeAmount, type RazorpayOrderTransfer } from '@/types/events'
 import { calculateRevenueSplit } from '@/lib/revenue'
 import { checkRSVPRateLimit } from '@/lib/ratelimit'
 import { bumpUserMetric } from '@/lib/metrics'
@@ -41,8 +42,8 @@ import { updateAttendanceStreak } from '@/lib/streak'
 import { redeemReferralCode } from '@/app/actions/referral'
 import { createNotification } from '@/app/actions/notifications'
 import { isGuestPhoneVerified } from '@/app/actions/guest-otp'
-import { sendWhatsAppTemplate } from '@/lib/whatsapp'
-import type { UserTier } from '@/types/database'
+import { sendWhatsAppTemplate, recordWhatsAppSendFailure } from '@/lib/whatsapp'
+import type { UserTier, ApplicationStatus } from '@/types/database'
 
 // ---------------------------------------------------------------------------
 // Input validation schemas
@@ -370,40 +371,12 @@ export async function initiateRSVP(params: {
   // 7a. Calculate total charge (per-person GST rule: SAC 998596)
   const totalAmount = calculateChargeAmount(resolvedTierPrice, quantity)
 
-  // 6b. Create the Razorpay order BEFORE inserting RSVP rows.
-  //     If Razorpay is down, we fail early without touching the DB.
-  let razorpayOrderId: string
-  try {
-    // receipt = short unique string for idempotency (max 40 chars)
-    // Format: rsvp_<6-char event suffix>_<6-char user suffix>_<timestamp suffix>
-    const receipt = [
-      'rsvp',
-      eventId.slice(-6),
-      (attendeeUserId ?? attendeePhone).slice(-6),
-      Date.now().toString(36).slice(-6),
-    ].join('_').slice(0, 40)
-
-    const order = await createRazorpayOrder({
-      amount: totalAmount,
-      currency: 'INR',
-      receipt,
-      notes: {
-        event_id: eventId,
-        event_title: event.title.slice(0, 50),
-        attendee_phone: attendeePhone,
-        quantity: String(quantity),
-        ...(attendeeUserId ? { user_id: attendeeUserId } : {}),
-      },
-    })
-
-    razorpayOrderId = order.id
-  } catch (err) {
-    const msg = err instanceof RazorpayApiError ? err.message : 'Payment service unavailable'
-    console.error('[initiateRSVP] Razorpay order creation failed', err)
-    return { ...EMPTY, error: msg }
-  }
-
-  // 7c. Compute per-ticket revenue split locked to the creator's current tier.
+  // 7b. Compute per-ticket revenue split locked to the creator's current
+  //     tier. Moved ahead of order creation (previously computed after) so
+  //     the venue's Razorpay Route transfer — which must be attached at
+  //     order-creation time, not after — can be built from the same numbers
+  //     that get written into the RSVP rows further below. The split values
+  //     themselves are unchanged.
   const { data: creatorProfile } = await admin
     .from('user_profiles')
     .select('user_tier, created_at')
@@ -425,7 +398,78 @@ export async function initiateRSVP(params: {
     ? perTicket.makerPaise + perTicket.platformPaise
     : perTicket.makerPaise
 
-  // 6d. Insert pending RSVP rows — one per ticket, all sharing the same
+  // 7c. Razorpay Route (Phase 2): attach a transfer for the venue's share of
+  //     this order, if the event has a venue with an activated Linked
+  //     Account. See buildVenueRouteTransfer's doc comment for why a
+  //     missing/non-activated account silently skips the transfer (order
+  //     still succeeds for the full amount; venue is paid via the existing
+  //     manual payout path) rather than failing the booking.
+  let routeTransfer: RazorpayOrderTransfer | null = null
+  // Durable trace of *why* a skip happened — written onto every RSVP row
+  // below so "which RSVPs had their venue transfer skipped, and why" is a
+  // query, not a log-archaeology exercise. NULL means no skip occurred
+  // (no venue on this event, or the transfer attached successfully).
+  let routeTransferSkipReason: string | null = null
+  if (hasVenue) {
+    const { data: venueLinkedAccount } = await admin
+      .from('linked_accounts')
+      .select('razorpay_account_id, status')
+      .eq('owner_type', 'venue')
+      .eq('owner_id', event.venue_id!)
+      .maybeSingle()
+
+    const { transfer, skippedReason } = buildVenueRouteTransfer({
+      linkedAccount: venueLinkedAccount,
+      venueSharePaise: perTicket.venuePaise * quantity,
+      eventId,
+      venueId: event.venue_id!,
+    })
+
+    routeTransfer = transfer
+    routeTransferSkipReason = skippedReason
+  }
+
+  // 7d. Create the Razorpay order BEFORE inserting RSVP rows.
+  //     If Razorpay is down, we fail early without touching the DB.
+  // receipt = short unique string for idempotency (max 40 chars)
+  // Format: rsvp_<6-char event suffix>_<6-char user suffix>_<timestamp suffix>
+  const receipt = [
+    'rsvp',
+    eventId.slice(-6),
+    (attendeeUserId ?? attendeePhone).slice(-6),
+    Date.now().toString(36).slice(-6),
+  ].join('_').slice(0, 40)
+
+  let razorpayOrderId: string
+  try {
+    const order = await createRazorpayOrder({
+      amount: totalAmount,
+      currency: 'INR',
+      receipt,
+      notes: {
+        event_id: eventId,
+        event_title: event.title.slice(0, 50),
+        attendee_phone: attendeePhone,
+        quantity: String(quantity),
+        ...(attendeeUserId ? { user_id: attendeeUserId } : {}),
+      },
+      ...(routeTransfer ? { transfers: [routeTransfer] } : {}),
+    })
+
+    razorpayOrderId = order.id
+  } catch (err) {
+    const msg = err instanceof RazorpayApiError ? err.message : 'Payment service unavailable'
+    console.error('[initiateRSVP] Razorpay order creation failed', err)
+    return { ...EMPTY, error: msg }
+  }
+
+  if (routeTransferSkipReason) {
+    console.warn('[initiateRSVP] Route transfer skipped', {
+      eventId, venueId: event.venue_id, razorpayOrderId, receipt, skippedReason: routeTransferSkipReason,
+    })
+  }
+
+  // 7e. Insert pending RSVP rows — one per ticket, all sharing the same
   //     razorpay_order_id.  This is the "order" that holds the spots.
   //     The webhook and confirmRSVPPayment find all tickets by order ID.
   const rows = Array.from({ length: quantity }, () => ({
@@ -442,6 +486,7 @@ export async function initiateRSVP(params: {
     ticket_tier_id:     resolvedTierId,
     ticket_tier_name:   resolvedTierName,
     discovery_source:   resolvedDiscoverySource,
+    route_transfer_skip_reason: routeTransferSkipReason,
     // amount_paid is set when payment is confirmed
   }))
 
@@ -749,7 +794,7 @@ export async function checkInAttendee(
   // Find the RSVP by token + event.
   const { data: rsvp } = await admin
     .from('rsvps')
-    .select('id, attendee_name, checked_in, payment_status, attendee_user_id')
+    .select('id, attendee_name, checked_in, payment_status, attendee_user_id, application_status')
     .eq('qr_code_token', qrToken)
     .eq('event_id', eventId)
     .maybeSingle()
@@ -759,6 +804,9 @@ export async function checkInAttendee(
   }
   if (rsvp.payment_status !== 'captured') {
     return { success: false, alreadyCheckedIn: false, attendeeName: null, error: 'Payment not confirmed for this ticket.' }
+  }
+  if (rsvp.application_status && rsvp.application_status !== 'approved') {
+    return { success: false, alreadyCheckedIn: false, attendeeName: null, error: 'This application has not been approved yet.' }
   }
   if (rsvp.checked_in) {
     return { success: true, alreadyCheckedIn: true, attendeeName: rsvp.attendee_name, error: null }
@@ -799,8 +847,10 @@ export interface AttendeeRow {
 
 /**
  * Returns all captured RSVPs for an event, ordered by check-in status then name.
- * Excludes casual "Can't go" responses — they aren't attendees. Caller must
- * be the event's creator.
+ * Excludes casual "Can't go" responses — they aren't attendees. Also excludes
+ * a still-pending/declined/waitlisted application (see migration 079) — those
+ * aren't confirmed attendees until the host approves them; see
+ * getEventApplications for the review queue. Caller must be the event's creator.
  */
 export async function getEventAttendees(
   eventId: string,
@@ -824,6 +874,7 @@ export async function getEventAttendees(
     .eq('event_id', eventId)
     .eq('payment_status', 'captured')
     .or('casual_intent.is.null,casual_intent.neq.not_going')
+    .or('application_status.is.null,application_status.eq.approved')
     .order('checked_in', { ascending: true })
     .order('attendee_name', { ascending: true })
 
@@ -865,13 +916,16 @@ export async function checkInAttendeeById(
 
   const { data: rsvp } = await admin
     .from('rsvps')
-    .select('id, checked_in, payment_status, attendee_user_id')
+    .select('id, checked_in, payment_status, attendee_user_id, application_status')
     .eq('id', rsvpId)
     .eq('event_id', eventId)
     .maybeSingle()
 
   if (!rsvp) return { success: false, error: 'Attendee not found.' }
   if (rsvp.payment_status !== 'captured') return { success: false, error: 'Payment not confirmed.' }
+  if (rsvp.application_status && rsvp.application_status !== 'approved') {
+    return { success: false, error: 'This application has not been approved yet.' }
+  }
   if (rsvp.checked_in) return { success: true }
 
   const { error } = await admin
@@ -898,12 +952,30 @@ export interface MyRSVP {
   qrToken:   string
   orderId:   string | null
   tierName:  string | null
+  /**
+   * Gate state for a casual "going" RSVP (migration 079) — NULL for a
+   * ticketed booking, an ungated casual RSVP, or a 'maybe'/'not_going'
+   * response. event-page.tsx uses this to distinguish a still-pending
+   * application from an actually-confirmed one; both used to render
+   * identically since this field didn't exist here until this fix.
+   */
+  applicationStatus: ApplicationStatus | null
+  /** Going/Maybe/Can't-go signal for a casual RSVP. NULL for a ticketed booking. */
+  casualIntent: 'going' | 'maybe' | 'not_going' | null
 }
 
 /**
- * Returns the authenticated user's confirmed RSVP for an event, if any.
- * Used by the event public page to show an existing ticket instead of the
- * booking form.
+ * Returns the authenticated user's existing RSVP for an event, if any —
+ * ticketed booking or casual response alike. Used by the event public page
+ * to reflect existing state instead of the plain booking form.
+ *
+ * NOTE: `payment_status = 'captured'` is a real filter for ticketed events
+ * (excludes pending/failed/refunded purchases) but is a no-op for casual
+ * events — every casual row is 'captured' regardless of casual_intent or
+ * application_status, since no money is ever involved. Distinguishing a
+ * confirmed casual "going" from 'maybe'/'not_going'/a pending application is
+ * the caller's job, using the two fields below — this function used to
+ * silently collapse all of those into one "you have an RSVP" signal.
  */
 export async function getMyRSVPForEvent(
   eventId: string,
@@ -915,7 +987,7 @@ export async function getMyRSVPForEvent(
   const admin = createAdminClient()
   const { data } = await admin
     .from('rsvps')
-    .select('id, qr_code_token, razorpay_order_id, ticket_tier_name')
+    .select('id, qr_code_token, razorpay_order_id, ticket_tier_name, application_status, casual_intent')
     .eq('event_id', eventId)
     .eq('attendee_user_id', user.id)
     .eq('payment_status', 'captured')
@@ -924,10 +996,12 @@ export async function getMyRSVPForEvent(
   if (!data) return { rsvp: null }
   return {
     rsvp: {
-      rsvpId:   data.id,
-      qrToken:  data.qr_code_token,
-      orderId:  data.razorpay_order_id,
-      tierName: data.ticket_tier_name ?? null,
+      rsvpId:            data.id,
+      qrToken:           data.qr_code_token,
+      orderId:           data.razorpay_order_id,
+      tierName:          data.ticket_tier_name ?? null,
+      applicationStatus: data.application_status,
+      casualIntent:      data.casual_intent,
     },
   }
 }
@@ -937,32 +1011,66 @@ export async function getMyRSVPForEvent(
 // ---------------------------------------------------------------------------
 
 /**
+ * Decides the application_status a casual RSVP row should carry after a
+ * Going/Maybe/Not Going save (see migration 079). Only 'going' is ever
+ * gated; an already-'approved' applicant re-confirming 'going' stays
+ * 'approved' rather than being bumped back into the pending queue.
+ */
+function resolveApplicationStatus(
+  intent: 'going' | 'maybe' | 'not_going',
+  requiresApproval: boolean,
+  existingStatus: ApplicationStatus | null,
+): ApplicationStatus | null {
+  if (intent !== 'going' || !requiresApproval) return null
+  if (existingStatus === 'approved') return 'approved'
+  return 'pending'
+}
+
+/**
  * Records a Going / Maybe / Not Going signal for a free casual event.
  *
  * Intent is stored in the `casual_intent` column (see migration 074).
  * Upserts so the user can change their mind without creating duplicate rows.
+ *
+ * If the event has `requires_approval` set, a 'going' response is held as
+ * `application_status = 'pending'` instead of counting as an attendee right
+ * away — see migration 079. `payment_status` stays 'captured' throughout;
+ * there's no money involved in a free event, so nothing needs to be held.
+ * Only 'going' is ever gated — 'maybe'/'not_going' pass through unchanged.
+ * An already-'approved' applicant who re-confirms 'going' is NOT bumped back
+ * into the pending queue.
  */
 export async function casualRSVP(params: {
   eventId: string
   intent: 'going' | 'maybe' | 'not_going'
-}): Promise<{ error: string | null }> {
+  answer?: string
+}): Promise<{ error: string | null; applicationStatus: ApplicationStatus | null }> {
+  const FAIL = { applicationStatus: null }
   const eventIdParsed = z.string().uuid().safeParse(params.eventId)
   const intentParsed = z.enum(['going', 'maybe', 'not_going']).safeParse(params.intent)
-  if (!eventIdParsed.success || !intentParsed.success) return { error: 'Invalid input.' }
+  const answerParsed = z.string().trim().max(500).optional().safeParse(params.answer)
+  if (!eventIdParsed.success || !intentParsed.success || !answerParsed.success) {
+    return { error: 'Invalid input.', ...FAIL }
+  }
+  const answer = answerParsed.data
 
   const { user } = await requireAuth()
   const admin = createAdminClient()
 
   const { data: event } = await admin
     .from('events')
-    .select('id, status, starts_at, ticket_price')
+    .select('id, status, starts_at, ticket_price, requires_approval, application_question')
     .eq('id', params.eventId)
     .maybeSingle()
 
-  if (!event) return { error: 'Event not found.' }
-  if (event.status !== 'published') return { error: 'This event is not available for RSVP.' }
-  if (new Date(event.starts_at) <= new Date()) return { error: 'This event has already started.' }
-  if (event.ticket_price !== 0) return { error: 'Casual RSVP is only available for free events.' }
+  if (!event) return { error: 'Event not found.', ...FAIL }
+  if (event.status !== 'published') return { error: 'This event is not available for RSVP.', ...FAIL }
+  if (new Date(event.starts_at) <= new Date()) return { error: 'This event has already started.', ...FAIL }
+  if (event.ticket_price !== 0) return { error: 'Casual RSVP is only available for free events.', ...FAIL }
+
+  if (params.intent === 'going' && event.requires_approval && event.application_question && !answer) {
+    return { error: 'Please answer the question to apply.', ...FAIL }
+  }
 
   const { data: profile } = await admin
     .from('user_profiles')
@@ -975,19 +1083,27 @@ export async function casualRSVP(params: {
   // Upsert: update casual_intent if already RSVPed, otherwise insert a fresh row
   const { data: existing } = await admin
     .from('rsvps')
-    .select('id')
+    .select('id, application_status')
     .eq('event_id', params.eventId)
     .eq('attendee_user_id', user.id)
     .eq('payment_status', 'captured')
     .maybeSingle()
 
+  const newApplicationStatus = resolveApplicationStatus(
+    params.intent, event.requires_approval, existing?.application_status ?? null,
+  )
+
   if (existing) {
     const { error: updateError } = await admin
       .from('rsvps')
-      .update({ casual_intent: params.intent })
+      .update({
+        casual_intent: params.intent,
+        application_status: newApplicationStatus,
+        ...(params.intent === 'going' ? { application_answer: answer ?? null } : {}),
+      })
       .eq('id', existing.id)
 
-    if (updateError) return { error: 'Failed to update your RSVP.' }
+    if (updateError) return { error: 'Failed to update your RSVP.', ...FAIL }
   } else {
     const { error: insertError } = await admin
       .from('rsvps')
@@ -999,6 +1115,8 @@ export async function casualRSVP(params: {
         attendee_name:       displayName,
         attendee_phone:      '',
         casual_intent:       params.intent,
+        application_status:  newApplicationStatus,
+        application_answer:  params.intent === 'going' ? (answer ?? null) : null,
         platform_fee_paise:  0,
         maker_payout_paise:  0,
         venue_fee_paise:     0,
@@ -1006,10 +1124,10 @@ export async function casualRSVP(params: {
         discovery_source:    'direct' as const,
       })
 
-    if (insertError) return { error: 'Failed to save your RSVP.' }
+    if (insertError) return { error: 'Failed to save your RSVP.', ...FAIL }
   }
 
-  return { error: null }
+  return { error: null, applicationStatus: newApplicationStatus }
 }
 
 // ---------------------------------------------------------------------------
@@ -1021,6 +1139,7 @@ const CasualRSVPGuestSchema = z.object({
   intent:  z.enum(['going', 'maybe', 'not_going']),
   name:    z.string().trim().min(1, 'Please enter your name.').max(100, 'Name must be at most 100 characters'),
   phone:   z.string().regex(/^\+[1-9]\d{6,14}$/, 'Please enter a valid phone number.'),
+  answer:  z.string().trim().max(500, 'Answer must be at most 500 characters').optional(),
 })
 
 /**
@@ -1034,49 +1153,72 @@ const CasualRSVPGuestSchema = z.object({
  * Dedupes on (event, phone) rather than a user id — a guest can revisit and
  * change their mind (going → maybe) without creating duplicate rows, same
  * as the authenticated casualRSVP above.
+ *
+ * If the event has `requires_approval` set, a 'going' response is held as
+ * `application_status = 'pending'` instead of counting as an attendee right
+ * away — see migration 079 and resolveApplicationStatus above.
+ * payment_status stays 'captured' throughout, so this dedupe query (keyed
+ * on payment_status='captured') needs no changes: a pending applicant's row
+ * is still captured, and a repeat visit still matches it and updates in
+ * place instead of inserting a duplicate.
  */
 export async function casualRSVPGuest(params: {
   eventId: string
   intent: 'going' | 'maybe' | 'not_going'
   name: string
   phone: string
-}): Promise<{ error: string | null }> {
+  answer?: string
+}): Promise<{ error: string | null; applicationStatus: ApplicationStatus | null }> {
+  const FAIL = { applicationStatus: null }
   const parsed = CasualRSVPGuestSchema.safeParse(params)
-  if (!parsed.success) return { error: parsed.error.errors[0].message }
-  const { eventId, intent, name, phone } = parsed.data
+  if (!parsed.success) return { error: parsed.error.errors[0].message, ...FAIL }
+  const { eventId, intent, name, phone, answer } = parsed.data
 
   const verified = await isGuestPhoneVerified(phone)
-  if (!verified) return { error: 'Please verify your phone number before continuing.' }
+  if (!verified) return { error: 'Please verify your phone number before continuing.', ...FAIL }
 
   const admin = createAdminClient()
 
   const { data: event } = await admin
     .from('events')
-    .select('id, status, starts_at, ticket_price, title, venue_name, venue_address, slug')
+    .select('id, status, starts_at, ticket_price, title, venue_name, venue_address, slug, requires_approval, application_question')
     .eq('id', eventId)
     .maybeSingle()
 
-  if (!event) return { error: 'Event not found.' }
-  if (event.status !== 'published') return { error: 'This event is not available for RSVP.' }
-  if (new Date(event.starts_at) <= new Date()) return { error: 'This event has already started.' }
-  if (event.ticket_price !== 0) return { error: 'Casual RSVP is only available for free events.' }
+  if (!event) return { error: 'Event not found.', ...FAIL }
+  if (event.status !== 'published') return { error: 'This event is not available for RSVP.', ...FAIL }
+  if (new Date(event.starts_at) <= new Date()) return { error: 'This event has already started.', ...FAIL }
+  if (event.ticket_price !== 0) return { error: 'Casual RSVP is only available for free events.', ...FAIL }
+
+  if (intent === 'going' && event.requires_approval && event.application_question && !answer) {
+    return { error: 'Please answer the question to apply.', ...FAIL }
+  }
 
   const { data: existing } = await admin
     .from('rsvps')
-    .select('id, casual_intent')
+    .select('id, casual_intent, application_status')
     .eq('event_id', eventId)
     .is('attendee_user_id', null)
     .eq('attendee_phone', phone)
     .eq('payment_status', 'captured')
     .maybeSingle()
 
+  const newApplicationStatus = resolveApplicationStatus(
+    intent, event.requires_approval, existing?.application_status ?? null,
+  )
+
   if (existing) {
     const { error: updateError } = await admin
       .from('rsvps')
-      .update({ attendee_name: name, casual_intent: intent })
+      .update({
+        attendee_name: name,
+        casual_intent: intent,
+        application_status: newApplicationStatus,
+        ...(intent === 'going' ? { application_answer: answer ?? null } : {}),
+      })
       .eq('id', existing.id)
 
-    if (updateError) return { error: 'Failed to update your RSVP.' }
+    if (updateError) return { error: 'Failed to update your RSVP.', ...FAIL }
   } else {
     const { error: insertError } = await admin
       .from('rsvps')
@@ -1088,6 +1230,8 @@ export async function casualRSVPGuest(params: {
         attendee_name:       name,
         attendee_phone:      phone,
         casual_intent:       intent,
+        application_status:  newApplicationStatus,
+        application_answer:  intent === 'going' ? (answer ?? null) : null,
         platform_fee_paise:  0,
         maker_payout_paise:  0,
         venue_fee_paise:     0,
@@ -1095,7 +1239,7 @@ export async function casualRSVPGuest(params: {
         discovery_source:    'direct' as const,
       })
 
-    if (insertError) return { error: 'Failed to save your RSVP.' }
+    if (insertError) return { error: 'Failed to save your RSVP.', ...FAIL }
   }
 
   // Immediate confirmation only. The day-before reminder is handled separately
@@ -1107,7 +1251,27 @@ export async function casualRSVPGuest(params: {
   // here for "not_going" — nothing to confirm or remind. Sent on every
   // going/maybe save (not just new rows) so switching from maybe → going
   // gets its own confirmation.
-  if (intent !== 'not_going') {
+  //
+  // A 'going' response gated into application_status='pending' gets the
+  // "application received" template instead of the normal confirmation —
+  // it isn't confirmed as an attendee yet.
+  if (newApplicationStatus === 'pending') {
+    const eventDateOnly = new Date(event.starts_at).toLocaleDateString('en-IN', {
+      weekday: 'long', day: 'numeric', month: 'short', year: 'numeric',
+    })
+    const eventTimeOnly = new Date(event.starts_at).toLocaleTimeString('en-IN', {
+      hour: '2-digit', minute: '2-digit',
+    })
+    sendWhatsAppTemplate(phone, 'rsvp_application_received_v1', 'en', [
+      event.title, eventDateOnly, eventTimeOnly,
+    ], [{ index: 0, urlParameter: event.slug }]).catch((err) => {
+      console.error('[casualRSVPGuest] application-received WhatsApp send failed', { eventId, error: String(err) })
+      recordWhatsAppSendFailure({
+        templateName: 'rsvp_application_received_v1', recipientPhone: phone, error: err,
+        eventId, contextId: existing?.id ?? null,
+      })
+    })
+  } else if (intent !== 'not_going') {
     const eventDateOnly = new Date(event.starts_at).toLocaleDateString('en-IN', {
       weekday: 'long', day: 'numeric', month: 'short', year: 'numeric',
     })
@@ -1122,7 +1286,265 @@ export async function casualRSVPGuest(params: {
     })
   }
 
-  return { error: null }
+  return { error: null, applicationStatus: newApplicationStatus }
+}
+
+// ---------------------------------------------------------------------------
+// getEventApplications
+// ---------------------------------------------------------------------------
+
+export interface ApplicationRow {
+  id:                      string
+  attendee_name:           string
+  attendee_phone:          string
+  application_status:      ApplicationStatus | null
+  application_answer:      string | null
+  application_decided_at:  string | null
+  created_at:              string
+  /**
+   * True if this phone number has any other captured, non-declined RSVP
+   * (application_status IS NULL or 'approved') against a past event by this
+   * same creator — a signal the host can use to fast-track a known regular.
+   */
+  isReturningGuest:        boolean
+}
+
+/**
+ * Returns the review queue of gated 'going' applications for an event
+ * (see migration 079), optionally filtered to one application_status.
+ * Caller must be the event's creator.
+ */
+export async function getEventApplications(
+  eventId: string,
+  status?: ApplicationStatus,
+): Promise<{ data: ApplicationRow[] | null; error: string | null }> {
+  const eventIdParsed = z.string().uuid().safeParse(eventId)
+  if (!eventIdParsed.success) return { data: null, error: 'Invalid event ID.' }
+
+  const { user } = await requireAuth()
+  const admin = createAdminClient()
+
+  const { data: event } = await admin
+    .from('events')
+    .select('id, creator_id')
+    .eq('id', eventId)
+    .maybeSingle()
+
+  if (!event || event.creator_id !== user.id) {
+    return { data: null, error: 'Event not found.' }
+  }
+
+  let query = admin
+    .from('rsvps')
+    .select('id, attendee_name, attendee_phone, application_status, application_answer, application_decided_at, created_at')
+    .eq('event_id', eventId)
+    .eq('payment_status', 'captured')
+    .not('application_status', 'is', null)
+
+  if (status) query = query.eq('application_status', status)
+
+  const { data, error } = await query.order('created_at', { ascending: true })
+  if (error) return { data: null, error: error.message }
+  if (!data?.length) return { data: [], error: null }
+
+  // Returning-guest check: same phone number has a captured, non-declined/
+  // non-waitlisted RSVP against a past event by this same creator.
+  const phones = [...new Set(data.map((r) => r.attendee_phone).filter(Boolean))]
+  const now = new Date().toISOString()
+
+  const { data: pastEvents } = await admin
+    .from('events')
+    .select('id')
+    .eq('creator_id', event.creator_id)
+    .neq('id', eventId)
+    .lt('starts_at', now)
+
+  const pastEventIds = (pastEvents ?? []).map((e) => e.id)
+
+  let returningPhones = new Set<string>()
+  if (pastEventIds.length && phones.length) {
+    const { data: pastRsvps } = await admin
+      .from('rsvps')
+      .select('attendee_phone')
+      .in('event_id', pastEventIds)
+      .in('attendee_phone', phones)
+      .eq('payment_status', 'captured')
+      .or('application_status.is.null,application_status.eq.approved')
+
+    returningPhones = new Set((pastRsvps ?? []).map((r) => r.attendee_phone))
+  }
+
+  const applications: ApplicationRow[] = data.map((r) => ({
+    ...r,
+    isReturningGuest: returningPhones.has(r.attendee_phone),
+  }))
+
+  return { data: applications, error: null }
+}
+
+// ---------------------------------------------------------------------------
+// decideApplication / bulkDecideApplications
+// ---------------------------------------------------------------------------
+
+const DecisionSchema = z.enum(['approved', 'declined', 'waitlisted'])
+
+async function sendApplicationDecisionWhatsApp(
+  decision: 'approved' | 'declined',
+  rsvp: { id: string; attendee_name: string; attendee_phone: string },
+  event: { id: string; title: string; slug: string; starts_at: string },
+): Promise<void> {
+  if (!rsvp.attendee_phone) return
+
+  const eventDateOnly = new Date(event.starts_at).toLocaleDateString('en-IN', {
+    weekday: 'long', day: 'numeric', month: 'short', year: 'numeric',
+  })
+  const eventTimeOnly = new Date(event.starts_at).toLocaleTimeString('en-IN', {
+    hour: '2-digit', minute: '2-digit',
+  })
+
+  // Meta's approved decline template is named 'rsvp_application_decline' —
+  // no '_v1', and "decline" not "declined" — confirmed 2026-09-11 against
+  // WhatsApp Manager after 'rsvp_application_declined_v1' 404'd outright.
+  const templateName = decision === 'approved' ? 'rsvp_application_approved_v1' : 'rsvp_application_decline'
+  const templateParams = decision === 'approved'
+    ? [event.title, eventDateOnly, eventTimeOnly]
+    : [event.title, eventDateOnly]
+
+  try {
+    // rsvp_application_decline has no button component in Meta — passing a
+    // button param for it 400s ("Template does not contain button
+    // components"). Only the approved template has one.
+    const buttons = decision === 'approved' ? [{ index: 0, urlParameter: event.slug }] : undefined
+    await sendWhatsAppTemplate(rsvp.attendee_phone, templateName, 'en', templateParams, buttons)
+  } catch (err) {
+    console.error('[decideApplication] WhatsApp send failed', { decision, error: String(err) })
+    await recordWhatsAppSendFailure({
+      templateName, recipientPhone: rsvp.attendee_phone, error: err,
+      eventId: event.id, contextId: rsvp.id,
+    })
+  }
+}
+
+/**
+ * Approves, declines, or waitlists a single application. Idempotency guard:
+ * only transitions out of 'pending'/'waitlisted' — an already-decided
+ * ('approved'/'declined') row is left untouched. Records an audit trail
+ * (application_decided_at/application_decided_by) on every decision.
+ * Caller must be the event's creator.
+ */
+export async function decideApplication(
+  eventId: string,
+  rsvpId: string,
+  decision: 'approved' | 'declined' | 'waitlisted',
+): Promise<{ success: boolean; error?: string }> {
+  const eventIdParsed = z.string().uuid().safeParse(eventId)
+  const rsvpIdParsed = z.string().uuid().safeParse(rsvpId)
+  const decisionParsed = DecisionSchema.safeParse(decision)
+  if (!eventIdParsed.success || !rsvpIdParsed.success || !decisionParsed.success) {
+    return { success: false, error: 'Invalid input.' }
+  }
+
+  const { user } = await requireAuth()
+  const admin = createAdminClient()
+
+  const { data: event } = await admin
+    .from('events')
+    .select('id, creator_id, title, slug, starts_at')
+    .eq('id', eventId)
+    .maybeSingle()
+
+  if (!event || event.creator_id !== user.id) {
+    return { success: false, error: 'Event not found.' }
+  }
+
+  const { data: rsvp } = await admin
+    .from('rsvps')
+    .select('id, attendee_name, attendee_phone, application_status')
+    .eq('id', rsvpId)
+    .eq('event_id', eventId)
+    .maybeSingle()
+
+  if (!rsvp) return { success: false, error: 'Application not found.' }
+  if (rsvp.application_status !== 'pending' && rsvp.application_status !== 'waitlisted') {
+    return { success: false, error: 'This application has already been decided.' }
+  }
+
+  const { error } = await admin
+    .from('rsvps')
+    .update({
+      application_status:     decision,
+      application_decided_at: new Date().toISOString(),
+      application_decided_by: user.id,
+    })
+    .eq('id', rsvpId)
+    .in('application_status', ['pending', 'waitlisted'])   // idempotency guard
+
+  if (error) return { success: false, error: 'Failed to update application.' }
+
+  if (decision === 'approved' || decision === 'declined') {
+    sendApplicationDecisionWhatsApp(decision, rsvp, event).catch(() => {})
+  }
+
+  return { success: true }
+}
+
+/**
+ * Decides up to 200 applications at once. Applies the same idempotency
+ * guard as decideApplication (only transitions out of pending/waitlisted)
+ * and the same audit trail. Caller must be the event's creator.
+ */
+export async function bulkDecideApplications(
+  eventId: string,
+  rsvpIds: string[],
+  decision: 'approved' | 'declined' | 'waitlisted',
+): Promise<{ success: boolean; decided: number; error?: string }> {
+  const eventIdParsed = z.string().uuid().safeParse(eventId)
+  const rsvpIdsParsed = z.array(z.string().uuid()).min(1).max(200).safeParse(rsvpIds)
+  const decisionParsed = DecisionSchema.safeParse(decision)
+  if (!eventIdParsed.success || !rsvpIdsParsed.success || !decisionParsed.success) {
+    return { success: false, decided: 0, error: 'Invalid input.' }
+  }
+
+  const { user } = await requireAuth()
+  const admin = createAdminClient()
+
+  const { data: event } = await admin
+    .from('events')
+    .select('id, creator_id, title, slug, starts_at')
+    .eq('id', eventId)
+    .maybeSingle()
+
+  if (!event || event.creator_id !== user.id) {
+    return { success: false, decided: 0, error: 'Event not found.' }
+  }
+
+  const { data: rsvps } = await admin
+    .from('rsvps')
+    .select('id, attendee_name, attendee_phone, application_status')
+    .eq('event_id', eventId)
+    .in('id', rsvpIdsParsed.data)
+    .in('application_status', ['pending', 'waitlisted'])   // idempotency guard
+
+  if (!rsvps?.length) return { success: true, decided: 0 }
+
+  const decidedIds = rsvps.map((r) => r.id)
+  const { error } = await admin
+    .from('rsvps')
+    .update({
+      application_status:     decision,
+      application_decided_at: new Date().toISOString(),
+      application_decided_by: user.id,
+    })
+    .in('id', decidedIds)
+    .in('application_status', ['pending', 'waitlisted'])   // idempotency guard
+
+  if (error) return { success: false, decided: 0, error: 'Failed to update applications.' }
+
+  if (decision === 'approved' || decision === 'declined') {
+    await Promise.all(rsvps.map((rsvp) => sendApplicationDecisionWhatsApp(decision, rsvp, event).catch(() => {})))
+  }
+
+  return { success: true, decided: decidedIds.length }
 }
 
 // ---------------------------------------------------------------------------

@@ -228,7 +228,7 @@ export default function VenueStudioClient({ venue, initialBlocks, upcomingEvents
 
   async function handleThemeSave() {
     setThemeSaving(true)
-    const result = await updateProfileTheme(theme)
+    const result = await updateProfileTheme(theme, 'venue')
     setThemeSaving(false)
     if (result.error) {
       setThemeStatus('error')

@@ -8,6 +8,7 @@ import { useExistingProfileData } from '@/hooks/useExistingProfileData'
 import { prefillCreatorKeys } from '@/lib/onboarding/prefill'
 import { PAPER } from '@/lib/onboarding/design-tokens'
 import { ONBOARDING_CTA } from '@/lib/constants/onboarding-cta-copy'
+import { queueDraftPatch, flushDraftPatch } from '@/lib/onboarding/draft-sync'
 
 const LEFT_BG  = '#1A2744'
 const RIGHT_BG = PAPER.bg
@@ -229,7 +230,7 @@ function C2Content() {
   const [creatorCity,  setCreatorCity]  = useState('')
   const [ctaLoading,   setCtaLoading]   = useState(false)
 
-  const { data: existingData } = useExistingProfileData()
+  const { data: existingData } = useExistingProfileData('creator')
 
   // Pre-fill from existing profile in add-mode
   useEffect(() => {
@@ -279,6 +280,9 @@ function C2Content() {
       sessionStorage.setItem(SK.c_name,     displayName)
       sessionStorage.setItem(SK.c_username, username)
     } catch {}
+    queueDraftPatch('creator', SK.c_name,     displayName)
+    queueDraftPatch('creator', SK.c_username, username)
+    await flushDraftPatch('creator')
     router.push('/onboarding/creator/C3')
   }
 

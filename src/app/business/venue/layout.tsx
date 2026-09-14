@@ -41,7 +41,7 @@ export default async function VenueLayout({ children }: { children: React.ReactN
       <div className="wimc-grain" aria-hidden />
 
       {/* Persistent circular nav on every sub-route below /business/venue/dashboard —
-          the index route's own SwipeCarousel already renders a live version
+          the index route's own PersonaTabSwitcher already renders a live version
           of this; PersonaNavGate no-ops there to avoid a double nav. Deliberately
           a sibling of .dash-content, NOT nested inside it: .dash-content has a
           mount entrance animation (globals.css, transform: translateY(28px) in

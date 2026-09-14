@@ -7,6 +7,7 @@ import { updatePersonas } from '@/lib/onboarding/update-personas'
 import { completeVenueOnboarding, type CompleteVenueInput } from '@/app/actions/venue-onboarding'
 import { createClient } from '@/lib/supabase/client'
 import { ArtifactStyles, ScaledStage, VenuePoster } from '@/components/onboarding/artifacts'
+import { queueDraftPatch, cancelPendingDraftWrites } from '@/lib/onboarding/draft-sync'
 
 const ACCENT  = '#5DD9D0'
 const CORAL   = '#E8705A'
@@ -87,10 +88,12 @@ export default function V8Page() {
   const [bio,            setBio]            = useState('')
 
   function syncContact(wa: string, mail: string, ig: string, b: string) {
+    const serialized = JSON.stringify({ whatsapp: wa, email: mail, instagram: ig, bio: b })
     try {
-      sessionStorage.setItem('wimc_ob_v_contact', JSON.stringify({ whatsapp: wa, email: mail, instagram: ig, bio: b }))
+      sessionStorage.setItem('wimc_ob_v_contact', serialized)
       window.dispatchEvent(new Event('ob-snap-update'))
     } catch {}
+    queueDraftPatch('business', SK.v_contact, serialized)
   }
   const [suggestLoading, setSuggestLoading] = useState(false)
   const [isSubmitting,   setIsSubmitting]   = useState(false)
@@ -223,6 +226,7 @@ export default function V8Page() {
 
   async function handleDone() {
     if (!email.trim() || isSubmitting) return
+    cancelPendingDraftWrites('business')
     setIsSubmitting(true)
     setSubmitError(null)
     if (whatsapp && whatsapp.length !== 10) {

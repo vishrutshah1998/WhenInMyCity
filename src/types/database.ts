@@ -38,6 +38,12 @@ export type AvailabilityStatus = 'available' | 'blocked' | 'pending' | 'confirme
 
 export type ConnectionStatus = 'pending' | 'accepted' | 'declined'
 
+export type LinkedAccountOwnerType = 'creator' | 'venue'
+export type LinkedAccountStatus =
+  | 'not_started' | 'pending_kyc' | 'requested' | 'under_review'
+  | 'activated' | 'needs_clarification' | 'config_locked'
+  | 'suspended' | 'rejected'
+
 export type CreatorType =
   // Legacy values (pre-v2 onboarding) — kept for existing profiles
   | 'music_performance'
@@ -121,6 +127,12 @@ export type BlockType =
 export type EventStatus = 'draft' | 'published' | 'cancelled' | 'completed'
 
 export type PaymentStatus = 'pending' | 'captured' | 'failed' | 'refunded' | 'refund_failed'
+
+/** Gate on a casual (free) 'going' RSVP when events.requires_approval is true. NULL = not gated. Added in migration 079. */
+export type ApplicationStatus = 'pending' | 'approved' | 'declined' | 'waitlisted'
+
+/** event_applications.status — same vocabulary as ApplicationStatus plus 'expired' (paid-gated events only). Added in migration 080. */
+export type EventApplicationStatus = ApplicationStatus | 'expired'
 
 // ---------------------------------------------------------------------------
 // Page-theme shape (stored as jsonb in user_profiles.page_theme)
@@ -629,6 +641,14 @@ export interface Database {
           early_access_at: string | null
           /** Patreon-style ticket tiers. NULL = flat ticket_price. Added in migration 022. */
           ticket_tiers: Json | null
+          /** 'ticketed' (default) or 'casual' (Going/Maybe/Not Going, free events only). Added in migration 034 — was missing from this hand-maintained file until migration 079. */
+          rsvp_style: 'ticketed' | 'casual'
+          /** If true, a casual "going" RSVP is held pending host approval. Only meaningful when rsvp_style = 'casual'. Added in migration 079. */
+          requires_approval: boolean
+          /** Optional single custom question shown to applicants. Max 200 chars. Added in migration 079. */
+          application_question: string | null
+          /** Minutes an approved paid-gated applicant has to pay (60-10080). NULL = not a paid-gated event, or unset. Added in migration 080. */
+          application_payment_window_minutes: number | null
           created_at: string
           updated_at: string
         }
@@ -656,6 +676,10 @@ export interface Database {
           rating_count?: number
           early_access_at?: string | null
           ticket_tiers?: Json | null
+          rsvp_style?: 'ticketed' | 'casual'
+          requires_approval?: boolean
+          application_question?: string | null
+          application_payment_window_minutes?: number | null
           created_at?: string
           updated_at?: string
         }
@@ -683,6 +707,10 @@ export interface Database {
           rating_count?: number
           early_access_at?: string | null
           ticket_tiers?: Json | null
+          rsvp_style?: 'ticketed' | 'casual'
+          requires_approval?: boolean
+          application_question?: string | null
+          application_payment_window_minutes?: number | null
           created_at?: string
           updated_at?: string
         }
@@ -729,6 +757,14 @@ export interface Database {
           discovery_source: 'creator_link' | 'platform_discovery' | 'direct'
           /** Going/Maybe/Can't-go signal for casual (free) RSVPs. NULL for ticketed/paid bookings. See migration 074. */
           casual_intent: 'going' | 'maybe' | 'not_going' | null
+          /** Gate on a casual "going" RSVP when events.requires_approval is true. NULL = not gated. See migration 079. */
+          application_status: ApplicationStatus | null
+          /** Applicant's answer to events.application_question, if one was set. See migration 079. */
+          application_answer: string | null
+          application_decided_at: string | null
+          application_decided_by: string | null
+          /** Set when the venue's Razorpay Route transfer was skipped at order-creation time: 'no_linked_account' or 'not_activated:<status at skip-time>'. NULL = no skip occurred. See migration 084. */
+          route_transfer_skip_reason: string | null
           created_at: string
         }
         Insert: {
@@ -752,6 +788,11 @@ export interface Database {
           ticket_tier_name?: string | null
           discovery_source?: 'creator_link' | 'platform_discovery' | 'direct'
           casual_intent?: 'going' | 'maybe' | 'not_going' | null
+          application_status?: ApplicationStatus | null
+          application_answer?: string | null
+          application_decided_at?: string | null
+          application_decided_by?: string | null
+          route_transfer_skip_reason?: string | null
           created_at?: string
         }
         Update: {
@@ -775,6 +816,11 @@ export interface Database {
           ticket_tier_name?: string | null
           discovery_source?: 'creator_link' | 'platform_discovery' | 'direct'
           casual_intent?: 'going' | 'maybe' | 'not_going' | null
+          application_status?: ApplicationStatus | null
+          application_answer?: string | null
+          application_decided_at?: string | null
+          application_decided_by?: string | null
+          route_transfer_skip_reason?: string | null
           created_at?: string
         }
         Relationships: [
@@ -790,6 +836,100 @@ export interface Database {
             columns: ['attendee_user_id']
             isOneToOne: false
             referencedRelation: 'user_profiles'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'rsvps_application_decided_by_fkey'
+            columns: ['application_decided_by']
+            isOneToOne: false
+            referencedRelation: 'user_profiles'
+            referencedColumns: ['id']
+          }
+        ]
+      }
+
+      event_applications: {
+        Row: {
+          id: string
+          event_id: string
+          /** NULL = guest applicant, mirrors rsvps.attendee_user_id. */
+          applicant_user_id: string | null
+          applicant_name: string
+          applicant_phone: string
+          answer: string | null
+          /** Selected tier id (events.ticket_tiers[].id), required when the event has tiers configured. */
+          ticket_tier_id: string | null
+          status: EventApplicationStatus
+          /** Timestamp of the host's decision; doubles as the approval timestamp and survives the 'expired' transition. */
+          decided_at: string | null
+          decided_by: string | null
+          /** decided_at + events.application_payment_window_minutes, computed once at approval. */
+          payment_deadline: string | null
+          /** Set only by the expiry sweep cron (not yet built). */
+          expired_at: string | null
+          /** The rsvps row created once payment succeeds via initiateRSVP. */
+          rsvp_id: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          event_id: string
+          applicant_user_id?: string | null
+          applicant_name: string
+          applicant_phone: string
+          answer?: string | null
+          ticket_tier_id?: string | null
+          status?: EventApplicationStatus
+          decided_at?: string | null
+          decided_by?: string | null
+          payment_deadline?: string | null
+          expired_at?: string | null
+          rsvp_id?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          event_id?: string
+          applicant_user_id?: string | null
+          applicant_name?: string
+          applicant_phone?: string
+          answer?: string | null
+          ticket_tier_id?: string | null
+          status?: EventApplicationStatus
+          decided_at?: string | null
+          decided_by?: string | null
+          payment_deadline?: string | null
+          expired_at?: string | null
+          rsvp_id?: string | null
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'event_applications_event_id_fkey'
+            columns: ['event_id']
+            isOneToOne: false
+            referencedRelation: 'events'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'event_applications_applicant_user_id_fkey'
+            columns: ['applicant_user_id']
+            isOneToOne: false
+            referencedRelation: 'user_profiles'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'event_applications_decided_by_fkey'
+            columns: ['decided_by']
+            isOneToOne: false
+            referencedRelation: 'user_profiles'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'event_applications_rsvp_id_fkey'
+            columns: ['rsvp_id']
+            isOneToOne: false
+            referencedRelation: 'rsvps'
             referencedColumns: ['id']
           }
         ]
@@ -1098,6 +1238,8 @@ export interface Database {
           google_calendar_refresh_token: string | null
           buffer_before_minutes: number
           buffer_after_minutes: number
+          // Persona/Brand profile split (migration 075)
+          page_theme: Json
           created_at: string
           updated_at: string
         }
@@ -1144,6 +1286,7 @@ export interface Database {
           google_calendar_refresh_token?: string | null
           buffer_before_minutes?: number
           buffer_after_minutes?: number
+          page_theme?: Json
           created_at?: string
           updated_at?: string
         }
@@ -1190,6 +1333,7 @@ export interface Database {
           google_calendar_refresh_token?: string | null
           buffer_before_minutes?: number
           buffer_after_minutes?: number
+          page_theme?: Json
           created_at?: string
           updated_at?: string
         }
@@ -1220,6 +1364,11 @@ export interface Database {
           followed_maker_ids: string[]
           saved_event_ids: string[]
           notification_preferences: Json
+          // Persona/Brand profile split (migration 075)
+          page_theme: Json
+          // Moved from user_profiles (migration 078)
+          explorer_scene: string | null
+          explorer_creator_intent: string[]
           created_at: string
           updated_at: string
         }
@@ -1238,6 +1387,9 @@ export interface Database {
           followed_maker_ids?: string[]
           saved_event_ids?: string[]
           notification_preferences?: Json
+          page_theme?: Json
+          explorer_scene?: string | null
+          explorer_creator_intent?: string[]
           created_at?: string
           updated_at?: string
         }
@@ -1256,12 +1408,185 @@ export interface Database {
           followed_maker_ids?: string[]
           saved_event_ids?: string[]
           notification_preferences?: Json
+          page_theme?: Json
+          explorer_scene?: string | null
+          explorer_creator_intent?: string[]
           created_at?: string
           updated_at?: string
         }
         Relationships: [
           {
             foreignKeyName: 'explorer_profiles_auth_user_id_fkey'
+            columns: ['auth_user_id']
+            isOneToOne: true
+            referencedRelation: 'users'
+            referencedColumns: ['id']
+          }
+        ]
+      }
+
+      // Onboarding wizard resume drafts (migration 081)
+      onboarding_drafts: {
+        Row: {
+          auth_user_id: string
+          persona: 'creator' | 'business' | 'explorer'
+          draft: Json
+          last_step_path: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          auth_user_id: string
+          persona: 'creator' | 'business' | 'explorer'
+          draft?: Json
+          last_step_path?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          auth_user_id?: string
+          persona?: 'creator' | 'business' | 'explorer'
+          draft?: Json
+          last_step_path?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'onboarding_drafts_auth_user_id_fkey'
+            columns: ['auth_user_id']
+            isOneToOne: false
+            referencedRelation: 'users'
+            referencedColumns: ['id']
+          }
+        ]
+      }
+
+      // Creator/Brand profile split (migration 075)
+      creator_profiles: {
+        Row: {
+          id: string
+          auth_user_id: string
+          bio: string | null
+          avatar_url: string | null
+          city: string
+          neighbourhood: string | null
+          creator_type: CreatorType
+          sub_types: string[]
+          offline_activities: string[]
+          interest_tags: string[]
+          social_links: Json
+          instagram_handle: string | null
+          page_theme: Json
+          show_city_mastery: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          auth_user_id: string
+          bio?: string | null
+          avatar_url?: string | null
+          city: string
+          neighbourhood?: string | null
+          creator_type: CreatorType
+          sub_types?: string[]
+          offline_activities?: string[]
+          interest_tags?: string[]
+          social_links?: Json
+          instagram_handle?: string | null
+          page_theme?: Json
+          show_city_mastery?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          auth_user_id?: string
+          bio?: string | null
+          avatar_url?: string | null
+          city?: string
+          neighbourhood?: string | null
+          creator_type?: CreatorType
+          sub_types?: string[]
+          offline_activities?: string[]
+          interest_tags?: string[]
+          social_links?: Json
+          instagram_handle?: string | null
+          page_theme?: Json
+          show_city_mastery?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'creator_profiles_auth_user_id_fkey'
+            columns: ['auth_user_id']
+            isOneToOne: true
+            referencedRelation: 'users'
+            referencedColumns: ['id']
+          }
+        ]
+      }
+
+      brand_profiles: {
+        Row: {
+          id: string
+          auth_user_id: string
+          business_name: string | null
+          bio: string | null
+          avatar_url: string | null
+          city: string
+          business_categories: string[]
+          wimc_goals: string[]
+          target_audience: string[]
+          contact_whatsapp: string | null
+          contact_email: string | null
+          website_url: string | null
+          instagram_handle: string | null
+          page_theme: Json
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          auth_user_id: string
+          business_name?: string | null
+          bio?: string | null
+          avatar_url?: string | null
+          city: string
+          business_categories?: string[]
+          wimc_goals?: string[]
+          target_audience?: string[]
+          contact_whatsapp?: string | null
+          contact_email?: string | null
+          website_url?: string | null
+          instagram_handle?: string | null
+          page_theme?: Json
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          auth_user_id?: string
+          business_name?: string | null
+          bio?: string | null
+          avatar_url?: string | null
+          city?: string
+          business_categories?: string[]
+          wimc_goals?: string[]
+          target_audience?: string[]
+          contact_whatsapp?: string | null
+          contact_email?: string | null
+          website_url?: string | null
+          instagram_handle?: string | null
+          page_theme?: Json
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'brand_profiles_auth_user_id_fkey'
             columns: ['auth_user_id']
             isOneToOne: true
             referencedRelation: 'users'
@@ -2044,6 +2369,138 @@ export interface Database {
           }
         ]
       }
+
+      whatsapp_send_failures: {
+        Row: {
+          id:              string
+          template_name:   string
+          recipient_phone: string
+          error_detail:    string
+          event_id:        string | null
+          context_id:      string | null
+          created_at:      string
+        }
+        Insert: {
+          id?:              string
+          template_name:    string
+          recipient_phone:  string
+          error_detail:     string
+          event_id?:        string | null
+          context_id?:      string | null
+          created_at?:      string
+        }
+        Update: {
+          id?:              string
+          template_name?:   string
+          recipient_phone?: string
+          error_detail?:    string
+          event_id?:        string | null
+          context_id?:      string | null
+          created_at?:      string
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'whatsapp_send_failures_event_id_fkey'
+            columns: ['event_id']
+            isOneToOne: false
+            referencedRelation: 'events'
+            referencedColumns: ['id']
+          }
+        ]
+      }
+      linked_accounts: {
+        Row: {
+          id:                     string
+          owner_type:             string
+          owner_id:               string
+          razorpay_account_id:    string | null
+          stakeholder_id:         string | null
+          product_config_id:      string | null
+          status:                 string
+          rejection_reason:       string | null
+          legal_name:             string | null
+          business_type:          string | null
+          business_pan:           string | null
+          bank_account_last4:     string | null
+          bank_ifsc:              string | null
+          bank_beneficiary_name:  string | null
+          cooling_period_ends_at: string | null
+          submitted_at:           string | null
+          activated_at:           string | null
+          created_at:             string
+          updated_at:             string
+        }
+        Insert: {
+          id?:                     string
+          owner_type:              string
+          owner_id:                string
+          razorpay_account_id?:    string | null
+          stakeholder_id?:         string | null
+          product_config_id?:      string | null
+          status?:                 string
+          rejection_reason?:       string | null
+          legal_name?:             string | null
+          business_type?:          string | null
+          business_pan?:           string | null
+          bank_account_last4?:     string | null
+          bank_ifsc?:              string | null
+          bank_beneficiary_name?:  string | null
+          cooling_period_ends_at?: string | null
+          submitted_at?:           string | null
+          activated_at?:           string | null
+          created_at?:             string
+          updated_at?:             string
+        }
+        Update: {
+          id?:                     string
+          owner_type?:             string
+          owner_id?:               string
+          razorpay_account_id?:    string | null
+          stakeholder_id?:         string | null
+          product_config_id?:      string | null
+          status?:                 string
+          rejection_reason?:       string | null
+          legal_name?:             string | null
+          business_type?:          string | null
+          business_pan?:           string | null
+          bank_account_last4?:     string | null
+          bank_ifsc?:              string | null
+          bank_beneficiary_name?:  string | null
+          cooling_period_ends_at?: string | null
+          submitted_at?:           string | null
+          activated_at?:           string | null
+          created_at?:             string
+          updated_at?:             string
+        }
+        Relationships: []
+      }
+      route_transfer_reversals: {
+        Row: {
+          id:          string
+          refund_id:   string
+          transfer_id: string
+          reversal_id: string
+          amount:      number
+          created_at:  string
+        }
+        Insert: {
+          id?:         string
+          refund_id:   string
+          transfer_id: string
+          reversal_id: string
+          amount:      number
+          created_at?: string
+        }
+        Update: {
+          id?:          string
+          refund_id?:   string
+          transfer_id?: string
+          reversal_id?: string
+          amount?:      number
+          created_at?:  string
+        }
+        Relationships: []
+      }
     }
 
     Views: {
@@ -2081,6 +2538,10 @@ export interface Database {
       }
       increment_user_metric: {
         Args: { p_user_id: string; p_column: string; p_delta?: number }
+        Returns: undefined
+      }
+      merge_onboarding_draft: {
+        Args: { p_auth_user_id: string; p_persona: string; p_patch: Json; p_last_step_path?: string | null }
         Returns: undefined
       }
     }
@@ -2125,6 +2586,7 @@ export type UserProfile        = Tables<'user_profiles'>
 export type PageBlock          = Tables<'page_blocks'>
 export type Event              = Tables<'events'>
 export type Rsvp               = Tables<'rsvps'>
+export type EventApplication   = Tables<'event_applications'>
 export type LinkClick          = Tables<'link_clicks'>
 export type VenueDirectory     = Tables<'venue_directory'>
 export type VenueProfile         = Tables<'venue_profiles'>
@@ -2145,6 +2607,9 @@ export type PayoutRequest        = Tables<'payout_requests'>
 export type BookingInquiry       = Tables<'booking_inquiries'>
 export type DigitalPurchase      = Tables<'digital_purchases'>
 export type WaitlistEntry        = Tables<'waitlist_entries'>
+export type WhatsAppSendFailure  = Tables<'whatsapp_send_failures'>
+export type LinkedAccount        = Tables<'linked_accounts'>
+export type RouteTransferReversal = Tables<'route_transfer_reversals'>
 
 // RSVP joined with its parent event — used in the attendee Tickets panel
 export interface RsvpWithEvent {
