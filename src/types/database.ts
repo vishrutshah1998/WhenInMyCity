@@ -763,6 +763,8 @@ export interface Database {
           application_answer: string | null
           application_decided_at: string | null
           application_decided_by: string | null
+          /** Set when the venue's Razorpay Route transfer was skipped at order-creation time: 'no_linked_account' or 'not_activated:<status at skip-time>'. NULL = no skip occurred. See migration 084. */
+          route_transfer_skip_reason: string | null
           created_at: string
         }
         Insert: {
@@ -790,6 +792,7 @@ export interface Database {
           application_answer?: string | null
           application_decided_at?: string | null
           application_decided_by?: string | null
+          route_transfer_skip_reason?: string | null
           created_at?: string
         }
         Update: {
@@ -817,6 +820,7 @@ export interface Database {
           application_answer?: string | null
           application_decided_at?: string | null
           application_decided_by?: string | null
+          route_transfer_skip_reason?: string | null
           created_at?: string
         }
         Relationships: [

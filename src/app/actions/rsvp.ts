@@ -33,7 +33,8 @@ import {
   verifyPaymentSignature,
   RazorpayApiError,
 } from '@/lib/razorpay'
-import { calculateChargeAmount } from '@/types/events'
+import { buildVenueRouteTransfer } from '@/lib/razorpay/route-transfers'
+import { calculateChargeAmount, type RazorpayOrderTransfer } from '@/types/events'
 import { calculateRevenueSplit } from '@/lib/revenue'
 import { checkRSVPRateLimit } from '@/lib/ratelimit'
 import { bumpUserMetric } from '@/lib/metrics'
@@ -370,40 +371,12 @@ export async function initiateRSVP(params: {
   // 7a. Calculate total charge (per-person GST rule: SAC 998596)
   const totalAmount = calculateChargeAmount(resolvedTierPrice, quantity)
 
-  // 6b. Create the Razorpay order BEFORE inserting RSVP rows.
-  //     If Razorpay is down, we fail early without touching the DB.
-  let razorpayOrderId: string
-  try {
-    // receipt = short unique string for idempotency (max 40 chars)
-    // Format: rsvp_<6-char event suffix>_<6-char user suffix>_<timestamp suffix>
-    const receipt = [
-      'rsvp',
-      eventId.slice(-6),
-      (attendeeUserId ?? attendeePhone).slice(-6),
-      Date.now().toString(36).slice(-6),
-    ].join('_').slice(0, 40)
-
-    const order = await createRazorpayOrder({
-      amount: totalAmount,
-      currency: 'INR',
-      receipt,
-      notes: {
-        event_id: eventId,
-        event_title: event.title.slice(0, 50),
-        attendee_phone: attendeePhone,
-        quantity: String(quantity),
-        ...(attendeeUserId ? { user_id: attendeeUserId } : {}),
-      },
-    })
-
-    razorpayOrderId = order.id
-  } catch (err) {
-    const msg = err instanceof RazorpayApiError ? err.message : 'Payment service unavailable'
-    console.error('[initiateRSVP] Razorpay order creation failed', err)
-    return { ...EMPTY, error: msg }
-  }
-
-  // 7c. Compute per-ticket revenue split locked to the creator's current tier.
+  // 7b. Compute per-ticket revenue split locked to the creator's current
+  //     tier. Moved ahead of order creation (previously computed after) so
+  //     the venue's Razorpay Route transfer — which must be attached at
+  //     order-creation time, not after — can be built from the same numbers
+  //     that get written into the RSVP rows further below. The split values
+  //     themselves are unchanged.
   const { data: creatorProfile } = await admin
     .from('user_profiles')
     .select('user_tier, created_at')
@@ -425,7 +398,78 @@ export async function initiateRSVP(params: {
     ? perTicket.makerPaise + perTicket.platformPaise
     : perTicket.makerPaise
 
-  // 6d. Insert pending RSVP rows — one per ticket, all sharing the same
+  // 7c. Razorpay Route (Phase 2): attach a transfer for the venue's share of
+  //     this order, if the event has a venue with an activated Linked
+  //     Account. See buildVenueRouteTransfer's doc comment for why a
+  //     missing/non-activated account silently skips the transfer (order
+  //     still succeeds for the full amount; venue is paid via the existing
+  //     manual payout path) rather than failing the booking.
+  let routeTransfer: RazorpayOrderTransfer | null = null
+  // Durable trace of *why* a skip happened — written onto every RSVP row
+  // below so "which RSVPs had their venue transfer skipped, and why" is a
+  // query, not a log-archaeology exercise. NULL means no skip occurred
+  // (no venue on this event, or the transfer attached successfully).
+  let routeTransferSkipReason: string | null = null
+  if (hasVenue) {
+    const { data: venueLinkedAccount } = await admin
+      .from('linked_accounts')
+      .select('razorpay_account_id, status')
+      .eq('owner_type', 'venue')
+      .eq('owner_id', event.venue_id!)
+      .maybeSingle()
+
+    const { transfer, skippedReason } = buildVenueRouteTransfer({
+      linkedAccount: venueLinkedAccount,
+      venueSharePaise: perTicket.venuePaise * quantity,
+      eventId,
+      venueId: event.venue_id!,
+    })
+
+    routeTransfer = transfer
+    routeTransferSkipReason = skippedReason
+  }
+
+  // 7d. Create the Razorpay order BEFORE inserting RSVP rows.
+  //     If Razorpay is down, we fail early without touching the DB.
+  // receipt = short unique string for idempotency (max 40 chars)
+  // Format: rsvp_<6-char event suffix>_<6-char user suffix>_<timestamp suffix>
+  const receipt = [
+    'rsvp',
+    eventId.slice(-6),
+    (attendeeUserId ?? attendeePhone).slice(-6),
+    Date.now().toString(36).slice(-6),
+  ].join('_').slice(0, 40)
+
+  let razorpayOrderId: string
+  try {
+    const order = await createRazorpayOrder({
+      amount: totalAmount,
+      currency: 'INR',
+      receipt,
+      notes: {
+        event_id: eventId,
+        event_title: event.title.slice(0, 50),
+        attendee_phone: attendeePhone,
+        quantity: String(quantity),
+        ...(attendeeUserId ? { user_id: attendeeUserId } : {}),
+      },
+      ...(routeTransfer ? { transfers: [routeTransfer] } : {}),
+    })
+
+    razorpayOrderId = order.id
+  } catch (err) {
+    const msg = err instanceof RazorpayApiError ? err.message : 'Payment service unavailable'
+    console.error('[initiateRSVP] Razorpay order creation failed', err)
+    return { ...EMPTY, error: msg }
+  }
+
+  if (routeTransferSkipReason) {
+    console.warn('[initiateRSVP] Route transfer skipped', {
+      eventId, venueId: event.venue_id, razorpayOrderId, receipt, skippedReason: routeTransferSkipReason,
+    })
+  }
+
+  // 7e. Insert pending RSVP rows — one per ticket, all sharing the same
   //     razorpay_order_id.  This is the "order" that holds the spots.
   //     The webhook and confirmRSVPPayment find all tickets by order ID.
   const rows = Array.from({ length: quantity }, () => ({
@@ -442,6 +486,7 @@ export async function initiateRSVP(params: {
     ticket_tier_id:     resolvedTierId,
     ticket_tier_name:   resolvedTierName,
     discovery_source:   resolvedDiscoverySource,
+    route_transfer_skip_reason: routeTransferSkipReason,
     // amount_paid is set when payment is confirmed
   }))
 

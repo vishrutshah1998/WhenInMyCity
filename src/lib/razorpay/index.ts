@@ -17,6 +17,7 @@ import 'server-only'
 import { createHmac, timingSafeEqual } from 'crypto'
 import type {
   RazorpayOrder,
+  RazorpayOrderTransfer,
   RazorpayPayment,
   RazorpayRefund,
   RazorpayItem,
@@ -27,6 +28,8 @@ import type {
   RazorpayProductRequirement,
   NormalisedPaymentStatus,
 } from '@/types/events'
+
+export type { RazorpayOrderTransfer } from '@/types/events'
 
 const RAZORPAY_BASE = 'https://api.razorpay.com/v1'
 // v2 base — Route / Linked Accounts (KYC Track B). Used by createLinkedAccount
@@ -153,6 +156,17 @@ async function rzFetchBase<T>(
  * receipt is submitted twice Razorpay returns the existing order, preventing
  * duplicate charges.
  *
+ * `transfers` (Razorpay Route, Phase 2) embeds one or more split-payment
+ * transfers directly in this same order-creation call — confirmed live,
+ * there is no separate "create transfer" endpoint. Whenever `transfers` is
+ * non-empty, `partial_payment: false` is set explicitly (Route transfers
+ * require it) rather than left to whatever Razorpay's or a future caller's
+ * default would be — see the plan doc's Phase 2 hard constraints. Callers
+ * are responsible for only ever including transfers whose target account is
+ * `activated` (see `buildVenueRouteTransfer` in `./route-transfers` —
+ * Razorpay's own API does not enforce this and will silently accept a
+ * transfer to a non-activated account).
+ *
  * @example
  * const order = await createRazorpayOrder({
  *   amount: 29900,
@@ -166,22 +180,32 @@ export async function createRazorpayOrder(params: {
   currency: 'INR'
   receipt: string
   notes: Record<string, string>
+  transfers?: RazorpayOrderTransfer[]
 }): Promise<RazorpayOrder> {
   // Razorpay receipt field max length is 40 chars.
   const receipt = params.receipt.slice(0, 40)
 
+  const body: Record<string, unknown> = {
+    amount: params.amount,
+    currency: params.currency,
+    receipt,
+    notes: params.notes,
+    // payment_capture: 1 → auto-capture immediately after authorization.
+    // This means we don't need a separate capture step; the webhook fires
+    // payment.captured (not payment.authorized) when funds are received.
+    payment_capture: 1,
+  }
+
+  if (params.transfers?.length) {
+    body.transfers = params.transfers
+    // Explicit, not assumed absent — a Route order must never accidentally
+    // inherit partial_payment: true from some other order type/caller.
+    body.partial_payment = false
+  }
+
   return rzFetch<RazorpayOrder>('/orders', {
     method: 'POST',
-    body: JSON.stringify({
-      amount: params.amount,
-      currency: params.currency,
-      receipt,
-      notes: params.notes,
-      // payment_capture: 1 → auto-capture immediately after authorization.
-      // This means we don't need a separate capture step; the webhook fires
-      // payment.captured (not payment.authorized) when funds are received.
-      payment_capture: 1,
-    }),
+    body: JSON.stringify(body),
   })
 }
 

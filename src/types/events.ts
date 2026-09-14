@@ -246,6 +246,24 @@ export interface RazorpayOrder {
   created_at: number      // UNIX timestamp
 }
 
+/**
+ * A Route transfer attached to an order at creation time via the order's
+ * `transfers` array (`POST /v1/orders`) — Razorpay Route, Phase 2. Confirmed
+ * live: this is embedded directly in the order-creation call, not a
+ * separate endpoint. `amount` may be less than the order's own `amount`;
+ * the remainder implicitly stays with the main account (no explicit
+ * "platform transfer" object is needed).
+ */
+export interface RazorpayOrderTransfer {
+  account: string                    // recipient's razorpay_account_id (acc_xxx)
+  amount: number                     // paise; must not exceed the order's amount
+  currency: 'INR'
+  notes?: Record<string, string>
+  linked_account_notes?: string[]
+  on_hold?: boolean
+  on_hold_until?: number             // UNIX timestamp (seconds)
+}
+
 export interface RazorpayPayment {
   id: string              // pay_xxx
   entity: 'payment'
