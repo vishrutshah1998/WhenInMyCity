@@ -20,6 +20,9 @@ import type {
   RazorpayOrderTransfer,
   RazorpayPayment,
   RazorpayRefund,
+  RazorpayTransfer,
+  RazorpayTransferCollection,
+  RazorpayTransferReversal,
   RazorpayItem,
   RazorpayAddress,
   RazorpayLinkedAccount,
@@ -289,6 +292,18 @@ export function verifyWebhookSignature(
 // ---------------------------------------------------------------------------
 
 /**
+ * Fetches the raw payment entity from Razorpay — `GET /v1/payments/:id`.
+ *
+ * Exported (not just used internally by `fetchPaymentStatus`) because Route
+ * Phase 3's proportional-reversal math (see `computeProportionalReversalAmount`
+ * in ./route-refunds.ts) needs the payment's own `amount` — the original
+ * captured total a refund and its transfers are both proportions of.
+ */
+export async function fetchPayment(paymentId: string): Promise<RazorpayPayment> {
+  return rzFetch<RazorpayPayment>(`/payments/${paymentId}`)
+}
+
+/**
  * Fetches the current status of a payment from Razorpay.
  *
  * Used by the reconciliation cron to resolve payments that slipped through
@@ -303,7 +318,7 @@ export function verifyWebhookSignature(
 export async function fetchPaymentStatus(
   paymentId: string,
 ): Promise<NormalisedPaymentStatus> {
-  const payment = await rzFetch<RazorpayPayment>(`/payments/${paymentId}`)
+  const payment = await fetchPayment(paymentId)
 
   switch (payment.status) {
     case 'captured':
@@ -333,13 +348,26 @@ export async function fetchPaymentStatus(
  * days for UPI → bank account).  The `refund.processed` webhook fires when
  * the funds are returned.
  *
- * @param paymentId - Razorpay payment ID (pay_xxx).
- * @param amount    - Optional amount to refund in paise. Omit for full refund.
+ * `reverseAll` (Razorpay Route, Phase 3): pass `true` on a FULL refund of a
+ * payment that has Route transfers attached — confirmed live, `reverse_all:
+ * true` auto-reverses every transfer associated with the payment in this
+ * same call, no separate Transfer Reversal call needed. Confirmed live that
+ * `reverse_all` cannot be combined with a partial `amount` — Razorpay
+ * rejects it; never pass both. Existing callers (cancelEvent,
+ * reconcile-payments' failed-refund retry) omit this and are unaffected —
+ * see route-refunds.ts for the Route-aware partial-refund path, which
+ * computes and submits reversals separately since Razorpay won't do it for
+ * them.
+ *
+ * @param paymentId  - Razorpay payment ID (pay_xxx).
+ * @param amount     - Optional amount to refund in paise. Omit for full refund.
+ * @param reverseAll - Full refunds only. Auto-reverses associated Route transfers.
  * @returns `{ refund_id }` on success, `{ refund_id: '', error }` on failure.
  */
 export async function refundPayment(
   paymentId: string,
   amount?: number,
+  reverseAll?: boolean,
 ): Promise<{ refund_id: string; error?: string }> {
   try {
     const body: Record<string, unknown> = {
@@ -347,6 +375,7 @@ export async function refundPayment(
       speed: 'optimum',
     }
     if (amount !== undefined) body.amount = amount
+    if (reverseAll) body.reverse_all = true
 
     const refund = await rzFetch<RazorpayRefund>(
       `/payments/${paymentId}/refund`,
@@ -359,6 +388,58 @@ export async function refundPayment(
     console.error(`[refundPayment] payment_id=${paymentId}`, message)
     return { refund_id: '', error: message }
   }
+}
+
+// ---------------------------------------------------------------------------
+// fetchPaymentTransfers / createTransferReversal — Razorpay Route (Phase 3)
+// ---------------------------------------------------------------------------
+
+/**
+ * Fetches every transfer created against a payment — `GET
+ * /v1/payments/:id/transfers`.
+ *
+ * Deliberately fetched fresh rather than reading any locally-stored transfer
+ * id: Phase 2 (order-time transfer attachment) does not persist the
+ * resulting `trf_...` id anywhere, and this response's `amount_reversed` is
+ * needed live anyway (plan Phase 3 hard gate — never reverse against a
+ * transfer without first confirming, via a fresh fetch, how much of it is
+ * already reversed). See `reverseTransfersForPartialRefund` in
+ * ./route-refunds.ts, the only caller.
+ */
+export async function fetchPaymentTransfers(paymentId: string): Promise<RazorpayTransfer[]> {
+  const res = await rzFetch<RazorpayTransferCollection>(`/payments/${paymentId}/transfers`)
+  return res.items
+}
+
+/**
+ * Reverses (all or part of) a single transfer — `POST
+ * /v1/transfers/:id/reversals`.
+ *
+ * Confirmed live (plan Phase 3): the response's `customer_refund_id` is
+ * always `null`, even for a reversal performed specifically to compensate a
+ * refund — Razorpay does not link the two. Callers must record the
+ * refund↔transfer↔reversal link themselves; see migration 085
+ * (`route_transfer_reversals`) and `reverseTransfersForPartialRefund`.
+ *
+ * `amount` is required here (unlike a bare reversal call, which would
+ * default to reversing the transfer's full remaining amount) — every caller
+ * in this codebase computes a specific proportional amount first and must
+ * pass it explicitly, never rely on the endpoint's own default.
+ *
+ * Razorpay's behavior when the linked account's floating balance is
+ * insufficient to cover a reversal is NOT YET CONFIRMED (plan Open Decision
+ * #9) — this throws `RazorpayApiError` like any other failed call; callers
+ * must not assume a specific error shape for that case.
+ */
+export async function createTransferReversal(
+  transferId: string,
+  amount: number,
+  notes?: Record<string, string>,
+): Promise<RazorpayTransferReversal> {
+  return rzFetch<RazorpayTransferReversal>(`/transfers/${transferId}/reversals`, {
+    method: 'POST',
+    body: JSON.stringify({ amount, ...(notes ? { notes } : {}) }),
+  })
 }
 
 // ---------------------------------------------------------------------------

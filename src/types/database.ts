@@ -2474,6 +2474,33 @@ export interface Database {
         }
         Relationships: []
       }
+      route_transfer_reversals: {
+        Row: {
+          id:          string
+          refund_id:   string
+          transfer_id: string
+          reversal_id: string
+          amount:      number
+          created_at:  string
+        }
+        Insert: {
+          id?:         string
+          refund_id:   string
+          transfer_id: string
+          reversal_id: string
+          amount:      number
+          created_at?: string
+        }
+        Update: {
+          id?:          string
+          refund_id?:   string
+          transfer_id?: string
+          reversal_id?: string
+          amount?:      number
+          created_at?:  string
+        }
+        Relationships: []
+      }
     }
 
     Views: {
@@ -2582,6 +2609,7 @@ export type DigitalPurchase      = Tables<'digital_purchases'>
 export type WaitlistEntry        = Tables<'waitlist_entries'>
 export type WhatsAppSendFailure  = Tables<'whatsapp_send_failures'>
 export type LinkedAccount        = Tables<'linked_accounts'>
+export type RouteTransferReversal = Tables<'route_transfer_reversals'>
 
 // RSVP joined with its parent event — used in the attendee Tickets panel
 export interface RsvpWithEvent {

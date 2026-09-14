@@ -293,6 +293,55 @@ export interface RazorpayRefund {
   speed_requested: string
 }
 
+/**
+ * A transfer attached to a payment — `GET /v1/payments/:id/transfers`
+ * (Razorpay Route, Phase 3). Fetched fresh at refund time rather than cached
+ * from order creation, so `amount_reversed` always reflects Razorpay's
+ * current state (see reverseTransfersForPartialRefund in
+ * src/lib/razorpay/route-refunds.ts).
+ */
+export interface RazorpayTransfer {
+  id: string               // trf_xxx
+  entity: 'transfer'
+  source: string            // pay_xxx (the payment this transfer was made from)
+  recipient: string         // acc_xxx
+  amount: number             // paise — the transfer's own (original) amount
+  currency: 'INR'
+  amount_reversed: number    // paise — cumulative amount already reversed
+  notes: Record<string, string>
+  fees: number | null
+  tax: number | null
+  on_hold: boolean
+  recipient_settlement_id: string | null
+  created_at: number         // UNIX timestamp
+}
+
+/** `GET /v1/payments/:id/transfers` response envelope. */
+export interface RazorpayTransferCollection {
+  entity: 'collection'
+  count: number
+  items: RazorpayTransfer[]
+}
+
+/**
+ * A Transfer Reversal — `POST /v1/transfers/:id/reversals` (Razorpay Route,
+ * Phase 3). `customer_refund_id` is confirmed (live testing, plan Phase 3)
+ * to always be `null` in this response, even when the reversal was performed
+ * specifically to compensate for a refund — Razorpay does not link the two.
+ * See migration 085 (`route_transfer_reversals`) for how WIMC tracks that
+ * link itself.
+ */
+export interface RazorpayTransferReversal {
+  id: string                        // rvrsl_xxx
+  entity: 'transfer'
+  transfer_id?: string
+  amount: number                     // paise
+  currency: 'INR'
+  notes: Record<string, string>
+  customer_refund_id: string | null  // always null per live testing — see comment above
+  created_at: number
+}
+
 export interface RazorpayItem {
   id: string              // item_xxx
   active: boolean
