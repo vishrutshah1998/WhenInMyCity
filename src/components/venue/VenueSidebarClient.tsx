@@ -3,7 +3,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { usePathname } from 'next/navigation'
 import Link from 'next/link'
-import TabbedNavGroup from '@/components/nav/TabbedNavGroup'
 
 // ---------------------------------------------------------------------------
 // Nav data
@@ -46,9 +45,16 @@ const NAV_SECTIONS_VENUE: NavSection[] = [
     group: 'Management',
     items: [
       { href: '/business/venue/studio', icon: 'web', label: 'My Page' },
+      { href: '/business/venue/venue',  icon: 'settings', label: 'Venue Settings' },
     ],
   },
 ]
+
+// Sibling routes grouped under the single "Venue Settings" sidebar entry —
+// each has its own SectionTabs strip to switch between the others (was a
+// nested TabbedNavGroup, see the "Community"/"Progress" fix in
+// dashboard/Sidebar.tsx for the same pattern).
+const VENUE_SETTINGS_HREFS = ['/business/venue/venue', '/business/venue/pricing', '/business/venue/availability']
 
 const NAV_SECTIONS_BRAND: NavSection[] = [
   {
@@ -214,14 +220,6 @@ function NavLink({ item, active, badge, collapsed }: { item: NavItem; active: bo
 // Main component
 // ---------------------------------------------------------------------------
 
-const NAV_GROUP_THEME = {
-  activeColor: VENUE_ACCENT,
-  activeBg:    'var(--venue-accent-tint)',
-  textColor:   'var(--venue-text-secondary)',
-  mutedColor:  VENUE_MUTED,
-  fontFamily:  'var(--font-inter), system-ui, sans-serif',
-}
-
 export default function VenueSidebarClient({
   businessName, ownerName, initials, avatarUrl,
   pendingCount, unreadCount,
@@ -306,6 +304,9 @@ export default function VenueSidebarClient({
   }
 
   function isActive(item: NavItem) {
+    if (item.href === '/business/venue/venue') {
+      return VENUE_SETTINGS_HREFS.some(h => pathname === h || pathname.startsWith(h + '/'))
+    }
     if (item.exact) return pathname === item.href
     return pathname === item.href || pathname.startsWith(item.href + '/')
   }
@@ -501,7 +502,7 @@ export default function VenueSidebarClient({
       {/* ── Nav ───────────────────────────────────────────────────────────────── */}
       <nav onClick={handleNavClick} style={{ flex: 1, padding: collapsed ? '8px 8px' : '8px 10px', display: 'flex', flexDirection: 'column', overflowY: 'auto', overflowX: 'hidden' }}>
         {NAV_SECTIONS.map((section, si) => (
-          <div key={section.group || `section-${si}`}>
+          <div key={section.group || `section-${si}`} style={{ flexShrink: 0 }}>
             {collapsed && si > 0 && <div style={{ height: 1, background: VENUE_BORDER, margin: '6px 8px' }} />}
             {!collapsed && section.group && <SectionLabel label={section.group} />}
 
@@ -536,19 +537,6 @@ export default function VenueSidebarClient({
               )
             })}
 
-            {businessType === 'venue' && section.group === 'Management' && (
-              <TabbedNavGroup
-                icon="settings"
-                label="Venue Settings"
-                collapsed={collapsed}
-                theme={NAV_GROUP_THEME}
-                tabs={[
-                  { label: 'My Venue', href: '/business/venue/venue' },
-                  { label: 'Pricing', href: '/business/venue/pricing' },
-                  { label: 'Availability Rules', href: '/business/venue/availability' },
-                ]}
-              />
-            )}
           </div>
         ))}
       </nav>

@@ -5,6 +5,7 @@ import Link from 'next/link'
 import type { UserTier } from '@/types/database'
 import { TIER_THRESHOLDS } from '@/lib/constants/interests'
 import { SOFT_UI, SOFT_UI_LABEL_FONT } from '@/lib/softUI'
+import SectionTabs from '@/components/dashboard/SectionTabs'
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -175,9 +176,13 @@ interface TierClientProps {
   eventsAttendedIn90d: number
   eventsHostedIn180d: number
   eventsHostedIn365d: number
+  /** Hide the Hall of Lights / Tier Progress tab strip — set false when this
+   *  is already being rendered stacked alongside HallClient (see
+   *  /dashboard/progress), where a tab switcher would be redundant. */
+  showSectionTabs?: boolean
 }
 
-export default function TierClient({ tier, metrics, eventsAttendedIn90d, eventsHostedIn180d, eventsHostedIn365d }: TierClientProps) {
+export default function TierClient({ tier, metrics, eventsAttendedIn90d, eventsHostedIn180d, eventsHostedIn365d, showSectionTabs = true }: TierClientProps) {
   const currentIdx = TIER_ORDER.indexOf(tier)
   const nextTier   = currentIdx < TIER_ORDER.length - 1 ? TIER_ORDER[currentIdx + 1] : null
   const nextMeta   = nextTier ? TIER_META[nextTier] : null
@@ -242,6 +247,18 @@ export default function TierClient({ tier, metrics, eventsAttendedIn90d, eventsH
           How tiers work
         </button>
       </header>
+
+      {/* ── Section tabs: sibling Progress pages (was a nested sidebar group) ── */}
+      {showSectionTabs && (
+        <div style={{ padding: '16px 32px 0' }}>
+          <SectionTabs
+            tabs={[
+              { label: 'Hall of Lights', href: '/dashboard/hall-of-lights' },
+              { label: 'Tier Progress', href: '/dashboard/tier' },
+            ]}
+          />
+        </div>
+      )}
 
       <div style={{ padding: 'clamp(16px, 4vw, 40px) clamp(16px, 4vw, 40px) 80px', display: 'grid', gap: 28 }}>
 

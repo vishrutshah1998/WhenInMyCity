@@ -8,6 +8,7 @@ import {
   sendMessage,
 } from '@/app/actions/hub'
 import type { DiscoverCreator, HubConnection, HubMessage } from '@/app/actions/hub'
+import SectionTabs from '@/components/dashboard/SectionTabs'
 
 // ── Design tokens ────────────────────────────────────────────────────────────
 const BG      = 'var(--wimc-bg-base)'
@@ -194,8 +195,18 @@ export function HubClient({ currentUserId, discover, connections }: Props) {
     // ExplorerProfileHubClient / HallClient's inDashboard case.
     <div style={{ background: BG, color: TEXT }}>
 
+      {/* ── Section tabs: sibling Community pages (was a nested sidebar group) ── */}
+      <div style={{ padding: '16px 32px 0' }}>
+        <SectionTabs
+          tabs={[
+            { label: 'Creator Hub', href: '/dashboard/hub' },
+            { label: 'Common Circles', href: '/dashboard/community' },
+          ]}
+        />
+      </div>
+
       {/* ── Header ────────────────────────────────────────────────────────── */}
-      <div style={{ padding: '32px 32px 0' }}>
+      <div style={{ padding: '24px 32px 0' }}>
         <div style={{ fontFamily: 'var(--font-jetbrains-mono)', fontSize: 12, color: TEAL, textTransform: 'uppercase', letterSpacing: '0.15em', marginBottom: 8 }}>
           HUB
         </div>

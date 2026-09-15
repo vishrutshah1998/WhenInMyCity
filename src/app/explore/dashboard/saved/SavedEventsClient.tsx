@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useState, useTransition } from 'react'
 import { unsaveEvent } from '@/app/actions/explorer'
 import type { Event } from '@/types/database'
+import SectionTabs from '@/components/dashboard/SectionTabs'
 
 const LAVENDER = '#9B8FFF'
 
@@ -27,8 +28,20 @@ export default function SavedEventsClient({ events }: { events: Event[] }) {
   }
 
   return (
-    <div style={{ maxWidth: 680, margin: '0 auto', padding: '32px 24px 80px' }}>
-      <h1 style={{ fontFamily: 'var(--font-outfit)', fontSize: 24, fontWeight: 900, color: '#F0EFF8', marginBottom: 8 }}>
+    <div style={{ maxWidth: 680, margin: '0 auto', padding: '16px 24px 80px' }}>
+      <SectionTabs
+        tabs={[
+          { label: 'Events', href: '/explore/dashboard/saved' },
+          { label: 'People', href: '/explore/dashboard/following' },
+          { label: 'Places', href: '/explore/dashboard/spots' },
+        ]}
+        textColor="#F0EFF8"
+        mutedColor="#9896B0"
+        accentColor={LAVENDER}
+        borderColor="rgba(155,143,255,0.15)"
+      />
+
+      <h1 style={{ fontFamily: 'var(--font-outfit)', fontSize: 24, fontWeight: 900, color: '#F0EFF8', margin: '24px 0 8px' }}>
         Saved Events
       </h1>
       <p style={{ fontSize: 13, color: '#9896B0', marginBottom: 28 }}>

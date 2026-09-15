@@ -10,8 +10,11 @@ import type { UserTier } from '@/types/marketplace'
 // composition the mobile carousel's Progress tab used to stack inline
 // (CreatorProgressSlot.tsx, now removed). Reached from a "Progress" card in
 // CreatorBusinessSlot.tsx's Business tab; the two standalone routes stay
-// linked separately from desktop's Sidebar (Sidebar.tsx's own "Progress"
-// TabbedNavGroup), untouched by this route's existence.
+// linked separately from desktop's Sidebar (a single "Progress" NavLink
+// pointing at /dashboard/hall-of-lights, with an in-page SectionTabs strip
+// on each page to switch to the sibling), untouched by this route's
+// existence. showSectionTabs is off here since both pages already render
+// stacked on one scroll.
 export default async function CreatorProgressPage() {
   const { profile } = await requireProfile()
 
@@ -29,6 +32,7 @@ export default async function CreatorProgressPage() {
           eventsAttendedIn90d={tierData.eventsAttendedIn90d}
           eventsHostedIn180d={tierData.eventsHostedIn180d}
           eventsHostedIn365d={tierData.eventsHostedIn365d}
+          showSectionTabs={false}
         />
       </div>
       <HallClient
@@ -36,6 +40,7 @@ export default async function CreatorProgressPage() {
         viewerCity={profile.city ?? null}
         viewerTier={(profile.user_tier as UserTier) ?? null}
         inDashboard
+        showSectionTabs={false}
       />
     </div>
   )

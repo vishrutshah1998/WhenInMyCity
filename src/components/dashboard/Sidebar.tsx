@@ -5,7 +5,6 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import type { UserTier } from '@/types/database'
 import { isLocalPlus } from '@/lib/tier'
-import TabbedNavGroup from '@/components/nav/TabbedNavGroup'
 
 const TIER_LABELS: Record<UserTier, string> = {
   wanderer: 'Wanderer',
@@ -57,14 +56,6 @@ const SB_BG     = '#1A2744'
 const SB_BORDER = 'rgba(255,255,255,0.07)'
 const SB_TEXT   = 'rgba(255,255,255,0.55)'
 const SB_MUTED  = 'rgba(255,255,255,0.30)'
-
-const NAV_GROUP_THEME = {
-  activeColor: 'var(--wimc-accent)',
-  activeBg:    'color-mix(in srgb, var(--wimc-accent) 14%, transparent)',
-  textColor:   SB_TEXT,
-  mutedColor:  SB_MUTED,
-  fontFamily:  'var(--font-jetbrains-mono)',
-}
 
 function hexToRgba(hex: string, alpha: number): string {
   const h = hex.replace('#', '')
@@ -418,7 +409,7 @@ export default function Sidebar({
       )}
 
       {/* ── Nav ─────────────────────────────────────────────────────────── */}
-      <nav onClick={handleNavClick} style={{ flex: 1, padding: '12px 8px', display: 'flex', flexDirection: 'column', gap: 2, overflowY: 'auto', overflowX: 'hidden' }}>
+      <nav onClick={handleNavClick} style={{ flex: 1, minHeight: 0, padding: '12px 8px', display: 'flex', flexDirection: 'column', gap: 2, overflowY: 'auto', overflowX: 'hidden' }}>
         {!c && <SectionLabel>Creator</SectionLabel>}
 
         {CORE_NAV.map((item) => (
@@ -447,26 +438,22 @@ export default function Sidebar({
 
         {!c && <SectionLabel>Community</SectionLabel>}
         <NavLink item={CIRCLES_ITEM} active={isActive(CIRCLES_ITEM)} collapsed={c} />
-        <TabbedNavGroup
-          icon="diversity_3"
-          label="Community"
+        {isLocalPlus(tier) && (
+          <NavLink
+            item={{
+              href: '/dashboard/hub',
+              icon: 'diversity_3',
+              label: 'Community',
+              badge: (unreadHubMessages + pendingHubRequests) > 0 ? unreadHubMessages + pendingHubRequests : undefined,
+            }}
+            active={pathname.startsWith('/dashboard/hub') || pathname.startsWith('/dashboard/community')}
+            collapsed={c}
+          />
+        )}
+        <NavLink
+          item={{ href: '/dashboard/hall-of-lights', icon: 'workspace_premium', label: 'Progress' }}
+          active={pathname.startsWith('/dashboard/hall-of-lights') || pathname.startsWith('/dashboard/tier')}
           collapsed={c}
-          hidden={!isLocalPlus(tier)}
-          theme={NAV_GROUP_THEME}
-          tabs={[
-            { label: 'Creator Hub', href: '/dashboard/hub', badge: (unreadHubMessages + pendingHubRequests) > 0 ? unreadHubMessages + pendingHubRequests : undefined },
-            { label: 'Common Circles', href: '/dashboard/community' },
-          ]}
-        />
-        <TabbedNavGroup
-          icon="workspace_premium"
-          label="Progress"
-          collapsed={c}
-          theme={NAV_GROUP_THEME}
-          tabs={[
-            { label: 'Hall of Lights', href: '/dashboard/hall-of-lights' },
-            { label: 'Tier Progress', href: '/dashboard/tier' },
-          ]}
         />
       </nav>
 
@@ -525,6 +512,7 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
       color: SB_MUTED, padding: '12px 8px 6px',
       fontFamily: 'var(--font-jetbrains-mono)',
       whiteSpace: 'nowrap',
+      flexShrink: 0,
     }}>
       {children}
     </div>
@@ -553,6 +541,7 @@ function NavLink({ item, active, collapsed, dimmed = false }: { item: NavItem; a
     overflow: 'hidden',
     position: 'relative',
     opacity: dimmed ? 0.4 : 1,
+    flexShrink: 0,
   }
 
   return (

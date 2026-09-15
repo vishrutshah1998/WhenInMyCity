@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import type { SupportedCreator } from '@/app/actions/analytics'
+import SectionTabs from '@/components/dashboard/SectionTabs'
 
 const SUPPORT_LEVEL_COLOR: Record<string, string> = {
   'First Timer':  'var(--wimc-text-muted)',
@@ -43,7 +44,19 @@ export default function CommunityClient({ supported }: Props) {
   }
 
   return (
-    <div style={{ padding: 'clamp(16px, 4vw, 40px) clamp(16px, 4vw, 40px) 80px', display: 'flex', flexDirection: 'column', gap: 28 }}>
+    <div style={{ display: 'flex', flexDirection: 'column' }}>
+
+      {/* ── Section tabs: sibling Community pages (was a nested sidebar group) ── */}
+      <div style={{ padding: 'clamp(16px, 4vw, 40px) clamp(16px, 4vw, 40px) 0' }}>
+        <SectionTabs
+          tabs={[
+            { label: 'Creator Hub', href: '/dashboard/hub' },
+            { label: 'Common Circles', href: '/dashboard/community' },
+          ]}
+        />
+      </div>
+
+      <div style={{ padding: '24px clamp(16px, 4vw, 40px) 80px', display: 'flex', flexDirection: 'column', gap: 28 }}>
 
       {/* Header */}
       <div>
@@ -248,6 +261,7 @@ export default function CommunityClient({ supported }: Props) {
         </>
       )}
 
+      </div>
     </div>
   )
 }

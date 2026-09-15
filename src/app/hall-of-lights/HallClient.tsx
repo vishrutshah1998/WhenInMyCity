@@ -7,6 +7,7 @@ import { MobileHeader } from '@/components/landing/mobile/MobileHeader'
 import type { ShowcasedCreator } from '@/app/actions/hallOfLights'
 import type { UserTier } from '@/types/marketplace'
 import { cityToSlug } from '@/lib/profile-url'
+import SectionTabs from '@/components/dashboard/SectionTabs'
 
 // ---------------------------------------------------------------------------
 // Tier meta
@@ -187,9 +188,13 @@ interface Props {
   viewerCity: string | null
   viewerTier: UserTier | null
   inDashboard?: boolean
+  /** Hide the Hall of Lights / Tier Progress tab strip — set false when this
+   *  is already being rendered stacked alongside TierClient (see
+   *  /dashboard/progress), where a tab switcher would be redundant. */
+  showSectionTabs?: boolean
 }
 
-export default function HallClient({ creators, viewerCity, viewerTier, inDashboard = false }: Props) {
+export default function HallClient({ creators, viewerCity, viewerTier, inDashboard = false, showSectionTabs = true }: Props) {
   const viewerIsLanternPlus = viewerTier === 'lantern' || viewerTier === 'beacon'
 
   const cities = [...new Set(creators.map((c) => c.cityId))]
@@ -228,6 +233,18 @@ export default function HallClient({ creators, viewerCity, viewerTier, inDashboa
     // standalone case avoids the same mismatch against mobile browsers' dynamic
     // toolbar, per the dvh convention used elsewhere in the mobile redesign.
     <div style={{ minHeight: inDashboard ? undefined : '100dvh', background: inDashboard ? 'var(--wimc-bg-base)' : '#FBF3E7', color: '#201A12' }}>
+
+      {/* ── Section tabs: sibling Progress pages (was a nested sidebar group) ── */}
+      {inDashboard && showSectionTabs && (
+        <div style={{ padding: '16px 32px 0' }}>
+          <SectionTabs
+            tabs={[
+              { label: 'Hall of Lights', href: '/dashboard/hall-of-lights' },
+              { label: 'Tier Progress', href: '/dashboard/tier' },
+            ]}
+          />
+        </div>
+      )}
 
       {/* ── Nav — only for the standalone public page; the dashboard shell supplies its own topbar ── */}
       {!inDashboard && (

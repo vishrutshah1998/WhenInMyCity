@@ -4,7 +4,6 @@ import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { WimcWordmark } from '@/components/WimcWordmark'
-import TabbedNavGroup from '@/components/nav/TabbedNavGroup'
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -47,13 +46,7 @@ const YOU_NAV: NavItem[] = [
   { href: '/explore/dashboard/guide',  icon: 'map', label: 'City Guide' },
 ]
 
-const NAV_GROUP_THEME = {
-  activeColor: LAVENDER,
-  activeBg:    'rgba(155,143,255,0.14)',
-  textColor:   'rgba(255,255,255,0.55)',
-  mutedColor:  'rgba(255,255,255,0.30)',
-  fontFamily:  'var(--font-jetbrains-mono)',
-}
+const SAVED_ITEM: NavItem = { href: '/explore/dashboard/saved', icon: 'bookmark', label: 'Saved' }
 
 // ---------------------------------------------------------------------------
 // Props
@@ -204,16 +197,15 @@ export default function ExplorerSidebar({
         {DISCOVER_NAV.map((item) => (
           <NavItemLink key={item.href} item={item} active={isActive(item)} collapsed={c} activeBg={activeBg} />
         ))}
-        <TabbedNavGroup
-          icon="bookmark"
-          label="Saved"
+        <NavItemLink
+          item={SAVED_ITEM}
+          active={
+            pathname.startsWith('/explore/dashboard/saved') ||
+            pathname.startsWith('/explore/dashboard/following') ||
+            pathname.startsWith('/explore/dashboard/spots')
+          }
           collapsed={c}
-          theme={NAV_GROUP_THEME}
-          tabs={[
-            { label: 'Events', href: '/explore/dashboard/saved' },
-            { label: 'People', href: '/explore/dashboard/following' },
-            { label: 'Places', href: '/explore/dashboard/spots' },
-          ]}
+          activeBg={activeBg}
         />
         {DISCOVER_NAV_AFTER_SAVED.map((item) => (
           <NavItemLink key={item.href} item={item} active={isActive(item)} collapsed={c} activeBg={activeBg} />
@@ -284,6 +276,7 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
       color: SB_MUTED, padding: '12px 8px 6px',
       fontFamily: 'var(--font-jetbrains-mono)',
       whiteSpace: 'nowrap',
+      flexShrink: 0,
     }}>
       {children}
     </div>
@@ -310,6 +303,7 @@ function NavItemLink({ item, active, collapsed, activeBg }: { item: NavItem; act
         background: active ? activeBg : 'transparent',
         whiteSpace: 'nowrap',
         overflow: 'hidden',
+        flexShrink: 0,
       }}
     >
       <span

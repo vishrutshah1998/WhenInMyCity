@@ -2,6 +2,13 @@ import { redirect } from 'next/navigation'
 import { requireAuth } from '@/lib/auth/requireAuth'
 import { createAdminClient } from '@/lib/supabase/admin'
 import VenueEditorClient from '@/components/venue/editor/VenueEditorClient'
+import SectionTabs from '@/components/dashboard/SectionTabs'
+
+const VENUE_SETTINGS_TABS = [
+  { label: 'My Venue', href: '/business/venue/venue' },
+  { label: 'Pricing', href: '/business/venue/pricing' },
+  { label: 'Availability Rules', href: '/business/venue/availability' },
+]
 
 export default async function VenuePage() {
   const { user } = await requireAuth('/business/venue/venue')
@@ -15,5 +22,18 @@ export default async function VenuePage() {
 
   if (!venue) redirect('/business/venue/onboard')
 
-  return <VenueEditorClient venue={venue} slug={venue.slug} />
+  return (
+    <>
+      <div style={{ padding: '12px 24px 0', background: 'var(--venue-bg-surface)' }}>
+        <SectionTabs
+          tabs={VENUE_SETTINGS_TABS}
+          textColor="var(--venue-text-primary)"
+          mutedColor="var(--venue-text-muted)"
+          accentColor="var(--venue-accent, #5DD9D0)"
+          borderColor="var(--venue-border-default)"
+        />
+      </div>
+      <VenueEditorClient venue={venue} slug={venue.slug} />
+    </>
+  )
 }
