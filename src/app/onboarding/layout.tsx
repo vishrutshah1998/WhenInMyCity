@@ -206,10 +206,17 @@ export default function OnboardingLayout({ children }: { children: React.ReactNo
     setVh()
     vv.addEventListener('resize', onResize)
 
-    let blurTimeout: ReturnType<typeof setTimeout> | null = null
+    // A single fixed-delay read races the real keyboard-close animation,
+    // whose duration varies by device/OS — if that one read lands before the
+    // animation actually finishes, vv.height is still the shrunk value and
+    // nothing else ever re-checks it (confirmed live: this is what left
+    // --ob-vh, and the black gap below the box, stuck after the keyboard
+    // closed). Retry at a few staggered delays instead of one guess so a
+    // later read catches the settled height even if an earlier one didn't.
+    let blurTimeouts: ReturnType<typeof setTimeout>[] = []
     const onFocusOut = () => {
-      if (blurTimeout) clearTimeout(blurTimeout)
-      blurTimeout = setTimeout(setVh, 200)
+      blurTimeouts.forEach(clearTimeout)
+      blurTimeouts = [150, 300, 500].map(delay => setTimeout(setVh, delay))
     }
     document.addEventListener('focusout', onFocusOut)
 
@@ -217,7 +224,7 @@ export default function OnboardingLayout({ children }: { children: React.ReactNo
       vv.removeEventListener('resize', onResize)
       if (settleTimeout) clearTimeout(settleTimeout)
       document.removeEventListener('focusout', onFocusOut)
-      if (blurTimeout) clearTimeout(blurTimeout)
+      blurTimeouts.forEach(clearTimeout)
     }
   }, [])
 
