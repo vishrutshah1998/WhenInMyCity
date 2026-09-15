@@ -26,9 +26,16 @@
 // late-running sweep can never let a guest pay past their window — it only
 // affects how promptly the DB status (and therefore the UI) reflects reality.
 //
-// Fires rsvp_application_expired_v1 (placeholder — not yet created/approved
-// in Meta Business Manager, so sends fail silently, caught + logged, until
-// it is) once per row that actually transitions to 'expired' in this pass.
+// Fires rsvp_application_expired_v1 (Active in Meta Business Manager as of
+// 2026-09-11 — no longer a placeholder) once per row that actually
+// transitions to 'expired' in this pass. Real-world delivery is still
+// unverified, though: as of 2026-09-15, event_applications has never had a
+// single row of any status in production, so this send path has never
+// actually fired against a real recipient — confirmed via whatsapp_send_
+// failures (migration 082) being empty for every template, not just this
+// one. Absence of failures here is an empty sample, not a clean bill of
+// health; re-check whatsapp_send_failures the first time a real application
+// expires.
 // Kept as a single bulk UPDATE, not a per-row loop: .update().select() with
 // an embedded event:event_id(...) relation (same embedding Supabase-js
 // pattern already used for the failed-refund step in reconcile-payments/
