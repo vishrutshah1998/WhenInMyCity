@@ -6,13 +6,8 @@ import { signOut } from '@/app/actions/auth'
 import type { MyTicket } from '@/app/actions/rsvp'
 import type { WorkspaceLink } from '@/lib/constants/bottomNavConfigs'
 import WorkspaceSwitcherList from '@/components/nav/WorkspaceSwitcherList'
-import CommunitiesComingSoon from '@/components/explore/CommunitiesComingSoon'
-
-const LAVENDER = '#9B8FFF'
-const PANEL    = '#131317'
-const BORDER   = 'rgba(155,143,255,0.15)'
-const MUTED    = '#9896B0'
-const TEXT     = '#F0EFF8'
+import PaperCard from '@/components/ui/PaperCard'
+import IconChip from '@/components/ui/IconChip'
 
 function fmtDate(iso: string) {
   return new Intl.DateTimeFormat('en-IN', { weekday: 'short', month: 'short', day: 'numeric' }).format(new Date(iso))
@@ -31,10 +26,16 @@ interface Props {
 const sectionLabelStyle: React.CSSProperties = {
   fontFamily: 'var(--font-jetbrains-mono)',
   fontSize: 10, fontWeight: 700,
-  color: LAVENDER, letterSpacing: '0.2em', textTransform: 'uppercase',
+  color: 'var(--venue-accent)', letterSpacing: '0.2em', textTransform: 'uppercase',
   marginBottom: 14,
 }
 
+// Paper-cutout pass: swapped the old hardcoded LAVENDER/PANEL/BORDER/MUTED/
+// TEXT hex constants for PaperCard/IconChip + the shared --venue-* tokens
+// (this surface resolves them to lavender/violet via the .explorer-variant
+// class applied in explore/dashboard/layout.tsx — see venue-tokens.css).
+// CommunitiesComingSoon.tsx's content is inlined below (its only remaining
+// call site) rather than kept as a separate restyled component.
 export default function ExplorerProfileHubClient({
   displayName, avatarUrl, initials, username, bio, tickets, workspaces,
 }: Props) {
@@ -58,7 +59,7 @@ export default function ExplorerProfileHubClient({
       <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: bio ? 12 : 28 }}>
         <div style={{
           width: 64, height: 64, borderRadius: '50%',
-          background: avatarUrl ? 'transparent' : `linear-gradient(135deg, ${LAVENDER}, rgba(155,143,255,0.5))`,
+          background: avatarUrl ? 'transparent' : 'linear-gradient(135deg, var(--venue-accent), rgba(155,143,255,0.5))',
           display: 'grid', placeItems: 'center',
           fontWeight: 700, fontSize: 22, color: '#fff',
           overflow: 'hidden', flexShrink: 0,
@@ -71,11 +72,11 @@ export default function ExplorerProfileHubClient({
           )}
         </div>
         <div style={{ minWidth: 0 }}>
-          <h1 style={{ fontFamily: 'var(--font-outfit)', fontSize: 22, fontWeight: 900, color: TEXT, margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          <h1 style={{ fontFamily: 'var(--font-outfit)', fontSize: 22, fontWeight: 900, color: 'var(--venue-text-primary)', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {displayName}
           </h1>
           {username && (
-            <div style={{ fontFamily: 'var(--font-jetbrains-mono)', fontSize: 12, color: MUTED, marginTop: 2 }}>
+            <div style={{ fontFamily: 'var(--font-jetbrains-mono)', fontSize: 12, color: 'var(--venue-text-secondary)', marginTop: 2 }}>
               @{username}
             </div>
           )}
@@ -83,20 +84,35 @@ export default function ExplorerProfileHubClient({
       </div>
 
       {bio && (
-        <p style={{ fontSize: 13, color: MUTED, lineHeight: 1.6, margin: '0 0 28px' }}>
+        <p style={{ fontSize: 13, color: 'var(--venue-text-secondary)', lineHeight: 1.6, margin: '0 0 28px' }}>
           {bio}
         </p>
       )}
 
+      {/* ── Communities — coming soon (inlined from CommunitiesComingSoon.tsx,
+          its only remaining call site) ────────────────────────────────────── */}
       <div style={{ marginBottom: 28 }}>
-        <CommunitiesComingSoon />
+        <div style={sectionLabelStyle}>Communities</div>
+        <PaperCard
+          borderColor="var(--venue-text-primary)"
+          background="var(--venue-bg-elevated)"
+          padding="20px 20px"
+          style={{ textAlign: 'center' }}
+        >
+          <span className="material-symbols-outlined" style={{ fontSize: 26, color: 'var(--venue-text-secondary)', display: 'block', marginBottom: 8 }}>
+            groups
+          </span>
+          <p style={{ fontSize: 12, color: 'var(--venue-text-secondary)', margin: 0 }}>
+            Coming soon — join scenes like Salsa In My City or Read In My City.
+          </p>
+        </PaperCard>
       </div>
 
       {/* ── Activity ───────────────────────────────────────────────────────── */}
       <div style={{ marginBottom: 28 }}>
         <div style={sectionLabelStyle}>Activity</div>
 
-        <div style={{ display: 'flex', border: `1px solid ${BORDER}`, marginBottom: 12 }}>
+        <div style={{ display: 'flex', border: '1px solid var(--venue-border-default)', marginBottom: 12 }}>
           {(['upcoming', 'completed'] as const).map(tab => {
             const active = activityTab === tab
             const count = tab === 'upcoming' ? upcoming.length : completed.length
@@ -106,8 +122,8 @@ export default function ExplorerProfileHubClient({
                 onClick={() => setActivityTab(tab)}
                 style={{
                   flex: 1, padding: '9px 0',
-                  background: active ? LAVENDER : 'transparent',
-                  color: active ? '#07070A' : MUTED,
+                  background: active ? 'var(--venue-accent)' : 'transparent',
+                  color: active ? 'var(--venue-bg-base)' : 'var(--venue-text-secondary)',
                   border: 'none', cursor: 'pointer',
                   fontFamily: 'var(--font-jetbrains-mono)',
                   fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase',
@@ -120,35 +136,42 @@ export default function ExplorerProfileHubClient({
         </div>
 
         {activeList.length === 0 ? (
-          <div style={{ background: PANEL, border: `1px solid ${BORDER}`, padding: '24px 20px', textAlign: 'center' }}>
-            <p style={{ fontSize: 12, color: MUTED, margin: 0 }}>
+          <PaperCard
+            borderColor="var(--venue-text-primary)"
+            background="var(--venue-bg-elevated)"
+            padding="24px 20px"
+            style={{ textAlign: 'center' }}
+          >
+            <p style={{ fontSize: 12, color: 'var(--venue-text-secondary)', margin: 0 }}>
               {activityTab === 'upcoming' ? 'No upcoming events booked yet.' : 'No completed events yet.'}
             </p>
-          </div>
+          </PaperCard>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             {activeList.slice(0, 4).map(t => (
-              <Link
+              <PaperCard
                 key={t.rsvpId}
                 href={`/events/${t.eventSlug}`}
-                style={{
-                  display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12,
-                  background: PANEL, border: `1px solid ${BORDER}`,
-                  padding: '12px 16px', textDecoration: 'none',
-                }}
+                borderColor="var(--venue-text-primary)"
+                background="var(--venue-bg-elevated)"
+                padding="12px 16px"
+                style={{ display: 'flex', alignItems: 'center', gap: 14 }}
               >
-                <div style={{ minWidth: 0 }}>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: TEXT, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                <IconChip color="var(--venue-accent-tint)" iconColor="var(--venue-accent)">
+                  <span className="material-symbols-outlined" style={{ fontSize: 20 }}>confirmation_number</span>
+                </IconChip>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--venue-text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {t.eventTitle}
                   </div>
-                  <div style={{ fontSize: 11, color: MUTED, marginTop: 2 }}>
+                  <div style={{ fontSize: 11, color: 'var(--venue-text-secondary)', marginTop: 2 }}>
                     {fmtDate(t.eventStartsAt)} · {t.venueName}
                   </div>
                 </div>
-                <span className="material-symbols-outlined" style={{ fontSize: 16, color: MUTED, flexShrink: 0 }}>
+                <span className="material-symbols-outlined" style={{ fontSize: 16, color: 'var(--venue-text-muted)', flexShrink: 0 }}>
                   chevron_right
                 </span>
-              </Link>
+              </PaperCard>
             ))}
           </div>
         )}
@@ -156,7 +179,7 @@ export default function ExplorerProfileHubClient({
         <Link
           href="/explore/dashboard/tickets"
           style={{
-            display: 'block', marginTop: 10, fontSize: 11, color: LAVENDER,
+            display: 'block', marginTop: 10, fontSize: 11, color: 'var(--venue-accent)',
             fontFamily: 'var(--font-jetbrains-mono)', letterSpacing: '0.05em',
             textDecoration: 'none',
           }}
@@ -166,28 +189,28 @@ export default function ExplorerProfileHubClient({
       </div>
 
       {/* ── Switch workspace — only shown for multi-persona users ────────────── */}
-      <WorkspaceSwitcherList workspaces={workspaces} accentColor={LAVENDER} mutedColor={MUTED} />
+      <WorkspaceSwitcherList workspaces={workspaces} accentColor="var(--venue-accent)" mutedColor="var(--venue-text-secondary)" />
 
       {/* ── Settings ───────────────────────────────────────────────────────── */}
-      <Link
-        href="/explore/dashboard/settings"
-        style={{
-          display: 'flex', alignItems: 'center', gap: 10,
-          padding: '13px 16px', marginBottom: 32,
-          background: PANEL, border: `1px solid ${BORDER}`,
-          textDecoration: 'none',
-        }}
-      >
-        <span className="material-symbols-outlined" style={{ fontSize: 18, color: LAVENDER, flexShrink: 0 }}>
-          settings
-        </span>
-        <span style={{ flex: 1, fontSize: 13, fontWeight: 600, color: TEXT, fontFamily: 'var(--font-dm-sans)' }}>
-          Settings
-        </span>
-        <span className="material-symbols-outlined" style={{ fontSize: 16, color: MUTED, flexShrink: 0 }}>
-          chevron_right
-        </span>
-      </Link>
+      <div style={{ marginBottom: 32 }}>
+        <PaperCard
+          href="/explore/dashboard/settings"
+          borderColor="var(--venue-text-primary)"
+          background="var(--venue-bg-elevated)"
+          padding="13px 16px"
+          style={{ display: 'flex', alignItems: 'center', gap: 14 }}
+        >
+          <IconChip color="var(--venue-accent-tint)" iconColor="var(--venue-accent)">
+            <span className="material-symbols-outlined" style={{ fontSize: 20 }}>settings</span>
+          </IconChip>
+          <span style={{ flex: 1, fontSize: 13, fontWeight: 600, color: 'var(--venue-text-primary)', fontFamily: 'var(--font-dm-sans)' }}>
+            Settings
+          </span>
+          <span className="material-symbols-outlined" style={{ fontSize: 18, color: 'var(--venue-text-muted)', flexShrink: 0 }}>
+            chevron_right
+          </span>
+        </PaperCard>
+      </div>
 
       {/* ── Log out — deliberately de-emphasized, plain text + confirm step ──── */}
       <div style={{ textAlign: 'center' }}>
@@ -196,7 +219,7 @@ export default function ExplorerProfileHubClient({
             onClick={() => setConfirmingLogout(true)}
             style={{
               background: 'none', border: 'none', cursor: 'pointer',
-              fontSize: 12, color: MUTED,
+              fontSize: 12, color: 'var(--venue-text-secondary)',
               fontFamily: 'var(--font-dm-sans)',
               textDecoration: 'underline', textDecorationStyle: 'dashed',
               padding: '8px 0',
@@ -206,14 +229,14 @@ export default function ExplorerProfileHubClient({
           </button>
         ) : (
           <div style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
-            <span style={{ fontSize: 12, color: MUTED }}>Log out of When In My City?</span>
+            <span style={{ fontSize: 12, color: 'var(--venue-text-secondary)' }}>Log out of When In My City?</span>
             <div style={{ display: 'flex', gap: 10 }}>
               <button
                 onClick={() => setConfirmingLogout(false)}
                 disabled={loggingOut}
                 style={{
-                  background: 'transparent', border: `1px solid ${BORDER}`,
-                  color: MUTED, cursor: 'pointer', padding: '7px 16px',
+                  background: 'transparent', border: '1px solid var(--venue-border-default)',
+                  color: 'var(--venue-text-secondary)', cursor: 'pointer', padding: '7px 16px',
                   fontFamily: 'var(--font-jetbrains-mono)', fontSize: 10,
                   textTransform: 'uppercase', letterSpacing: '0.1em',
                 }}
