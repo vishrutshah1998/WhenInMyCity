@@ -14,6 +14,8 @@ import CommunityClient from '@/app/dashboard/community/CommunityClient'
 import { isLocalPlus } from '@/lib/tier'
 import type { UserProfile } from '@/types/database'
 import { SOFT_UI, softUICssVars } from '@/lib/softUI'
+import PaperCard from '@/components/ui/PaperCard'
+import IconChip from '@/components/ui/IconChip'
 
 // Community carousel page — Creator Hub / Communities / Common Circles,
 // behind a segmented toggle rather than stacked sections. Hub is a
@@ -194,25 +196,28 @@ function CreatorCommunitiesTab({ communities, accentColor }: { communities: Comm
   }
 
   return (
-    <div style={{ padding: '16px 16px 40px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+    <div style={{ padding: '16px 16px 40px', display: 'flex', flexDirection: 'column', gap: 12 }}>
       {communities.map((c) => (
-        <Link
+        <PaperCard
           key={c.id}
           href={`/circles/${c.slug}`}
-          style={{
-            display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px',
-            background: 'var(--wimc-bg-raised)', border: '1px solid var(--wimc-border-subtle)', textDecoration: 'none',
-          }}
+          borderColor="var(--wimc-text-primary)"
+          background="var(--wimc-bg-raised)"
+          padding="12px 14px"
+          style={{ display: 'flex', alignItems: 'center', gap: 12 }}
         >
-          <div style={{
-            width: 36, height: 36, borderRadius: 999, flexShrink: 0,
-            backgroundImage: c.cover_image_url ? `url(${c.cover_image_url})` : undefined,
-            backgroundSize: 'cover', backgroundPosition: 'center',
-            background: c.cover_image_url ? undefined : 'rgba(26,39,68,0.06)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-          }}>
-            {!c.cover_image_url && <span className="material-symbols-outlined" style={{ fontSize: 16, color: 'var(--wimc-text-muted)' }}>groups</span>}
-          </div>
+          <IconChip
+            color={c.cover_image_url ? 'transparent' : 'rgba(26,39,68,0.06)'}
+            iconColor="var(--wimc-text-muted)"
+            size={36}
+            radius={999}
+            style={{
+              backgroundImage: c.cover_image_url ? `url(${c.cover_image_url})` : undefined,
+              backgroundSize: 'cover', backgroundPosition: 'center',
+            }}
+          >
+            {!c.cover_image_url && <span className="material-symbols-outlined" style={{ fontSize: 16 }}>groups</span>}
+          </IconChip>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--wimc-text-primary)', fontFamily: 'var(--font-dm-sans)' }}>{c.name}</div>
             {c.city && (
@@ -221,7 +226,7 @@ function CreatorCommunitiesTab({ communities, accentColor }: { communities: Comm
               </div>
             )}
           </div>
-        </Link>
+        </PaperCard>
       ))}
       <Link
         href="/circles"

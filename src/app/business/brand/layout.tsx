@@ -109,11 +109,11 @@ export default async function BrandLayout({ children }: { children: React.ReactN
         {/* No fixed bottom nav left to clear (MobileBottomNav removed for Brand,
             replaced by the Home page's swipe carousel) — just the iOS
             home-indicator safe area, which mob-nav-pb used to cover too. */}
-        {/* lg:!pb-0 cancels the mobile-only reserve below at desktop, where
-            PersonaNavGate never renders (it's lg:hidden) — without this,
+        {/* md:!pb-0 cancels the mobile-only reserve below at desktop, where
+            PersonaNavGate never renders (it's md:hidden) — without this,
             sub-route content's last bit scrolls in behind the fixed
             standalone nav and can never be fully brought into view. */}
-        <main className="lg:!pb-0" style={{ flex: 1, minWidth: 0, paddingBottom: `calc(${NAV_HEIGHT}px + env(safe-area-inset-bottom, 0px))` }}>
+        <main className="md:!pb-0" style={{ flex: 1, minWidth: 0, paddingBottom: `calc(${NAV_HEIGHT}px + env(safe-area-inset-bottom, 0px))` }}>
           {children}
         </main>
       </div>

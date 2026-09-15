@@ -1,4 +1,5 @@
-import Link from 'next/link'
+import PaperCard from '@/components/ui/PaperCard'
+import IconChip from '@/components/ui/IconChip'
 
 // Venue carousel page — My Venue / Pricing / Availability / My Page, a
 // single ungrouped card list (unlike Business's Operations/Growth split —
@@ -34,26 +35,19 @@ export default function VenueSettingsSlot() {
         How your space is set up and presented to creators.
       </p>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
         {CARDS.map(card => (
-          <Link
+          <PaperCard
             key={card.href}
             href={card.href}
-            style={{
-              display: 'flex', alignItems: 'center', gap: 14,
-              padding: '14px 16px',
-              background: 'var(--venue-bg-elevated)',
-              border: '1px solid var(--venue-border-default)',
-              textDecoration: 'none',
-            }}
+            borderColor="var(--venue-text-primary)"
+            background="var(--venue-bg-elevated)"
+            padding="14px 16px"
+            style={{ display: 'flex', alignItems: 'center', gap: 14 }}
           >
-            <div style={{
-              width: 40, height: 40, flexShrink: 0,
-              background: 'var(--venue-accent-tint)', color: 'var(--venue-accent)',
-              display: 'grid', placeItems: 'center',
-            }}>
+            <IconChip color="var(--venue-accent-tint)" iconColor="var(--venue-accent)">
               <span className="material-symbols-outlined" style={{ fontSize: 20 }}>{card.icon}</span>
-            </div>
+            </IconChip>
             <div style={{ flex: 1, minWidth: 0 }}>
               <p style={{ fontSize: 15, fontWeight: 700, color: 'var(--venue-text-primary)', fontFamily: 'var(--font-dm-sans)', margin: '0 0 2px' }}>
                 {card.label}
@@ -65,7 +59,7 @@ export default function VenueSettingsSlot() {
             <span className="material-symbols-outlined" style={{ fontSize: 18, color: 'var(--venue-text-muted)', flexShrink: 0 }}>
               chevron_right
             </span>
-          </Link>
+          </PaperCard>
         ))}
       </div>
     </div>

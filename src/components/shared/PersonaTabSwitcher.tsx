@@ -114,7 +114,7 @@ export default function PersonaTabSwitcher({
   return (
     <>
       <div
-        className="fixed lg:hidden left-0 right-0 md:left-[var(--wimc-sidebar-w)] z-20"
+        className="persona-tab-switcher fixed md:hidden left-0 right-0 md:left-[var(--wimc-sidebar-w)] z-20"
         style={{
           // top+bottom (no computed height) — same fix already validated on
           // PersonaNavStandalone (see PersonaNav.tsx): a calc(100dvh - topOffset)
@@ -179,7 +179,7 @@ export default function PersonaTabSwitcher({
           sidesteps that regardless of what the content container's own
           bottom edge is doing. */}
       <div
-        className="fixed lg:hidden left-0 right-0 md:left-[var(--wimc-sidebar-w)] z-20"
+        className="persona-tab-switcher fixed md:hidden left-0 right-0 md:left-[var(--wimc-sidebar-w)] z-20"
         style={{ bottom: 0, overflow: 'visible' }}
       >
         <PersonaNavBar
