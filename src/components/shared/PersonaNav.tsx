@@ -260,7 +260,12 @@ export function PersonaNavStandalone({ pages, activeKey, indexHref, accentColor,
     // tracks the current visual viewport reliably on modern iOS Safari.
     <div
       ref={containerRef}
-      className="fixed lg:hidden left-0 right-0 md:left-[var(--wimc-sidebar-w)] z-20"
+      // persona-tab-switcher: shared hook (also used by PersonaTabSwitcher's
+      // own fixed panels) that globals.css keys off of to drop body's 884px
+      // min-height floor back to the real viewport — this standalone nav is
+      // the same "fixed, viewport-anchored, doesn't need the floor" case on
+      // every sub-route below the dashboard index.
+      className="persona-tab-switcher fixed lg:hidden left-0 right-0 md:left-[var(--wimc-sidebar-w)] z-20"
       style={{ bottom: 0, overflow: 'visible' }}
     >
       <PersonaNavBar

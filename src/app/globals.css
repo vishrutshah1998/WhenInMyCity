@@ -73,6 +73,20 @@
     min-height: max(884px, 100dvh);
   }
 
+  /* PersonaTabSwitcher (Venue/Creator/Explorer/Brand dashboards' mobile Home
+     tab) and PersonaNavStandalone (the same bottom nav's version rendered on
+     every OTHER sub-route via PersonaNavGate — see PersonaNav.tsx) both
+     render their own viewport-anchored `fixed` panels and don't add to
+     body's document-flow height. The 884px floor above then forces body
+     taller than those panels actually need on any shorter device, leaving a
+     scrollable gap of raw body background exposed below them. These
+     dashboards don't need the 884px floor the rest of the app relies on
+     (nothing there is designed against a fixed minimum device height), so
+     drop it back to the real viewport wherever either one is mounted. */
+  body:has(.persona-tab-switcher) {
+    min-height: 100dvh;
+  }
+
   /* Hide scrollbar globally */
   ::-webkit-scrollbar {
     display: none;
