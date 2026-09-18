@@ -27,7 +27,7 @@ export default async function ExplorerDashboardLayout({
   // Get username + initials from user_profiles
   const { data: up } = await admin
     .from('user_profiles')
-    .select('username, display_name, avatar_url')
+    .select('username, display_name, avatar_url, personas, creator_type')
     .eq('id', user.id)
     .maybeSingle()
 
@@ -37,6 +37,18 @@ export default async function ExplorerDashboardLayout({
   const username         = up?.username ?? 'explorer'
   const avatarUrl        = ep.avatar_url ?? up?.avatar_url ?? null
   const initials         = displayName.split(' ').map((w: string) => w[0]).join('').toUpperCase().slice(0, 2)
+
+  // Workspace-switcher personas — same legacy-fallback augmentation as
+  // dashboard/layout.tsx's (Creator) sidebarPersonas, so a legacy user whose
+  // personas[] wasn't backfilled still sees their other active workspace.
+  const personas: string[] = up?.personas ?? []
+  const isBrand = up?.creator_type === 'business_brand' || personas.includes('brand')
+  const isVenue = personas.includes('venue') || personas.includes('business')
+  const sidebarPersonas = [
+    ...personas,
+    ...(isBrand && !personas.includes('brand') ? ['brand'] : []),
+    ...(isVenue && !personas.includes('venue')  ? ['venue'] : []),
+  ]
   // LocationPill only covers the Phase 0 launch cities — fall back to the same
   // default /explore itself uses for any other stored city.
   const pillCity          = ep.city === 'Gandhinagar' ? 'Gandhinagar' : 'Ahmedabad'
@@ -81,6 +93,7 @@ export default async function ExplorerDashboardLayout({
           username={username}
           initials={initials}
           avatarUrl={avatarUrl}
+          personas={sidebarPersonas}
         />
       </div>
 
