@@ -7,6 +7,10 @@ import ExplorerAuthenticatedTopBar from '@/components/explore/ExplorerAuthentica
 import PersonaNavGate from '@/components/shared/PersonaNavGate'
 import { EXPLORER_NAV_PAGES, NAV_HEIGHT, EXPLORER_SECTION_ROUTES } from '@/lib/constants/personaNavPages'
 import { getNotificationsForUser } from '@/app/actions/notifications'
+import PersonaSwitcherPills from '@/components/PersonaSwitcherPills'
+import DashPageLink from '@/components/DashPageLink'
+import GuideDashLinkBoost from '@/components/explore/GuideDashLinkBoost'
+import { profileUrl } from '@/lib/profile-url'
 
 // Matches --venue-bg-elevated under .venue-theme.explorer-variant
 // (venue-tokens.css) — the actual background PersonaNavBar renders under
@@ -40,7 +44,7 @@ export default async function ExplorerDashboardLayout({
   // Get username + initials from user_profiles
   const { data: up } = await admin
     .from('user_profiles')
-    .select('username, display_name, avatar_url, personas, creator_type')
+    .select('username, display_name, avatar_url, personas, creator_type, city')
     .eq('id', user.id)
     .maybeSingle()
 
@@ -164,6 +168,29 @@ export default async function ExplorerDashboardLayout({
             sub-route content's last bit scrolls in behind the fixed
             standalone nav and can never be fully brought into view. */}
         <main className="lg:!pb-0" style={{ flex: 1, minWidth: 0, paddingBottom: `calc(${NAV_HEIGHT}px + env(safe-area-inset-bottom, 0px))` }}>
+          {/* Persona-switcher pills + share-page link — previously only
+              rendered by the index page (page.tsx), so they vanished on every
+              other /explore/dashboard/* route (browse, guide, saved, etc.)
+              since each is its own page component under this shared layout.
+              Lifted here, inside <main> and still ahead of {children}, so
+              every sub-route gets them while staying in the SAME stacking
+              context as {children} — that's what lets PersonaSwitcherPills'
+              own z-index:21 (see that component) correctly outrank the index
+              route's fixed mobile carousel (z-index 20) without also
+              swallowing clicks on ExploreClient's TabBar (z-index 50) inside
+              {children}; hoisting it above <main> entirely broke that
+              comparison because <main> itself isn't a positioned element, so
+              everything inside it painted as one unpositioned layer below
+              pills regardless of the TabBar's own z-index. */}
+          <PersonaSwitcherPills personas={personas} currentPersona="explorer" variant="dark" />
+          {up?.username && (
+            <GuideDashLinkBoost>
+              <DashPageLink
+                url={`${process.env.NEXT_PUBLIC_APP_URL ?? 'https://www.wheninmycity.com'}${profileUrl(up.city, up.username)}`}
+                variant="dark"
+              />
+            </GuideDashLinkBoost>
+          )}
           {children}
         </main>
       </div>

@@ -12,9 +12,6 @@ import ExplorerCarousel from './ExplorerCarousel'
 import { EXPLORER_NAV_PAGES } from '@/lib/constants/personaNavPages'
 import ExplorerCommunitiesPanel from '@/components/explore/ExplorerCommunitiesPanel'
 import { getCommunitiesForUser } from '@/app/actions/communities'
-import PersonaSwitcherPills from '@/components/PersonaSwitcherPills'
-import DashPageLink from '@/components/DashPageLink'
-import { profileUrl } from '@/lib/profile-url'
 
 // Explorer's dashboard root — a swipe-based 3-page carousel (Map / Home /
 // Communities) on mobile, replacing the old ExplorerTabStrip + this page's
@@ -122,18 +119,14 @@ export default async function ExplorerDashboardIndexPage({
   let followedCreatorIds: string[]      = []
   let viewerUserId: string | null       = null
   let personas: string[]                = []
-  let viewerUsername: string | null     = null
-  let viewerCity: string | null         = null
 
   try {
     const { data: { user } } = await userClient.auth.getUser()
     viewerUserId = user?.id ?? null
 
     if (user) {
-      const { data: userProfile } = await admin.from('user_profiles').select('personas, username, city').eq('id', user.id).maybeSingle()
+      const { data: userProfile } = await admin.from('user_profiles').select('personas').eq('id', user.id).maybeSingle()
       personas = (userProfile?.personas ?? []) as string[]
-      viewerUsername = userProfile?.username ?? null
-      viewerCity = userProfile?.city ?? null
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const db = userClient as any
@@ -175,12 +168,10 @@ export default async function ExplorerDashboardIndexPage({
 
   return (
     <>
-      {/* Fixed mobile carousel (PersonaTabSwitcher inside) must come BEFORE
-          PersonaSwitcherPills in DOM order — mirrors dashboard/layout.tsx's
-          <CreatorCarouselSlot /> preceding .dash-content: a later same-level
-          sibling paints on top of an earlier position:fixed one, which is what
-          lets the pills row sit visibly above the carousel's fixed top edge
-          instead of being painted over by it. */}
+      {/* PersonaSwitcherPills + DashPageLink moved to layout.tsx so every
+          /explore/dashboard/* sub-route gets them, not just this index page —
+          see layout.tsx for why. The carousel below still paints under that
+          shared row via its own z-index (see PersonaSwitcherPills). */}
       <div className="lg:hidden">
         <ExplorerCarousel
           mapSlot={<ExplorerMapPanel attractions={attractions} />}
@@ -193,14 +184,6 @@ export default async function ExplorerDashboardIndexPage({
           defaultIndex={defaultIndex}
         />
       </div>
-
-      <PersonaSwitcherPills personas={personas} currentPersona="explorer" variant="dark" />
-      {viewerUsername && (
-        <DashPageLink
-          url={`${process.env.NEXT_PUBLIC_APP_URL ?? 'https://www.wheninmycity.com'}${profileUrl(viewerCity, viewerUsername)}`}
-          variant="dark"
-        />
-      )}
 
       <div className="hidden lg:block">
         {homeContent}

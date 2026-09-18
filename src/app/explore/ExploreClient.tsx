@@ -1861,18 +1861,26 @@ function MobileBottomNav({ tab, city }: { tab: string; city: string }) {
 // ─── Tab Bar ─────────────────────────────────────────────────────────────────
 
 const TABS = [
-  { id: 'all',      label: 'ALL',      icon: 'grid_view',           activeColor: 'bg-[#050308] text-white',                 textColor: 'text-white'      },
-  { id: 'events',   label: 'EVENTS',   icon: 'confirmation_number', activeColor: 'bg-[#E8705A] text-white',                 textColor: 'text-[#E8705A]'  },
-  { id: 'creators', label: 'CREATORS', icon: 'person',              activeColor: 'bg-[#3B6BCC] text-white',                 textColor: 'text-[#3B6BCC]'  },
-  { id: 'venues',   label: 'VENUES',    icon: 'location_on',         activeColor: 'bg-[#5DD9D0] text-[#0A0814] font-bold',  textColor: 'text-[#5DD9D0]'  },
+  { id: 'all',      label: 'ALL',      icon: 'grid_view',           activeColor: 'bg-[#050308] text-white',                 textColor: 'text-white',     dashBg: 'bg-[#050308]', dashText: 'text-[#F0EFF8]'          },
+  { id: 'events',   label: 'EVENTS',   icon: 'confirmation_number', activeColor: 'bg-[#E8705A] text-white',                 textColor: 'text-[#E8705A]', dashBg: 'bg-[#E8705A]', dashText: 'text-[#F0EFF8]'          },
+  { id: 'creators', label: 'CREATORS', icon: 'person',              activeColor: 'bg-[#3B6BCC] text-white',                 textColor: 'text-[#3B6BCC]', dashBg: 'bg-[#3B6BCC]', dashText: 'text-[#F0EFF8]'          },
+  { id: 'venues',   label: 'VENUES',    icon: 'location_on',         activeColor: 'bg-[#5DD9D0] text-[#0A0814] font-bold',  textColor: 'text-[#5DD9D0]', dashBg: 'bg-[#5DD9D0]', dashText: 'text-[#0A0814] font-bold' },
 ] as const
 
+// inDashboard renders inside .venue-theme.explorer-variant (dark) — the
+// standalone /explore page below is unaffected and keeps its own always-dark
+// shell, so only the dashboard variant needed to switch off the --wimc-*
+// (light/cream) tokens that were bleeding through onto the dark dashboard as
+// a stray light bar. Every tab pill is filled with its accent colour at all
+// times here (not just when active) per design ask; the active tab is at
+// full opacity, inactive ones dimmed, since colour-fill no longer doubles as
+// the active/inactive signal.
 function TabBar({ activeTab, city, count = 0, basePath = '/explore', stickyTop = 'top-[64px]', inDashboard = false }: { activeTab: string; city: string; count?: number; basePath?: string; stickyTop?: string; inDashboard?: boolean }) {
   const shellClass = inDashboard
     ? 'backdrop-blur border-b h-12 flex justify-between items-center'
     : 'bg-[#050308]/95 backdrop-blur border-b-2 border-dashed border-[rgba(155,143,255,0.15)] h-12 flex justify-between items-center'
   const shellStyle = inDashboard
-    ? { background: 'var(--wimc-bg-elevated)', borderColor: 'var(--wimc-border-default)' }
+    ? { background: 'var(--venue-bg-elevated)', borderColor: 'var(--venue-border-default)' }
     : undefined
   return (
     <div className={`sticky ${stickyTop} z-[50] ${shellClass}`} style={shellStyle}>
@@ -1885,8 +1893,8 @@ function TabBar({ activeTab, city, count = 0, basePath = '/explore', stickyTop =
             <Link
               key={t.id}
               href={`${basePath}?tab=${t.id}&city=${city}`}
-              className={`flex items-center gap-2 px-4 lg:px-6 font-mono text-[10px] tracking-[0.24em] uppercase h-full transition-colors ${i > 0 ? `${dividerClass} ${inDashboard ? '' : 'border-[rgba(155,143,255,0.15)]'}` : ''} ${isActive ? t.activeColor : inDashboard ? `${t.textColor} opacity-70 hover:opacity-100` : 'text-[#9896B0] hover:bg-[#211C33]'}`}
-              style={i > 0 && inDashboard ? { borderColor: 'var(--wimc-border-default)' } : undefined}
+              className={`flex items-center gap-2 px-4 lg:px-6 font-mono text-[10px] tracking-[0.24em] uppercase h-full transition-opacity ${i > 0 ? `${dividerClass} ${inDashboard ? '' : 'border-[rgba(155,143,255,0.15)]'}` : ''} ${inDashboard ? `${t.dashBg} ${t.dashText} ${isActive ? 'opacity-100' : 'opacity-55 hover:opacity-85'}` : isActive ? t.activeColor : 'text-[#9896B0] hover:bg-[#211C33]'}`}
+              style={i > 0 && inDashboard ? { borderColor: 'var(--venue-border-default)' } : undefined}
             >
               <span className="hidden lg:inline">
                 <span className="material-symbols-outlined text-[14px]">{t.icon}</span>
