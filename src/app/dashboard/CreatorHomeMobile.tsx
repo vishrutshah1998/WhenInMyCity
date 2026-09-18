@@ -19,6 +19,7 @@ interface Props {
   profile:                 UserProfile | null
   subscriberCount:         number
   upcomingEvents:          Event[]
+  totalEventsCount:        number
   requestsCount:           number
   availablePaise:          number
   mtdEarnedPaise:          number
@@ -28,7 +29,7 @@ interface Props {
 }
 
 export default function CreatorHomeMobile({
-  displayName, profile, subscriberCount, upcomingEvents, requestsCount,
+  displayName, profile, subscriberCount, upcomingEvents, totalEventsCount, requestsCount,
   availablePaise, mtdEarnedPaise, confirmedNotifications, soldCountMap, onPostCreated,
 }: Props) {
   return (
@@ -46,11 +47,11 @@ export default function CreatorHomeMobile({
         <div style={{ display: 'flex', gap: 12 }}>
           {[
             { value: String(subscriberCount), label: 'SUBSCRIBERS', color: '#E8705A' },
-            { value: String(upcomingEvents.length), label: 'EVENTS', color: '#E8705A' },
+            { value: String(upcomingEvents.length), label: 'UPCOMING EVENTS', color: '#E8705A', sub: `${totalEventsCount} total` },
             { value: String(profile?.monthly_page_visitors ?? 0), label: 'VIEWS', color: '#E8705A' },
             { value: String(requestsCount), label: 'REQUESTS', color: '#E8705A' },
             { value: formatPaiseCompact(availablePaise), label: 'EARNINGS', color: '#D97706', href: '/dashboard/payouts' },
-          ].map(({ value, label, color, href }) => (
+          ].map(({ value, label, color, href, sub }) => (
             <PaperCard
               key={label}
               href={href}
@@ -61,6 +62,9 @@ export default function CreatorHomeMobile({
             >
               <p style={{ fontFamily: 'var(--font-syne)', fontSize: 24, fontWeight: 900, color, lineHeight: 1, margin: 0 }}>{value}</p>
               <p style={{ fontSize: 9, color: 'rgba(26,39,68,0.4)', textTransform: 'uppercase', fontFamily: 'var(--font-jetbrains-mono)', marginTop: 6, letterSpacing: 1 }}>{label}</p>
+              {sub && (
+                <p style={{ fontSize: 8, color: 'rgba(26,39,68,0.3)', fontFamily: 'var(--font-jetbrains-mono)', marginTop: 2 }}>{sub}</p>
+              )}
             </PaperCard>
           ))}
         </div>

@@ -339,6 +339,7 @@ export default function DashboardPage() {
           profile={profile}
           subscriberCount={subscriberCount}
           upcomingEvents={upcomingEvents}
+          totalEventsCount={events.length}
           requestsCount={requests.length}
           availablePaise={availablePaise}
           mtdEarnedPaise={mtdEarnedPaise}
