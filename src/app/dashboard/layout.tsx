@@ -1,3 +1,4 @@
+import type { Viewport } from 'next'
 import { requireProfile } from '@/lib/auth/requireAuth'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
@@ -21,6 +22,16 @@ import { isLocalPlus } from '@/lib/tier'
 // Brand's dashboards already use unconditionally.
 const EXPLORER_ACCENT = '#9B8FFF'
 const CREATOR_ACCENT  = '#E8705A'
+
+// Matches --wimc-bg-elevated (globals.css) — the actual background PersonaNavBar
+// renders under the bottom nav / carousel nav bar. Without an explicit theme-color,
+// Safari's bottom toolbar tint is inferred automatically and unreliably; setting
+// this makes the toolbar-blend consistent instead of leaving it to chance. Merges
+// with the root layout's viewport (width/initialScale/viewportFit) — Next.js
+// resolves nested viewport exports field-by-field, root to leaf.
+export const viewport: Viewport = {
+  themeColor: '#FEFCF8',
+}
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { profile } = await requireProfile()
@@ -139,7 +150,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
           CreatorCarouselContext.tsx / CreatorCarouselSlot.tsx. */}
       <CreatorCarouselSlot />
 
-      <div className="hidden md:block">
+      <div className="hidden lg:block">
         <Sidebar
           username={profile.username ?? ''}
           displayName={profile.display_name ?? profile.username ?? ''}
@@ -155,7 +166,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
           personas={sidebarPersonas}
         />
       </div>
-      <div className="dash-content ml-0 md:ml-[var(--wimc-sidebar-w)]" style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', transition: 'margin-left 250ms cubic-bezier(.4,0,.2,1)' }}>
+      <div className="dash-content ml-0 lg:ml-[var(--wimc-sidebar-w)]" style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', transition: 'margin-left 250ms cubic-bezier(.4,0,.2,1)' }}>
         {/* New top bar is mobile-only this session (Part 1 of 3) — lg:hidden
             matches the gate already proven for Explorer's equivalent swap.
             Desktop keeps the original bar unchanged below. CreatorTabStrip is
@@ -191,11 +202,11 @@ export default async function DashboardLayout({ children }: { children: React.Re
         </div>
         {/* No fixed bottom nav left to clear (MobileBottomNav removed for Creator) —
             just the iOS home-indicator safe area, which mob-nav-pb used to cover too. */}
-        {/* md:!pb-0 cancels the mobile-only reserve below at desktop, where
-            PersonaNavGate never renders (it's md:hidden) — without this,
+        {/* lg:!pb-0 cancels the mobile-only reserve below at desktop, where
+            PersonaNavGate never renders (it's lg:hidden) — without this,
             sub-route content's last bit scrolls in behind the fixed
             standalone nav and can never be fully brought into view. */}
-        <main className="md:!pb-0" style={{ flex: 1, minWidth: 0, paddingBottom: `calc(${NAV_HEIGHT}px + env(safe-area-inset-bottom, 0px))` }}>
+        <main className="lg:!pb-0" style={{ flex: 1, minWidth: 0, paddingBottom: `calc(${NAV_HEIGHT}px + env(safe-area-inset-bottom, 0px))` }}>
           {children}
         </main>
       </div>

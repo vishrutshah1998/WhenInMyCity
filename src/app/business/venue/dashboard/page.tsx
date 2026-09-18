@@ -1,9 +1,9 @@
-import { Suspense } from 'react'
-import { redirect } from 'next/navigation'
+'use client'
+
+import { Suspense, useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { requireAuth } from '@/lib/auth/requireAuth'
-import { createAdminClient } from '@/lib/supabase/admin'
-import { getVenueDashboardData } from '@/app/actions/venue-dashboard'
+import { getVenueDashboardPageData } from '@/app/actions/venue-dashboard'
 import { getNotificationsForUser } from '@/app/actions/notifications'
 import PersonaSwitcherPills from '@/components/PersonaSwitcherPills'
 import DashPageLink from '@/components/DashPageLink'
@@ -11,15 +11,15 @@ import PriorityActions from '@/components/venue/dashboard/PriorityActions'
 import BookingConfirmedBanner from '@/components/shared/BookingConfirmedBanner'
 import KpiCard from '@/components/venue/dashboard/KpiCard'
 import { KpiCardSkeletonRow } from '@/components/venue/dashboard/KpiCardSkeleton'
+import SkeletonCard from '@/components/ui/SkeletonCard'
 import WeekStrip from '@/components/venue/dashboard/WeekStrip'
 import PendingRequests from '@/components/venue/dashboard/PendingRequests'
 import RevenueTrend from '@/components/venue/dashboard/RevenueTrend'
 import type { MonthlyRevenue } from '@/components/venue/dashboard/charts/RevenueTrendChart'
-import VenueCarousel from './VenueCarousel'
-import { VENUE_NAV_PAGES } from '@/lib/constants/personaNavPages'
+import { VenueCarouselPublisher } from './VenueCarouselContext'
 import VenueSettingsSlot from './VenueSettingsSlot'
 import VenueOperationsSlot from './VenueOperationsSlot'
-import type { VenueProfile, VenueTier } from '@/types/database'
+import type { VenueProfile, VenueTier, Notification } from '@/types/database'
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -194,79 +194,112 @@ function KpiRow({ mtdRevenuePaise, occupancyPercent, avgBookingPaise, pendingCou
 // Page
 // ---------------------------------------------------------------------------
 
-export default async function VenueDashboardPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ panel?: string }>
-}) {
-  const { user } = await requireAuth('/business/venue/dashboard')
+// Client Component (not a Server Component, unlike most other pages in this
+// area) — deliberately mirrors CreatorDashboardPage/DashboardPage's shape.
+// VenueCarouselSlot (business/venue/layout.tsx) relocates this page's
+// homeSlot/venueSlot/businessSlot into a layout-level sibling of
+// .dash-content via VenueCarouselContext, exactly like CreatorCarouselSlot
+// does for Creator — but Creator's version only ever relocates plain
+// client-side elements. This page used to be an async Server Component
+// (data fetched via createAdminClient() directly in the render), which made
+// it the only persona combining Server-Component-computed slot content with
+// Context-based relocation — an untested combination that shipped alongside
+// the relocation fix and made Venue's carousel nav bar stop responding to
+// taps. Fetching here instead, via one server action
+// (getVenueDashboardPageData), keeps all the same admin-client reads
+// server-side (nothing security-sensitive moves to the browser) while
+// making the JSX handed to VenueCarouselPublisher plain client-rendered
+// elements, same as Creator's.
+type VenuePageData = Extract<Awaited<ReturnType<typeof getVenueDashboardPageData>>, { needsOnboarding: false }>
 
-  const sp = await searchParams
-  const panelIndex = sp.panel ? VENUE_NAV_PAGES.findIndex(p => p.key === sp.panel) : -1
-  const defaultIndex = panelIndex !== -1 ? panelIndex : 1
+export default function VenueDashboardPage() {
+  const router = useRouter()
 
-  const admin = createAdminClient()
+  const [venueProfile, setVenueProfile] = useState<VenueProfile | null>(null)
+  const [pendingProposals, setPendingProposals] = useState<VenuePageData['pendingProposals']>([])
+  const [recentRevenue, setRecentRevenue] = useState<VenuePageData['recentRevenue']>([])
+  const [availabilityThisMonth, setAvailabilityThisMonth] = useState<VenuePageData['availabilityThisMonth']>([])
+  const [personas, setPersonas] = useState<string[]>([])
+  const [hasAnyConfirmedBooking, setHasAnyConfirmedBooking] = useState(false)
+  const [reviewCount, setReviewCount] = useState(0)
+  const [confirmedNotifications, setConfirmedNotifications] = useState<Notification[]>([])
+  const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
 
-  const { data: venue } = await admin
-    .from('venue_profiles')
-    .select('id, name, slug')
-    .eq('auth_user_id', user.id)
-    .maybeSingle()
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      const [result, allNotifications] = await Promise.all([
+        getVenueDashboardPageData(),
+        getNotificationsForUser(),
+      ])
+      if (cancelled) return
 
-  if (!venue) redirect('/business/venue/onboard')
+      if ('needsOnboarding' in result && result.needsOnboarding) {
+        router.push('/business/venue/onboard')
+        return
+      }
+      if ('error' in result) {
+        setLoadError(result.error)
+        setLoading(false)
+        return
+      }
 
-  const [result, { data: userProfile }, allNotifications, { count: confirmedProposalCount }] = await Promise.all([
-    getVenueDashboardData(venue.id),
-    admin.from('user_profiles').select('personas').eq('id', user.id).maybeSingle(),
-    getNotificationsForUser(),
-    // Same computation as VenueSidebar.tsx's hasAnyConfirmedBooking — reused here for the
-    // Business carousel page's Analytics/Payouts "unlocks after first booking" sublabel.
-    admin
-      .from('maker_venue_proposals')
-      .select('id', { count: 'exact', head: true })
-      .eq('venue_id', venue.id)
-      .eq('status', 'accepted'),
-  ])
+      setVenueProfile(result.venue)
+      setPendingProposals(result.pendingProposals)
+      setRecentRevenue(result.recentRevenue)
+      setAvailabilityThisMonth(result.availabilityThisMonth)
+      setPersonas(result.personas)
+      setHasAnyConfirmedBooking(result.hasAnyConfirmedBooking)
+      setReviewCount(result.reviewCount)
+      setConfirmedNotifications(
+        allNotifications.filter(
+          (n) => !n.is_read && (n.type === 'venue_proposal_accepted' || n.type === 'venue_counter_accepted'),
+        ),
+      )
+      setLoading(false)
+    })()
+    return () => { cancelled = true }
+  }, [router])
 
-  const hasAnyConfirmedBooking = (confirmedProposalCount ?? 0) > 0
-
-  const confirmedNotifications = allNotifications.filter(
-    (n) => !n.is_read && (n.type === 'venue_proposal_accepted' || n.type === 'venue_counter_accepted'),
-  )
-
-  const rawPersonas = (userProfile?.personas ?? []) as string[]
-  const personas = rawPersonas.includes('venue') ? rawPersonas : [...rawPersonas, 'venue']
-
-  if ('error' in result) {
+  if (loadError) {
     return (
       <div style={{
         display: 'grid', placeItems: 'center', minHeight: '60vh',
         fontFamily: 'var(--font-inter), system-ui, sans-serif',
         color: 'var(--venue-text-secondary)',
       }}>
-        {(result as { error: string }).error}
+        {loadError}
       </div>
     )
   }
 
-  const { venue: venueProfile, pendingProposals, recentRevenue, availabilityThisMonth } = result
-
-  // Review count for tier progress card
-  const { data: eventIds } = await admin
-    .from('events')
-    .select('id')
-    .eq('venue_id', venue.id)
-    .in('status', ['published', 'completed'])
-
-  const eventIdList = (eventIds ?? []).map((e) => e.id)
-  const reviewCount = eventIdList.length > 0
-    ? ((await admin
-        .from('explorer_event_history')
-        .select('id', { count: 'exact', head: true })
-        .in('event_id', eventIdList)
-        .not('rating', 'is', null)
-      ).count ?? 0)
-    : 0
+  // Skeleton of the real KpiRow grid below (same 4-col/2-col-mobile layout,
+  // same rounded-card shape and accent/border tokens) instead of a spinner/
+  // text — see KpiCard.tsx for the shape this mirrors.
+  if (loading || !venueProfile) {
+    return (
+      <div style={{ background: 'var(--venue-bg-base)', minHeight: '60vh', padding: '24px 16px' }}>
+        <style>{`
+          @media (max-width: 767px) {
+            .venue-skeleton-grid { grid-template-columns: repeat(2, 1fr) !important; }
+          }
+        `}</style>
+        <div className="venue-skeleton-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, maxWidth: 1400, margin: '0 auto' }}>
+          {Array.from({ length: 4 }).map((_, i) => (
+            <SkeletonCard
+              key={i}
+              radius={18}
+              accentColor="var(--venue-accent)"
+              borderColor="var(--venue-border-subtle)"
+              background="var(--venue-bg-surface)"
+              fillColor="var(--venue-bg-hover)"
+            />
+          ))}
+        </div>
+      </div>
+    )
+  }
 
   // KPI calculations
   const now = new Date()
@@ -314,7 +347,7 @@ export default async function VenueDashboardPage({
 
       <PersonaSwitcherPills personas={personas} currentPersona="venue" variant="dark" />
       <DashPageLink
-        url={`${process.env.NEXT_PUBLIC_APP_URL ?? 'https://www.wheninmycity.com'}/venue/${venue.slug}`}
+        url={`${process.env.NEXT_PUBLIC_APP_URL ?? 'https://www.wheninmycity.com'}/venue/${venueProfile.slug}`}
         variant="dark"
       />
 
@@ -449,16 +482,20 @@ export default async function VenueDashboardPage({
           already uses in layout.tsx). */}
       <div className="hidden lg:block">{homeContent}</div>
 
-      {/* Mobile — swipe carousel replacing MobileBottomNav as the primary
-          mobile nav surface for /business/venue. */}
-      <div className="lg:hidden">
-        <VenueCarousel
-          homeSlot={homeContent}
-          venueSlot={<VenueSettingsSlot />}
-          businessSlot={<VenueOperationsSlot hasAnyConfirmedBooking={hasAnyConfirmedBooking} />}
-          defaultIndex={defaultIndex}
-        />
-      </div>
+      {/* Mobile — the actual carousel (VenueCarousel/PersonaTabSwitcher) no
+          longer renders here — it renders from VenueCarouselSlot, a genuine
+          layout-level sibling of .dash-content (business/venue/layout.tsx),
+          same placement as PersonaNavGate. This component (now a Client
+          Component, see the note above the page function) stays the sole
+          owner of the venue-dashboard fetch that feeds the carousel's
+          slots; it just publishes the computed props up through
+          VenueCarouselContext instead of rendering the carousel itself.
+          VenueCarouselPublisher renders nothing visible. */}
+      <VenueCarouselPublisher
+        homeSlot={homeContent}
+        venueSlot={<VenueSettingsSlot />}
+        businessSlot={<VenueOperationsSlot hasAnyConfirmedBooking={hasAnyConfirmedBooking} />}
+      />
     </>
   )
 }

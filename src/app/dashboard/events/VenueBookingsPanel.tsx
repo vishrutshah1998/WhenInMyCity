@@ -223,7 +223,7 @@ function ConfirmActionModal({
 
   return createPortal(
     <>
-      <div onClick={onCancel} className="fixed inset-0 md:left-[var(--wimc-sidebar-w)]" style={{ background: 'rgba(0,0,0,0.6)', zIndex: 200, backdropFilter: 'blur(4px)' }} />
+      <div onClick={onCancel} className="fixed inset-0 lg:left-[var(--wimc-sidebar-w)]" style={{ background: 'rgba(0,0,0,0.6)', zIndex: 200, backdropFilter: 'blur(4px)' }} />
       <div
         role="dialog"
         aria-modal="true"
@@ -365,7 +365,7 @@ function MakerCounterOfferModal({
 
   return createPortal(
     <>
-      <div onClick={onClose} className="fixed inset-0 md:left-[var(--wimc-sidebar-w)]" style={{ background: 'rgba(0,0,0,0.7)', zIndex: 200, backdropFilter: 'blur(6px)' }} />
+      <div onClick={onClose} className="fixed inset-0 lg:left-[var(--wimc-sidebar-w)]" style={{ background: 'rgba(0,0,0,0.7)', zIndex: 200, backdropFilter: 'blur(6px)' }} />
       <div style={{
         position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
         width: 440, maxHeight: '90vh', overflow: 'auto',
@@ -566,7 +566,7 @@ function ProposalDetailDrawer({
   // with-the-page behavior instead of a real fixed overlay.
   return createPortal(
     <>
-      <div onClick={onClose} className="fixed inset-0 md:left-[var(--wimc-sidebar-w)]" style={{ background: 'rgba(0,0,0,0.6)', zIndex: 100, backdropFilter: 'blur(4px)' }} />
+      <div onClick={onClose} className="fixed inset-0 lg:left-[var(--wimc-sidebar-w)]" style={{ background: 'rgba(0,0,0,0.6)', zIndex: 100, backdropFilter: 'blur(4px)' }} />
       <div style={{
         position: 'fixed', right: 0, top: 0, bottom: 0, width: 480,
         background: 'var(--wimc-bg-elevated)', borderLeft: '1px solid var(--wimc-border-default)',

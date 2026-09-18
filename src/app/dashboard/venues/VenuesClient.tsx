@@ -125,9 +125,9 @@ function DetailDrawer({
 
   return createPortal(
     <>
-      {/* Backdrop — left inset stops at the sidebar (md:left-[var(--wimc-sidebar-w)])
+      {/* Backdrop — left inset stops at the sidebar (lg:left-[var(--wimc-sidebar-w)])
           so the persistent nav stays fully readable instead of dimmed/blurred under it. */}
-      <div onClick={onClose} className="fixed inset-0 md:left-[var(--wimc-sidebar-w)]" style={{ background: 'rgba(0,0,0,0.6)', zIndex: 100, backdropFilter: 'blur(4px)' }} />
+      <div onClick={onClose} className="fixed inset-0 lg:left-[var(--wimc-sidebar-w)]" style={{ background: 'rgba(0,0,0,0.6)', zIndex: 100, backdropFilter: 'blur(4px)' }} />
       {/* Drawer — fixed to the viewport height (top:0/bottom:0) with its own internal
           scroll region, so the CTA footer below stays pinned and visible on any screen
           height instead of requiring a scroll to reach it. Portaled to document.body so
@@ -396,7 +396,7 @@ function ProposalModal({
           .dash-content ancestor (entrance animation, globals.css) makes it a
           containing block for position:fixed descendants, which breaks this
           modal's viewport-relative positioning otherwise. */}
-      <div onClick={onClose} className="fixed inset-0 md:left-[var(--wimc-sidebar-w)]" style={{ background: 'rgba(0,0,0,0.7)', zIndex: 200, backdropFilter: 'blur(6px)' }} />
+      <div onClick={onClose} className="fixed inset-0 lg:left-[var(--wimc-sidebar-w)]" style={{ background: 'rgba(0,0,0,0.7)', zIndex: 200, backdropFilter: 'blur(6px)' }} />
       <div style={{
         position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
         width: 480, maxHeight: '90vh', overflow: 'auto',

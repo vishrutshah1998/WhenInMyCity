@@ -1,3 +1,4 @@
+import type { Viewport } from 'next'
 import { redirect } from 'next/navigation'
 import { requireAuth } from '@/lib/auth/requireAuth'
 import { createAdminClient } from '@/lib/supabase/admin'
@@ -6,6 +7,18 @@ import ExplorerAuthenticatedTopBar from '@/components/explore/ExplorerAuthentica
 import PersonaNavGate from '@/components/shared/PersonaNavGate'
 import { EXPLORER_NAV_PAGES, NAV_HEIGHT, EXPLORER_SECTION_ROUTES } from '@/lib/constants/personaNavPages'
 import { getNotificationsForUser } from '@/app/actions/notifications'
+
+// Matches --venue-bg-elevated under .venue-theme.explorer-variant
+// (venue-tokens.css) — the actual background PersonaNavBar renders under
+// Explorer's bottom nav / carousel nav bar. Without an explicit theme-color,
+// Safari's bottom toolbar tint is inferred automatically and unreliably;
+// setting this makes the toolbar-blend consistent instead of leaving it to
+// chance. Merges with the root layout's viewport (width/initialScale/
+// viewportFit) — Next.js resolves nested viewport exports field-by-field,
+// root to leaf.
+export const viewport: Viewport = {
+  themeColor: '#191527',
+}
 
 export default async function ExplorerDashboardLayout({
   children,
@@ -87,7 +100,7 @@ export default async function ExplorerDashboardLayout({
         borderColor="var(--venue-border-default)"
       />
 
-      <div className="hidden md:block">
+      <div className="hidden lg:block">
         <ExplorerSidebar
           displayName={displayName}
           username={username}
@@ -98,7 +111,7 @@ export default async function ExplorerDashboardLayout({
       </div>
 
       <div
-        className="md:ml-[var(--wimc-sidebar-w)]"
+        className="lg:ml-[var(--wimc-sidebar-w)]"
         style={{
           flex: 1,
           minWidth: 0,
@@ -145,11 +158,11 @@ export default async function ExplorerDashboardLayout({
 
         {/* No fixed bottom nav left to clear (MobileBottomNav removed for Explorer) —
             just the iOS home-indicator safe area, which mob-nav-pb used to cover too. */}
-        {/* md:!pb-0 cancels the mobile-only reserve below at desktop, where
-            PersonaNavGate never renders (it's md:hidden) — without this,
+        {/* lg:!pb-0 cancels the mobile-only reserve below at desktop, where
+            PersonaNavGate never renders (it's lg:hidden) — without this,
             sub-route content's last bit scrolls in behind the fixed
             standalone nav and can never be fully brought into view. */}
-        <main className="md:!pb-0" style={{ flex: 1, minWidth: 0, paddingBottom: `calc(${NAV_HEIGHT}px + env(safe-area-inset-bottom, 0px))` }}>
+        <main className="lg:!pb-0" style={{ flex: 1, minWidth: 0, paddingBottom: `calc(${NAV_HEIGHT}px + env(safe-area-inset-bottom, 0px))` }}>
           {children}
         </main>
       </div>

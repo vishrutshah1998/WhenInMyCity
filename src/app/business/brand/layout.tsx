@@ -1,3 +1,4 @@
+import type { Viewport } from 'next'
 import { requireAuth } from '@/lib/auth/requireAuth'
 import { redirect } from 'next/navigation'
 import { createAdminClient } from '@/lib/supabase/admin'
@@ -12,6 +13,18 @@ import { getNotificationsForUser } from '@/app/actions/notifications'
 
 function getInitials(name: string): string {
   return name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2)
+}
+
+// Matches --venue-bg-elevated under .venue-theme.brand-variant
+// (venue-tokens.css) — the actual background PersonaNavBar renders under
+// Brand's bottom nav / carousel nav bar. Without an explicit theme-color,
+// Safari's bottom toolbar tint is inferred automatically and unreliably;
+// setting this makes the toolbar-blend consistent instead of leaving it to
+// chance. Merges with the root layout's viewport (width/initialScale/
+// viewportFit) — Next.js resolves nested viewport exports field-by-field,
+// root to leaf.
+export const viewport: Viewport = {
+  themeColor: '#1E1A12',
 }
 
 export default async function BrandLayout({ children }: { children: React.ReactNode }) {
@@ -65,12 +78,12 @@ export default async function BrandLayout({ children }: { children: React.ReactN
         borderColor="var(--venue-border-default)"
       />
 
-      <div className="hidden md:block">
+      <div className="hidden lg:block">
         <BrandSidebarServer />
       </div>
 
       <div
-        className="dash-content md:ml-[var(--venue-sidebar-w)]"
+        className="dash-content lg:ml-[var(--venue-sidebar-w)]"
         style={{
           transition: 'margin-left 220ms cubic-bezier(0.4,0,0.2,1)',
           display: 'flex', flexDirection: 'column', minHeight: '100vh',
@@ -109,11 +122,11 @@ export default async function BrandLayout({ children }: { children: React.ReactN
         {/* No fixed bottom nav left to clear (MobileBottomNav removed for Brand,
             replaced by the Home page's swipe carousel) — just the iOS
             home-indicator safe area, which mob-nav-pb used to cover too. */}
-        {/* md:!pb-0 cancels the mobile-only reserve below at desktop, where
-            PersonaNavGate never renders (it's md:hidden) — without this,
+        {/* lg:!pb-0 cancels the mobile-only reserve below at desktop, where
+            PersonaNavGate never renders (it's lg:hidden) — without this,
             sub-route content's last bit scrolls in behind the fixed
             standalone nav and can never be fully brought into view. */}
-        <main className="md:!pb-0" style={{ flex: 1, minWidth: 0, paddingBottom: `calc(${NAV_HEIGHT}px + env(safe-area-inset-bottom, 0px))` }}>
+        <main className="lg:!pb-0" style={{ flex: 1, minWidth: 0, paddingBottom: `calc(${NAV_HEIGHT}px + env(safe-area-inset-bottom, 0px))` }}>
           {children}
         </main>
       </div>

@@ -265,7 +265,7 @@ export function PersonaNavStandalone({ pages, activeKey, indexHref, accentColor,
       // min-height floor back to the real viewport — this standalone nav is
       // the same "fixed, viewport-anchored, doesn't need the floor" case on
       // every sub-route below the dashboard index.
-      className="persona-tab-switcher fixed md:hidden left-0 right-0 md:left-[var(--wimc-sidebar-w)] z-20"
+      className="persona-tab-switcher fixed lg:hidden left-0 right-0 lg:left-[var(--wimc-sidebar-w)] z-20"
       style={{ bottom: 0, overflow: 'visible' }}
     >
       <PersonaNavBar

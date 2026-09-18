@@ -1,3 +1,4 @@
+import type { Viewport } from 'next'
 import { requireAuth } from '@/lib/auth/requireAuth'
 import { redirect } from 'next/navigation'
 import { createAdminClient } from '@/lib/supabase/admin'
@@ -9,9 +10,23 @@ import PersonaNavGate from '@/components/shared/PersonaNavGate'
 import { VENUE_NAV_PAGES, NAV_HEIGHT, VENUE_SECTION_ROUTES } from '@/lib/constants/personaNavPages'
 import Link from 'next/link'
 import { WimcWordmark } from '@/components/WimcWordmark'
+import { VenueCarouselProvider } from './dashboard/VenueCarouselContext'
+import VenueCarouselSlot from './dashboard/VenueCarouselSlot'
 
 function getInitials(name: string): string {
   return name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2)
+}
+
+// Matches --venue-bg-elevated under .venue-theme.venue-variant
+// (venue-tokens.css) — the actual background PersonaNavBar renders under
+// Venue's bottom nav / carousel nav bar. Without an explicit theme-color,
+// Safari's bottom toolbar tint is inferred automatically and unreliably;
+// setting this makes the toolbar-blend consistent instead of leaving it to
+// chance. Merges with the root layout's viewport (width/initialScale/
+// viewportFit) — Next.js resolves nested viewport exports field-by-field,
+// root to leaf.
+export const viewport: Viewport = {
+  themeColor: '#122636',
 }
 
 export default async function VenueLayout({ children }: { children: React.ReactNode }) {
@@ -34,6 +49,7 @@ export default async function VenueLayout({ children }: { children: React.ReactN
     'Owner'
 
   return (
+    <VenueCarouselProvider>
     <div
       className="venue-theme venue-variant"
       style={{ minHeight: '100vh', background: 'var(--venue-bg-base)', position: 'relative' }}
@@ -60,7 +76,16 @@ export default async function VenueLayout({ children }: { children: React.ReactN
         borderColor="var(--venue-border-default)"
       />
 
-      <div className="hidden md:block">
+      {/* Layout-level sibling of .dash-content for the index route's own
+          VenueCarousel (PersonaTabSwitcher) — same containing-block
+          rationale as PersonaNavGate above, and the same fix already applied
+          to Creator's CreatorCarouselSlot (dashboard/layout.tsx). page.tsx
+          (a Server Component) still owns the actual Supabase fetch and
+          publishes its computed slot content up through VenueCarouselContext
+          for this to render — see VenueCarouselContext.tsx / VenueCarouselSlot.tsx. */}
+      <VenueCarouselSlot />
+
+      <div className="hidden lg:block">
         <VenueSidebar
           venueId={venue.id}
           venueName={venue.name}
@@ -70,7 +95,7 @@ export default async function VenueLayout({ children }: { children: React.ReactN
       </div>
 
       <div
-        className="dash-content md:ml-[var(--venue-sidebar-w)]"
+        className="dash-content lg:ml-[var(--venue-sidebar-w)]"
         style={{
           transition: 'margin-left 220ms cubic-bezier(0.4,0,0.2,1)',
           display: 'flex',
@@ -121,14 +146,15 @@ export default async function VenueLayout({ children }: { children: React.ReactN
         {/* No fixed bottom nav left to clear (MobileBottomNav removed for Venue,
             replaced by the Home page's swipe carousel) — just the iOS
             home-indicator safe area, which mob-nav-pb used to cover too. */}
-        {/* md:!pb-0 cancels the mobile-only reserve below at desktop, where
-            PersonaNavGate never renders (it's md:hidden) — without this,
+        {/* lg:!pb-0 cancels the mobile-only reserve below at desktop, where
+            PersonaNavGate never renders (it's lg:hidden) — without this,
             sub-route content's last bit scrolls in behind the fixed
             standalone nav and can never be fully brought into view. */}
-        <main className="md:!pb-0" style={{ flex: 1, paddingBottom: `calc(${NAV_HEIGHT}px + env(safe-area-inset-bottom, 0px))` }}>
+        <main className="lg:!pb-0" style={{ flex: 1, paddingBottom: `calc(${NAV_HEIGHT}px + env(safe-area-inset-bottom, 0px))` }}>
           {children}
         </main>
       </div>
     </div>
+    </VenueCarouselProvider>
   )
 }
