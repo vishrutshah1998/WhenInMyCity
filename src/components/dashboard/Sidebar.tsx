@@ -346,7 +346,7 @@ export default function Sidebar({
           {/* Explorer workspace — if user has explorer persona */}
           {personas.includes('explorer') && (
             <Link
-              href="/dashboard"
+              href="/explore/dashboard"
               style={{
                 display: 'flex', alignItems: 'center', gap: 10,
                 padding: '9px 12px', textDecoration: 'none',

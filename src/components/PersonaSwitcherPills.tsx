@@ -41,6 +41,16 @@ export default function PersonaSwitcherPills({
       display: 'flex', gap: 8,
       padding: '12px 24px 0',
       background: isDark ? '#07070A' : '#F2EDE3',
+      // Every dashboard home page (Creator/Venue/Brand/Explorer) mounts a
+      // fixed-position, z-index:20 carousel nav (PersonaTabSwitcher) as a
+      // plain document-order sibling of this row on mobile. A positioned,
+      // z-indexed element always paints over a static one regardless of
+      // DOM order, so without its own stacking context + higher z-index
+      // this row silently renders fully hidden behind the carousel on
+      // every mobile dashboard — position/zIndex here is load-bearing,
+      // not decorative.
+      position: 'relative',
+      zIndex: 21,
     }}>
       {personas.map(p => {
         const isActive = p === currentPersona
