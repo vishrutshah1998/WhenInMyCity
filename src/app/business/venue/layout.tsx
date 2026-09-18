@@ -74,6 +74,7 @@ export default async function VenueLayout({ children }: { children: React.ReactN
         mutedColor="var(--venue-text-secondary)"
         elevatedBgColor="var(--venue-bg-elevated)"
         borderColor="var(--venue-border-default)"
+        invertIconImage
       />
 
       {/* Layout-level sibling of .dash-content for the index route's own

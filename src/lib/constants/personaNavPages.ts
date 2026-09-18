@@ -31,19 +31,19 @@ export const NAV_HEIGHT = 72
 
 export const EXPLORER_NAV_PAGES: PersonaNavPage[] = [
   { key: 'map',         label: 'Map',         icon: 'map' },
-  { key: 'home',        label: 'Home',        icon: 'home' },
+  { key: 'home',        label: 'Home',        icon: 'home', iconImage: '/logo-stamp.png' },
   { key: 'communities', label: 'Communities', icon: 'groups' },
 ]
 
 export const VENUE_NAV_PAGES: PersonaNavPage[] = [
   { key: 'venue',    label: 'Venue',    icon: 'storefront' },
-  { key: 'home',     label: 'Home',     icon: 'dashboard' },
+  { key: 'home',     label: 'Home',     icon: 'dashboard', iconImage: '/logo-stamp.png' },
   { key: 'business', label: 'Business', icon: 'bar_chart_4_bars' },
 ]
 
 export const BRAND_NAV_PAGES: PersonaNavPage[] = [
   { key: 'enquiries', label: 'Enquiries', icon: 'inbox' },
-  { key: 'home',      label: 'Home',      icon: 'dashboard' },
+  { key: 'home',      label: 'Home',      icon: 'dashboard', iconImage: '/logo-stamp.png' },
   { key: 'creators',  label: 'Creators',  icon: 'search' },
 ]
 
@@ -62,7 +62,7 @@ export const BRAND_NAV_PAGES: PersonaNavPage[] = [
 export function getCreatorNavPages(): PersonaNavPage[] {
   return [
     { key: 'business',  label: 'Business',  icon: 'storefront' },
-    { key: 'home',      label: 'Home',      icon: 'dashboard' },
+    { key: 'home',      label: 'Home',      icon: 'dashboard', iconImage: '/logo-stamp.png' },
     { key: 'community', label: 'Community', icon: 'diversity_3' },
   ]
 }

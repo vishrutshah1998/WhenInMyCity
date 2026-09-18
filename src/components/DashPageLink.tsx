@@ -50,7 +50,7 @@ export default function DashPageLink({ url, variant = 'dark' }: Props) {
   return (
     <div style={{ padding: '10px 24px 0' }}>
       <div style={{
-        display: 'flex', alignItems: 'center', gap: 10,
+        display: 'flex', alignItems: 'center', gap: 10, minWidth: 0,
         background: surface, border: `1px solid ${border}`,
         borderRadius: showQR ? '8px 8px 0 0' : 8,
         padding: '8px 12px',
@@ -61,7 +61,7 @@ export default function DashPageLink({ url, variant = 'dark' }: Props) {
           target="_blank"
           rel="noopener noreferrer"
           style={{
-            flex: 1, fontSize: 12, fontFamily: 'var(--font-jetbrains-mono), monospace',
+            flex: 1, minWidth: 0, fontSize: 12, fontFamily: 'var(--font-jetbrains-mono), monospace',
             color: primary, textDecoration: 'none',
             overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
           }}

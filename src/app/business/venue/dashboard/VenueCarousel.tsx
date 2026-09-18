@@ -2,7 +2,7 @@
 
 import PersonaTabSwitcher from '@/components/shared/PersonaTabSwitcher'
 
-interface Props {
+export interface VenueCarouselProps {
   homeSlot:     React.ReactNode
   venueSlot:    React.ReactNode
   businessSlot: React.ReactNode
@@ -21,12 +21,12 @@ interface Props {
 // src/components/shared/PersonaTabSwitcher.tsx, and ExplorerCarousel.tsx /
 // CreatorCarousel.tsx, its other consumers). Fixed 3 pages, no tier gating
 // (venue_tier is a public trust badge only, not a nav gate).
-export default function VenueCarousel({ homeSlot, venueSlot, businessSlot, defaultIndex = 1 }: Props) {
+export default function VenueCarousel({ homeSlot, venueSlot, businessSlot, defaultIndex = 1 }: VenueCarouselProps) {
   return (
     <PersonaTabSwitcher
       pages={[
         { key: 'venue',    label: 'Venue',    icon: 'storefront',  content: venueSlot },
-        { key: 'home',     label: 'Home',     icon: 'dashboard',   content: homeSlot },
+        { key: 'home',     label: 'Home',     icon: 'dashboard',   iconImage: '/logo-stamp.png', content: homeSlot },
         { key: 'business', label: 'Business', icon: 'bar_chart_4_bars', content: businessSlot },
       ]}
       defaultIndex={defaultIndex}
@@ -35,6 +35,7 @@ export default function VenueCarousel({ homeSlot, venueSlot, businessSlot, defau
       bgColor="var(--venue-bg-base)"
       elevatedBgColor="var(--venue-bg-elevated)"
       borderColor="var(--venue-border-default)"
+      invertIconImage
     />
   )
 }

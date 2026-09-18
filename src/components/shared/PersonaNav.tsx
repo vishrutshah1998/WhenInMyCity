@@ -22,6 +22,8 @@ export interface PersonaNavPage {
   key:   string
   label: string
   icon:  string
+  /** When set, renders this image (e.g. the WIMC stamp) instead of the Material Symbol named by `icon`. */
+  iconImage?: string
 }
 
 interface PersonaNavBarProps {
@@ -34,6 +36,10 @@ interface PersonaNavBarProps {
   mutedColor:      string
   elevatedBgColor: string
   borderColor:     string
+  /** Invert (black → white) any page.iconImage — for dark-themed personas, whose
+   *  circle sits on a dark fill that a black-line-art image would be illegible against.
+   *  Same invert-filter technique WimcWordmark uses for its own white variant. */
+  invertIconImage?: boolean
 }
 
 // ── Circular icon+label nav ────────────────────────────────────────────────
@@ -52,7 +58,7 @@ interface PersonaNavBarProps {
 // standalone (PersonaNavStandalone below, a trackX that's fixed forever) —
 // this component itself doesn't care which, it just reads whatever trackX
 // it's given.
-export function PersonaNavBar({ pages, trackX, width, active, onSelect, accentColor, mutedColor, elevatedBgColor, borderColor }: PersonaNavBarProps) {
+export function PersonaNavBar({ pages, trackX, width, active, onSelect, accentColor, mutedColor, elevatedBgColor, borderColor, invertIconImage }: PersonaNavBarProps) {
   const navTrackX = useTransform(
     trackX,
     pages.map((_, i) => restingXOf(i, width)),
@@ -85,6 +91,7 @@ export function PersonaNavBar({ pages, trackX, width, active, onSelect, accentCo
             mutedColor={mutedColor}
             elevatedBgColor={elevatedBgColor}
             borderColor={borderColor}
+            invertIconImage={invertIconImage}
           />
         ))}
       </motion.div>
@@ -101,7 +108,7 @@ export function PersonaNavBar({ pages, trackX, width, active, onSelect, accentCo
 // so the button visibly grows/lifts/glows in and out DURING the drag, not
 // just on release, in both swipe directions (progress's domain is symmetric
 // by construction).
-function CircularNavButton({ page, index, trackX, width, active, onSelect, accentColor, mutedColor, elevatedBgColor, borderColor }: {
+function CircularNavButton({ page, index, trackX, width, active, onSelect, accentColor, mutedColor, elevatedBgColor, borderColor, invertIconImage }: {
   page: PersonaNavPage
   index: number
   trackX: MotionValue<number>
@@ -112,6 +119,7 @@ function CircularNavButton({ page, index, trackX, width, active, onSelect, accen
   mutedColor: string
   elevatedBgColor: string
   borderColor: string
+  invertIconImage?: boolean
 }) {
   const sw     = slideWidthOf(width)
   const center = restingXOf(index, width)
@@ -124,6 +132,10 @@ function CircularNavButton({ page, index, trackX, width, active, onSelect, accen
   const glowOpacity   = useTransform(progress, [0, 1], [1, 0])
   const labelOpacity  = useTransform(progress, [0, 1], [1, 0.7])
   const labelLift     = useTransform(progress, [0, 1], [4, 2])
+  // Matches this exact asset's existing dimmed-mark convention (EntryPassFace.tsx's
+  // opacity: 0.4 stamp watermark) — also equal to the alpha this nav already uses for
+  // its own inactive/muted color on Creator and Explorer (rgba(255,255,255,0.40)).
+  const imageOpacity  = useTransform(progress, [0, 1], [1, 0.4])
   // accentColor/mutedColor arrive as opaque CSS strings (e.g. "var(--venue-
   // accent)") Framer Motion's range interpolator can't blend — a transformer
   // function instead gives a live, continuously-recomputed swap tied to the
@@ -186,7 +198,21 @@ function CircularNavButton({ page, index, trackX, width, active, onSelect, accen
               boxShadow: `0 0 0 6px color-mix(in srgb, ${accentColor} 14%, transparent), 0 6px 16px color-mix(in srgb, ${accentColor} 40%, transparent)`,
             }}
           />
-          <span style={{ position: 'relative' }}>{page.icon}</span>
+          {page.iconImage ? (
+            <motion.img
+              src={page.iconImage}
+              alt=""
+              style={{
+                position: 'relative',
+                width: '88%', height: '88%',
+                objectFit: 'contain',
+                opacity: imageOpacity,
+                filter: invertIconImage ? 'invert(1)' : undefined,
+              }}
+            />
+          ) : (
+            <span style={{ position: 'relative' }}>{page.icon}</span>
+          )}
         </motion.span>
       </span>
       <motion.span style={{
@@ -213,6 +239,7 @@ interface PersonaNavStandaloneProps {
   mutedColor:      string
   elevatedBgColor: string
   borderColor:     string
+  invertIconImage?: boolean
 }
 
 // For sub-routes with no live carousel mounted — measures its own width
@@ -223,7 +250,7 @@ interface PersonaNavStandaloneProps {
 // Feeding PersonaNavBar this static trackX naturally produces "resting on
 // activeKey" for free — its useTransform chains just hold their one computed
 // output when the source value never changes, no special-casing needed.
-export function PersonaNavStandalone({ pages, activeKey, indexHref, accentColor, mutedColor, elevatedBgColor, borderColor }: PersonaNavStandaloneProps) {
+export function PersonaNavStandalone({ pages, activeKey, indexHref, accentColor, mutedColor, elevatedBgColor, borderColor, invertIconImage }: PersonaNavStandaloneProps) {
   const router = useRouter()
   const containerRef = useRef<HTMLDivElement>(null)
   const [width, setWidth] = useState(0)
@@ -278,6 +305,7 @@ export function PersonaNavStandalone({ pages, activeKey, indexHref, accentColor,
         mutedColor={mutedColor}
         elevatedBgColor={elevatedBgColor}
         borderColor={borderColor}
+        invertIconImage={invertIconImage}
       />
     </div>
   )

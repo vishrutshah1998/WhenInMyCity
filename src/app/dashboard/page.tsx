@@ -12,6 +12,7 @@ import { getNotificationsForUser } from '@/app/actions/notifications'
 import { profileUrl } from '@/lib/profile-url'
 import { TIER_THRESHOLDS } from '@/lib/constants/interests'
 import PersonaSwitcherPills from '@/components/PersonaSwitcherPills'
+import DashPageLink from '@/components/DashPageLink'
 import BookingConfirmedBanner from '@/components/shared/BookingConfirmedBanner'
 import { CreatorCarouselPublisher } from './CreatorCarouselContext'
 import CreatorHomeMobile from './CreatorHomeMobile'
@@ -289,18 +290,37 @@ export default function DashboardPage() {
   const creatorCarouselProps = {
     accentColor: 'var(--wimc-accent)',
     homeSlot: (
-      <CreatorHomeMobile
-        displayName={displayName}
-        profile={profile}
-        subscriberCount={subscriberCount}
-        upcomingEvents={upcomingEvents}
-        requestsCount={requests.length}
-        availablePaise={availablePaise}
-        mtdEarnedPaise={mtdEarnedPaise}
-        confirmedNotifications={confirmedNotifications}
-        soldCountMap={soldCountMap}
-        onPostCreated={(post: CreatorPost) => setDashPosts(prev => [post, ...prev].slice(0, 5))}
-      />
+      <>
+        {/* .dash-content (this component's real mount point on the index route
+            is CreatorCarouselSlot, a sibling of .dash-content — see the comment
+            above) has a transform-bearing mount animation, which establishes a
+            stacking context that silently defeats PersonaSwitcherPills' own
+            z-index trick against the carousel's z-20 fixed panel. Rendering
+            these here instead — as part of the carousel's own content, the
+            same place VenueCarousel/BrandCarousel put their homeContent's
+            copy — sidesteps the trap entirely rather than fighting it. The
+            desktop-only copy above (outside the carousel) is unaffected and
+            stays as-is. */}
+        <PersonaSwitcherPills personas={personas} currentPersona="creator" variant="light" />
+        {profile?.username && (
+          <DashPageLink
+            url={`${process.env.NEXT_PUBLIC_APP_URL ?? 'https://www.wheninmycity.com'}${profileUrl(profile.city, profile.username)}`}
+            variant="light"
+          />
+        )}
+        <CreatorHomeMobile
+          displayName={displayName}
+          profile={profile}
+          subscriberCount={subscriberCount}
+          upcomingEvents={upcomingEvents}
+          requestsCount={requests.length}
+          availablePaise={availablePaise}
+          mtdEarnedPaise={mtdEarnedPaise}
+          confirmedNotifications={confirmedNotifications}
+          soldCountMap={soldCountMap}
+          onPostCreated={(post: CreatorPost) => setDashPosts(prev => [post, ...prev].slice(0, 5))}
+        />
+      </>
     ),
     businessSlot: <CreatorBusinessSlot showBookings={showBookings} accentColor="var(--wimc-accent)" />,
     communitySlot: profile ? (
@@ -314,6 +334,12 @@ export default function DashboardPage() {
 
       {/* ── Persona switcher ── */}
       <PersonaSwitcherPills personas={personas} currentPersona="creator" variant="light" />
+      {profile?.username && (
+        <DashPageLink
+          url={`${process.env.NEXT_PUBLIC_APP_URL ?? 'https://www.wheninmycity.com'}${profileUrl(profile.city, profile.username)}`}
+          variant="light"
+        />
+      )}
 
       {/* ═══════════════ DESKTOP ══════════════════════════════════════════════ */}
       {/* Breakpoint changed from md to lg (unchanged content/logic below) so this

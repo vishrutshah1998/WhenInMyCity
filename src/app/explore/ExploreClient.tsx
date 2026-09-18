@@ -6,6 +6,8 @@ import { useEffect, useRef, useState } from 'react'
 import Pushpin from '@/components/ui/Pushpin'
 import RubberStamp from '@/components/ui/RubberStamp'
 import ExplorerTopBar from '@/components/explore/ExplorerTopBar'
+import LocationPill from '@/components/ui/LocationPill'
+import { WimcWordmark } from '@/components/WimcWordmark'
 import { createClient } from '@/lib/supabase/client'
 import { profileUrl } from '@/lib/profile-url'
 
@@ -1911,25 +1913,19 @@ function DesktopHeader({ city, setCity }: { city: string; setCity: (c: string) =
     <header className="hidden lg:flex sticky top-0 z-[60] h-[64px] items-center justify-between px-6 bg-[#050308]/95 backdrop-blur border-b-2 border-dashed border-white/15">
       {/* Left */}
       <div className="flex items-center gap-4">
-        <span className="font-display font-black text-[24px] text-[#E8705A] tracking-tighter uppercase">
-          WIMC
-        </span>
+        <WimcWordmark color="white" height={26} />
         <div className="h-8 w-px bg-white/15 rotate-12" />
-        <div className="flex gap-2">
-          {['Ahmedabad', 'Gandhinagar'].map(c => (
-            <button
-              key={c}
-              onClick={() => setCity(c)}
-              className={`px-4 py-1 border-2 font-mono text-[11px] uppercase font-bold transition-all ${
-                city === c
-                  ? 'bg-[#F5A800] text-[#0A0814] border-[#F5A800]'
-                  : 'border-dashed border-white/30 text-white/50 hover:border-solid hover:border-white hover:text-white bg-transparent'
-              }`}
-            >
-              {c.toUpperCase()}
-            </button>
-          ))}
-        </div>
+        <LocationPill
+          activeCity={city}
+          onSelect={setCity}
+          accentColor="#F5A800"
+          accentText="#0A0814"
+          mutedText="rgba(255,255,255,0.5)"
+          borderColor="rgba(255,255,255,0.3)"
+          borderStyle="dashed"
+          hoverBorderColor="#FFFFFF"
+          hoverTextColor="#FFFFFF"
+        />
       </div>
 
       {/* Right */}

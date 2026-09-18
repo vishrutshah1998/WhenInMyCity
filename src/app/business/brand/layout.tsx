@@ -76,6 +76,7 @@ export default async function BrandLayout({ children }: { children: React.ReactN
         mutedColor="var(--venue-text-secondary)"
         elevatedBgColor="var(--venue-bg-elevated)"
         borderColor="var(--venue-border-default)"
+        invertIconImage
       />
 
       <div className="hidden lg:block">

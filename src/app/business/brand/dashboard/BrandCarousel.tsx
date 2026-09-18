@@ -29,7 +29,7 @@ export default function BrandCarousel({ homeSlot, enquiriesSlot, creatorsSlot, d
     <PersonaTabSwitcher
       pages={[
         { key: 'enquiries', label: 'Enquiries', icon: 'inbox',     content: enquiriesSlot },
-        { key: 'home',      label: 'Home',      icon: 'dashboard', content: homeSlot },
+        { key: 'home',      label: 'Home',      icon: 'dashboard', iconImage: '/logo-stamp.png', content: homeSlot },
         { key: 'creators',  label: 'Creators',  icon: 'search',    content: creatorsSlot },
       ]}
       defaultIndex={defaultIndex}
@@ -38,6 +38,7 @@ export default function BrandCarousel({ homeSlot, enquiriesSlot, creatorsSlot, d
       bgColor="var(--venue-bg-base)"
       elevatedBgColor="var(--venue-bg-elevated)"
       borderColor="var(--venue-border-default)"
+      invertIconImage
     />
   )
 }

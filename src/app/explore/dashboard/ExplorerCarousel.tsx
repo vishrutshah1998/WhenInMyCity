@@ -29,7 +29,7 @@ export default function ExplorerCarousel({ mapSlot, homeSlot, communitiesSlot, d
     <PersonaTabSwitcher
       pages={[
         { key: 'map',         label: 'Map',         icon: 'map',    content: mapSlot, fullBleed: true },
-        { key: 'home',        label: 'Home',        icon: 'home',   content: homeSlot },
+        { key: 'home',        label: 'Home',        icon: 'home',   iconImage: '/logo-stamp.png', content: homeSlot },
         { key: 'communities', label: 'Communities', icon: 'groups', content: communitiesSlot },
       ]}
       defaultIndex={defaultIndex}
@@ -38,6 +38,7 @@ export default function ExplorerCarousel({ mapSlot, homeSlot, communitiesSlot, d
       bgColor="var(--venue-bg-base)"
       elevatedBgColor="var(--venue-bg-elevated)"
       borderColor="var(--venue-border-default)"
+      invertIconImage
     />
   )
 }

@@ -16,6 +16,8 @@ interface Props {
   mutedColor:      string
   elevatedBgColor: string
   borderColor:     string
+  /** Invert (black → white) any page.iconImage — for dark-themed personas. */
+  invertIconImage?: boolean
 }
 
 // Renders the persistent nav on every sub-route within a persona's dashboard
@@ -24,7 +26,7 @@ interface Props {
 // stack two navs. A client component (not the Server Component persona
 // layouts that render it) since only the client reliably knows the current
 // pathname.
-export default function PersonaNavGate({ pages, homeKey, indexHref, sectionRoutes, accentColor, mutedColor, elevatedBgColor, borderColor }: Props) {
+export default function PersonaNavGate({ pages, homeKey, indexHref, sectionRoutes, accentColor, mutedColor, elevatedBgColor, borderColor, invertIconImage }: Props) {
   const pathname = usePathname()
   console.log('[NAV] PersonaNavGate — pathname:', pathname, '— will render:', pathname !== indexHref)
   if (pathname === indexHref) return null
@@ -49,6 +51,7 @@ export default function PersonaNavGate({ pages, homeKey, indexHref, sectionRoute
       mutedColor={mutedColor}
       elevatedBgColor={elevatedBgColor}
       borderColor={borderColor}
+      invertIconImage={invertIconImage}
     />
   )
 }

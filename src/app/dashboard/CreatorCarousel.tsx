@@ -38,7 +38,7 @@ export default function CreatorCarousel({ accentColor, homeSlot, businessSlot, c
     <PersonaTabSwitcher
       pages={[
         { key: 'business',  label: 'Business',  icon: 'storefront',  content: businessSlot },
-        { key: 'home',      label: 'Home',      icon: 'dashboard',   content: homeSlot },
+        { key: 'home',      label: 'Home',      icon: 'dashboard',   iconImage: '/logo-stamp.png', content: homeSlot },
         { key: 'community', label: 'Community', icon: 'diversity_3', content: communitySlot },
       ]}
       defaultIndex={defaultIndex}

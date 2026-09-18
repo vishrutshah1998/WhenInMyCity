@@ -36,6 +36,8 @@ interface Props {
   borderColor:     string
   /** px from the top the switcher starts below (matches the persona's top bar height). Default 48. */
   topOffset?:      number
+  /** Invert (black → white) any page.iconImage — for dark-themed personas. */
+  invertIconImage?: boolean
 }
 
 // Tap-driven replacement for SwipeCarousel.tsx — no drag, no swipe gesture,
@@ -57,6 +59,7 @@ export default function PersonaTabSwitcher({
   pages, defaultIndex = 0,
   accentColor, mutedColor, bgColor, elevatedBgColor, borderColor,
   topOffset = 48,
+  invertIconImage,
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
   // Starts at 0 on both server and client to avoid a hydration mismatch —
@@ -187,6 +190,7 @@ export default function PersonaTabSwitcher({
           trackX={trackX} width={width}
           accentColor={accentColor} mutedColor={mutedColor}
           elevatedBgColor={elevatedBgColor} borderColor={borderColor}
+          invertIconImage={invertIconImage}
         />
       </div>
     </>
