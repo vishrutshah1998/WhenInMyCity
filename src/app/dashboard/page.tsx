@@ -14,6 +14,7 @@ import { TIER_THRESHOLDS } from '@/lib/constants/interests'
 import PersonaSwitcherPills from '@/components/PersonaSwitcherPills'
 import DashPageLink from '@/components/DashPageLink'
 import BookingConfirmedBanner from '@/components/shared/BookingConfirmedBanner'
+import SkeletonCard from '@/components/ui/SkeletonCard'
 import { CreatorCarouselPublisher } from './CreatorCarouselContext'
 import CreatorHomeMobile from './CreatorHomeMobile'
 import CreatorBusinessSlot from './CreatorBusinessSlot'
@@ -269,13 +270,38 @@ export default function DashboardPage() {
   )
 
   // ── Loading ──────────────────────────────────────────────────────────────────
+  // Skeleton of the real "Overview" 4-card grid below (same accents, same
+  // square-cornered paper-cutout card shape) instead of a spinner/text — reads
+  // as "the board is already here, filling in" rather than "fetching from the
+  // internet". Responsive 4-col/2-col split mirrors the real grid's own
+  // desktop/mobile behavior (here via a plain CSS media query, since this
+  // renders before the lg:hidden/hidden lg:block carousel split below exists).
 
   if (loading) {
     return (
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh', background: '#F2EDE3' }}>
-        <p style={{ color: '#1A2744', fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.25em', fontFamily: 'var(--font-jetbrains-mono)' }}>
-          LOADING BOARD...
-        </p>
+      <div style={{ background: '#F2EDE3', minHeight: '60vh', padding: '32px 24px' }}>
+        <style>{`
+          @media (max-width: 767px) {
+            .creator-skeleton-grid { grid-template-columns: repeat(2, 1fr) !important; }
+          }
+        `}</style>
+        <div className="creator-skeleton-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 20, maxWidth: 1280, margin: '0 auto' }}>
+          {[
+            { accent: '#E8705A' },
+            { accent: '#0D9488' },
+            { accent: '#D97706' },
+            { accent: '#D97706' },
+          ].map((c, i) => (
+            <SkeletonCard
+              key={i}
+              accentColor={c.accent}
+              borderColor="var(--wimc-coral-dim)"
+              background="#FEFCF8"
+              fillColor="rgba(26,39,68,0.08)"
+              showIcon
+            />
+          ))}
+        </div>
       </div>
     )
   }

@@ -1,29 +1,20 @@
-// Shown inside <Suspense fallback> while KPI data is loading.
-export default function KpiCardSkeleton() {
-  return (
-    <div style={{
-      background: 'var(--venue-bg-surface)',
-      border: '1px solid var(--venue-border-subtle)',
-      borderRadius: 18,
-      padding: '20px 20px 0',
-      overflow: 'hidden',
-    }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
-        <div style={{ width: 80, height: 11, background: 'var(--venue-bg-hover)', borderRadius: 4 }} />
-        <div style={{ width: 40, height: 11, background: 'var(--venue-bg-hover)', borderRadius: 4 }} />
-      </div>
-      <div style={{ width: 120, height: 28, background: 'var(--venue-bg-hover)', borderRadius: 4, marginBottom: 8 }} />
-      <div style={{ width: 60, height: 10, background: 'var(--venue-bg-hover)', borderRadius: 4, marginBottom: 16 }} />
-      <div style={{ height: 64, background: 'var(--venue-bg-hover)', marginLeft: -20, marginRight: -20 }} />
-    </div>
-  )
-}
+import SkeletonCard from '@/components/ui/SkeletonCard'
 
+// Shown inside <Suspense fallback> while KPI data is loading — mirrors
+// KpiCard.tsx's real shape via the shared SkeletonCard (components/ui/),
+// same one used for the page-level loading skeleton below.
 export function KpiCardSkeletonRow() {
   return (
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}>
       {Array.from({ length: 4 }).map((_, i) => (
-        <KpiCardSkeleton key={i} />
+        <SkeletonCard
+          key={i}
+          radius={18}
+          accentColor="var(--venue-accent)"
+          borderColor="var(--venue-border-subtle)"
+          background="var(--venue-bg-surface)"
+          fillColor="var(--venue-bg-hover)"
+        />
       ))}
     </div>
   )

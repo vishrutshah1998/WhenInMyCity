@@ -209,3 +209,81 @@ export async function getVenueDashboardData(venueId: string): Promise<{
     stats,
   }
 }
+
+// ---------------------------------------------------------------------------
+// getVenueDashboardPageData
+// ---------------------------------------------------------------------------
+
+/**
+ * Superset of getVenueDashboardData for the dashboard page itself — resolves
+ * the caller's own Venue profile (rather than requiring an already-known
+ * venueId) and bundles the extra reads the page needs (workspace-switcher
+ * personas, confirmed-booking flag, tier-card review count) into the same
+ * round-trip. Lets VenueDashboardPage be a Client Component that fetches via
+ * one action call, mirroring CreatorDashboardPage/DashboardPage's pattern —
+ * see the VenueCarouselContext relocation-safety note on VenueDashboardPage
+ * for why.
+ */
+export async function getVenueDashboardPageData(): Promise<
+  | { needsOnboarding: true }
+  | {
+      needsOnboarding: false
+      venue: VenueProfile
+      upcomingEvents: Event[]
+      pendingProposals: ProposalWithMaker[]
+      recentRevenue: RevenueEntry[]
+      availabilityThisMonth: VenueAvailability[]
+      stats: VenueDashboardStats
+      personas: string[]
+      hasAnyConfirmedBooking: boolean
+      reviewCount: number
+    }
+  | { error: string }
+> {
+  const { user } = await requireAuth('/business/venue/dashboard')
+  const admin = createAdminClient()
+
+  const venue = await resolveOwnedVenue(user.id, admin)
+  if (!venue) return { needsOnboarding: true }
+
+  const [dashboardResult, userProfileResult, confirmedProposalResult] = await Promise.all([
+    getVenueDashboardData(venue.id),
+    admin.from('user_profiles').select('personas').eq('id', user.id).maybeSingle(),
+    admin
+      .from('maker_venue_proposals')
+      .select('id', { count: 'exact', head: true })
+      .eq('venue_id', venue.id)
+      .eq('status', 'accepted'),
+  ])
+
+  if ('error' in dashboardResult) return dashboardResult
+
+  const rawPersonas = (userProfileResult.data?.personas ?? []) as string[]
+  const personas = rawPersonas.includes('venue') ? rawPersonas : [...rawPersonas, 'venue']
+  const hasAnyConfirmedBooking = (confirmedProposalResult.count ?? 0) > 0
+
+  // Review count for the tier progress card.
+  const { data: eventIds } = await admin
+    .from('events')
+    .select('id')
+    .eq('venue_id', venue.id)
+    .in('status', ['published', 'completed'])
+
+  const eventIdList = (eventIds ?? []).map((e) => e.id)
+  const reviewCount = eventIdList.length > 0
+    ? ((await admin
+        .from('explorer_event_history')
+        .select('id', { count: 'exact', head: true })
+        .in('event_id', eventIdList)
+        .not('rating', 'is', null)
+      ).count ?? 0)
+    : 0
+
+  return {
+    needsOnboarding: false,
+    ...dashboardResult,
+    personas,
+    hasAnyConfirmedBooking,
+    reviewCount,
+  }
+}
