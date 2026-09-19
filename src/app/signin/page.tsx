@@ -42,6 +42,8 @@ function SignInForm() {
 
   const [view, setView]              = useState<'phone' | 'otp'>('phone')
   const [countryIso, setCountryIso]  = useState<CountryCode>('IN')
+  const [suggestedIso, setSuggestedIso] = useState<CountryCode | null>(null)
+  const [suggestionDismissed, setSuggestionDismissed] = useState(false)
   const [phoneDigits, setPhoneDigits] = useState('')
   const [otpDigits, setOtpDigits]    = useState(['', '', '', '', '', ''])
   const [error, setError]            = useState<string | null>(null)
@@ -62,15 +64,37 @@ function SignInForm() {
   const e164Phone = phoneDigits ? `+${dialCode}${phoneDigits}` : ''
   const phoneValid = isPhoneValid(phoneDigits, countryIso)
 
-  // Default the country chip from device locale, falling back to India.
+  // Suggest (never auto-apply) a country chip from device locale. India stays
+  // the default until the user taps to switch — a silent auto-swap here used
+  // to misfire for domestic users on a misconfigured OS/browser region
+  // (imported hardware, corporate-imaged laptops, VPNs, en-US/en-GB OS
+  // defaults), while still needing to surface real diaspora/NRI matches.
   useEffect(() => {
     try {
       const region = new Intl.Locale(navigator.language).region
-      if (region && DIAL_COUNTRIES.some((c) => c.iso === region)) {
-        setCountryIso(region as CountryCode)
+      if (region && region !== 'IN' && DIAL_COUNTRIES.some((c) => c.iso === region)) {
+        setSuggestedIso(region as CountryCode)
       }
     } catch {}
   }, [])
+
+  // Only live while still on the India default and not yet dismissed —
+  // once shown-and-decided (tapped or dismissed) it doesn't come back this
+  // page load, and it never resurfaces over a country the user picked themselves.
+  const localeSuggestion =
+    suggestedIso && !suggestionDismissed && countryIso === 'IN'
+      ? DIAL_COUNTRIES.find((c) => c.iso === suggestedIso) ?? null
+      : null
+
+  function applyLocaleSuggestion() {
+    if (!localeSuggestion) return
+    setCountryIso(localeSuggestion.iso)
+    setSuggestionDismissed(true)
+  }
+
+  function dismissLocaleSuggestion() {
+    setSuggestionDismissed(true)
+  }
 
   useEffect(() => {
     if (view !== 'otp' || otpChannel !== 'sms') {
@@ -266,6 +290,33 @@ function SignInForm() {
                       className="placeholder-[#57423e]"
                     />
                   </div>
+
+                  {localeSuggestion && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -4 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      style={{ display: 'flex', alignItems: 'flex-start', gap: 8, flexWrap: 'wrap' }}
+                    >
+                      <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 12, color: '#dec0ba', lineHeight: 1.5 }}>
+                        Looks like you&apos;re in {localeSuggestion.name} —{' '}
+                        <button
+                          type="button"
+                          onClick={applyLocaleSuggestion}
+                          style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 12, color: '#ffb4a6', background: 'none', border: 'none', borderBottom: '1px solid #ffb4a6', cursor: 'pointer', padding: 0 }}
+                        >
+                          use {localeSuggestion.flag} +{localeSuggestion.dialCode} instead?
+                        </button>
+                      </span>
+                      <button
+                        type="button"
+                        onClick={dismissLocaleSuggestion}
+                        aria-label="Dismiss suggestion"
+                        style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', color: '#57423e', fontSize: 14, lineHeight: 1, padding: 0 }}
+                      >
+                        ✕
+                      </button>
+                    </motion.div>
+                  )}
 
                   {error && (
                     <motion.p
