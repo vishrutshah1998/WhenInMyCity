@@ -10,8 +10,6 @@ import PersonaNavGate from '@/components/shared/PersonaNavGate'
 import { VENUE_NAV_PAGES, NAV_HEIGHT, VENUE_SECTION_ROUTES } from '@/lib/constants/personaNavPages'
 import Link from 'next/link'
 import { WimcWordmark } from '@/components/WimcWordmark'
-import { VenueCarouselProvider } from './dashboard/VenueCarouselContext'
-import VenueCarouselSlot from './dashboard/VenueCarouselSlot'
 
 function getInitials(name: string): string {
   return name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2)
@@ -49,7 +47,6 @@ export default async function VenueLayout({ children }: { children: React.ReactN
     'Owner'
 
   return (
-    <VenueCarouselProvider>
     <div
       className="venue-theme venue-variant"
       style={{ minHeight: '100vh', background: 'var(--venue-bg-base)', position: 'relative' }}
@@ -76,15 +73,6 @@ export default async function VenueLayout({ children }: { children: React.ReactN
         borderColor="var(--venue-border-default)"
         invertIconImage
       />
-
-      {/* Layout-level sibling of .dash-content for the index route's own
-          VenueCarousel (PersonaTabSwitcher) — same containing-block
-          rationale as PersonaNavGate above, and the same fix already applied
-          to Creator's CreatorCarouselSlot (dashboard/layout.tsx). page.tsx
-          (a Server Component) still owns the actual Supabase fetch and
-          publishes its computed slot content up through VenueCarouselContext
-          for this to render — see VenueCarouselContext.tsx / VenueCarouselSlot.tsx. */}
-      <VenueCarouselSlot />
 
       <div className="hidden lg:block">
         <VenueSidebar
@@ -156,6 +144,5 @@ export default async function VenueLayout({ children }: { children: React.ReactN
         </main>
       </div>
     </div>
-    </VenueCarouselProvider>
   )
 }

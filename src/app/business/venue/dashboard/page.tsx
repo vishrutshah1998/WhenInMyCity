@@ -1,7 +1,8 @@
 'use client'
 
 import { Suspense, useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { createPortal } from 'react-dom'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { getVenueDashboardPageData } from '@/app/actions/venue-dashboard'
 import { getNotificationsForUser } from '@/app/actions/notifications'
@@ -16,9 +17,10 @@ import WeekStrip from '@/components/venue/dashboard/WeekStrip'
 import PendingRequests from '@/components/venue/dashboard/PendingRequests'
 import RevenueTrend from '@/components/venue/dashboard/RevenueTrend'
 import type { MonthlyRevenue } from '@/components/venue/dashboard/charts/RevenueTrendChart'
-import { VenueCarouselPublisher } from './VenueCarouselContext'
+import VenueCarousel from './VenueCarousel'
 import VenueSettingsSlot from './VenueSettingsSlot'
 import VenueOperationsSlot from './VenueOperationsSlot'
+import { VENUE_NAV_PAGES } from '@/lib/constants/personaNavPages'
 import type { VenueProfile, VenueTier, Notification } from '@/types/database'
 
 // ---------------------------------------------------------------------------
@@ -196,24 +198,23 @@ function KpiRow({ mtdRevenuePaise, occupancyPercent, avgBookingPaise, pendingCou
 
 // Client Component (not a Server Component, unlike most other pages in this
 // area) — deliberately mirrors CreatorDashboardPage/DashboardPage's shape.
-// VenueCarouselSlot (business/venue/layout.tsx) relocates this page's
-// homeSlot/venueSlot/businessSlot into a layout-level sibling of
-// .dash-content via VenueCarouselContext, exactly like CreatorCarouselSlot
-// does for Creator — but Creator's version only ever relocates plain
-// client-side elements. This page used to be an async Server Component
-// (data fetched via createAdminClient() directly in the render), which made
-// it the only persona combining Server-Component-computed slot content with
-// Context-based relocation — an untested combination that shipped alongside
-// the relocation fix and made Venue's carousel nav bar stop responding to
-// taps. Fetching here instead, via one server action
+// This page portals its own homeSlot/venueSlot/businessSlot straight to
+// document.body (see the VenueCarousel portal below) instead of nesting
+// VenueCarousel inline — .dash-content (business/venue/layout.tsx) has a
+// transform in its mount-in keyframes, which establishes a new containing
+// block for position:fixed descendants and would trap the carousel's tab
+// bar away from the real viewport otherwise. Same fix already used for
+// VenueBookingsPanel.tsx/VenuesClient.tsx's own fixed overlays. This page
+// used to be an async Server Component (data fetched via createAdminClient()
+// directly in the render); fetching here instead, via one server action
 // (getVenueDashboardPageData), keeps all the same admin-client reads
 // server-side (nothing security-sensitive moves to the browser) while
-// making the JSX handed to VenueCarouselPublisher plain client-rendered
-// elements, same as Creator's.
+// keeping the whole page a plain client-rendered component tree.
 type VenuePageData = Extract<Awaited<ReturnType<typeof getVenueDashboardPageData>>, { needsOnboarding: false }>
 
-export default function VenueDashboardPage() {
+function VenueDashboardPageInner() {
   const router = useRouter()
+  const searchParams = useSearchParams()
 
   const [venueProfile, setVenueProfile] = useState<VenueProfile | null>(null)
   const [pendingProposals, setPendingProposals] = useState<VenuePageData['pendingProposals']>([])
@@ -324,6 +325,18 @@ export default function VenueDashboardPage() {
     : null
 
   const revenueTrendData = buildRevenueTrend()
+
+  // Which carousel tab lands active on mount — e.g. from a `?panel=` link on
+  // a sub-route, defaulting to Home. Previously computed in
+  // VenueCarouselSlot.tsx (a layout-level component that persisted across
+  // navigation, hence its own mountKey-bump-on-route-transition trick to
+  // force a reset); now computed here instead, where a fresh VenueCarousel
+  // is mounted directly by this page's own render on every arrival at
+  // /business/venue/dashboard, so no separate remount-key is needed.
+  const panel = searchParams.get('panel')
+  const panelIndex = panel ? VENUE_NAV_PAGES.findIndex(p => p.key === panel) : -1
+  const homeIndex = VENUE_NAV_PAGES.findIndex(p => p.key === 'home')
+  const defaultIndex = panelIndex !== -1 ? panelIndex : homeIndex
 
   // Reused as-is for both the desktop view and the mobile carousel's Home
   // slot — this content already reflows responsively via its own
@@ -482,20 +495,37 @@ export default function VenueDashboardPage() {
           already uses in layout.tsx). */}
       <div className="hidden lg:block">{homeContent}</div>
 
-      {/* Mobile — the actual carousel (VenueCarousel/PersonaTabSwitcher) no
-          longer renders here — it renders from VenueCarouselSlot, a genuine
-          layout-level sibling of .dash-content (business/venue/layout.tsx),
-          same placement as PersonaNavGate. This component (now a Client
-          Component, see the note above the page function) stays the sole
-          owner of the venue-dashboard fetch that feeds the carousel's
-          slots; it just publishes the computed props up through
-          VenueCarouselContext instead of rendering the carousel itself.
-          VenueCarouselPublisher renders nothing visible. */}
-      <VenueCarouselPublisher
-        homeSlot={homeContent}
-        venueSlot={<VenueSettingsSlot />}
-        businessSlot={<VenueOperationsSlot hasAnyConfirmedBooking={hasAnyConfirmedBooking} />}
-      />
+      {/* Mobile — portaled straight to document.body so VenueCarousel's
+          position:fixed tab bar escapes .dash-content's transform-based
+          containing block (see the file-level comment above). This page
+          stays the sole owner of the venue-dashboard fetch that feeds the
+          carousel's slots — it just renders VenueCarousel itself now,
+          instead of publishing props through a Context for a
+          layout-level sibling component to render. */}
+      {createPortal(
+        <div className="lg:hidden">
+          <VenueCarousel
+            homeSlot={homeContent}
+            venueSlot={<VenueSettingsSlot />}
+            businessSlot={<VenueOperationsSlot hasAnyConfirmedBooking={hasAnyConfirmedBooking} />}
+            defaultIndex={defaultIndex}
+          />
+        </div>,
+        document.body,
+      )}
     </>
+  )
+}
+
+// useSearchParams() requires a Suspense boundary in Next.js 15 — same
+// reasoning as the old VenueCarouselSlot.tsx this replaces. fallback is
+// null, not a skeleton: VenueDashboardPageInner already renders its own
+// loading skeleton from internal state, so this boundary only exists to
+// satisfy the useSearchParams() requirement, not to show anything itself.
+export default function VenueDashboardPage() {
+  return (
+    <Suspense fallback={null}>
+      <VenueDashboardPageInner />
+    </Suspense>
   )
 }

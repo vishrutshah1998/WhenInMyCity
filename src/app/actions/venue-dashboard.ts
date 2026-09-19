@@ -220,9 +220,7 @@ export async function getVenueDashboardData(venueId: string): Promise<{
  * venueId) and bundles the extra reads the page needs (workspace-switcher
  * personas, confirmed-booking flag, tier-card review count) into the same
  * round-trip. Lets VenueDashboardPage be a Client Component that fetches via
- * one action call, mirroring CreatorDashboardPage/DashboardPage's pattern —
- * see the VenueCarouselContext relocation-safety note on VenueDashboardPage
- * for why.
+ * one action call, mirroring CreatorDashboardPage/DashboardPage's pattern.
  */
 export async function getVenueDashboardPageData(): Promise<
   | { needsOnboarding: true }
