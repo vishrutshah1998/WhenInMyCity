@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useCallback, useEffect } from 'react'
+import { usePathname } from 'next/navigation'
 import dynamic from 'next/dynamic'
 import { Drawer } from 'vaul'
 import type { CityAttraction, CityAttractionSource, TransitRoute } from '@/app/actions/cityGuide'
@@ -95,6 +96,25 @@ const SNAP_FULL  = '92%'
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export default function GuideClient({ attractions, transitRoutes }: Props) {
+  // /explore/dashboard/guide (logged-in) stacks a sticky header (48px,
+  // ExplorerTopBar's BAR_H) + PersonaSwitcherPills (~44px) + the
+  // GuideDashLinkBoost-wrapped DashPageLink share bar (~55px) above this
+  // component on mobile — none of that exists on the public /explore/guide
+  // route this component also serves. The mobile map below is
+  // position:fixed;inset:0, so it always pins to the physical viewport top
+  // regardless of that in-flow stack, which buried Leaflet's top-left zoom
+  // control under all three bars. Measured live via Playwright at 390×844,
+  // logged in as a seeded explorer account, 2026-09-19 — not derived from
+  // the individual bar heights, since DashPageLink only renders when the
+  // user has a username and PersonaSwitcherPills' row height can vary
+  // slightly with workspace-pill count; 152px clears the observed stack
+  // (146px) with a small margin. Gated by exact pathname, mirroring
+  // GuideDashLinkBoost.tsx's fix for the same route/component pairing —
+  // the public route's overlay keeps its original inset:0 (offset 0).
+  const pathname = usePathname()
+  const isDashboardGuide = pathname === '/explore/dashboard/guide'
+  const mobileMapTopOffset = isDashboardGuide ? 'calc(152px + env(safe-area-inset-top))' : 0
+
   const [mainTab,        setMainTab]        = useState<MainTab>('guide')
   const [activeGroup,    setActiveGroup]    = useState<GuideGroup>('all')
   const [categoryFilter, setCategoryFilter] = useState<string>('all')
@@ -715,7 +735,7 @@ export default function GuideClient({ attractions, transitRoutes }: Props) {
       ══════════════════════════════════════════════════════════════════════ */}
       <div
         className="md:hidden"
-        style={{ position: 'fixed', inset: 0, zIndex: 20, overflow: 'hidden' }}
+        style={{ position: 'fixed', inset: 0, top: mobileMapTopOffset, zIndex: 20, overflow: 'hidden' }}
       >
         {/* Full-bleed Leaflet map — absolute fill behind the drawer */}
         <div style={{ position: 'absolute', inset: 0 }}>
