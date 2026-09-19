@@ -501,9 +501,20 @@ function VenueDashboardPageInner() {
           stays the sole owner of the venue-dashboard fetch that feeds the
           carousel's slots — it just renders VenueCarousel itself now,
           instead of publishing props through a Context for a
-          layout-level sibling component to render. */}
+          layout-level sibling component to render.
+
+          venue-theme/venue-variant is reapplied here because --venue-*
+          custom properties (venue-tokens.css) are scoped to that class
+          pair and cascade through the real DOM, not React's tree — once
+          portaled to document.body the carousel sits outside layout.tsx's
+          themed wrapper div, so every var(--venue-*) it uses would
+          otherwise resolve to nothing (transparent nav, no accent color).
+          data-venue-carousel-portal tags the portal's actual DOM root so
+          it can be queried unambiguously — PersonaNavGate's persistent
+          sub-route nav reuses the same aria-labels (Home/Venue/Business),
+          so those alone can't tell the two apart. */}
       {createPortal(
-        <div className="lg:hidden">
+        <div className="lg:hidden venue-theme venue-variant" data-venue-carousel-portal="">
           <VenueCarousel
             homeSlot={homeContent}
             venueSlot={<VenueSettingsSlot />}
